@@ -1,21 +1,23 @@
 import { Link } from 'react-router-dom'
 import './leads873.css'
-import { PhoneIncoming, PhoneCall, ClipboardCheck, MessageSquareReply, CalendarClock, TriangleAlert, Info } from 'lucide-react'
+import { PhoneIncoming, PhoneCall, ClipboardCheck, PhoneForwarded, FileCheck2, CalendarClock, TriangleAlert, Wallet, Info } from 'lucide-react'
 import { Avatar } from './kit'
 import { paths } from './paths'
 
-// P873 — Needs you now: the six triggers (leadLifecycle.js TRIGGERS), most urgent first, each with its one action.
+// P873 — Needs you now (P878: eight triggers, no text replies) (leadLifecycle.js TRIGGERS), most urgent first, each with its one action.
 // The Overview shows them as cards, the bell as rows. FYI items sit apart and quiet: the team is already on them.
 const TRIGGER_LOOK = {
   live: { tone: 'warn', Icon: PhoneIncoming },
   starting: { tone: 'blue', Icon: PhoneCall },
   outcome: { tone: 'violet', Icon: ClipboardCheck },
-  reply: { tone: 'teal', Icon: MessageSquareReply },
+  call: { tone: 'warn', Icon: PhoneForwarded },
+  finish: { tone: 'green', Icon: FileCheck2 },
   follow: { tone: 'teal', Icon: CalendarClock },
   servicing: { tone: 'green', Icon: TriangleAlert },
+  billing: { tone: 'blue', Icon: Wallet },
 }
 
-const toOf = item => (item.kind === 'client' ? paths.client(item.ref) : paths.lead(item.ref))
+const toOf = item => (item.kind === 'billing' ? paths.billing() : item.kind === 'client' ? paths.client(item.ref) : paths.lead(item.ref))
 
 export function NeedCard({ item, i, onAct }) {
   const { tone, Icon } = TRIGGER_LOOK[item.trigger]

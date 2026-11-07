@@ -7,6 +7,7 @@ import { RecordDrawer, Block, Stepper } from '../../template/Record'
 import { Dropdown, DField } from '../kit'
 import { ap } from '../paths'
 import { LEAD_LANES, STAGE_WORD, KIND_WORD, stageTone } from '../words'
+import { ConsentProof, UnassignedBlock } from './Compliance879'
 
 // P849 — Leads (the inbounds page, on screen as Leads): every lead across every agent this week on one board, in
 // stage colours: Needs routing (no agent yet, missed transfers), Booked, Transferred, Sold, Not sold. A card opens the
@@ -57,13 +58,16 @@ function LeadDrawer({ id, onClose }) {
         <button type="button" className="tp-primary fx-accent" onClick={route} disabled={!to || to === l.agent_id}><Shuffle size={16} />{l.agent_id ? 'Move to this agent' : 'Route to this agent'}</button>
         {l.agent_id && <Link to={`${ap('messages')}?to=${l.agent_id}`} className="tp-btn ov-ghost">Message {l.agent.split(' ')[0]}</Link>}
       </>}>
-      <Block title={l.agent ? `With ${l.agent}` : 'Route it'} sub={lane.key === 'route' ? (l.stage === 'missed' ? 'The transfer rang and nobody picked up. Give it to someone on duty.' : 'No agent yet. Agents licensed in this state are listed first.') : 'Move it to another agent if needed.'}>
+      {/* P879: Unassigned (no agent ID) gets its own block: the source ad, and only agents who can take it. */}
+      {l.stage === 'unassigned' && <UnassignedBlock lead={l} agents={agents} onAssign={a => { assignLead(l.id, a.id); note(`${l.name} assigned to ${a.name}. Logged.`) }} />}
+      {l.stage !== 'unassigned' && <Block title={l.agent ? `With ${l.agent}` : 'Route it'} sub={lane.key === 'route' ? (l.stage === 'missed' ? 'The transfer rang and nobody picked up. Give it to someone on duty.' : 'No agent yet. Agents licensed in this state are listed first.') : 'Move it to another agent if needed.'}>
         <DField label="Agent"><Dropdown label="Agent" value={to} options={options} onChange={setPick} /></DField>
-      </Block>
+      </Block>}
       <Block title="What we know">
         <dl className="fx-facts">{[['Phone', l.phone], ['Came in', l.came], ['Type', KIND_WORD[l.kind]], ['From', l.source], ['Looking for', l.product], ['Agent', l.agent || 'No agent yet']].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
         {l.note && <p className="tp-sub">{l.note}</p>}
       </Block>
+      <ConsentProof lead={l} />
       {l.log.length > 0 && <Block title="Routing"><ul className="tp-list">{l.log.map(x => <li key={x} className="tp-sub"><Check size={13} aria-hidden="true" /> {x}</li>)}</ul></Block>}
     </RecordDrawer>
   )

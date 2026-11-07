@@ -1,17 +1,27 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Inbox, Phone, MessageSquare, Users, ArrowRightLeft } from 'lucide-react'
 import { useSampleActivity, useSampleClients } from '../data'
 import { Seg, Empty } from '../kit'
 import { CountUp } from '../motion'
 import { paths } from '../paths'
+import { Results } from '../Results'
 
 const KINDS = { lead: ['Leads', Inbox, 'blue'], call: ['Calls', Phone, 'warn'], text: ['Texts', MessageSquare, 'teal'], client: ['Clients', Users, 'green'], moved: ['Moves', ArrowRightLeft, 'mute'] }
 const dayOf = at => (at.startsWith('Today') ? 'Today' : at.startsWith('Yesterday') ? 'Yesterday' : 'Earlier this week')
 
 // What happened, newest first, down one line grouped by day. The side tile counts it by kind with meters;
 // tap a kind to see only that.
+// P878: a Results tab (what your spend bought) beside the feed; ?view=results opens it.
 export default function Activity() {
+  const [params, setParams] = useSearchParams()
+  const view = params.get('view') === 'results' ? 'results' : 'feed'
+  const viewTabs = <Seg label="View" value={view} onChange={v => setParams(v === 'results' ? { view: 'results' } : {}, { replace: true })} options={[{ key: 'results', label: 'Results' }, { key: 'feed', label: 'Activity' }]} />
+  if (view === 'results') return <div className="tp-page fx-page"><div className="fx-tools">{viewTabs}</div><Results /></div>
+  return <Feed tabs={viewTabs} />
+}
+
+function Feed({ tabs }) {
   const { data: items } = useSampleActivity()
   const { data: clients } = useSampleClients()
   const [range, setRange] = useState('week')
@@ -24,6 +34,7 @@ export default function Activity() {
   let n = 0
   return (
     <div className="tp-page fx-page">
+      <div className="fx-tools">{tabs}</div>
       <div className="fx-tools">
         <Seg label="Range" value={range} onChange={setRange} options={[{ key: 'today', label: 'Today' }, { key: 'week', label: 'This week' }, { key: 'all', label: 'All' }]} />
         <span className="tp-grow" />

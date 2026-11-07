@@ -14,7 +14,18 @@
 
 export type Device = { token: string; platform: 'ios' | 'android' }
 export type Due = { id: string; profile_id: string; type: string; title: string; body: string | null; link: string | null; devices: Device[]; badge: number }
-export type Msg = { title: string; body: string; link: string; badge: number; type: string }
+export type Msg = {
+  title: string; body: string; link: string; badge: number; type: string
+  // P880, live-transfer pushes only (transfer.ts builds them):
+  //   timeSensitive  iOS interruption-level time-sensitive (breaks through Focus); Android channel ohvara_transfer
+  //   category       iOS notification category with the Yes / No buttons (AppDelegate registers OHVARA_TRANSFER)
+  //   collapseId     the check's id: a later push with the same id replaces this one on every phone
+  //   ttlSec         how long Apple/Google may hold it for a phone that's off (a 30 s check is useless later)
+  //   data           extra string fields for the app (check_id, seen_url)
+  //   dataOnly       Android: send a data message so the app's TransferMessagingService draws it with buttons
+  timeSensitive?: boolean; category?: string; collapseId?: string; ttlSec?: number
+  data?: Record<string, string>; dataOnly?: boolean
+}
 export type Result = { ok: boolean; dead?: boolean; error?: string }
 export type Sender = (token: string, m: Msg) => Promise<Result>
 export type Senders = { ios?: Sender | null; android?: Sender | null }
@@ -147,6 +158,23 @@ export async function signJwt(alg: 'ES256' | 'RS256', pem: string, header: Recor
 
 export type ApnsConfig = { keyP8: string; keyId: string; teamId: string; bundleId: string; production: boolean }
 
+export function apnsHeaders(bundleId: string, m: Msg, nowMs: number): Record<string, string> {
+  const h: Record<string, string> = {
+    'apns-topic': bundleId, 'apns-push-type': 'alert', 'apns-priority': '10', 'content-type': 'application/json',
+  }
+  if (m.collapseId) h['apns-collapse-id'] = m.collapseId.slice(0, 64)
+  if (m.ttlSec) h['apns-expiration'] = String(Math.floor(nowMs / 1000) + m.ttlSec)
+  return h
+}
+
+export function apnsBody(m: Msg) {
+  const aps: Record<string, unknown> = { alert: { title: m.title, body: m.body }, sound: 'default', badge: m.badge }
+  if (m.timeSensitive) { aps['interruption-level'] = 'time-sensitive'; aps['relevance-score'] = 1 }
+  if (m.category) aps.category = m.category
+  if (m.collapseId) aps['thread-id'] = 'transfer'
+  return { aps, link: m.link, type: m.type, ...(m.data || {}) }
+}
+
 export function apnsSender(cfg: ApnsConfig, f: typeof fetch = fetch, now = () => Date.now()): Sender {
   let cached: { jwt: string; at: number } | null = null
   const host = cfg.production ? 'https://api.push.apple.com' : 'https://api.sandbox.push.apple.com'
@@ -157,14 +185,8 @@ export function apnsSender(cfg: ApnsConfig, f: typeof fetch = fetch, now = () =>
     }
     const res = await f(`${host}/3/device/${token}`, {
       method: 'POST',
-      headers: {
-        authorization: `bearer ${cached.jwt}`,
-        'apns-topic': cfg.bundleId,
-        'apns-push-type': 'alert',
-        'apns-priority': '10',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({ aps: { alert: { title: m.title, body: m.body }, sound: 'default', badge: m.badge }, link: m.link, type: m.type }),
+      headers: { authorization: `bearer ${cached.jwt}`, ...apnsHeaders(cfg.bundleId, m, now()) },
+      body: JSON.stringify(apnsBody(m)),
     })
     if (res.ok) return { ok: true }
     const reason = (await res.json().catch(() => ({})))?.reason || `http ${res.status}`
@@ -176,6 +198,20 @@ export function apnsSender(cfg: ApnsConfig, f: typeof fetch = fetch, now = () =>
 // ── FCM (Android) ───────────────────────────────────────────────────────────
 
 export type ServiceAccount = { project_id: string; client_email: string; private_key: string }
+
+export function fcmMessage(token: string, m: Msg) {
+  const data = { link: m.link, type: m.type, ...(m.data || {}) }
+  const ttl = m.ttlSec ? { ttl: `${m.ttlSec}s` } : {}
+  const collapse = m.collapseId ? { collapse_key: m.collapseId.slice(0, 64) } : {}
+  // Live transfer: data only, so the app's own service draws it with Yes / No on the high-priority channel.
+  if (m.dataOnly) return { token, data: { ...data, title: m.title, body: m.body }, android: { priority: 'HIGH', ...ttl, ...collapse } }
+  return {
+    token,
+    notification: { title: m.title, body: m.body },
+    data,
+    android: { priority: 'HIGH', ...ttl, ...collapse, notification: { sound: 'default', notification_count: m.badge } },
+  }
+}
 
 export function fcmSender(sa: ServiceAccount, f: typeof fetch = fetch, now = () => Date.now()): Sender {
   let cached: { token: string; until: number } | null = null
@@ -200,14 +236,7 @@ export function fcmSender(sa: ServiceAccount, f: typeof fetch = fetch, now = () 
     const res = await f(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {
       method: 'POST',
       headers: { authorization: `Bearer ${await accessToken()}`, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        message: {
-          token,
-          notification: { title: m.title, body: m.body },
-          data: { link: m.link, type: m.type },
-          android: { priority: 'HIGH', notification: { sound: 'default', notification_count: m.badge } },
-        },
-      }),
+      body: JSON.stringify({ message: fcmMessage(token, m) }),
     })
     if (res.ok) return { ok: true }
     const err = (await res.json().catch(() => ({})))?.error || {}

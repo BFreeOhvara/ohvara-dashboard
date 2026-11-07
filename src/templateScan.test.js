@@ -34,6 +34,8 @@ test('src/template holds only sample-only code', () => {
       for (const [why, re] of RULES) {
         if (!re.test(line)) continue
         const allowed = (why.startsWith('a brand') && /TemplateApp\.jsx$/.test(f) && /createElement\('meta'\)/.test(line))
+          // P878: the agent connects their own calendar; "Google Calendar" names that product, nothing else.
+          || (why.startsWith('a brand') && /Hours\.jsx$/.test(f) && /'Google Calendar'/.test(line) && !/meta|facebook|google(?! calendar)/i.test(line))
           || (why === 'the word inbound' && /paths(\.test)?\.js$/.test(f))
         if (!allowed) hits.push(`${f.slice(ROOT.length)}:${i + 1} ${why}: ${line.trim().slice(0, 80)}`)
       }

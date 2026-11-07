@@ -29,6 +29,8 @@ export const paths = {
   more: both('/more', '/agent/more'),
   signup: () => '/signup',
   welcome: () => '/welcome',
+  // P878: the pages a lead sees (Deedstone). Template only: the real ones live on Deedstone's own address.
+  deedstone: (page = 'book') => `/d/${page}`,
 }
 
 export const SHELL_ROUTES = {

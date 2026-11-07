@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   User, Users, ToggleRight, Wallet, History, Bug, SlidersHorizontal, LogOut, Mail, UserPlus, ArrowUpRight, Search, ShieldCheck,
-  ShieldOff, Image as ImageIcon, Check, Lock, GraduationCap,
+  ShieldOff, Image as ImageIcon, Check, Lock, GraduationCap, Scale,
 } from 'lucide-react'
 import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmAudit, useAdmBugs, useAdmDay, SWITCHES, ME } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
@@ -15,13 +15,16 @@ import { ap } from '../paths'
 import { PhoneInput } from '../../template/PhoneInput'
 import { ZONES } from '../words'
 import TrainingAdmin from './TrainingAdmin'
+import { BUG_STATUS } from '../../template/bugReport'
+import '../../template/reportbug.css'
+import { Compliance } from './Compliance879'
 
 // P849 — admin Settings on the agent page's shape: the profile card and Sign out on the left, one panel whose stretch
 // tabs switch sections. Sections: Profile, People & access (everyone with a login, as Users does today), Switches,
 // Pay rules, Audit log (append-only, every admin action), Bug reports, Preferences. Sample only: the
 // real switches stay on today's /settings page until the backend step, and this page says so.
 const TABS = [['profile', 'Profile', User], ['people', 'People & access', Users], ['switches', 'Switches', ToggleRight], ['pay', 'Pay rules', Wallet],
-  ['training', 'Training', GraduationCap], ['audit', 'Audit log', History], ['bugs', 'Bug reports', Bug], ['prefs', 'Preferences', SlidersHorizontal]]
+  ['training', 'Training', GraduationCap], ['audit', 'Audit log', History], ['bugs', 'Bug reports', Bug], ['compliance', 'Compliance', Scale], ['prefs', 'Preferences', SlidersHorizontal]]
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
 
 function FormFoot({ dirty, onDiscard, onSave, label = 'Save changes' }) {
@@ -152,17 +155,28 @@ function Audit() {
   )
 }
 
+// P876 — Bug reports: what agents, VAs and admins send from Help & Support → Report a bug, newest first, with what was
+// captured for them. New → Seen → Fixed. Sample until P858 reads bug_reports (the P711 table).
+const BUG_TONE = { new: 'warn', seen: 'blue', fixed: 'green' }
 function Bugs() {
   const { data: bugs } = useAdmBugs()
-  const { resolveBug } = useAdmActions()
+  const { setBugStatus } = useAdmActions()
   const note = useNote()
+  const [show, setShow] = useState('open')
+  const list = bugs.filter(b => (show === 'open' ? b.status !== 'fixed' : show === 'fixed' ? b.status === 'fixed' : true))
+  const count = k => bugs.filter(b => (k === 'open' ? b.status !== 'fixed' : k === 'fixed' ? b.status === 'fixed' : true)).length
   return (
     <>
-      <Head title="Bug reports" sub="Sent from the account menu by agents and VAs." />
-      <ul className="tp-list">{bugs.map(b => (
-        <li key={b.id} className="fx-mrow"><Avatar name={b.who} /><span className="tp-grow"><b>{b.who} · {b.at}</b><small>{b.text}</small></span>
-          {b.shot && <button type="button" className="fx-pillbtn" onClick={() => note('Screenshots open once you sign in for real')}><ImageIcon size={13} />Screenshot</button>}
-          {b.resolved ? <Chip tone="green">Resolved</Chip> : <button type="button" className="fx-pillbtn" onClick={() => { resolveBug(b.id); note('Marked resolved') }}><Check size={13} />Mark resolved</button>}
+      <Head title="Bug reports" sub="Sent from Help and support → Report a bug. Each one tells you the page, time, browser and screen." />
+      <Seg label="Show" value={show} onChange={setShow} options={[{ key: 'open', label: 'Open', count: count('open') }, { key: 'fixed', label: 'Fixed', count: count('fixed') }, { key: 'all', label: 'All', count: count('all') }]} />
+      {list.length === 0 && <Empty title="Nothing here" sub={show === 'open' ? 'No open bug reports.' : 'None yet.'} />}
+      <ul className="tp-list adm-bugs">{list.map(b => (
+        <li key={b.id} className="fx-mrow"><Avatar name={b.who} />
+          <span className="tp-grow"><b>{b.who}{b.role ? ` (${b.role})` : ''} · {b.at}</b><small>{b.text}</small>{b.expected && <small>Expected: {b.expected}</small>}
+            <small className="adm-bug-ctx">{[b.page, b.browser, b.screen].filter(Boolean).join(' · ')}</small></span>
+          {b.shot && <button type="button" className="fx-pillbtn" onClick={() => note('Screenshots open once you sign in for real')}><ImageIcon size={13} />{b.file ? 'File' : 'Screenshot'}</button>}
+          <Chip tone={BUG_TONE[b.status]}>{BUG_STATUS[b.status]}</Chip>
+          {b.status !== 'fixed' && <button type="button" className="fx-pillbtn" onClick={() => { const to = b.status === 'new' ? 'seen' : 'fixed'; setBugStatus(b.id, to, b.who); note(to === 'seen' ? 'Marked seen' : 'Marked fixed') }}><Check size={13} />{b.status === 'new' ? 'Mark seen' : 'Mark fixed'}</button>}
         </li>
       ))}</ul>
     </>
@@ -242,6 +256,7 @@ export default function Settings() {
           {tab === 'training' && <TrainingAdmin />}
           {tab === 'audit' && <Audit />}
           {tab === 'bugs' && <Bugs />}
+          {tab === 'compliance' && <Compliance />}
           {tab === 'prefs' && <Prefs />}
         </div>
       </section>

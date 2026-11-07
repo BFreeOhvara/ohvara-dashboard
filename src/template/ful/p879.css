@@ -1,0 +1,25 @@
+/* P879 — VA pieces from the hole check (lead drawer blocks, clock, timesheet, swaps, holidays). Tokens only. */
+.v879-band { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--ov-hi) 7%, transparent); color: var(--ov-hi); }
+.v879-band.is-warn { background: var(--ov-warn-tint); } .v879-band.is-warn > svg { color: var(--ov-warn); }
+.v879-band.is-blue { background: var(--ov-data-a-tint); }
+.v879-band.is-green { background: var(--ov-up-tint); } .v879-band.is-green > svg { color: var(--ov-up); }
+.v879-band b { display: block; font-size: 13.5px; font-weight: 600; }
+.v879-band small { display: block; font-size: 12px; color: var(--ov-mid); }
+.v879-warn { color: var(--ov-hi); }
+.v879-warn svg { color: var(--ov-warn); }
+.v879-steps { display: flex; gap: 6px; list-style: none; margin: 0 0 8px; padding: 0; flex-wrap: wrap; }
+.v879-steps li { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; background: color-mix(in srgb, var(--ov-hi) 7%, transparent); font-size: 12.5px; color: var(--ov-mute); }
+.v879-steps li i { width: 8px; height: 8px; border-radius: 50%; background: var(--ov-line); }
+.v879-steps li.is-done { color: var(--ov-mid); } .v879-steps li.is-done i { background: var(--ov-up); }
+.v879-steps li.is-now { color: var(--ov-hi); font-weight: 600; background: var(--ov-data-a-tint); } .v879-steps li.is-now i { background: var(--ov-data-a); }
+.v879-sim { padding: 8px 10px; border: 1px dashed var(--ov-line); border-radius: 12px; }
+.v879-lines .fx-mrow { align-items: flex-start; color: var(--ov-hi); font-size: 13px; }
+.v879-lines input { margin-top: 3px; accent-color: var(--ov-data-a); }
+.v879-tasks { margin-bottom: 14px; }
+.v879-clock .tp-row { margin-top: 4px; }
+.v879-after { width: auto; min-height: 36px; font-size: 13px; color: var(--ov-hi); }
+.v879-after input { accent-color: var(--ov-data-a); }
+.v879-day { width: 36px; color: var(--ov-hi); }
+.v879-sheet { display: grid; gap: 8px; }
+.v879-two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-top: 14px; }
+@media (max-width: 720px) { .v879-two { grid-template-columns: minmax(0, 1fr); } }

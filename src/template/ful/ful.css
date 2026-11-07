@@ -231,44 +231,44 @@
   .fs-cring-arc, .fs-cring::after, .fs-daypulse, .fs-spark-area, .fs-spark-dot, .fs-dayline li, .fs-ov .fx-ncards .fx-ncard { animation: none; transition: none; }
 }
 
-/* P857 — the rail: one + for the call actions, the phone (with a dot while a call rings or is on), Get the app */
-.fx .fs-ri-phone .fs-ri-dot { position: absolute; top: 5px; right: 5px; width: 9px; height: 9px; border-radius: 50%; background: var(--ov-st-cancelled, var(--ov-data-a)); box-shadow: 0 0 0 2px var(--bg-surface); }
-.fx .fs-ri-phone.is-ringing .fs-ri-dot { animation: fs-dot 1.2s ease-in-out infinite; }
-@keyframes fs-dot { 50% { transform: scale(1.35); } }
+/* P857 — the rail: one + for the call actions, the phone, Get the app. P876: the phone icon is the only way into the
+   phone (the top bar's phone icon on a phone). It rings for an incoming call and, while a call is live, pulses green
+   and shows the call's timer, so a call slid away is never lost. */
+.fx .fs-ri-phone, .fx .fs-top-phone { position: relative; }
+.fx :is(.fs-ri-phone, .fs-top-phone) .fs-ri-dot { position: absolute; top: 5px; right: 5px; width: 9px; height: 9px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 2px var(--bg-surface); }
+.fx :is(.fs-ri-phone, .fs-top-phone) .fs-ri-dot.is-after { background: var(--sh-ci, var(--ov-mid)); }
+.fx :is(.fs-ri-phone, .fs-top-phone).is-ringing { color: var(--tp-white); background: var(--success); animation: fs-ring-ic 1s ease-in-out infinite; }
+.fx :is(.fs-ri-phone, .fs-top-phone).is-live { color: var(--success); }
+.fx :is(.fs-ri-phone, .fs-top-phone).is-live::after { content: ''; position: absolute; inset: 2px; border-radius: 50%; border: 2px solid var(--success); animation: fs-live-pulse 1.6s ease-out infinite; pointer-events: none; }
+.fx .fs-ri-time { position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%); padding: 0 5px; height: 16px; border-radius: 999px; display: inline-flex; align-items: center; font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--tp-white); background: var(--success); box-shadow: 0 0 0 2px var(--bg-surface); white-space: nowrap; }
+.fx .fs-top-phone .fs-ri-time { bottom: -6px; }
+.fx :is(.fs-ri-phone, .fs-top-phone) .fx-badge.is-missed { color: var(--tp-white); background: var(--danger); }
+@keyframes fs-ring-ic { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-14deg); } 40% { transform: rotate(12deg); } 60% { transform: rotate(-8deg); } 80% { transform: rotate(4deg); } }
+@keyframes fs-live-pulse { from { opacity: .8; transform: scale(.94); } to { opacity: 0; transform: scale(1.3); } }
+/* The top bar's phone icon is the phone-width stand-in for the rail's; on a desktop the rail's is the one. */
+@media (min-width: 1000px) { .fx .fs-top-phone { display: none; } }
 .fs .fx-bplus { position: relative; }
 .fs .fx-bplus .fx-badge { top: -6px; right: -8px; }
 .fs-cmenu .fx-mrow .fx-tb { flex: none; }
 
-/* P857 — the in-app phone. P872: docked at the bottom right like a chat widget (a bottom sheet on a phone). The layer
-   lets clicks through (no scrim), so the page stays usable. It sits above a record drawer (and moves left of it) but
-   under menus, the search and modal drawers; the frame also hides it when one of its own panels opens. */
-.fx-layer.fs-dock-layer { z-index: 84; pointer-events: none; }
-.fs-dock-layer > * { pointer-events: auto; }
-.fx-menu.fs-phone { position: fixed; top: auto; left: auto; right: 16px; bottom: 16px; width: 360px; max-height: min(660px, calc(100vh - 32px)); padding: 0; border-radius: 24px; display: flex; flex-direction: column; overflow: hidden; transform-origin: bottom right; animation: fx-pop-in .24s var(--fx-ease) both; }
-.fs-dock-layer.is-leaving .fs-phone { pointer-events: none; animation: fx-fade-out .18s var(--fx-ease) forwards; }
-/* Closed: a round phone button, or during a call a pill with the caller and the timer. */
-.fs-dock { position: fixed; right: 16px; bottom: 16px; display: inline-flex; align-items: center; color: var(--ov-hi); background: color-mix(in srgb, var(--bg-surface) 84%, transparent); border: 1px solid var(--sh-edge); box-shadow: inset 0 1px 0 var(--sh-hl), 0 18px 40px -18px color-mix(in srgb, var(--bg-base) 80%, transparent); -webkit-backdrop-filter: blur(22px) saturate(1.5); backdrop-filter: blur(22px) saturate(1.5); animation: fx-pop-in .24s var(--fx-spring) both; transition: transform .2s var(--fx-spring); }
-[data-theme="light"] .fs-dock { box-shadow: 0 18px 40px -18px color-mix(in srgb, var(--ov-hi) 30%, transparent); }
-.fs-dock:hover { transform: translateY(-2px); }
-.fs-dock:active { transform: scale(.95); }
-.fs-dock-btn { justify-content: center; width: 52px; height: 52px; border-radius: 50%; }
-.fs-dock-btn .fx-badge { top: -2px; right: -2px; }
-.fs-dock-btn.is-ringing { color: var(--sh-on-accent); background: var(--accent); border-color: transparent; }
-.fs-dock-btn.is-ringing::after, .fs-dock-pill.is-live .fs-dock-dot::after { content: ''; position: absolute; inset: -5px; border-radius: inherit; border: 2px solid var(--accent); animation: fs-dock-ring 1.4s ease-out infinite; }
-.fs-dock-btn.is-missed .fx-badge { color: var(--sh-on-accent); background: var(--danger); }
-@keyframes fs-dock-ring { from { opacity: .7; transform: scale(.92); } to { opacity: 0; transform: scale(1.22); } }
-.fs-dock-pill { gap: 10px; height: 52px; max-width: min(300px, calc(100vw - 32px)); padding: 0 18px 0 8px; border-radius: 999px; text-align: left; }
-.fs-dock-dot { position: relative; flex: none; width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--sh-ci); background: var(--sh-cf-sage); }
-.fs-dock-t { min-width: 0; }
-.fs-dock-t b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; font-weight: 700; }
-.fs-dock-t small { display: block; font-size: 12px; font-weight: 600; color: var(--ov-mid); }
-/* Room for it: on a desktop the page column keeps a right gutter for the round button, and makes room for the open
-   panel, so the dock never sits on a page's buttons. A record drawer pushes the dock to its left. */
+/* P876 — the phone: a call screen that slides in from the right OVER the page (soft shadow, no scrim), like a
+   phone's in-call screen. It never changes the page's layout: nothing here touches .fx-col. A tab on its left edge
+   (arrow pointing right) slides it away, even mid-call. It sits above a record drawer and moves left of it, under
+   menus, the search and modal drawers; the frame also slides it away when one of its own panels opens. */
+.fx-layer.fs-call-layer { z-index: 84; pointer-events: none; }
+.fs-call { --fx-glass: color-mix(in srgb, var(--bg-surface) 90%, transparent); position: fixed; top: 12px; right: 12px; bottom: 12px; width: 380px; display: flex; flex-direction: column; border-radius: 28px; color: var(--ov-hi);
+  background: var(--fx-glass); border: 1px solid var(--sh-edge); box-shadow: inset 0 1px 0 var(--sh-hl), -24px 0 60px -20px color-mix(in srgb, var(--bg-base) 70%, transparent);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5); backdrop-filter: blur(28px) saturate(1.5);
+  transform: translateX(calc(100% + 40px)); visibility: hidden; transition: transform .34s var(--fx-ease), visibility 0s linear .34s; }
+[data-theme="light"] .fs-call { --fx-glass: color-mix(in srgb, var(--bg-surface) 94%, transparent); box-shadow: -24px 0 60px -24px color-mix(in srgb, var(--ov-hi) 28%, transparent); }
+.fs-call.is-in { pointer-events: auto; transform: none; visibility: visible; transition: transform .34s var(--fx-ease), visibility 0s; }
+/* The slide-away tab: on the screen's left edge, an arrow pointing right. */
+.fs-call-tab { position: absolute; left: -26px; top: 50%; width: 26px; height: 72px; margin-top: -36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 14px 0 0 14px; color: var(--ov-hi);
+  background: var(--fx-glass); border: 1px solid var(--sh-edge); border-right: 0; box-shadow: -10px 0 24px -14px color-mix(in srgb, var(--bg-base) 70%, transparent); -webkit-backdrop-filter: blur(28px); backdrop-filter: blur(28px); transition: width .2s var(--fx-ease), left .2s var(--fx-ease); }
+.fs-call-tab:hover { left: -30px; width: 30px; }
+.fs-call-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (min-width: 1000px) {
-  .fx.fs .fx-col { transition: margin-right .28s var(--fx-ease, ease); }
-  .fx.fs.has-dock-button .fx-col { margin-right: 52px; }
-  .fx.fs.has-dock-pill .fx-col { margin-right: 52px; padding-bottom: 72px; }
-  body:has(.fx-rec-layer:not(.is-leaving)) .fs-dock-layer :is(.fs-phone, .fs-dock) { right: calc(min(440px, 100vw - 24px) + 28px); }
+  body:has(.fx-rec-layer:not(.is-leaving)) .fs-call { right: calc(min(440px, 100vw - 24px) + 28px); }
 }
 .fs-ph-h { display: flex; align-items: center; gap: 10px; padding: 14px 14px 10px 16px; }
 .fs-ph-h b { display: block; font-size: 15px; font-weight: 700; color: var(--ov-hi); }
@@ -304,8 +304,8 @@
 .fs-ph-timer { display: flex; flex-direction: column; align-items: center; margin: 4px 0; font-family: var(--font-mono); font-size: 34px; font-weight: 600; color: var(--ov-hi); }
 .fs-ph-timer span { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--ov-mid); }
 .fs-ph-timer.is-held span { color: var(--sh-ci); }
-.tp .fs-phone .fs-off { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-size: 12.5px; }
-.tp .fs-phone .fs-off svg { flex: none; margin-top: 1px; }
+.tp .fs-call .fs-off { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-size: 12.5px; }
+.tp .fs-call .fs-off svg { flex: none; margin-top: 1px; }
 .fs-ph-tones { min-height: 26px; text-align: center; font-size: 18px; letter-spacing: .12em; color: var(--ov-hi); }
 .fs-ph-ctl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .fs-ctl { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 0 8px; border-radius: 16px; font-size: 11.5px; font-weight: 600; color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 6%, transparent); transition: transform .2s var(--fx-spring), background-color .2s; }
@@ -318,20 +318,85 @@
 .fs-ph-acts > .tp-primary { flex: 1 1 100%; justify-content: center; }
 .fs-ph-acts > .tp-btn { flex: 1 1 0; justify-content: center; }
 .fs-ph-offline { margin: 0; text-align: center; }
-/* The open panel gets its own room from 1360 wide, where the column stays at least 860 (the narrowest every VA page is
-   built for). Narrower desktops keep the full page under the panel, like a chat widget; X or Esc tucks it away. */
-@media (min-width: 1360px) {
-  .fx.fs.has-dock-panel .fx-col { margin-right: 352px; }
-}
-/* Phone: the panel is a bottom sheet; the button and pill sit above the tab bar, and pages leave room below for them. */
+/* Phone width: a full-height sheet with the same tab. */
 @media (max-width: 999.98px) {
-  .fx-menu.fs-phone { top: auto; left: 10px; right: 10px; bottom: 10px; width: auto; max-height: calc(100vh - 20px); padding-bottom: env(safe-area-inset-bottom, 0px); transform-origin: bottom center; }
-  .fs-dock { right: 14px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
-  .fs-dock-btn { width: 48px; height: 48px; }
-  .fs-dock-pill { height: 48px; bottom: calc(138px + env(safe-area-inset-bottom, 0px)); } /* above the "More below" cue */
-  .fx.fs .tp-col { padding-bottom: 172px; }
+  .fs-call { top: 0; right: 0; bottom: 0; width: calc(100vw - 26px); max-width: 420px; border-radius: 24px 0 0 24px; padding-bottom: env(safe-area-inset-bottom, 0px); }
 }
-@media (prefers-reduced-motion: reduce) { .fx .fs-ri-phone.is-ringing .fs-ri-dot, .fs-dock-btn.is-ringing::after, .fs-dock-pill.is-live .fs-dock-dot::after { animation: none; } .fs-dock { animation: none; transition: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .fs-call, .fs-call.is-in { transition: visibility 0s; }
+  .fx :is(.fs-ri-phone, .fs-top-phone).is-ringing, .fx :is(.fs-ri-phone, .fs-top-phone).is-live::after, .fs-cs-pulse::after { animation: none; }
+}
+
+/* The call screen's insides: the caller and the timer at the top, round buttons, a red End. */
+.fs-ph-rule { margin: 0; }
+.fs-ph-group { display: flex; flex-direction: column; gap: 4px; }
+.fs-ph-gh { display: flex; align-items: center; gap: 8px; margin: 4px 0 0; font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ov-mid); }
+.fs-ph-gh span { font-weight: 600; }
+.fs-ph-todo, .fs-ph-recent { margin: 0; }
+.fs-ph-row { display: flex; align-items: center; gap: 6px; }
+.fs-ph-row > .fx-mrow { flex: 1; min-width: 0; }
+.fs-ph-row small { display: block; }
+.fs-cs { display: flex; flex-direction: column; gap: 14px; }
+.fs-cs-who { display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 6px; text-align: center; }
+.fs-cs-who > .tp-av, .fs-cs-who > .fx-av { width: 64px; height: 64px; font-size: 22px; margin-bottom: 6px; }
+.fs-cs-who small { font-size: 12.5px; color: var(--ov-mid); }
+.tp .fs-cs-name { font-family: var(--font-display); font-size: 24px; font-weight: 700; color: var(--ov-hi); display: inline-flex; align-items: center; gap: 6px; }
+.fs-cs-name.is-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.fs-cs-name.is-link svg { color: var(--ov-mid); }
+.fs-cs-rec { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 12.5px; font-weight: 600; color: var(--ov-mid); }
+.fs-cs-rec:hover { color: var(--ov-hi); }
+.fs-cs-kicker { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12px; font-weight: 700; color: var(--success); }
+.fs-cs-pulse { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+.fs-cs-pulse::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid var(--success); animation: fs-live-pulse 1.4s ease-out infinite; }
+.fs-cs-timer { display: flex; flex-direction: column; align-items: center; margin: 8px 0 0; font-family: var(--font-mono); font-size: 36px; font-weight: 600; color: var(--ov-hi); }
+.fs-cs-timer span { font-family: var(--font-ui); font-size: 12.5px; font-weight: 600; letter-spacing: normal; word-spacing: normal; color: var(--ov-mid); }
+.fs-cs-timer.is-held span { color: var(--sh-ci); background: var(--sh-cf-apricot, var(--sh-cf-sage)); padding: 2px 10px; border-radius: 999px; }
+.fs-cs-recpill { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px; margin-bottom: 6px; border-radius: 999px; font-size: 11.5px; font-weight: 700; color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.fs-cs-notice { display: flex; align-items: flex-start; gap: 6px; margin: 0; font-size: 12px; color: var(--ov-mid); }
+.fs-cs-notice svg { flex: none; margin-top: 1px; color: var(--danger); }
+.fs-cs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 6px; }
+.fs-rbw { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.fs-rbw small { font-size: 11.5px; font-weight: 600; color: var(--ov-mid); text-align: center; }
+.fs-rb { width: 58px; height: 58px; flex: none; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 9%, transparent); transition: transform .2s var(--fx-spring), background-color .2s, color .2s; }
+.fs-rb:hover:not(:disabled) { background: color-mix(in srgb, var(--ov-hi) 15%, transparent); }
+.fs-rb:active:not(:disabled) { transform: scale(.92); }
+.fs-rb:disabled { opacity: .38; cursor: not-allowed; }
+.fs-rb.is-on, .fs-rb[aria-pressed="true"] { color: var(--sh-on-sel, var(--bg-base)); background: var(--sh-sel, var(--ov-hi)); }
+.fs-rb.is-rec.is-on { color: var(--tp-white); background: var(--danger); }
+.fs-rb.is-merge { color: var(--sh-on-accent); background: var(--accent); }
+.fs-rb.is-go { color: var(--tp-white); background: var(--success); }
+.fs-rb.is-go:hover { background: var(--success); filter: brightness(.92); }
+.fs-rb.is-end { color: var(--tp-white); background: var(--danger); }
+.fs-rb.is-end:hover { background: var(--danger); filter: brightness(.92); }
+.fs-rb.is-big { width: 68px; height: 68px; }
+.fs-rb.is-sm { width: 38px; height: 38px; }
+.fs-cs-endrow { display: flex; justify-content: center; padding: 2px 0 4px; }
+.fs-cs-ans { display: flex; justify-content: space-around; padding: 6px 12px 4px; }
+.fs-cs-ans > span { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ov-mid); }
+.fs-cs-ans .fs-rb { width: 68px; height: 68px; }
+.fs-cs-line, .fs-cs-sheet, .fs-cs-xfer { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 18px; background: color-mix(in srgb, var(--ov-hi) 5%, transparent); border: 1px solid var(--fx-edge, var(--sh-edge)); }
+.fs-cs-line .tp-list, .fs-cs-sheet .tp-list { margin: 0; }
+.fs-cs-li { display: flex; align-items: center; gap: 10px; padding: 6px 2px; }
+.fs-cs-li b { display: block; font-size: 13.5px; }
+.fs-cs-li small { display: block; font-size: 12px; color: var(--ov-mid); }
+.fs-cs-li.is-ringing small, .fs-cs-li.is-waiting small { color: var(--sh-ci); }
+.fs-cs-drop { flex: none; }
+.fs-cs-merge { justify-content: center; }
+.fs-cs-sh { display: flex; align-items: center; justify-content: space-between; }
+.fs-cs-sh b { font-size: 14px; }
+.fs-cs-sheet .fx-mrow:disabled { opacity: .45; }
+.fs-cs-sheet .fx-chip small { display: block; font-size: 11px; color: var(--ov-mid); }
+.fs-cs-xfer header { display: flex; align-items: center; justify-content: space-between; font-size: 14px; }
+.fs-cs-xfer header span { font-family: var(--font-mono); font-size: 13px; color: var(--ov-mid); }
+.fs-cs-xfer p { margin: 0; font-size: 13px; }
+.fs-cs-xfer:is(.is-yes, .is-done) { border-color: color-mix(in srgb, var(--success) 55%, transparent); }
+.fs-cs-xfer:is(.is-yes, .is-lateyes) { border-color: color-mix(in srgb, var(--success) 55%, transparent); }
+.fs-cs-xfer:is(.is-no, .is-noanswer, .is-fail, .is-bounced, .is-withdrew, .is-busy, .is-unreachable) { border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+/* P880: why an agent can't be checked (no app, notifications off, push test not passed). */
+.fs-cs-why { margin: 0; font-size: 13px; color: var(--ov-mid); }
+.fs-cs-steps { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.fs-cs-steps li { flex: 1; height: 26px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700; color: var(--ov-mid); background: color-mix(in srgb, var(--ov-hi) 7%, transparent); }
+.fs-cs-steps li.is-done { color: var(--tp-white); background: var(--success); }
 
 /* P867: the queue board holds still like the agent Leads board (flow.css "Desktop: Leads, Messages and Settings hold
    still"): the page fits the window and each bucket scrolls inside its lane, so no lane is cut by the fold. */

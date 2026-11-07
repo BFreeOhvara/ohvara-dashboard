@@ -28,13 +28,15 @@ export function atLabel(s, now = SAMPLE_NOW) {
 // key: the sample stage. db: the lead row stage column (migration 180: new/contacting/booked/met/sold/follow_up/lost);
 // outcome: leads.outcome (migration 215). lane: the Leads board column. who: who acts next.
 export const STAGES = {
-  new: { label: 'New', chip: 'New lead', lane: 'calling', db: 'new', who: 'The team calls within 5 minutes' },
+  new: { label: 'New', chip: 'New lead', lane: 'calling', db: 'new', who: 'The team calls right away' },
   calling: { label: 'Calling', chip: 'Calling', lane: 'calling', db: 'contacting', who: 'The team, then automatic texts' },
   ringing: { label: 'Live transfer', chip: 'Ringing now', lane: 'live', db: 'contacting', who: 'You' },
   missed: { label: 'Missed transfer', chip: 'Missed transfer', lane: 'calling', db: 'contacting', who: 'The team books a time' },
   booked: { label: 'Booked', chip: 'Appointment booked', lane: 'booked', db: 'booked', who: 'You, at the time' },
   showed: { label: 'Showed', chip: 'Mark how it went', lane: 'booked', db: 'met', who: 'You' },
   no_show: { label: 'No-show', chip: 'No-show', lane: 'no_show', db: 'booked', who: 'The team rebooks' },
+  // P878: the agent can't make a booked appointment; the client got an apology and a rebook link.
+  rebooking: { label: 'Rebooking', chip: 'Rebooking', lane: 'calling', db: 'contacting', who: 'The client picks a new time' },
   follow_up: { label: 'Follow up', chip: 'Follow up', lane: 'follow', db: 'follow_up', outcome: 'follow_up', who: 'You' },
   sold: { label: 'Sold', chip: 'Sold', lane: 'sold', db: 'sold', outcome: 'sold', who: 'You submit it' },
   not_interested: { label: 'Not interested', chip: 'Not interested', lane: 'closed', db: 'lost', outcome: 'not_interested', who: 'No one' },
@@ -94,10 +96,10 @@ export function seedEvents(l, now = SAMPLE_NOW) {
   }
 
   switch (l.stage) {
-    case 'new': team(addMin(c, 5), 'Calls within 5 minutes'); break
+    case 'new': team(addMin(c, 1), 'Calls right away'); break
     case 'calling': {
       tries(l.tries || 1, addMin(c, 3))
-      if (l.reply) add('text_received', l.reply.at, 'Replied', { text: l.reply.text, by: l.first_name, role: 'lead' })
+      if (l.reply) replyRows(l, l.reply.text, l.reply.at).forEach(r => add(r.kind, r.at, r.label, r))
       else if ((l.tries || 1) < MAX_TRIES) team(addMin(c, (l.tries || 1) * 24 * 60 + 60), `Calls again, try ${(l.tries || 1) + 1} of ${MAX_TRIES}`)
       else text('not_reached_d7', addMin(c, 7 * 24 * 60))
       break
@@ -134,8 +136,8 @@ export function seedEvents(l, now = SAMPLE_NOW) {
       const end = l.apptAt ? addMin(l.apptAt, 30) : addMin(c, 30)
       if (l.stage === 'no_show') {
         you('no_show', end, 'Marked no-show')
-        text('no_show_rebook', addMin(end, 1))
-        team(addMin(end, 45), 'Calls to rebook')
+        text('no_show_link', addMin(end, 1))
+        team(addMin(end, 45), 'Calls to rebook if they have not picked a time')
       }
       if (l.stage === 'follow_up') {
         you('outcome', end, `Showed. Follow up ${l.follow}`)
@@ -146,6 +148,8 @@ export function seedEvents(l, now = SAMPLE_NOW) {
         if (l.submitted) you('became_client', addMin(end, 20), 'Submitted for servicing. Now a client')
       }
       if (l.stage === 'not_interested') you('outcome', end, `Showed. Not interested: ${(l.reason || 'Not interested right now').toLowerCase()}`)
+      // P878: a reply after booking goes through the automatic replier too.
+      if (l.reply) replyRows(l, l.reply.text, l.reply.at).forEach(r => add(r.kind, r.at, r.label, r))
     }
   }
   return ev.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0))
@@ -163,32 +167,80 @@ export function applyMove(lead, stage, extra = {}, now = SAMPLE_NOW) {
   if (!AGENT_MOVES.includes(stage)) throw new Error(`An agent cannot move a lead to ${stage}`)
   const s = STAGES[stage]
   const [kind, word] = MOVE_ROWS[stage]
-  const label = stage === 'follow_up' && extra.follow ? `Follow up ${extra.follow}` : stage === 'not_interested' && extra.reason ? `Not interested: ${extra.reason.toLowerCase()}` : word
-  const rows = [{ id: `${lead.id}-m${(lead.events || []).length + 1}`, kind, at: now, label, state: 'done', by: 'You', role: 'you' }]
+  let label = stage === 'follow_up' && extra.follow ? `Follow up ${extra.follow}` : stage === 'not_interested' && extra.reason ? `Not interested: ${extra.reason.toLowerCase()}` : word
+  // P878 (N-C-45): changing an outcome already marked stays on the record: who, when, from what to what.
+  const changed = OUTCOME_STAGES.includes(lead.stage) && lead.stage !== stage
+  if (changed) label = `Changed from ${STAGES[lead.stage].label} to ${label}`
+  const rows = [{ id: `${lead.id}-m${(lead.events || []).length + 1}`, kind, at: now, label, state: 'done', by: 'You', role: 'you', ...(changed ? { audit: true } : {}) }]
   if (stage === 'no_show') {
-    rows.push({ id: `${lead.id}-m${(lead.events || []).length + 2}`, kind: 'text_sent', step: 'no_show_rebook', at: now, label: 'Text', state: 'scheduled', text: leadText('no_show_rebook', { lead: lead.first_name }), by: SENDER, role: 'auto' })
-    rows.push({ id: `${lead.id}-m${(lead.events || []).length + 3}`, kind: 'va_call', at: addMin(now, 45), label: 'Calls to rebook', state: 'scheduled', by: TEAM, role: 'team' })
+    // The one-tap rebook text waits out the short Undo (N-C-45), then sends; the team calls if they don't rebook.
+    rows.push({ id: `${lead.id}-m${(lead.events || []).length + 2}`, kind: 'text_sent', step: 'no_show_link', at: now, label: 'Text', state: 'scheduled', text: leadText('no_show_link', { lead: lead.first_name }), by: SENDER, role: 'auto' })
+    rows.push({ id: `${lead.id}-m${(lead.events || []).length + 3}`, kind: 'va_call', at: addMin(now, 45), label: 'Calls to rebook if they have not picked a time', state: 'scheduled', by: TEAM, role: 'team' })
   }
   const status = stage === 'sold' ? 'closed' : stage === 'not_interested' ? 'bad' : stage === 'follow_up' ? 'contacted' : lead.status
   return { ...lead, ...extra, stage, status, dbStage: s.db, outcome: s.outcome || (stage === 'no_show' || stage === 'showed' ? null : lead.outcome), fresh: false, events: [...(lead.events || []), ...rows] }
 }
 
-// The agent's own text back (a reply to a lead). Saved now; it sends once texting is switched on.
-export function addReply(lead, text, now = SAMPLE_NOW) {
-  const row = { id: `${lead.id}-r${(lead.events || []).length + 1}`, kind: 'text_sent', at: now, label: 'Your text', state: 'scheduled', text, by: 'You', role: 'you' }
-  return { ...lead, reply: lead.reply ? { ...lead.reply, seen: true } : null, events: [...(lead.events || []), row] }
+const OUTCOME_STAGES = ['showed', 'no_show', 'sold', 'follow_up', 'not_interested']
+
+// ── The automatic replier (P878) ───────────────────────────────────────────────────────────────────────────────
+// Nobody replies to a lead by hand: there is no reply box. An incoming text is read for what the person wants and
+// answered automatically. Anything that needs a person gets a holding reply plus a call task: the team before the
+// lead is booked, the agent once it is booked (or for a coverage question). People reply to texts with calls.
+export const AFTER_HOURS = { from: 18 * 60, to: 8 * 60 } // 6 PM to 8 AM Central
+const minuteOfDay = s => { const t = s.split('T')[1] || '00:00'; const [h, m] = t.split(':').map(Number); return h * 60 + m }
+export const isAfterHours = at => { const m = minuteOfDay(at); return m >= AFTER_HOURS.from || m < AFTER_HOURS.to }
+
+export function replyIntent(text) {
+  const t = String(text || '').trim().toLowerCase()
+  if (/^(stop|stopall|unsubscribe|quit|end|cancel)\b/.test(t) || /(don'?t|do not) (text|contact|call) me/.test(t)) return 'stop'
+  if (/resched|can'?t make|cannot make|different time|another time|change (the|my) time|move (it|my)/.test(t)) return 'reschedule'
+  if (/^(yes|yep|yeah|y|ok|okay|confirm(ed)?|sounds good|see you|will do)\b[^?]*$/.test(t)) return 'confirm'
+  if (/call me|\?|question|after \d|before \d|policy|coverage|how much/.test(t)) return 'call'
+  return 'unclear'
+}
+
+const BOOKED_STAGES = ['booked', 'showed', 'follow_up', 'sold']
+// The rows one incoming text leaves: the text, the automatic answer, and (when a person is needed) the call task.
+export function replyRows(lead, text, at) {
+  const intent = replyIntent(text)
+  const booked = BOOKED_STAGES.includes(lead.stage)
+  const appt = lead.apptAt ? `${dayLabel(lead.apptAt)} at ${timeLabel(lead.apptAt)}` : undefined
+  const rows = [{ kind: 'text_received', at, label: 'Replied', text, by: lead.first_name, role: 'lead', intent }]
+  const auto = step => rows.push({ kind: 'text_sent', at, label: 'Automatic reply', step, text: leadText(step, { lead: lead.first_name, appt }), by: SENDER, role: 'auto' })
+  if (intent === 'stop') { auto('stop_confirm'); rows.push({ kind: 'outcome', at, label: 'Opted out. All calls and texts stopped', by: 'Automatic', role: 'auto' }); return rows }
+  if (intent === 'confirm' && booked) { auto('confirm_reply'); rows.push({ kind: 'confirmed', at, label: 'Confirmed the appointment', by: 'Automatic', role: 'auto' }); return rows }
+  if (intent === 'reschedule' && booked) { auto('reschedule_reply'); return rows }
+  const late = isAfterHours(at)
+  auto(late ? 'holding_reply_after_hours' : 'holding_reply')
+  rows.push({ kind: 'call_task', at, label: booked ? 'Call task for you: call them back' : `Call task for the team: call ${lead.first_name}${late ? ' after 8 AM' : ''}`, by: 'Automatic', role: 'auto', task: booked ? 'you' : 'team' })
+  return rows
+}
+// A lead's open call task for the agent: the automatic replier made one and the agent hasn't called back yet.
+export const agentCallTask = l => !!l.reply && !l.reply.called && BOOKED_STAGES.includes(l.stage) && ['call', 'unclear'].includes(replyIntent(l.reply.text))
+// The client confirmed by text (the card says Confirmed).
+export const confirmedByText = l => !!l.reply && l.stage === 'booked' && replyIntent(l.reply.text) === 'confirm'
+
+// The agent called back about a call task: the task closes and the call is on the timeline.
+export function closeCallTask(lead, now = SAMPLE_NOW) {
+  const row = { id: `${lead.id}-k${(lead.events || []).length + 1}`, kind: 'call', at: now, label: 'You called them back', state: 'done', by: 'You', role: 'you' }
+  return { ...lead, reply: lead.reply ? { ...lead.reply, called: true } : null, events: [...(lead.events || []), row] }
 }
 
 // ── Needs you now ──────────────────────────────────────────────────────────────────────────────────────────────
 // The six things that need the agent, most urgent first, each with its one action. FYI items are quiet: the team
 // is already on them.
+// P878: no "Replied by text" (nobody replies by hand). A reply that needs the agent arrives as a call task; a sale not
+// yet submitted for servicing and billing actions need the agent too.
 export const TRIGGERS = [
   { key: 'live', title: 'Live transfer ringing', action: 'Answer' },
   { key: 'starting', title: 'Appointment starting', action: 'Join call' },
   { key: 'outcome', title: 'How did it go?', action: 'Mark outcome' },
-  { key: 'reply', title: 'Replied by text', action: 'Reply' },
+  { key: 'call', title: 'Asked you to call', action: 'Call' },
+  { key: 'finish', title: 'Finish servicing details', action: 'Finish' },
   { key: 'follow', title: 'Follow-up due today', action: 'Call back' },
   { key: 'servicing', title: 'A client needs you', action: 'Open' },
+  { key: 'billing', title: 'Billing', action: 'Open billing' },
 ].map((t, i) => ({ ...t, rank: i + 1 }))
 const T = Object.fromEntries(TRIGGERS.map(t => [t.key, t]))
 export const JOIN_BEFORE = 15 // minutes before an appointment it starts to need you
@@ -197,7 +249,7 @@ export const APPT_LENGTH = 30
 export const needsOutcome = (l, now = SAMPLE_NOW) => l.stage === 'showed' || (l.stage === 'booked' && !!l.apptAt && minutesFrom(l.apptAt, now) >= APPT_LENGTH)
 const starting = (l, now) => l.stage === 'booked' && !!l.apptAt && minutesFrom(now, l.apptAt) <= JOIN_BEFORE && minutesFrom(l.apptAt, now) < APPT_LENGTH
 
-export function needsYouNow({ leads = [], clients = [] }, now = SAMPLE_NOW) {
+export function needsYouNow({ leads = [], clients = [], billingNeeds = [], servicing = true }, now = SAMPLE_NOW) {
   const out = []
   const push = (t, l, what, when) => out.push({ id: `${t.key}-${l.id}`, trigger: t.key, rank: t.rank, title: t.title, action: t.action, ref: l.id, kind: 'lead', name: fullName(l), phone: l.phone, what, when })
   leads.filter(l => l.stage === 'ringing').forEach(l => push(T.live, l, `${l.city}, ${l.state} · on the line with the team`, 'Now'))
@@ -206,9 +258,11 @@ export function needsYouNow({ leads = [], clients = [] }, now = SAMPLE_NOW) {
     push(T.starting, l, `Appointment at ${timeLabel(l.apptAt)}`, m > 0 ? `In ${m} min` : 'Now')
   })
   leads.filter(l => needsOutcome(l, now)).forEach(l => push(T.outcome, l, l.stage === 'showed' ? 'You talked. Mark the outcome' : `Appointment at ${timeLabel(l.apptAt)} ended`, l.stage === 'showed' ? 'Now' : 'Ended'))
-  leads.filter(l => l.reply && !l.reply.seen).forEach(l => push(T.reply, l, `“${l.reply.text}”`, l.reply.at.slice(0, 10) === now.slice(0, 10) ? timeLabel(l.reply.at) : atLabel(l.reply.at, now)))
+  leads.filter(agentCallTask).forEach(l => push(T.call, l, `“${l.reply.text}”`, l.reply.at.slice(0, 10) === now.slice(0, 10) ? timeLabel(l.reply.at) : atLabel(l.reply.at, now)))
+  if (servicing) leads.filter(l => l.stage === 'sold' && !l.submitted).forEach(l => push(T.finish, l, 'Sold. Add the policy details so the team can service it', 'Today'))
   leads.filter(l => l.stage === 'follow_up' && l.follow === dayLabel(now)).forEach(l => push(T.follow, l, 'You set this callback', 'Today'))
   clients.filter(c => c.stage === 'needs_attention').forEach(c => out.push({ id: `servicing-${c.id}`, trigger: 'servicing', rank: T.servicing.rank, title: T.servicing.title, action: T.servicing.action, ref: c.id, kind: 'client', name: `${c.client_first_name} ${c.client_last_name}`, phone: c.client_phone, what: c.attention || 'Needs you', when: 'Today' }))
+  billingNeeds.forEach(b => out.push({ id: `billing-${b.key}`, trigger: 'billing', rank: T.billing.rank, title: b.title, action: T.billing.action, ref: b.key, kind: 'billing', name: b.name, phone: null, what: b.what, when: b.when }))
   return out.sort((a, b) => a.rank - b.rank)
 }
 
@@ -216,7 +270,8 @@ export function forYourInfo({ leads = [] }) {
   const out = []
   leads.forEach(l => {
     if (l.stage === 'missed') out.push({ id: `fyi-missed-${l.id}`, ref: l.id, name: fullName(l), title: 'Missed transfer', what: 'The team is booking a time' })
-    if (l.stage === 'no_show') out.push({ id: `fyi-noshow-${l.id}`, ref: l.id, name: fullName(l), title: 'No-show', what: 'The team is rebooking' })
+    if (l.stage === 'no_show') out.push({ id: `fyi-noshow-${l.id}`, ref: l.id, name: fullName(l), title: 'No-show', what: 'They got a link to pick a new time' })
+    if (l.stage === 'rebooking') out.push({ id: `fyi-rebook-${l.id}`, ref: l.id, name: fullName(l), title: 'Rebooking', what: 'They got your apology and a link to pick a new time' })
     if (l.stage === 'booked' && l.fresh) out.push({ id: `fyi-booked-${l.id}`, ref: l.id, name: fullName(l), title: 'New booking', what: `Booked for ${whenLabel(l.apptAt)}` })
   })
   return out
@@ -224,13 +279,14 @@ export function forYourInfo({ leads = [] }) {
 
 // ── Submit knows your leads ────────────────────────────────────────────────────────────────────────────────────
 // Matches for what the agent typed in the client name or phone: their leads and clients, best first.
-export function matchPeople(q, leads = [], clients = [], max = 6) {
+// chipOf: the words for a lead's stage (the agent's Submit passes its five-status chip, agentView.js agentChip).
+export function matchPeople(q, leads = [], clients = [], max = 6, chipOf = stageChipOf) {
   const text = String(q || '').trim().toLowerCase()
   const digits = phoneDigits(text)
   const byPhone = /^[\d\s()+.-]+$/.test(text)
   if (byPhone ? digits.length < 3 : text.length < 2) return []
   const rows = [
-    ...leads.map(l => ({ kind: 'lead', id: l.id, name: fullName(l), phone: l.phone, city: l.city, state: l.state, stage: stageChipOf(l), sold: l.stage === 'sold' })),
+    ...leads.map(l => ({ kind: 'lead', id: l.id, name: fullName(l), phone: l.phone, city: l.city, state: l.state, stage: chipOf(l), sold: l.stage === 'sold' })),
     ...clients.map(c => ({ kind: 'client', id: c.id, name: `${c.client_first_name} ${c.client_last_name}`, phone: c.client_phone, city: c.city, state: c.state, stage: 'Client' })),
   ]
   const score = r => {

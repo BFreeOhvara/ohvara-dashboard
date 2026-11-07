@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import UserNotifications
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -7,7 +8,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // P880: the live-transfer push's Yes / No buttons (category OHVARA_TRANSFER, sent by help-transfer).
+        // Both open the app, which sends the answer with the agent's sign-in (lib/push.js) and, on Yes, shows
+        // the lead. Capacitor's push plugin passes the button as actionId "YES" / "NO".
+        let yes = UNNotificationAction(identifier: "YES", title: "Yes, I'll take it", options: [.foreground])
+        let no = UNNotificationAction(identifier: "NO", title: "No", options: [.foreground])
+        let transfer = UNNotificationCategory(identifier: "OHVARA_TRANSFER", actions: [yes, no], intentIdentifiers: [],
+                                              options: [.customDismissAction])
+        UNUserNotificationCenter.current().setNotificationCategories([transfer])
         return true
     }
 

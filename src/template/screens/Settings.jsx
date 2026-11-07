@@ -1,22 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { User, Bell, Radio, CreditCard, SunMoon, Mail, LogOut, Trash2, ChevronRight, KeyRound } from 'lucide-react'
+import { User, Bell, Radio, CreditCard, SunMoon, Mail, LogOut, Trash2, ChevronRight, KeyRound, BadgeCheck } from 'lucide-react'
 import { useSampleSettings, useSampleActions, useSampleBilling, useSampleClients, useSampleLeads, useSampleOverview } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
 import { Drawer, Field, Seg, Switch, Chip, PillTabs, useNote, useAccount, initials } from '../kit'
-import { Select } from '../Select'
 import { TimeZoneSelect } from '../Clock'
 import { CallerIdCard } from '../CallerId'
 import { PhoneInput } from '../PhoneInput'
 import { CountUp, usd } from '../motion'
 import { paths } from '../paths'
-import { PLAN, planRange, rangeText } from '../../lib/planPricing'
+import { dailyTotal, rangeWords, tierOf } from '../spendPlan'
 import { BookedMeter } from '../PlanBuilder'
+import { HoursEditor } from '../Hours'
+import { LicenceCard } from '../Licence'
 
-const TABS = [['profile', 'Profile', User], ['alerts', 'Notifications', Bell], ['calls', 'Active and calls', Radio], ['billing', 'Billing', CreditCard], ['look', 'Appearance', SunMoon]]
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const TIMES = ['7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM']
-const NEEDS = ['ringing', 'missed', 'no_show']
+const TABS = [['profile', 'Profile', User], ['licence', 'Licence', BadgeCheck], ['alerts', 'Notifications', Bell], ['calls', 'Hours and calls', Radio], ['billing', 'Billing', CreditCard], ['look', 'Appearance', SunMoon]]
+const NEEDS = ['ringing', 'showed']
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
 
 // Discard / Save under every section. Save is off until something changed.
@@ -39,7 +38,7 @@ function ProfileCard({ profile, duty }) {
   const { data: clients } = useSampleClients()
   const { data: leads } = useSampleLeads()
   const { data: ov } = useSampleOverview()
-  const wk = planRange(billing.budget.weekly, billing.budget.mode).week
+  const wk = billing.expected.appts.booked
   const money = usd()
   const next = ov.nextAppt || ov.upNext[0]
   const stats = [[clients.length, 'Clients'], [leads.filter(l => NEEDS.includes(l.stage)).length, 'Need you'], [leads.filter(l => l.stage === 'booked').length, 'Booked']]
@@ -50,9 +49,9 @@ function ProfileCard({ profile, duty }) {
       <p>Agent · {duty ? 'Active for live calls' : 'Off for live calls'}</p>
       <span className="fx-prof-mail"><Mail size={13} aria-hidden="true" />{profile.email}</span>
       <div className="fx-usage is-teal">
-        <div className="tp-row tp-between"><b>Budget {money(billing.budget.weekly)} a week</b><b className="fx-usage-n"><CountUp value={billing.booked} /></b></div>
-        <BookedMeter booked={billing.booked} weekly={billing.budget.weekly} mode={billing.budget.mode} />
-        <small><b>{billing.booked}</b> booked this week · range {rangeText(wk)} · servicing {billing.servicing.status}</small>
+        <div className="tp-row tp-between"><b>Lead spend {money(dailyTotal(billing.spend))} a day</b><b className="fx-usage-n"><CountUp value={billing.booked} /></b></div>
+        <BookedMeter booked={billing.booked} range={wk} />
+        <small><b>{billing.booked}</b> booked this week · about {rangeWords(wk)} expected · servicing {billing.servicing.status}</small>
       </div>
       <ul className="fx-pstats">{stats.map(([n, label]) => <li key={label}><small>{label}</small><b className="tp-num"><CountUp value={n} /></b></li>)}</ul>
       {next && (
@@ -71,7 +70,7 @@ function ProfileCard({ profile, duty }) {
 export default function Settings() {
   const { data: s } = useSampleSettings()
   const { data: billing } = useSampleBilling()
-  const { setNotification, setDuty, saveSettings } = useSampleActions()
+  const { setNotification, setDuty, saveSettings, saveWeek } = useSampleActions()
   const [saved, saveTheme] = useThemePref()
   const note = useNote()
   const account = useAccount()
@@ -83,8 +82,7 @@ export default function Settings() {
   const [pDraft, setPDraft] = useState(s.profile)
   const [tz, setTz] = useState(s.timeZone)
   const [alerts, setAlerts] = useState(s.notifications)
-  const [hours, setHours] = useState(s.hours)
-  const [cDraft, setCDraft] = useState({ duty: s.duty, ...s.hours })
+  const [cDraft, setCDraft] = useState({ duty: s.duty, week: s.week })
   const [bill, setBill] = useState({ email: s.profile.email, receipts: true })
   const [bDraft, setBDraft] = useState(bill)
   const [look, setLook] = useState(saved)
@@ -98,11 +96,10 @@ export default function Settings() {
 
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
   const alertsDirty = !same(alerts, s.notifications)
-  const callsSaved = { duty: s.duty, ...hours }
+  const callsSaved = { duty: s.duty, week: s.week }
   const signOut = () => (account.live ? account.signOut() : note('Sign out works once you sign in for real'))
   const DeleteDialog = account.DeleteDialog
   const flip = (key, field, v) => setAlerts(alerts.map(n => (n.key === key ? { ...n, [field]: v } : n)))
-  const toggleDay = d => setCDraft(c => ({ ...c, days: c.days.includes(d) ? c.days.filter(x => x !== d) : DAYS.filter(x => x === d || c.days.includes(x)) }))
   const money = usd()
 
   return (
@@ -123,7 +120,7 @@ export default function Settings() {
               <Field label="Full name"><input value={pDraft.name} onChange={e => setPDraft({ ...pDraft, name: e.target.value })} /></Field>
               <Field label="Email"><input type="email" value={pDraft.email} onChange={e => setPDraft({ ...pDraft, email: e.target.value })} /></Field>
               <Field label="Phone"><PhoneInput value={pDraft.phone} onChange={(d, e164, shown) => setPDraft({ ...pDraft, phone: shown })} /></Field>
-              <Field label="Plan" hint="Change your budget on the Billing page"><input value={pDraft.plan} readOnly /></Field>
+              <Field label="Plan" hint="Change your lead spend on the Billing page"><input value={pDraft.plan} readOnly /></Field>
               <Field label="Time zone" hint="The clock on your Overview uses it"><TimeZoneSelect value={tz} onChange={setTz} /></Field>
             </div>
             <div className="fx-form-row">
@@ -133,6 +130,8 @@ export default function Settings() {
             </div>
             <FormFoot dirty={!same(pDraft, profile) || tz !== s.timeZone} onDiscard={() => { setPDraft(profile); setTz(s.timeZone) }} onSave={() => { setProfile(pDraft); if (tz !== s.timeZone) saveSettings({ timeZone: tz }); note('Profile saved') }} />
           </>}
+
+          {tab === 'licence' && <LicenceCard />}
 
           {tab === 'alerts' && <>
             <Head title="Notifications" sub="Everything shows in the bell. Choose what also comes to your phone or email." />
@@ -152,31 +151,25 @@ export default function Settings() {
           </>}
 
           {tab === 'calls' && <>
-            <Head title="Active and calls" sub="When you're active, live calls ring your phone. When you're off, we book callers on your calendar." />
+            <Head title="Hours and calls" sub="When you're active, live calls ring your phone. When you're off, we book callers on your calendar inside these hours." />
             <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Active for live calls</b><p className="tp-sub">{cDraft.duty ? 'Calls ring your phone' : 'Off. We book callers instead'}</p></div><Switch on={cDraft.duty} label="Active for live calls" onChange={v => setCDraft({ ...cDraft, duty: v })} /></div>
-            <div className="tp-field"><span>Working days</span>
-              <div className="fx-days" role="group" aria-label="Working days">{DAYS.map(d => <button key={d} type="button" aria-pressed={cDraft.days.includes(d)} className={`fx-day${cDraft.days.includes(d) ? ' is-on' : ''}`} onClick={() => toggleDay(d)}>{d}</button>)}</div>
-            </div>
-            <div className="fx-form-grid">
-              <Field label="Start"><Select label="Start" value={cDraft.start} onChange={v => setCDraft({ ...cDraft, start: v })} options={TIMES} /></Field>
-              <Field label="End"><Select label="End" value={cDraft.end} onChange={v => setCDraft({ ...cDraft, end: v })} options={TIMES} /></Field>
-            </div>
+            <HoursEditor week={cDraft.week} onChange={week => setCDraft({ ...cDraft, week })} tz={s.timeZone} />
             {/* P847: optional caller ID (saves on its own: each step is its own action) */}
             <CallerIdCard value={s.callerId} defaultPhone={profile.phone} onSave={callerId => saveSettings({ callerId })} />
             <div className="fx-form-row"><div className="tp-grow"><b>A number of your own for texts</b><p className="tp-sub">Coming later</p></div><Chip tone="mute">Not available yet</Chip></div>
             <FormFoot dirty={!same(cDraft, callsSaved)} onDiscard={() => setCDraft(callsSaved)} onSave={() => {
               if (cDraft.duty !== s.duty) setDuty(cDraft.duty)
-              setHours({ start: cDraft.start, end: cDraft.end, days: cDraft.days })
-              note('Active and calls saved')
+              saveWeek(cDraft.week)
+              note('Hours and calls saved. Clashes with booked appointments show on Calendar')
             }} />
           </>}
 
           {tab === 'billing' && <>
-            <Head title="Billing" sub="Your plan and where receipts go. Change your weekly budget on the Billing page." />
+            <Head title="Billing" sub="Your plan and where receipts go. Change your lead spend on the Billing page." />
             <div className="fx-billsum">
-              <div><small>Weekly budget</small><b className="tp-money">{money(billing.budget.weekly)}</b></div>
-              <div><small>Servicing a month</small><b className="tp-money">{money(PLAN.servicingMonthly)}</b></div>
-              <div><small>Next charge</small><b>{billing.next_charge}</b></div>
+              <div><small>Lead spend a day</small><b className="tp-money">{money(dailyTotal(billing.spend))}</b></div>
+              <div><small>{billing.plan === 'pilot' ? 'Plan' : 'Membership'}</small><b>{billing.plan === 'pilot' ? 'Pilot' : tierOf(dailyTotal(billing.spend)).label}</b></div>
+              <div><small>{billing.plan === 'pilot' ? 'Next top-up' : 'Next bill'}</small><b>{billing.plan === 'pilot' ? billing.wallet.next : billing.nextBill}</b></div>
             </div>
             <div className="fx-form-grid">
               <Field label="Receipts go to"><input type="email" value={bDraft.email} onChange={e => setBDraft({ ...bDraft, email: e.target.value })} /></Field>

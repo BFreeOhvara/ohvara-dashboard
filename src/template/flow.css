@@ -1150,8 +1150,9 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 
 /* Unread badges back in colour (top-right Messages and Notifications, the rail Messages badge) ... */
 .fx-badge { color: var(--sh-on-accent); background: var(--sh-acc); }
-/* ...neutral only where they sit on colour: an active (highlighted) rail item */
-.fx .fx-ri:is(.active, [aria-expanded="true"]) .fx-badge { color: var(--sh-count-ink); background: var(--sh-count); }
+/* ...and on an active (highlighted) rail item too. P876: never the grey block there (it was: the Training "17"); a ring
+   of the rail's own surface keeps the colour badge readable on the highlight. */
+.fx .fx-ri:is(.active, [aria-expanded="true"]) .fx-badge { color: var(--sh-on-accent); background: var(--sh-acc); box-shadow: 0 0 0 2px var(--bg-surface); }
 
 /* P843 ----------------------------------------------------------------------------------------------------------
    Glass panels over a backdrop that shows in both themes, the booked number as the hero, status-coloured avatars,
@@ -1309,9 +1310,10 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 .fx-wchart .fx-bar.is-later, .fx-wchart .fx-bar.is-zero { fill: color-mix(in srgb, var(--ov-mute) 28%, transparent); }
 .fx-wchart.is-days .fx-xs span:not(:first-child):not(:last-child):not(:nth-child(4)):not(:nth-child(7)) { display: block; }
 
-/* P867 — a count badge on a tab never takes the selected look: in every tab group (kit.jsx PillTabs / Seg, so the
-   three portals) and the top tabs (.fx-tb), selected or not, on colour or not, it is the neutral count (P841). */
+/* P867 → P876 — a count on a tab or pill is never block-highlighted (Brayden, Nov 7: the grey block on "This week 5"
+   and "Payouts 4"). In every tab group (kit.jsx PillTabs / Seg, so the three portals), the top tabs (.fx-tb) and the
+   + menu rows, selected or not, on colour or not, it is the bare number in the tab's own ink, a little quieter. */
 .tp .fx-pt.fx-pt > b.fx-pt-n.fx-pt-n.fx-pt-n, .tp .fx-pt.fx-pt.is-on.is-on > b.fx-pt-n.fx-pt-n.fx-pt-n,
-.tp .fx-pt.fx-pt .fx-tb.fx-tb.fx-tb, .tp .fx-pt.fx-pt.is-on.is-on .fx-tb.fx-tb.fx-tb {
-  color: var(--sh-count-ink); background: var(--sh-count); box-shadow: none;
+.tp .fx-pt.fx-pt .fx-tb.fx-tb.fx-tb, .tp .fx-pt.fx-pt.is-on.is-on .fx-tb.fx-tb.fx-tb, .tp .fx-mrow .fx-tb.fx-tb.fx-tb {
+  color: inherit; background: transparent; box-shadow: none; min-width: 0; height: auto; padding: 0; border-radius: 0; opacity: .72; font-variant-numeric: tabular-nums;
 }

@@ -3,7 +3,7 @@ import { Link, NavLink, useLocation, useOutlet } from 'react-router-dom'
 import {
   Home, PhoneIncoming, CalendarDays, Users, History, CreditCard, Settings, Search, Bell, Plus, Sun, Moon, MessageSquare,
   PhoneCall, LifeBuoy, Radio, ChevronRight, LogOut, ShieldCheck, Ellipsis, FileUp, TriangleAlert, Wallet, CalendarCheck, Clock3,
-  Smartphone, CircleHelp, StickyNote, PhoneOutgoing, Mail, Keyboard,
+  Smartphone, CircleHelp, StickyNote, PhoneOutgoing, Mail, Keyboard, Bug,
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
 import {
@@ -12,6 +12,7 @@ import {
 import { NeedRows, FyiList } from './NeedsNow'
 import { useNeedAction } from './needAction'
 import { Drawer, Avatar, Field, PillTabs, Seg, useAccount, useNote, initials } from './kit'
+import { ReportBug } from './ReportBug'
 import { avatarHue } from './avatarHue'
 import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit } from './motion'
 import { armEntrance } from '../adminshell/entrance'
@@ -33,7 +34,8 @@ import { isSearchKey } from '../lib/searchKey'
 import { appLink, loadAppConfig } from '../lib/appConfig'
 import { openExternal } from '../lib/native'
 import { STORES, STORES_SOON, appQr } from '../lib/appStores'
-import { PLAN, planRange, rangeText } from '../lib/planPricing'
+import { dailyTotal, rangeWords, tierOf } from './spendPlan'
+import { TalkDrawer, TalkStatus } from './Talk'
 import { SUPPORT_EMAIL } from '../components/auth/authUtils'
 import './glass.css'
 import './flow.css'
@@ -246,11 +248,16 @@ export function GetApp({ open, onClose }) {
 }
 
 // Help and support: where to ask, and the one shortcut worth knowing.
-function Help({ open, onClose }) {
+function Help({ open, onClose, onBug, onTalk }) {
   if (!open) return null
   return (
     <Drawer open center onClose={onClose} title="Help and support" sub="Ask the team anything about a client or your account.">
+      <TalkStatus />
       <ul className="tp-list">
+        {/* P878 (N-I-01): a real person calls back, from any screen */}
+        <li><button type="button" className="fx-mrow" onClick={() => { onClose(); onTalk() }}><PhoneCall size={17} aria-hidden="true" /><span className="tp-grow"><b>Talk to someone</b><small>Pick a time and a person from Ohvara calls you</small></span><ChevronRight size={15} aria-hidden="true" /></button></li>
+        {/* P876: Report a bug, the same pop-up in all three portals (ReportBug) */}
+        <li><button type="button" className="fx-mrow" onClick={() => { onClose(); onBug() }}><Bug size={17} aria-hidden="true" /><span className="tp-grow"><b>Report a bug</b><small>Something broken or not working right</small></span><ChevronRight size={15} aria-hidden="true" /></button></li>
         <li><Link to={paths.messages()} className="fx-mrow" onClick={onClose}><MessageSquare size={17} aria-hidden="true" /><span className="tp-grow"><b>Message the team</b><small>Fastest for anything about a client</small></span><ChevronRight size={15} aria-hidden="true" /></Link></li>
         <li><Link to={paths.requestService()} className="fx-mrow" onClick={onClose}><LifeBuoy size={17} aria-hidden="true" /><span className="tp-grow"><b>Request a service</b><small>Changes, cancellations, documents</small></span><ChevronRight size={15} aria-hidden="true" /></Link></li>
         <li><a href={`mailto:${SUPPORT_EMAIL}`} className="fx-mrow"><Mail size={17} aria-hidden="true" /><span className="tp-grow"><b>Email support</b><small>{SUPPORT_EMAIL}</small></span><ChevronRight size={15} aria-hidden="true" /></a></li>
@@ -328,21 +335,23 @@ function useHeadStats(page) {
   const { data: events } = useSampleAppointments()
   const { data: activity } = useSampleActivity()
   const { data: settings } = useSampleSettings()
-  const weekly = billing.budget.weekly
-  const wk = planRange(weekly, billing.budget.mode).week
-  const booked = S0 => S0(CalendarCheck, billing.booked, 'booked this week', { chip: [`range ${rangeText(wk)}`, 'blue'] })
+  const daily = dailyTotal(billing.spend)
+  const wk = billing.expected.appts.booked
+  const booked = S0 => S0(CalendarCheck, billing.booked, 'booked this week', { chip: [`about ${rangeWords(wk)}`, 'blue'] })
   const { data: nowList } = useSampleNeeds()
   const needs = nowList.now.filter(n => n.kind === 'lead').length
   const by = st => clients.filter(c => c.stage === st).length
   const money = usd()
   const S = (icon, n, label, extra = {}) => ({ icon, n, label, ...extra })
   return {
-    overview: [S(Users, clients.length, 'clients in your book', { chip: [`${by('protected')} protected`, 'up'] }), booked(S), S(Wallet, weekly, 'budget this week', { fmt: money })],
-    leads: [S(TriangleAlert, needs, 'need you now', { chip: needs ? ['Act now', 'warn'] : null }), S(CalendarCheck, leads.filter(l => l.stage === 'booked').length, 'booked'), S(Wallet, weekly, 'weekly budget', { fmt: money })],
+    overview: [S(Users, clients.length, 'clients in your book', { chip: [`${by('protected')} protected`, 'up'] }), booked(S), S(Wallet, daily, 'lead spend a day', { fmt: money })],
+    leads: [S(TriangleAlert, needs, 'need you now', { chip: needs ? ['Act now', 'warn'] : null }), S(CalendarCheck, leads.filter(l => l.stage === 'booked').length, 'booked'), S(Wallet, daily, 'lead spend a day', { fmt: money })],
     clients: [S(Users, clients.length, 'clients'), S(TriangleAlert, by('needs_attention'), 'need attention', { chip: by('needs_attention') ? ['See who', 'warn'] : null }), S(ShieldCheck, by('protected'), 'protected', { chip: ['On time', 'up'] })],
     calendar: [S(CalendarDays, events.length, 'this week'), S(Clock3, events.filter(e => e.date === 2).length, 'today'), S(PhoneCall, events.filter(e => /call/i.test(e.label)).length, 'client calls')],
     activity: [S(History, activity.filter(a => a.at.startsWith('Today')).length, 'today'), S(CalendarDays, activity.length, 'this week'), S(MessageSquare, activity.filter(a => a.kind === 'text').length, 'texts sent for you')],
-    billing: [S(Wallet, weekly, 'weekly budget', { fmt: money, chip: ['Draft', 'blue'] }), S(ShieldCheck, PLAN.servicingMonthly, 'servicing a month', { fmt: money }), booked(S)],
+    billing: billing.plan === 'pilot'
+      ? [S(Wallet, billing.walletNow.left, 'left this week', { fmt: money, chip: ['Pilot', 'blue'] }), S(Wallet, daily, 'lead spend a day', { fmt: money }), booked(S)]
+      : [S(Wallet, daily, 'lead spend a day', { fmt: money, chip: ['Draft', 'blue'] }), S(ShieldCheck, tierOf(daily).monthly || 0, `${tierOf(daily).label} a month`, { fmt: money }), booked(S)],
     // P843: no weekly submit count or 'no weekly limit' (old plan language): what is in servicing now
     submit: [S(ShieldCheck, clients.length, 'clients in servicing'), S(FileUp, by('setting_up'), 'setting up', { chip: by('setting_up') ? ['Team on it', 'blue'] : null }), S(Users, by('protected'), 'protected', { chip: ['On time', 'up'] })],
     settings: [S(Bell, settings.notifications.filter(n => n.push).length, 'alerts switched on'), S(CalendarDays, settings.hours.days.length, 'working days'), S(Users, clients.length, 'clients in your book')],
@@ -493,7 +502,9 @@ export default function TemplateFrame() {
       <AddNote open={panel === 'note'} onClose={close} />
       <LogCall open={panel === 'log'} onClose={close} />
       <GetApp open={panel === 'app'} onClose={close} />
-      <Help open={panel === 'help'} onClose={close} />
+      <Help open={panel === 'help'} onClose={close} onBug={() => setPanel('bug')} onTalk={() => setPanel('talk')} />
+      <TalkDrawer open={panel === 'talk'} onClose={close} />
+      <ReportBug open={panel === 'bug'} onClose={close} role="Agent" />
       <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} duty={duty} setDuty={setDuty} />
       <MoreBelow page={layout} />
     </div>

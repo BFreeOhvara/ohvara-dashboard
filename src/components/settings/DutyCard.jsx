@@ -5,6 +5,7 @@ import { useAgentDuty } from '../../hooks/useAgentDuty'
 import { useAuth } from '../../hooks/useAuth'
 import { Switch } from '../ui/Switch'
 import { SettingsCard, SettingsChip } from '../agent/AgentUI'
+import { PushTestCard } from './PushTestCard'
 
 // Goal 7 — Settings → Client contact, agents only. The agent's own Active switch for live
 // transfers (agent_duty, migration 174), the same hook as Today's switch, so the two agree.
@@ -15,7 +16,8 @@ export function DutyCard() {
   const duty = useAgentDuty()
   const [saved, setSaved] = useState(false)
 
-  if (duty.soon || duty.loading) return null
+  // P880: the phone app push test sits under this card (live calls only reach an agent who passed it).
+  if (duty.soon || duty.loading) return <PushTestCard />
   const { on, since, failed } = duty
 
   function flip(next) {
@@ -26,6 +28,7 @@ export function DutyCard() {
   }
 
   return (
+    <>
     <SettingsCard icon={Headset} title="Live call transfers"
       sub="Turn this on when you can take a live call. Transfers only come to you while you're active."
       right={!failed ? <SettingsChip tone={on ? 'on' : 'off'}>{on ? 'Active' : 'Not active'}</SettingsChip> : null}>
@@ -48,6 +51,8 @@ export function DutyCard() {
         </span>
       )}
     </SettingsCard>
+    <PushTestCard />
+    </>
   )
 }
 

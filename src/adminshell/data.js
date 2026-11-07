@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { useSampleBugs, setSampleBugStatus } from '../template/bugReport.js'
 import { SETUP_STEPS, setupOf, stepsFor } from './setup.js'
 
 // P849 — the one door to the Admin side's sample info, like src/template/ful/data.js for the VA side. Screens read only
@@ -293,13 +294,14 @@ const seedSettings = {
     { key: 'dayoff', label: 'A VA asks for a day off', push: true, email: false },
     { key: 'payment', label: 'A payment fails', push: true, email: true },
     { key: 'listen', label: 'A cancellation needs a listen', push: true, email: false },
-    { key: 'bug', label: 'A bug report comes in', push: false, email: true },
+    { key: 'bug', label: 'A bug report comes in', push: true, email: true }, // P876: an app notification, never a text
   ],
 }
+// P876: status new → seen → fixed, plus what Report a bug captures (page, browser, screen).
 const seedBugs = [
-  { id: 'bg-1', who: 'Dana Walker', text: 'Calendar shows my 9:00 AM twice on Monday.', at: 'Wed, 5:12 PM', shot: true, resolved: false },
-  { id: 'bg-2', who: 'Omar Haddad', text: 'The bank form closed before I could finish.', at: 'Tue, 7:40 PM', shot: false, resolved: false },
-  { id: 'bg-3', who: 'Priya Shah', text: 'Search did not find a client by policy number.', at: 'Mon, 11:03 AM', shot: true, resolved: true },
+  { id: 'bg-1', who: 'Dana Walker', role: 'Agent', text: 'Calendar shows my 9:00 AM twice on Monday.', at: 'Wed, 5:12 PM', shot: true, status: 'new', page: '/agent/calendar', browser: 'Chrome 142 on Mac', screen: '1512×982 screen' },
+  { id: 'bg-2', who: 'Omar Haddad', role: 'Agent', text: 'The bank form closed before I could finish.', expected: 'To save my bank details.', at: 'Tue, 7:40 PM', shot: false, status: 'seen', page: '/agent/settings', browser: 'Safari 19 on iOS', screen: '390×844 screen' },
+  { id: 'bg-3', who: 'Priya Shah', role: 'Agent', text: 'Search did not find a client by policy number.', at: 'Mon, 11:03 AM', shot: true, status: 'fixed', page: '/agent/clients', browser: 'Edge 142 on Windows', screen: '1920×1080 screen' },
 ]
 const seedAudit = [
   { id: 'au-1', at: 'Wed, 4:08 PM', who: ME.name, what: 'Turned access off', target: 'Ben Carter' },
@@ -443,9 +445,16 @@ export function useAdmThreads() {
     return { ...t, name: nameOf(s, t.who), role }
   }))
 }
-export function useAdmFeed() { const s = useStore(); return ok(s.feed) }
+// P876: a bug report sent from Help & Support lands in Bug reports and in the bell as an app notification (the
+// sample store, template/bugReport, until P858 reads bug_reports).
+const bugWhen = iso => { try { return new Date(iso).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }) } catch { return 'Just now' } }
+const fromSample = r => ({ id: r.id, who: r.ctx.who, role: r.ctx.role, text: r.text, expected: r.expected, at: bugWhen(r.ctx.at), shot: !!r.file, file: r.file?.name || null, status: r.status, page: r.ctx.page, browser: r.ctx.browser, screen: r.ctx.screen, sample: true })
+export const bugsWithSent = (bugs, sent) => [...sent.map(fromSample), ...bugs]
+export const feedWithSent = (feed, sent) => [...sent.map(r => ({ id: `fb-${r.id}`, who: r.ctx.who, text: `Reported a bug: ${r.text}`, at: bugWhen(r.ctx.at), kind: 'bug' })), ...feed]
+export const openBugCount = (bugs, sent) => [...bugs, ...sent].filter(b => b.status !== 'fixed').length
+export function useAdmFeed() { const s = useStore(); const sent = useSampleBugs(); return ok(feedWithSent(s.feed, sent)) }
 export function useAdmSettings() { const s = useStore(); return ok(s.settings) }
-export function useAdmBugs() { const s = useStore(); return ok(s.bugs) }
+export function useAdmBugs() { const s = useStore(); const sent = useSampleBugs(); return ok(bugsWithSent(s.bugs, sent)) }
 export function useAdmAudit() { const s = useStore(); return ok(s.audit) }
 export function useAdmConnect() { const s = useStore(); return ok(s.connect) }
 // P866 — the Setup pipeline: agent invites (Invited) and every agent not live yet, each with setupOf() worked out.
@@ -520,6 +529,7 @@ export function useAdmDraws() {
 // The page heads and the Overview read this: the business today in one place.
 export function useAdmDay() {
   const s = useStore()
+  const sentBugs = useSampleBugs()
   const week = funnel(s.leads)
   const byDay = WEEK.map(d => ({ day: d, name: dayName(d), ...funnel(s.leads.filter(l => l.day === d)), later: d > TODAY }))
   const unassigned = s.leads.filter(l => l.stage === 'unassigned')
@@ -535,7 +545,7 @@ export function useAdmDay() {
     onDuty: s.agents.filter(a => a.onDuty && a.active),
     needs: unassigned.length + missed.length + late.length + requests.length + failed.length + listen.length,
     unread: s.threads.reduce((n, t) => n + t.unread, 0),
-    openBugs: s.bugs.filter(b => !b.resolved).length,
+    openBugs: openBugCount(s.bugs, sentBugs),
   })
 }
 
@@ -645,7 +655,12 @@ export function useAdmActions() {
     savePayRules: payRules => set(s => ({ settings: { ...s.settings, payRules }, ...audit(s, 'Changed pay rules', `$${payRules.perCancel} a cancellation, cap ${payRules.holdCap}`) })),
     saveSettings: patch => set(s => ({ settings: { ...s.settings, ...patch } })),
     setTz: tz => set(s => ({ settings: { ...s.settings, tz } })),
-    resolveBug: id => set(s => ({ bugs: patchById(s.bugs, id, { resolved: true }), ...audit(s, 'Resolved a bug report', s.bugs.find(b => b.id === id).who) })),
+    // P876: new → seen → fixed. Reports sent this visit live in the sample store (template/bugReport), the rest here.
+    setBugStatus: (id, status, who) => {
+      const what = status === 'fixed' ? 'Marked a bug report fixed' : 'Marked a bug report seen'
+      if (id.startsWith('br-')) { setSampleBugStatus(id, status); set(s => audit(s, what, who)); return }
+      set(s => ({ bugs: patchById(s.bugs, id, { status }), ...audit(s, what, s.bugs.find(b => b.id === id).who) }))
+    },
     // Messages
     sendMessage: (threadId, text, from = 'me') => set(s => ({ threads: patchById(s.threads, threadId, t => ({ messages: [...t.messages, { id: `m${Date.now()}`, from, text, at: `Today, ${stamp()}` }] })) })),
     readThread: threadId => set(s => ({ threads: patchById(s.threads, threadId, { unread: 0 }) })),

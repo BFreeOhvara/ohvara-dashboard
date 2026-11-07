@@ -16,6 +16,7 @@ import Settings from './screens/Settings'
 import More from './screens/More'
 import Signup from './screens/Signup'
 import Welcome from './screens/Welcome'
+import Deedstone from './client/Deedstone'
 import FulFrame from './ful/FulFrame'
 import { fulRoutes } from './ful/routes'
 import { ME } from './ful/data'
@@ -39,6 +40,7 @@ export default function TemplateApp() {
         <Routes>
           <Route path="signup" element={<Signup />} />
           <Route path="welcome" element={<Welcome />} />
+          <Route path="d/:page" element={<Deedstone />} />
           <Route element={<TemplateFrame />}>
             <Route index element={<Overview />} />
             <Route path="leads" element={<Leads />} />

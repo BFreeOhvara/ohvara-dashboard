@@ -3,11 +3,12 @@ import { Link } from 'react-router-dom'
 import { ArrowUpRight, Check, Clock, PhoneCall, PhoneIncoming, LifeBuoy, MessageSquare, CalendarClock } from 'lucide-react'
 import { useFulDay, useFulPay, useFulAgents, minutesOf } from '../data'
 import { Avatar } from '../../kit'
-import { ShiftLine, DayOffDrawer } from '../Shift'
 import { CountUp, usd } from '../../motion'
 import { fp } from '../paths'
 import { CALL_WORD, CALL_TONE, KIND } from '../words'
 import { TrainingNudge } from '../../../fulshell/training/Training'
+import { ClockTile, MyQuality } from '../Clock879'
+import { MY_SHEET, MY_RATE, hoursOf, weekPay } from '../p879'
 
 // P845 — the VA Overview. Same Solvik shape as the agent's (head stats, one dominant tile, a right column, colour
 // carried by a few filled tiles) but VA content: the dominant tile is the next call with a live countdown and the
@@ -97,23 +98,22 @@ function QueueCard({ l, i }) {
 }
 
 export default function Overview() {
-  const [ask, setAsk] = useState(false)
   const { data: day } = useFulDay()
   const { data: pay } = useFulPay()
   const { data: agents } = useFulAgents()
   const next = day.next
   const cd = useCountdown(next?.at)
-  const money = usd()
   const queue = [...day.queue.callback_due, ...day.queue.new]
   const servToday = [...day.tasks.overdue, ...day.tasks.today]
-  const top = Math.max(3, ...pay.byDay.map(d => d.verified + d.checking))
+  const cents = usd(true)
+  const hrs = weekPay()
+  const hourDays = MY_SHEET.map(r => ({ day: r.day, name: r.d, h: hoursOf(r) }))
 
   return (
     <div className="tp-page fx-page fx-ovl fs-ov">
-      <ShiftLine className="fs-shift-top" onAsk={() => setAsk(true)} />
       <TrainingNudge />
-      <DayOffDrawer open={ask} onClose={() => setAsk(false)} />
       <div className="fx-ovl-main">
+        <ClockTile />
         <Tile className="fs-ov-hero" i={0} title="Next call" sub={next ? `Cancellation call for ${next.agent}'s client` : 'No more calls today'} to={fp('schedule')} label="Open Schedule">
           {next ? (
             <div className="fs-next">
@@ -159,19 +159,21 @@ export default function Overview() {
             </ul>
           </Tile>
 
-          <Tile className="is-fill is-green fs-ov-pay" i={2} title="This week's pay" sub={`Paid ${pay.payday} · ${money(pay.rate)} a cancellation`} to={fp('pay')} label="Open Pay">
-            <b className="fx-huge tp-money"><CountUp value={pay.earned} format={money} /></b>
-            <div className="fs-minibars" role="img" aria-label={pay.byDay.map(d => `${d.name} ${d.verified + d.checking}`).join(', ')}>
-              {pay.byDay.map(d => (
-                <span key={d.day} className={d.later ? 'is-later' : ''}>
-                  <i style={{ '--h': (d.verified + d.checking) / top }}><em style={{ '--h': d.verified / Math.max(1, d.verified + d.checking) }} /></i>
+          {/* P879 (Q76): pay is hourly, from clock in and out. */}
+          <Tile className="is-fill is-green fs-ov-pay" i={2} title="This week's pay" sub={`Paid ${pay.payday} · ${cents(MY_RATE)} an hour`} to={fp('pay')} label="Open Pay">
+            <b className="fx-huge tp-money"><CountUp value={hrs.pay} format={cents} /></b>
+            <div className="fs-minibars" role="img" aria-label={hourDays.map(d => `${d.name} ${d.h.toFixed(1)} hours`).join(', ')}>
+              {hourDays.map(d => (
+                <span key={d.day}>
+                  <i style={{ '--h': d.h / 11 }}><em style={{ '--h': 1 }} /></i>
                   <small>{d.name}</small>
                 </span>
               ))}
             </div>
-            <small className="fs-paynote">{money(pay.verified)} verified · {money(pay.checking)} checking</small>
+            <small className="fs-paynote">{hrs.hours.toFixed(1)} hours so far this week</small>
           </Tile>
         </div>
+        <MyQuality />
       </div>
 
       <div className="fx-ovl-side">

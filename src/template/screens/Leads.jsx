@@ -1,39 +1,47 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { PhoneIncoming, CalendarDays, Phone, Search, Wallet, Clock, MessageSquare, MapPin, Check, X, ClipboardCheck, Send } from 'lucide-react'
-import { useSampleLeads, useSampleLead, useSampleBilling, useSampleActions } from '../data'
-import { Avatar, Chip, Money, Seg, Drawer, Empty, Pending, useNote } from '../kit'
-import { stageChip, OutcomeDrawer, OutcomePrompt } from '../LeadOutcome'
+import { PhoneIncoming, CalendarDays, Phone, Search, Wallet, Clock, MapPin, Check, X, ClipboardCheck, Users, Link2, MessageSquareWarning, Archive, PhoneForwarded } from 'lucide-react'
+import { useSampleLeads, useSampleLead, useSampleBilling, useSampleActions, useSampleSettings } from '../data'
+import { Avatar, Chip, Seg, Drawer, Empty, Pending, Switch, useNote } from '../kit'
+import { stageChip, OutcomeDrawer, OutcomePrompt, NoShowUndo } from '../LeadOutcome'
 import { RecordDrawer, Stepper, Block } from '../Record'
-import { BudgetSlider } from '../PlanBuilder'
-import { LANES, LEAD_STEPS, laneOf } from '../stages'
-import { STAGES, MAX_TRIES, needsOutcome, atLabel, SAMPLE_NOW } from '../leadLifecycle'
+import { SpendSliders } from '../PlanBuilder'
+import { LANES, CLOSED_LANE, LEAD_STEPS, laneOf } from '../stages'
+import { needsOutcome, agentCallTask, confirmedByText, atLabel, SAMPLE_NOW } from '../leadLifecycle'
+import { agentStatusOf, agentEvents, closedReason } from '../agentView'
+import { dailyTotal, openSlotsPerWeek, spendOk } from '../spendPlan'
+import { usd } from '../motion'
+import { FeedbackDrawer } from '../Talk'
 import { paths } from '../paths'
 import '../leads873.css'
+import '../p878.css'
 
-// Leads as a board: one lane per step of the lead's path (P873, leadLifecycle.js), left to right. Stage tabs above
-// filter to one lane (?lane=). A card opens the lead in a drawer at its own URL (paths.lead); the board stays put
-// behind it. On a desktop each lane scrolls inside itself.
+// P878: Leads as a board of the agent's five statuses (agentView.js), left to right: Our team is on it, Booked, Needs
+// you, Follow up, Sold. Closed sits under a filter, with its reason on each lead. Never call attempts, the text sequence
+// or where a lead came from. Status tabs above filter to one lane (?lane=). A card opens the lead in a drawer at its own
+// URL (paths.lead); the board stays put behind it. On a desktop each lane scrolls inside itself.
 const shortWhen = l => {
   if (l.stage === 'ringing') return 'Now'
-  if (l.stage === 'new') return 'Calling now'
-  if (l.stage === 'calling') return `Try ${Math.min(l.tries || 1, MAX_TRIES)} of ${MAX_TRIES}`
-  if (l.stage === 'missed') return 'Rebooking'
-  if (STAGES[l.stage]?.lane === 'closed') return STAGES[l.stage].label
+  const st = agentStatusOf(l)
+  if (st === 'closed') return 'Closed'
+  if (st === 'on_it') return l.appt ? l.appt.replace(/, Nov \d+,/, '') : 'Team on it'
+  if (l.stage === 'sold') return l.submitted ? 'Submitted' : 'Add details'
   if (l.stage === 'follow_up' && l.follow) return `Call ${l.follow.split(',')[0]}`
   return l.appt ? l.appt.replace(/, Nov \d+,/, '') : 'No time'
 }
 const whenOf = l => (l.stage === 'ringing' ? 'Ringing now' : l.stage === 'follow_up' && l.follow ? `Call back ${l.follow}` : l.appt || `Came in ${l.assigned_at}`)
 const tagOf = l => {
   if (needsOutcome(l, SAMPLE_NOW)) return ['violet', 'Mark outcome']
-  if (l.reply && !l.reply.seen) return ['teal', 'Replied']
-  if (l.stage === 'calling') return null
-  return laneOf(l.stage).tone === 'warn' ? stageChip(l.stage, l) : null
+  if (agentCallTask(l)) return ['warn', 'Call them back']
+  if (l.stage === 'sold' && !l.submitted) return ['warn', 'Finish details']
+  if (confirmedByText(l)) return ['blue', 'Confirmed']
+  if (l.stage === 'ringing') return ['warn', 'Live transfer']
+  return null
 }
 
 function LeadCard({ l, i, onAnswer }) {
   const live = l.kind === 'live_call'
-  const tone = laneOf(l.stage).tone
+  const tone = laneOf(l).tone
   const tag = tagOf(l)
   return (
     <article className={`fx-card fx-lcard is-${tone}`} style={{ '--i': i }} data-stage={l.stage}>
@@ -63,7 +71,9 @@ function Row({ e, lead, last }) {
       <div>
         <span className="lc-ev-h"><b>{e.label}</b>{later && <span className="lc-sched">{e.kind === 'text_sent' ? 'Scheduled' : 'Next'}</span>}</span>
         <span className="lc-ev-by">{e.by} · {atLabel(e.at, SAMPLE_NOW)}</span>
-        {isText && <div className={`tp-bub lc-bub${theirs ? '' : ' me'}`}>{e.text}{!theirs && <small>Preview · sends when your leads go live</small>}{theirs && <small>From {lead.first_name}</small>}</div>}
+        {isText && <div className={`tp-bub lc-bub${theirs ? '' : ' me'}`}>{e.text}{!theirs && <small>Automatic · preview, sends when your leads go live</small>}{theirs && <small>From {lead.first_name}</small>}</div>}
+        {e.kind === 'call_task' && <span className={`lc-task is-${e.task === 'you' ? 'you' : 'team'}`}>{e.task === 'you' ? 'For you' : 'For our team'}</span>}
+        {e.audit && <span className="lc-task is-audit">Kept on the record</span>}
       </div>
     </li>
   )
@@ -71,29 +81,27 @@ function Row({ e, lead, last }) {
 
 function LeadDrawer({ id, onClose }) {
   const { data: lead } = useSampleLead(id)
-  const { moveLead, addLeadNote, replyLead } = useSampleActions()
+  const { moveLead, addLeadNote, callBack, askTeamToCall, sendBookingLink } = useSampleActions()
   const note = useNote()
   const [params, setParams] = useSearchParams()
   const [draft, setDraft] = useState('')
-  const [text, setText] = useState('')
   const [outcome, setOutcome] = useState(null)
   const [prompt, setPrompt] = useState(params.get('outcome') === '1')
-  const [replying, setReplying] = useState(params.get('reply') === '1')
-  const replyRef = useRef(null)
+  const [panel, setPanel] = useState(null)
   useEffect(() => {
-    if (params.get('outcome') || params.get('reply')) setParams({}, { replace: true })
+    if (params.get('outcome') || params.get('call')) setParams({}, { replace: true })
   }, [params, setParams])
-  useEffect(() => { if (replying) replyRef.current?.focus({ preventScroll: false }) }, [replying])
   const name = `${lead.first_name} ${lead.last_name}`
-  const lane = laneOf(lead.stage)
+  const lane = laneOf(lead)
   const current = LEAD_STEPS.some(s => s.key === lead.stage) ? lead.stage : 'booked'
   const chip = stageChip(lead.stage, lead)
   const asks = [['Mortgage balance', lead.mortgage_balance_band], ['Age', lead.age_band], ['Homeowner', lead.homeowner ? 'Yes' : 'No'], ['Smoker', lead.smoker ? 'Yes' : 'No'], ['Best time', lead.best_time], ['Phone', lead.phone]]
   const pick = k => (k === 'booked' ? (moveLead(lead.id, 'booked'), note(`${name} moved to Booked`)) : setOutcome(k))
-  const events = lead.events || []
+  const events = agentEvents(lead)
   const lastDone = events.reduce((n, e, i) => (e.state === 'done' ? i : n), -1)
   const closed = lane.key === 'closed'
-  const send = () => { replyLead(lead.id, text.trim()); setText(''); setReplying(false); note('Text saved. It sends when your leads go live') }
+  const task = agentCallTask(lead)
+  const call = () => { if (task) callBack(lead.id); note(`Calling ${lead.phone}. Calls connect when your leads go live`) }
   return (
     <RecordDrawer label={name} kicker={`Lead · came in ${lead.created}`} tone={lane.tone} onClose={onClose}
       hero={<>
@@ -104,27 +112,27 @@ function LeadDrawer({ id, onClose }) {
       </>}
       stepper={<Stepper label="Move this lead" steps={LEAD_STEPS} current={current} onPick={pick} />}
       actions={<>
-        <button type="button" className="tp-primary fx-accent" onClick={() => note(`Calling ${lead.phone}. Calls connect when your leads go live`)}><Phone size={16} />Call</button>
-        <button type="button" className="tp-btn ov-ghost" disabled={lead.stage === 'opted_out'} onClick={() => setReplying(true)}><MessageSquare size={14} />Text</button>
+        <button type="button" className="tp-primary fx-accent" disabled={closed} onClick={call}><Phone size={16} />Call</button>
+        <button type="button" className="tp-btn ov-ghost" disabled={closed} onClick={() => setPanel('team')}><Users size={14} />Ask our team to call</button>
+        {lead.stage === 'follow_up' && <button type="button" className="tp-btn ov-ghost" disabled={lead.linkSent} onClick={() => { sendBookingLink(lead.id); note(`Booking link sent. ${lead.first_name} picks a time on your calendar`) }}><Link2 size={14} />{lead.linkSent ? 'Link sent' : 'Send booking link'}</button>}
         <span className="tp-grow" />
         <button type="button" className="tp-btn ov-ghost" onClick={() => setOutcome('sold')}><Check size={14} />Sold</button>
         <button type="button" className="tp-btn ov-ghost" onClick={() => setOutcome('not_interested')}><X size={14} />Not interested</button>
       </>}>
+      <NoShowUndo lead={lead} />
+      {task && <button type="button" className="lc-nudge" onClick={call}><PhoneForwarded size={16} aria-hidden="true" /><span className="tp-grow"><b>{lead.first_name} asked you to call</b><small>{'“'}{lead.reply.text}{'”'} We told them someone calls shortly.</small></span><span className="lc-nudge-go">Call</span></button>}
       {needsOutcome(lead, SAMPLE_NOW) && <button type="button" className="lc-nudge" onClick={() => setPrompt(true)}><ClipboardCheck size={16} aria-hidden="true" /><span className="tp-grow"><b>How did it go?</b><small>{lead.stage === 'showed' ? 'You talked. Mark the outcome' : `The appointment at ${lead.appt} ended`}</small></span><span className="lc-nudge-go">Mark outcome</span></button>}
-      {lead.stage === 'sold' && !lead.submitted && <Link to={paths.submit(lead.id)} className="fx-nudge">Sold. Submit it for servicing and the team takes it from here.</Link>}
-      {closed && <p className="lc-closed">{lead.stage === 'opted_out' ? 'Opted out. All calls and texts stopped.' : 'Closed. No more calls or texts.'} {lead.stage === 'unreachable' ? 'A reply to a check-in brings them back as a new lead.' : ''}</p>}
+      {lead.stage === 'sold' && !lead.submitted && <Link to={paths.submit(lead.id)} className="fx-nudge">Finish the servicing details. The team takes it from there.</Link>}
+      {closed && <p className="lc-closed"><b>{closedReason(lead)}.</b> {lead.stage === 'opted_out' ? 'All calls and texts stopped.' : 'No more calls or texts.'} A reply from them brings them back as a new lead.</p>}
+      {lane.key === 'on_it' && lead.stage !== 'ringing' && <p className="lc-closed">Our team is on it. Nothing for you to do yet: you hear from us when they{'’'}re booked or on the line.</p>}
       <Block title="What they told us">
         <dl className="fx-facts">{asks.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
         <Pending>Consent wording pending</Pending>
       </Block>
-      <Block title="Timeline" sub="Every call, text and change, oldest first. Texts stop once they reply, book or opt out.">
+      <Block title="Messages and changes" sub="Every text is automatic, and so is every answer to theirs. If they need a person, a call task goes to you or our team. Read only.">
         {events.length
           ? <ol className="tp-tl fx-tl lc-tl">{events.map((e, i) => <Row key={e.id} e={e} lead={lead} last={i === lastDone} />)}</ol>
-          : <Empty title="Nothing yet" sub="Calls, texts and changes show here as they happen." />}
-        {(replying || (lead.reply && !lead.reply.seen)) && lead.stage !== 'opted_out' && <div className="lc-reply">
-          <textarea ref={replyRef} className="tp-input fx-ta" aria-label={`Text ${lead.first_name}`} placeholder={`Text ${lead.first_name}`} value={text} onChange={e => setText(e.target.value)} />
-          <span className="lc-reply-f"><small>Saved now. It sends when your leads go live.</small><button type="button" className="tp-primary sm fx-accent" disabled={!text.trim()} onClick={send}><Send size={14} aria-hidden="true" />Send</button></span>
-        </div>}
+          : <Empty title="Nothing yet" sub="Texts and changes show here as they happen." />}
         <Pending>Opt-out line pending lawyer review</Pending>
       </Block>
       <Block title="Notes" sub="Only you and our team see these">
@@ -132,8 +140,11 @@ function LeadDrawer({ id, onClose }) {
         <textarea className="tp-input fx-ta" aria-label="Add a note" placeholder="Add a note" value={draft} onChange={e => setDraft(e.target.value)} />
         {draft.trim() && <button type="button" className="tp-btn ov-ghost fx-self" onClick={() => { addLeadNote(lead.id, draft.trim()); setDraft(''); note('Note saved') }}>Save note</button>}
       </Block>
+      <button type="button" className="tp-link lc-fb" onClick={() => setPanel('feedback')}><MessageSquareWarning size={14} aria-hidden="true" />Feedback on how our team handled {lead.first_name}</button>
       <OutcomeDrawer lead={outcome ? lead : null} kind={outcome} onClose={() => setOutcome(null)} />
       {prompt && <OutcomePrompt lead={lead} onClose={() => setPrompt(false)} />}
+      <AskTeamDrawer open={panel === 'team'} lead={lead} onClose={() => setPanel(null)} onSend={why => { askTeamToCall(lead.id, why); note(`Our team calls ${lead.first_name}. You see it here`) }} />
+      <FeedbackDrawer open={panel === 'feedback'} lead={lead} onClose={() => setPanel(null)} />
     </RecordDrawer>
   )
 }
@@ -149,13 +160,19 @@ export default function Leads() {
   const [q, setQ] = useState('')
   const [spend, setSpend] = useState(false)
   const [params, setParams] = useSearchParams()
-  const laneKey = LANES.some(l => l.key === params.get('lane')) ? params.get('lane') : 'all'
-  const setLane = k => setParams(k === 'all' ? {} : { lane: k }, { replace: true })
+  const showClosed = params.get('closed') === '1'
+  const ALL = showClosed ? [...LANES, CLOSED_LANE] : LANES
+  const laneKey = ALL.some(l => l.key === params.get('lane')) ? params.get('lane') : 'all'
+  const setLane = k => setParams({ ...(k === 'all' ? {} : { lane: k }), ...(showClosed ? { closed: '1' } : {}) }, { replace: true })
+  const setClosed = on => setParams(on ? { closed: '1', lane: 'closed' } : {}, { replace: true })
   const n = q.trim().toLowerCase()
   const shown = leads.filter(l => (kind === 'all' || (kind === 'live' ? l.kind === 'live_call' : l.kind === 'appointment'))
     && (!n || `${l.first_name} ${l.last_name} ${l.city} ${l.phone}`.toLowerCase().includes(n)))
+  const servicing = billing.products !== 'leads'
+  const inLane = (lane, l) => agentStatusOf(l, { servicing }) === lane.key
   const answer = l => { moveLead(l.id, 'showed'); note(`You took the call with ${l.first_name}. The team dropped off`); navigate(paths.lead(l.id)) }
-  const lanes = laneKey === 'all' ? LANES : LANES.filter(l => l.key === laneKey)
+  const lanes = laneKey === 'all' ? ALL : ALL.filter(l => l.key === laneKey)
+  const money = usd()
   let card = 0
   return (
     <div className="tp-page fx-page fx-leads">
@@ -163,14 +180,16 @@ export default function Leads() {
         <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a lead" placeholder="Find by name, city or phone" value={q} onChange={e => setQ(e.target.value)} /></label>
         <Seg label="Lead type" value={kind} onChange={setKind} options={[{ key: 'all', label: 'All', count: leads.length }, { key: 'appointments', label: 'Appointments', count: leads.filter(l => l.kind === 'appointment').length }, { key: 'live', label: 'Live calls', count: leads.filter(l => l.kind === 'live_call').length }]} />
         <span className="tp-grow" />
-        <button type="button" className="fx-pillbtn" aria-label="Change your weekly budget" onClick={() => setSpend(true)}><Wallet size={15} aria-hidden="true" /><Money v={billing.budget.weekly} cents={false} /><small>a week</small></button>
+        <label className="lc-closedsw"><Archive size={15} aria-hidden="true" /><span>Show closed</span><Switch on={showClosed} label="Show closed leads" onChange={setClosed} /></label>
+        <button type="button" className="fx-pillbtn" aria-label="Change your daily lead spend" onClick={() => setSpend(true)}><Wallet size={15} aria-hidden="true" /><b className="tp-money">{money(dailyTotal(billing.spend))}</b><small>a day</small></button>
       </div>
 
-      <Seg label="Stage" className="lc-stages" value={laneKey} onChange={setLane} options={[{ key: 'all', label: 'All stages', count: shown.length }, ...LANES.map(l => ({ key: l.key, label: l.label, count: shown.filter(x => l.stages.includes(x.stage)).length }))]} />
+      <Seg label="Status" className="lc-stages" value={laneKey} onChange={setLane} options={[{ key: 'all', label: showClosed ? 'All' : 'All open', count: shown.filter(x => ALL.some(l => inLane(l, x))).length }, ...ALL.map(l => ({ key: l.key, label: l.label, count: shown.filter(x => inLane(l, x)).length }))]} />
+      <p className="lc-explain">{(ALL.find(l => l.key === laneKey) || { explain: 'Five statuses, left to right. Our team works every lead until it’s booked or on the line with you.' }).explain}</p>
 
       <div className={`fx-board lc-board${lanes.length === 1 ? ' is-one' : ''}`} role="region" aria-label="Leads by stage">
         {lanes.map((lane, li) => {
-          const rows = shown.filter(l => lane.stages.includes(l.stage))
+          const rows = shown.filter(l => inLane(lane, l))
           return (
             <section key={lane.key} className={`fx-lane is-${lane.tone}`} style={{ '--i': li }} aria-label={`${lane.label}, ${rows.length}`}>
               <header className="fx-lane-h"><i aria-hidden="true" /><b>{lane.label}</b><span>{rows.length}</span></header>
@@ -189,17 +208,30 @@ export default function Leads() {
   )
 }
 
-// The weekly budget, from the Leads page: same slider as Billing. Sample only, nothing is charged.
+// The daily lead spend, from the Leads page: the same sliders as Billing. Sample only, nothing is charged.
 function SpendDrawer({ open, onClose }) {
   const { data: billing } = useSampleBilling()
-  const { setBudget } = useSampleActions()
+  const { data: settings } = useSampleSettings()
+  const { setSpend } = useSampleActions()
   const note = useNote()
-  const [weekly, setWeekly] = useState(billing.budget.weekly)
-  const [mode, setMode] = useState(billing.budget.mode)
+  const [spend, setDraft] = useState(billing.spend)
   return (
-    <Drawer open={open} onClose={onClose} title="Weekly budget" sub={`Draft prices · starts with the charge on ${billing.next_charge}`}
-      footer={<button type="button" className="tp-primary fx-accent" onClick={() => { setBudget(weekly, mode); note('Budget saved. Sample only, nothing was charged'); onClose() }}>Save budget</button>}>
-      <BudgetSlider weekly={weekly} mode={mode} onWeekly={setWeekly} onMode={setMode} id="leads-budget" />
+    <Drawer open={open} onClose={onClose} title="Daily lead spend" sub="Draft prices · a change starts tomorrow at 12:00 AM your time"
+      footer={<button type="button" className="tp-primary fx-accent" disabled={!spendOk(billing.plan, spend)} onClick={() => { setSpend(spend); note('Lead spend saved. Starts tomorrow. Sample only, nothing was charged'); onClose() }}>Save lead spend</button>}>
+      <SpendSliders spend={spend} onSpend={setDraft} plan={billing.plan} id="leads-spend" openSlots={openSlotsPerWeek(settings.week)} />
+    </Drawer>
+  )
+}
+
+// Ask our team to call: a call task for the team on this lead, with a reason.
+const ASK_WHY = ['I can’t reach them', 'They want a different time', 'Check their details', 'Something else']
+function AskTeamDrawer({ open, lead, onClose, onSend }) {
+  const [why, setWhy] = useState(ASK_WHY[0])
+  return (
+    <Drawer open={open} onClose={onClose} title="Ask our team to call" sub={`${lead.first_name} ${lead.last_name} · ${lead.phone}`}
+      footer={<><button type="button" className="tp-primary fx-accent" onClick={() => { onSend(why); onClose() }}><Users size={15} />Ask our team</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
+      <Seg role="radiogroup" label="Why" className="lc-why" value={why} onChange={setWhy} options={ASK_WHY.map(w => ({ key: w, label: w }))} />
+      <p className="tp-sub">The next free person on our team calls {lead.first_name} right away (at 8 AM if it{'’'}s after hours). It shows on this lead.</p>
     </Drawer>
   )
 }

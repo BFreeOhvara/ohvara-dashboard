@@ -18,6 +18,7 @@ import { companyDay, dateLabel, rangeText } from '../../../lib/vaShifts'
 import { fp } from '../paths'
 import { CALL_WORD, CALL_TONE } from '../words'
 import { HelpDot } from '../../../fulshell/training/HelpDot'
+import { SwapsHolidays } from '../Clock879'
 
 // P846 — Schedule (it was Calls): the VA's week as the same calendar the agent has, with everything they have to do
 // at a time on it: cancellation calls, booked callbacks (people from the Queue) and the appointments they booked for
@@ -319,6 +320,7 @@ export default function Schedule() {
       </div>
 
       <Rota week={week} onAsk={() => setAsk(true)} />
+      <SwapsHolidays />
       <DayOffDrawer open={ask} onClose={() => setAsk(false)} />
 
       {id && kind === 'call' && <CallDrawer key={id} id={id} onClose={closeDrawer} />}
