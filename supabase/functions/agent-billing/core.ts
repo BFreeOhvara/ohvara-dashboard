@@ -92,7 +92,7 @@ const json = (body: unknown, status = 200) =>
 const STRIPE_VERSION = '2024-06-20'
 
 const TAG = { ohvara: 'agent_billing' }
-const GRACE_HOURS = 48 // keep in step with src/lib/billing.js
+const GRACE_HOURS = 72 // P884 (Q4): 3 days of grace. Keep in step with src/lib/billing.js
 const MAX_SKEW_SECONDS = 5 * 60
 
 // Where Stripe may send the agent back to. Anything else falls back to prod.
@@ -294,7 +294,7 @@ async function ensurePortalConfig(): Promise<string> {
 // ── Subscription -> profile ──────────────────────────────────────────────────
 
 const LIVE = ['active', 'trialing', 'past_due']
-const PROFILE_COLS = 'id, role, email, full_name, billing_exempt, billing_status, stripe_customer_id, stripe_subscription_id, billing_grace_until'
+const PROFILE_COLS = 'id, role, email, full_name, billing_exempt, billing_status, stripe_customer_id, stripe_subscription_id, billing_grace_until, billing_current_period_end'
 
 async function profileFor(admin: SupabaseClient, sub: any) {
   const customerId = idOf(sub.customer)
@@ -354,8 +354,15 @@ async function syncSubscription(admin: SupabaseClient, sub: any, profile?: any) 
       patch.billing_grace_until = null
   }
 
+  const before = p.billing_current_period_end ? Date.parse(p.billing_current_period_end) : null
   const { error } = await admin.from('profiles').update(patch).eq('id', p.id)
   if (error) throw new Error(`Profile update failed: ${error.message}`)
+  // P884: a renewed period means a new bill, so a waiting tier change takes over (billing_period_rolled). The
+  // function may not exist until the P884 migration is applied; a failure here never blocks the sync.
+  const after = patch.billing_current_period_end ? Date.parse(patch.billing_current_period_end as string) : null
+  if (before && after && after > before) {
+    try { await admin.rpc('billing_period_rolled', { p_agent: p.id }) } catch { /* not applied yet */ }
+  }
   // Later reads in the same request see the new state.
   Object.assign(p, patch)
   return { profile_id: p.id, billing_status: patch.billing_status ?? p.billing_status }

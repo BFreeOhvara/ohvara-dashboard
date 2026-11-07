@@ -4,7 +4,7 @@ import {
   Home, PhoneIncoming, PhoneCall, Users, LifeBuoy, Wallet, Settings, Search, Bell, Sun, Moon, MessageSquare,
   ChevronRight, LogOut, Ellipsis, CalendarCheck, Clock3, CircleHelp, Mail, Keyboard, TriangleAlert,
   ShieldCheck, CalendarPlus, CheckCircle2, Hourglass, CalendarDays, CalendarOff, Plus, Phone, AlarmClock, Headset, NotebookPen, Smartphone,
-  GraduationCap, Trophy, Bug,
+  GraduationCap, Trophy, Bug, ShieldAlert,
 } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { Drawer, Avatar, Field, PillTabs, useAccount, useNote, initials } from '../kit'
@@ -31,8 +31,10 @@ import { GetApp } from '../TemplateFrame'
 import { ReportBug } from '../ReportBug'
 import { DayOffDrawer } from './Shift'
 import { CALL_WORD } from './words'
+import { licensedIn } from './p879'
 import { fp, FUL_TABS, fulPageOf, fulTitleOf } from './paths'
 import '../glass.css'
+import '../p881.css'
 import '../flow.css'
 import '../palette.css'
 import './ful.css'
@@ -93,15 +95,19 @@ export function BookForAgent({ open, onClose, leadId = null }) {
   const book = useVaBooking()
   const note = useNote()
   const [ref, setRef] = useState(leadId || '')
-  const [agent, setAgent] = useState(agents[0].id)
+  const [picked, setAgent] = useState(null)
   const [date, setDate] = useState(5)
   const [time, setTime] = useState('')
   const who = queue.find(l => l.id === (leadId || ref)) || queue[0]
+  // P881 (N-C-22, N-A-12): only an agent licensed in the person's state can be booked; the database refuses the rest.
+  const where = who?.checklist?.state || who?.state || null
+  const agent = picked || (agents.find(a => licensedIn(a, where)) || agents[0]).id
   const ag = AGENTS.find(x => x.id === agent)
+  const licensed = licensedIn(ag, where)
   const zone = useClientZone(who?.checklist?.state || who?.state, who?.city)
   const appts = useAgentAppts(agent)
   const slots = agentSlots({ date: isoOf(date), clocks: APPT_CLOCKS, clientTz: zone.tz, appts, length: ag.appt?.length, buffer: ag.appt?.buffer, hours: { tz: ag.tz, open: ag.open, close: ag.close, days: ag.days } })
-  const pick = slots.find(x => x.clock === time && x.open && x.iso >= NOW_ISO)
+  const pick = licensed ? slots.find(x => x.clock === time && x.open && x.iso >= NOW_ISO) : null
   if (!open) return null
   if (!who) {
     return <Drawer open center onClose={onClose} title="Book for an agent" sub="The queue is empty."><p className="fx-calm">No one is waiting to be booked.</p></Drawer>
@@ -119,8 +125,9 @@ export function BookForAgent({ open, onClose, leadId = null }) {
       {!leadId && <Field label="Who"><Select label="Who" value={who.id} onChange={setRef} options={queue.map(l => ({ value: l.id, label: l.name, sub: `${l.city}, ${l.state}` }))} /></Field>}
       <div className="tp-field"><span>Agent</span>
         <PillTabs role="radiogroup" label="Agent" className="fx-chips" itemClass="fx-chip fs-agent" value={agent} onChange={a => { setAgent(a); setTime('') }}
-          items={agents.map(a => ({ key: a.id, label: <><Avatar name={a.name} /><b>{a.name.split(' ')[0]}</b></> }))} />
-        <small className="tp-sub">{ag.hours}, {zoneAbbr(ag.tz)}</small>
+          items={agents.map(a => ({ key: a.id, label: <><Avatar name={a.name} /><b>{a.name.split(' ')[0]}</b>{!licensedIn(a, where) && <small className="fs-unlic">{where ? `not in ${where}` : 'state?'}</small>}</> }))} />
+        <small className="tp-sub">{ag.hours}, {zoneAbbr(ag.tz)} · licensed in {(ag.states || []).join(', ')}</small>
+        {!licensed && <p className="lic-va-warn" role="alert"><ShieldAlert size={13} aria-hidden="true" />{where ? `${ag.name.split(' ')[0]} isn't licensed in ${where}. Pick an agent who is, or leave it for the team.` : "Confirm the person's state on the call first."}</p>}
       </div>
       <SlotPick days={BOOK_DAYS} day={date} onDay={setDate} slots={slots} value={time} onPick={setTime} zone={zone} place={`${who.city}, ${who.checklist?.state || who.state}`} viewerTz={book.viewerTz}
         notBefore={NOW_ISO} hint={`Inside ${ag.name.split(' ')[0]}’s hours. Greyed-out times are within ${gap} minutes of another appointment.`} />

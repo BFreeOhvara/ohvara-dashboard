@@ -85,10 +85,13 @@ export const AGENT_RULES = [
   ['free', 'On another call'], ['notChecking', 'Already being checked'], ['licensed', 'Not licensed in this state'], ['notPaused', 'Paused'],
 ]
 export function agentCheck(agent, state) {
-  const a = { ...agent, licensed: (agent.states || []).includes(state) }
+  const a = { ...agent, licensed: licensedIn(agent, state) }
   const fail = AGENT_RULES.find(([k]) => !a[k])
-  return { ok: !fail, why: fail ? fail[1] : null, bookOk: a.licensed }
+  const why = fail ? (fail[0] === 'licensed' && !state ? "Confirm the lead's state first" : fail[1]) : null
+  return { ok: !fail, why, bookOk: a.licensed }
 }
+// P881 (N-C-22, Q61): the server gate is licence_allows(); this is the same rule on sample data. No state = no.
+export const licensedIn = (agent, state) => !!state && state !== 'NY' && (agent?.states || []).includes(state)
 export const SAMPLE_AGENTS = [
   { id: 'ag-dana', name: 'Dana Walker', states: ['TX', 'OK'], liveCalls: true, app: true, hours: true, free: true, notChecking: true, notPaused: true },
   { id: 'ag-priya', name: 'Priya Shah', states: ['FL', 'GA'], liveCalls: true, app: true, hours: true, free: false, notChecking: true, notPaused: true },

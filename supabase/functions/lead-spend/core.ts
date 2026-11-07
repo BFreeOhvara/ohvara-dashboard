@@ -1,0 +1,144 @@
+// lead-spend (Prompt 884) — charges the prepaid weekly lead spend. index.ts wires Deno; all the logic is here, free
+// of Deno globals, so it runs against a mocked Stripe and an in-memory store in core.test.ts.
+//
+// The money rules live in the database (supabase/migrations/p884_billing_engine.sql): what a week needs, rollover,
+// delivered spend capped at the balance, what stops when. This function only moves money for charges the database
+// has already made (lead_spend_charges), and reports each result back (lead_spend_charge_result).
+//
+//   POST (signed-in agent, Bearer JWT)
+//     { action: 'set_spend', appts_cents, live_cents }  lead_spend_set, then charges a raise for the days left at once.
+//                                                       A paid plan under $50 a day → 400 { code: 'min_daily' }.
+//     { action: 'pay_now' }                             after a card update: failed charges back to due, charged now.
+//     { action: 'pause', paused }                       lead_spend_pause.
+//   POST (pg_cron, header x-ohvara-cron)
+//     { action: 'run' }                                 every 15 minutes: charges everything due, re-checks processing.
+//
+// Each charge is an off-session PaymentIntent on the customer's default payment method (the card or bank account the
+// agent saved through agent-billing; card and bank numbers are only ever in Stripe). The idempotency key is the
+// charge's key plus its attempt number, so a crash and a re-run never charge twice; a retry after a decline is a new
+// attempt. Statement descriptor suffix "LEAD SPEND".
+//
+// TEST MODE ONLY: unless the key starts with sk_test_, nothing is charged and nothing is sent to Stripe; charges stay
+// due. A livemode PaymentIntent is never accepted. Going live is Brayden's switch (the live key), a hard stop.
+
+import { type Stripe, StripeError } from '../_shared/fulfillmentPayouts.ts'
+
+export type Charge = {
+  id: string; agent_id: string; key: string; kind: 'weekly' | 'change' | 'va_cost'; amount_cents: number
+  attempts: number; stripe_pi: string | null; week_start: string; note: string | null; customer: string | null; recheck: boolean
+}
+
+export type Store = {
+  userFromJwt(jwt: string): Promise<string | null>
+  cronOk(secret: string): Promise<boolean>
+  // A service-role RPC. Throws { message, hint?, code? } like PostgREST.
+  rpc(name: string, args: Record<string, unknown>): Promise<any>
+}
+
+export const isTestKey = (key: string | undefined) => !!key && key.startsWith('sk_test_')
+
+export const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+
+const cents = (v: unknown) => (Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 100000 ? (v as number) : null)
+
+// What one Stripe answer means for the charge.
+export function outcomeOf(pi: any): { status: 'paid' | 'processing' | 'failed'; failure?: string } {
+  if (pi?.livemode) return { status: 'failed', failure: 'Live payments are off (test mode only)' }
+  switch (pi?.status) {
+    case 'succeeded': return { status: 'paid' }
+    case 'processing': return { status: 'processing' }
+    case 'requires_action': return { status: 'failed', failure: 'Your bank wants you to confirm this payment. Update your card to try again.' }
+    default: return { status: 'failed', failure: pi?.last_payment_error?.message || 'The payment was declined' }
+  }
+}
+
+const words = (c: Charge) => c.kind === 'va_cost' ? 'Team time (pilot)' : c.kind === 'change' ? 'Lead spend (raised this week)' : 'Lead spend, week of ' + c.week_start
+
+async function chargeOne(store: Store, stripe: Stripe, c: Charge) {
+  let pi: any = null
+  try {
+    if (c.recheck && c.stripe_pi) {
+      pi = await stripe('GET', `payment_intents/${c.stripe_pi}`)
+    } else {
+      if (!c.customer) return store.rpc('lead_spend_charge_result', { p_id: c.id, p_status: 'failed', p_failure: 'No card or bank account on file' })
+      const customer = await stripe('GET', `customers/${c.customer}`)
+      const method = customer?.invoice_settings?.default_payment_method
+      const pm = typeof method === 'string' ? method : method?.id
+      if (!pm) return store.rpc('lead_spend_charge_result', { p_id: c.id, p_status: 'failed', p_failure: 'No card or bank account on file' })
+      pi = await stripe('POST', 'payment_intents', {
+        amount: c.amount_cents, currency: 'usd', customer: c.customer, payment_method: pm,
+        off_session: true, confirm: true, description: words(c), statement_descriptor_suffix: 'LEAD SPEND',
+        metadata: { ohvara: 'lead_spend', charge_id: c.id, agent_id: c.agent_id, kind: c.kind, week_start: c.week_start },
+      }, { idempotencyKey: `lead_spend:${c.key}:${c.attempts}` })
+    }
+  } catch (e) {
+    if (e instanceof StripeError) {
+      // A decline comes back as an error that still names the PaymentIntent.
+      const err = (e as StripeError).raw || {}
+      return store.rpc('lead_spend_charge_result', {
+        p_id: c.id, p_status: 'failed', p_pi: err.payment_intent?.id ?? null, p_failure: err.message || e.message || 'The payment was declined',
+      })
+    }
+    // Network or Stripe outage: leave it processing; the next run retries with the same idempotency key.
+    return { left: c.id, error: String((e as Error)?.message || e) }
+  }
+  const o = outcomeOf(pi)
+  return store.rpc('lead_spend_charge_result', { p_id: c.id, p_status: o.status, p_pi: pi?.id ?? null, p_failure: o.failure ?? null })
+}
+
+export async function runCharges(store: Store, stripe: Stripe | null, key: string | undefined, agent: string | null = null) {
+  if (!isTestKey(key) || !stripe) return { skipped: 'test mode only', charged: 0 }
+  const claimed: Charge[] = (await store.rpc('lead_spend_claim_charges', { p_limit: 25, p_agent: agent })) || []
+  const results = []
+  for (const c of claimed) results.push({ id: c.id, result: await chargeOne(store, stripe, c) })
+  return { charged: claimed.length, results }
+}
+
+export async function handle(req: Request, store: Store, stripe: Stripe | null, key: string | undefined): Promise<Response> {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
+  let body: any = {}
+  try { body = await req.json() } catch { return json({ error: 'Bad JSON' }, 400) }
+
+  const cron = req.headers.get('x-ohvara-cron')
+  if (cron) {
+    if (!(await store.cronOk(cron))) return json({ error: 'Not allowed' }, 401)
+    if (body.action !== 'run') return json({ error: 'Unknown action' }, 400)
+    return json(await runCharges(store, stripe, key))
+  }
+
+  const jwt = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '')
+  const me = jwt ? await store.userFromJwt(jwt) : null
+  if (!me) return json({ error: 'Not signed in' }, 401)
+
+  try {
+    switch (body.action) {
+      case 'set_spend': {
+        const a = cents(body.appts_cents), l = cents(body.live_cents)
+        if (a == null || l == null) return json({ error: 'Spend must be whole cents, $0 to $1,000 a day' }, 400)
+        const set = await store.rpc('lead_spend_set', { p_appts_cents: a, p_live_cents: l, p_agent: me })
+        const charged = set?.charge_id ? await runCharges(store, stripe, key, me) : null
+        return json({ ...set, charged })
+      }
+      case 'pay_now': {
+        const retried = await store.rpc('lead_spend_retry', { p_agent: me })
+        return json({ retried, charged: await runCharges(store, stripe, key, me) })
+      }
+      case 'pause':
+        if (typeof body.paused !== 'boolean') return json({ error: 'paused must be true or false' }, 400)
+        await store.rpc('lead_spend_pause', { p_paused: body.paused, p_agent: me })
+        return json({ paused: body.paused })
+      default:
+        return json({ error: 'Unknown action' }, 400)
+    }
+  } catch (e: any) {
+    if (e?.hint === 'min_daily') return json({ error: e.message, code: 'min_daily' }, 400)
+    if (e?.code === '42501') return json({ error: e.message || 'Not allowed' }, 403)
+    return json({ error: e?.message || 'Something went wrong' }, 500)
+  }
+}

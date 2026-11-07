@@ -1,19 +1,26 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Phone as PhoneIc, PhoneOff, Mic, MicOff, Pause, Play, Grid3x3, History, CircleCheck, PhoneMissed, ChevronRight, Search,
-  Volume2, UserPlus, Merge, PhoneForwarded, NotebookPen, CircleDot, X, ArrowUpRight, Building2, ShieldCheck, ListTodo,
+  Volume2, UserPlus, Merge, PhoneForwarded, NotebookPen, X, ArrowUpRight, Building2, ShieldCheck, ListTodo,
+  Ban, LifeBuoy, Voicemail, ArrowRightLeft, Undo2, CircleSlash, Timer, Plus,
 } from 'lucide-react'
-import { useFulCalls, useFulActions, useFulDay, useFulQueue, useFulTasks, AGENTS } from './data'
+import { useFulCalls, useFulActions, useFulDay, useFulQueue, useFulTasks, AGENTS, NOW_ISO } from './data'
 import { Avatar, Field, PillTabs, useNote } from '../kit'
 import { useClientZone } from '../useClientZone'
 import { clockOf, zoneAbbr } from '../../lib/callSlots'
 import { clock } from '../../lib/portalPhone'
 import { PAD } from '../../components/fulfillment/phoneIcons'
 import { CARRIER_CATALOG } from '../../lib/carriers/catalog'
-import { newCall, callReducer, lineCount, heldFor, XFER_WORDS, xferOpen, CHECK_MS, BOUNCE_MS, XFER_BOOK, XFER_GO, xferFromCheck, xferRefused, SAMPLE_REACH, REACH_WORDS } from './callLine'
+import {
+  newCall, callReducer, lineCount, heldFor, XFER_WORDS, xferOpen, CHECK_MS, BOUNCE_MS, XFER_BOOK, XFER_GO, xferFromCheck, xferRefused, SAMPLE_REACH, REACH_WORDS,
+  holdOnlyCarrier, RING_KIND, ringLeft, initialPresence, presenceReducer, wrapLeft, wrapStuck, PRESENCE_WORDS, MISSED_TO_AWAY,
+} from './callLine'
+import { predial, predialLine } from './predial'
+import { flagsOf } from './p879'
 import { useRealXfer } from '../../hooks/useLiveTransfer'
+import { useRealLine } from '../../hooks/useRealLine'
 import { CALL_WORD, KIND } from './words'
 import { fp } from './paths'
 import { HelpDot } from '../../fulshell/training/HelpDot'
@@ -29,8 +36,14 @@ import { HelpDot } from '../../fulshell/training/HelpDot'
 // on the line can be dropped. Transfer is the live transfer (Check agent → push → cold transfer → bounce-back).
 // Calling stays OFF (recovery_config.voice_live): the call screen keeps the time, the line and the notes while the VA
 // dials from a phone, and says so. Sample info only; nothing leaves the browser. The call itself: ./callLine.
+// P882: no call recording at launch (Q51), so the phone has no Record button and says nothing about recordings. The real engine
+// (useRealLine: rings from routing, the pre-dial check, hold/keypad/merge, Do not call) takes over once calling is on;
+// until then everything below runs on the sample.
 const CALLING_ON = false
-const RECORD_NOTICE = null // the wording is Brayden's (blueprint "recording with a notice"); null shows a placeholder
+
+// P882 sample: calls placed to a lead in the last 24 hours (minutes before the sample clock). Joyce in Florida is at
+// the state's limit of 3.
+const SAMPLE_ATTEMPTS = { 'vq-9': [23 * 60, 5 * 60, 60] }
 
 const OPEN = ['booked', 'no_answer']
 const plain = s => String(s || '').toLowerCase()
@@ -78,12 +91,33 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
   const { markCall, hideLive } = useFulActions()
   const note = useNote()
   const navigate = useNavigate()
+  const loc = useLocation()
   const [tab, setTab] = useState('todo')
   const [call, act] = useReducer((c, a) => (a.type === 'start' ? newCall(a.who, a.now) : a.type === 'clear' ? null : callReducer(c, a)), null)
-  const [sheet, setSheet] = useState(null) // during a call: 'add' | 'xfer' | 'notes' | 'line'
+  const [sheet, setSheet] = useState(null) // during a call: 'add' | 'xfer' | 'notes' | 'dnc' | 'handoff'
   const [log, setLog] = useState([])       // calls finished this visit
+  const [opted, setOpted] = useState(() => new Set()) // P882 sample: people opted out on a call this visit
+  const [pres, presDo] = useReducer(presenceReducer, initialPresence)
+  const rl = useRealLine()                 // P882: the real engine, null while calling is off
+  const offer = rl?.offer || null
   const box = useRef(null)
-  const now = useNow(call && !call.end ? 1000 : 30000)
+  const now = useNow((call && (!call.end || pres.status === 'wrap')) || ringId || offer ? 1000 : 30000)
+  // P882: the pre-dial check runs on the sample clock for sample rows, on the real clock on a real line.
+  const clockNow = rl ? now : Date.parse(NOW_ISO)
+
+  // The server's presence wins on a real line.
+  const rlPresence = rl?.presence
+  useEffect(() => { if (rlPresence) presDo({ type: 'server', presence: rlPresence, skew: rl?.skew || 0 }) }, [rlPresence, rl?.skew])
+
+  // P882: who can be called right now (consent, opt-out and do-not-call, calling hours in their state, the state's
+  // attempt limit). A blocked row says why and when; its Call button is off.
+  const check = w => {
+    if (w.role === 'carrier') return { ok: true }
+    const lead = w.kind === 'lead' ? queue.find(x => x.id === w.id) : null
+    const f = lead ? flagsOf(lead) : {}
+    const attempts = (SAMPLE_ATTEMPTS[w.id] || []).map(m => Date.parse(NOW_ISO) - m * 60000)
+    return predial({ state: w.state, consent: true, writtenConsent: true, optedOut: !!f.optedOut || opted.has(w.number), attempts }, clockNow)
+  }
 
   // What the system gave this VA to call, in the order to call it.
   const todo = useMemo(() => {
@@ -111,16 +145,68 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
     return null
   }
 
-  const ring = ringId && !call ? calls.find(x => x.id === ringId) : null
-  const ringWho = ring ? fromCall(ring) : null
-  const subject = call?.who || ringWho
+  // A ring: the server's offer on a real line, else the sample call ringing in from the frame. Both last 15 s.
+  const ring = !call && !offer && ringId ? calls.find(x => x.id === ringId) : null
+  const ringWho = ring ? { ...fromCall(ring), ringKind: 'call_in' } : null
+  const offerWho = !call && offer ? { key: `o-${offer.id}`, kind: offer.leadId ? 'lead' : 'call', id: offer.leadId || offer.policyId, role: offer.leadId ? 'lead' : 'client', name: offer.name, number: offer.last4 ? `…${offer.last4}` : '', state: offer.state, reason: RING_KIND[offer.kind] || 'Call', ringKind: offer.kind, callSid: offer.callSid, leadId: offer.leadId, notes: offer.detail?.notes || '' } : null
+  const ringing = ringWho || offerWho
+  const ringKey = offer ? `o-${offer.id}` : ringId || null
+  const offerAt = offer?.at ?? null
+  const [ringAt, setRingAt] = useState(null)
+  useEffect(() => {
+    if (!ringKey) return undefined
+    const at = offerAt ?? Date.now()
+    const t = setTimeout(() => { setRingAt(at); presDo({ type: 'ring' }) })
+    return () => clearTimeout(t)
+  }, [ringKey, offerAt])
+  // A ring nobody answered (the frame's 15 s timeout, or Not now) is a missed ring; two in a row → Away + admins told.
+  const missedN = missed.length
+  const [seenMissed, setSeenMissed] = useState(missedN)
+  if (missedN !== seenMissed) { setSeenMissed(missedN); if (missedN > seenMissed) presDo({ type: 'missed' }) }
+  const away = pres.status === 'away' && pres.missedRow >= MISSED_TO_AWAY
+  const [wasAway, setWasAway] = useState(false)
+  if (away !== wasAway) { setWasAway(away); if (away) note(`Set to Away after ${MISSED_TO_AWAY} missed rings · admins told`) }
+
+  const subject = call?.who || ringing
   const theirTime = useTheirTime(subject)
 
+  // P882: a ring that interrupts open work (no one on the line) keeps that work: the page stays as it was under the
+  // phone, and "Back to" brings the VA to it after the call.
+  const pauseWork = () => {
+    const d = document.querySelector('[role="dialog"]:not(.fs-call) :is(h1, h2)')
+    const task = { label: d?.textContent?.trim() || 'what you were doing', path: `${loc.pathname}${loc.search}` }
+    presDo({ type: 'pause', task })
+    rl?.pauseTask(task)
+  }
+
+  const begin = who => { act({ type: 'start', who }); setSheet(null); presDo({ type: 'answer' }) }
   const start = who => {
     if (!who) return
     if (call && !call.end) { note('Finish this call first'); return }
-    act({ type: 'start', who }); setSheet(null)
+    if (call && call.end) { note('Save how the last call went first'); return }
+    const c = check(who)
+    if (!c.ok) { note(predialLine(c, who.state, clockNow)); return }
+    begin(who)
+    if (rl) {
+      rl.openLine({ leadId: who.kind === 'lead' ? who.id : null, policyId: who.kind !== 'lead' ? who.policyId || who.id : null }, { onEnd: () => act({ type: 'end' }) })
+        .then(lineId => act({ type: 'line', lineId }))
+        .catch(e => note(e.code === 'predial' ? predialLine({ ok: false, reason: e.reason || 'outside_hours', nextAt: e.next_at || null }, who.state) : e.message))
+    }
   }
+  const answer = () => {
+    pauseWork()
+    if (offer) {
+      const who = offerWho
+      begin(who)
+      rl.accept(offer, { onEnd: () => act({ type: 'end' }) })
+        .then(info => act({ type: 'line', lineId: info.lineId, callSid: info.callSid }))
+        .catch(e => { note(e.message); act({ type: 'end' }) })
+      return
+    }
+    const w = ringWho; onAnswer(); begin(w)
+  }
+  const decline = () => { if (offer) { rl.pass(offer.id).catch(() => {}); presDo({ type: 'missed' }) } else onDecline() }
+
   // A Call button elsewhere (a call's drawer, a lead, a servicing step) sets the store's live request: the frame
   // slides this screen in (startReq) and the call starts on that person.
   useEffect(() => { if (live) { onLive(live); hideLive() } }, [live, onLive, hideLive])
@@ -128,21 +214,24 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
   if (startReq && startReq !== seenReq) {
     setSeenReq(startReq)
     const who = resolve(startReq.req)
-    if (who && !(call && !call.end)) { act({ type: 'start', who }); setSheet(null) }
+    if (who && !call) begin(who)
   }
 
-  const view = ring ? 'ring' : call ? (call.end ? 'result' : 'call') : 'idle'
+  const view = ringing ? 'ring' : call ? (call.end ? 'result' : 'call') : 'idle'
   const lineState = view === 'call' ? 'live' : view === 'result' ? 'after' : null
   const since = call?.start ?? null
   useEffect(() => { report?.(lineState, since) }, [lineState, since, report])
+  // The call ended: wrap-up starts (the outcome is needed before the VA is Available again).
+  const ended = !!call?.end
+  useEffect(() => { if (ended) presDo({ type: 'wrap' }) }, [ended])
 
   // Sample: whoever is added answers after a moment; the live transfer moves on its own (P852 swaps in real events).
-  const ringing = call?.parties.filter(p => p.state === 'ringing').map(p => p.id).join('|') || ''
+  const ringingLegs = call?.parties.filter(p => p.state === 'ringing').map(p => p.id).join('|') || ''
   useEffect(() => {
-    if (!ringing) return undefined
-    const ts = ringing.split('|').map((id, i) => setTimeout(() => act({ type: 'answered', id }), 2200 + i * 400))
+    if (!ringingLegs || call?.lineId) return undefined
+    const ts = ringingLegs.split('|').map((id, i) => setTimeout(() => act({ type: 'answered', id }), 2200 + i * 400))
     return () => ts.forEach(clearTimeout)
-  }, [ringing])
+  }, [ringingLegs, call?.lineId])
   const xs = call?.xfer?.step
   const xAgent = AGENTS.find(a => a.id === call?.xfer?.agent)
   // P880: on a real call (help-voice's CallSid on it) the transfer card follows the server's check instead.
@@ -185,26 +274,33 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
     return () => cancelAnimationFrame(t)
   }, [open, view])
 
+  // P882: every button also steers the real line once there is one (the sample keeps its own state either way).
+  const srv = (action, extra) => { if (rl && call?.lineId) rl.send(call.lineId, action, extra).catch(e => note(e.message)) }
+  const partyOf = p => (p.role === 'lead' ? 'lead' : p.role === 'client' ? 'client' : p.role)
   const took = call ? clock(((call.end || now) - call.start) / 1000) : ''
-  const finish = () => { act({ type: 'clear' }); setSheet(null); setTab('recent') }
+  const finish = () => { act({ type: 'clear' }); setSheet(null); setTab('todo') }
   const openRec = who => { if (who?.rec) navigate(who.rec) }
 
   let body
-  if (ring) {
+  if (ringing) {
+    const left = ringLeft(ringAt ?? now, now)
+    const r = ringing
     body = (
       <div className="fs-cs fs-cs-ring">
         <div className="fs-cs-who">
-          <span className="fs-cs-kicker"><span className="fs-cs-pulse" aria-hidden="true" />Incoming call</span>
-          <Avatar name={ring.name} tone="blue" />
-          <b className="fs-cs-name">{ring.name}</b>
-          <small>{ringWho.reason}</small>
-          <small className="fs-ph-tz">{theirTime}</small>
-          <button type="button" className="fs-cs-rec" onClick={() => openRec(ringWho)}>{ring.agent}'s client · open the call<ArrowUpRight size={13} aria-hidden="true" /></button>
+          <span className="fs-cs-kicker"><span className="fs-cs-pulse" aria-hidden="true" />{RING_KIND[r.ringKind] || 'Incoming call'}<span className="fs-cs-count tp-num" aria-label={`${left} seconds to answer`}>{left}s</span></span>
+          <Avatar name={r.name} tone="blue" />
+          <b className="fs-cs-name">{r.name}</b>
+          <small>{r.reason}</small>
+          {theirTime && <small className="fs-ph-tz">{theirTime}</small>}
+          {ring && <button type="button" className="fs-cs-rec" onClick={() => openRec(ringWho)}>{ring.agent}'s client · open the call<ArrowUpRight size={13} aria-hidden="true" /></button>}
+          {offer?.pullHold && <small className="fs-cs-why">Your carrier hold goes to the next free VA when you answer.</small>}
         </div>
-        {!CALLING_ON && <p className="fx-calm fs-off"><PhoneOff size={16} aria-hidden="true" /><span>Calling is off right now. Answer to keep the time and notes here, and dial <b className="tp-num">{ring.client.client_phone}</b> from your phone.</span></p>}
+        {!CALLING_ON && !offer && <p className="fx-calm fs-off"><PhoneOff size={16} aria-hidden="true" /><span>Calling is off right now. Answer to keep the time and notes here, and dial <b className="tp-num">{ring.client.client_phone}</b> from your phone.</span></p>}
+        <p className="tp-sub fs-cs-ringrule">Not answered in {left}s, it goes to the next free VA and counts as a missed ring.</p>
         <div className="fs-cs-ans">
-          <span><button type="button" className="fs-rb is-end" aria-label="Not now" onClick={() => onDecline()}><PhoneOff size={24} /></button><small>Not now</small></span>
-          <span><button type="button" className="fs-rb is-go" data-first aria-label={`Answer ${ring.name}`} onClick={() => { const w = ringWho; onAnswer(); start(w) }}><PhoneIc size={24} /></button><small>Answer</small></span>
+          <span><button type="button" className="fs-rb is-end" aria-label="Not now" onClick={decline}><PhoneOff size={24} /></button><small>Not now</small></span>
+          <span><button type="button" className="fs-rb is-go" data-first aria-label={`Answer ${r.name}`} onClick={answer}><PhoneIc size={24} /></button><small>Answer</small></span>
         </div>
       </div>
     )
@@ -215,59 +311,95 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
     const people = lineCount(call)
     const held = heldFor(call, now)
     const isLead = p.role === 'lead'
+    const person = p.role === 'lead' || p.role === 'client'
+    const personOn = call.parties.some(x => x.id === p.key)
+    const carrierHold = holdOnlyCarrier(call)
     const status = call.held ? `On hold · ${clock(held / 1000)}` : call.muted ? 'Muted' : people > 2 ? `${people} on the call` : 'On the call'
     const btn = (key, label, Icon, on, run, extra = {}) => (
       <span key={key} className="fs-rbw"><button type="button" className={`fs-rb${on ? ' is-on' : ''}${extra.cls ? ` ${extra.cls}` : ''}`} aria-pressed={extra.press === false ? undefined : !!on}
         aria-label={extra.aria || label} disabled={extra.disabled} title={extra.title} onClick={run} {...(extra.first ? { 'data-first': true } : {})}><Icon size={22} /></button><small>{label}</small></span>
     )
+    const doDnc = () => {
+      act({ type: 'dnc' }); setSheet(null)
+      setOpted(s => new Set(s).add(p.number))
+      if (rl) rl.doNotCall({ phone: p.number, leadId: isLead ? p.id : null, policyId: p.policyId || null, reason: 'asked_on_call' }).catch(e => note(e.message))
+      note('Opted out everywhere: calls, texts and the text system')
+    }
+    const doHelp = () => {
+      act({ type: 'help' })
+      if (rl && call.lineId) rl.needHelp(call.lineId).catch(e => note(e.message))
+      note('Both admins were pinged. They can listen, whisper or join.')
+    }
+    const doVoicemail = () => {
+      srv('voicemail', { party: partyOf(p) })
+      act({ type: 'voicemail', id: p.key })
+      note(`Voicemail left for ${p.name.split(' ')[0]}. Their line was dropped`)
+    }
     body = (
       <div className="fs-cs">
         <div className="fs-cs-who">
-          {call.rec && <span className="fs-cs-recpill"><CircleDot size={12} aria-hidden="true" />Recording</span>}
           <Avatar name={p.name} tone="blue" />
           <button type="button" className="fs-cs-name is-link" onClick={() => openRec(p)} aria-label={`Open ${p.name}'s record`}>{p.name}<ArrowUpRight size={15} aria-hidden="true" /></button>
           <small>{p.reason}</small>
           {theirTime && <small className="fs-ph-tz">{theirTime}</small>}
           <p className={`fs-cs-timer tp-num${call.held ? ' is-held' : ''}`} aria-live="off"><span>{status}</span>{took}</p>
         </div>
-        {call.rec && <p className="fs-cs-notice"><CircleDot size={13} aria-hidden="true" />{RECORD_NOTICE || 'Say the recording notice first. (The exact words are coming from Brayden.)'}</p>}
-        {!CALLING_ON && <p className="fx-calm fs-off"><PhoneOff size={16} aria-hidden="true" /><span>Calling is off right now. Dial <b className="tp-num">{p.number}</b> from your phone. This keeps the time, the line and your notes.</span></p>}
-        {(people > 2 || waiting || pending) && <LineList call={call} onDrop={id => act({ type: 'drop', id })} onMerge={() => act({ type: 'merge' })} />}
+        {!CALLING_ON && !call.lineId && <p className="fx-calm fs-off"><PhoneOff size={16} aria-hidden="true" /><span>Calling is off right now. Dial <b className="tp-num">{p.number}</b> from your phone. This keeps the time, the line and your notes.</span></p>}
+        {call.dnc && <p className="fs-cs-band" role="status"><CircleSlash size={15} aria-hidden="true" /><span><b>Opted out everywhere</b><small>No more calls or texts to {p.name.split(' ')[0]}. Say goodbye, then end the call.</small></span></p>}
+        {call.help && <p className="fs-cs-band is-help" role="status"><LifeBuoy size={15} aria-hidden="true" /><span><b>Help is on the way</b><small>An admin can listen, whisper to you, or join the call.</small></span></p>}
+        {(people > 2 || waiting || pending) && <LineList call={call} onDrop={id => { const x = call.parties.find(q => q.id === id); if (x) srv('end', { party: partyOf(x) }); act({ type: 'drop', id }) }} onMerge={() => { srv('merge'); act({ type: 'merge' }) }} />}
         {call.xfer && <XferCard x={call.xfer} agent={xAgent} now={now}
           onTransfer={() => (real ? real.transfer().catch(e => note(e.message)) : act({ type: 'transfer' }))}
           onBook={() => { onBook?.(p.kind === 'lead' ? p.id : null); if (real) { real.book().catch(() => {}); real.clear() } act({ type: 'xferClear' }) }}
           onClear={() => { real?.clear(); act({ type: 'xferClear' }) }} />}
         {call.pad && <div className="fs-ph-tones tp-num" aria-label="Keys pressed">{call.tones || ' '}</div>}
-        {call.pad && <div className="fs-pad is-small" aria-label="Keypad for tones">{PAD.map(d => <button key={d} type="button" className="fs-key" onClick={() => act({ type: 'tone', key: d })}>{d}</button>)}</div>}
+        {call.pad && <div className="fs-pad is-small" aria-label="Keypad for tones">{PAD.map(d => <button key={d} type="button" className="fs-key" onClick={() => { act({ type: 'tone', key: d }); srv('dtmf', { digits: d }) }}>{d}</button>)}</div>}
         {sheet === 'notes' && <Field label="Notes" hint="Saved with the call"><textarea className="tp-input fx-ta" rows={3} placeholder="What happened on the call" value={call.notes} onChange={e => act({ type: 'notes', text: e.target.value })} /></Field>}
-        {sheet === 'add' && <AddCaller who={p} on={call.parties} onPick={party => { act({ type: 'add', party }); setSheet(null) }} onClose={() => setSheet(null)} />}
+        {sheet === 'add' && <AddCaller who={p} on={call.parties} onPick={party => { srv(party.role === 'agent' ? 'ring_agent' : 'ring_carrier', party.role === 'carrier' ? { carrier_id: party.id } : {}); act({ type: 'add', party }); setSheet(null) }} onClose={() => setSheet(null)} />}
         {sheet === 'xfer' && <PickAgent who={p} real={!!real} onCheck={agent => { if (real) real.check().catch(e => note(e.message)); else act({ type: 'check', agent }); setSheet(null) }} onClose={() => setSheet(null)} />}
+        {sheet === 'dnc' && (
+          <section className="fs-cs-sheet" aria-label="Do not call">
+            <header className="fs-cs-sh"><b>Do not call {p.name.split(' ')[0]}?</b><button type="button" className="fx-x" aria-label="Close" onClick={() => setSheet(null)}><X size={15} /></button></header>
+            <p className="tp-sub">Stops every call and text to {p.number} right away: queued calls, callbacks, check-in texts and the text system.</p>
+            <div className="fs-ph-acts"><button type="button" className="tp-primary fs-cs-dncgo" data-first onClick={doDnc}><Ban size={16} />Do not call</button><button type="button" className="tp-btn ov-ghost" onClick={() => setSheet(null)}>Keep calling</button></div>
+          </section>
+        )}
+        {sheet === 'handoff' && <HandOff call={call} rl={rl} note={note} onDone={h => { act({ type: 'handoff', ...h }); setSheet(null) }} onClose={() => setSheet(null)} />}
         <div className="fs-cs-grid">
-          {btn('mute', call.muted ? 'Unmute' : 'Mute', call.muted ? MicOff : Mic, call.muted, () => act({ type: 'mute' }), { first: true })}
+          {btn('mute', call.muted ? 'Unmute' : 'Mute', call.muted ? MicOff : Mic, call.muted, () => { rl?.mute(!call.muted); act({ type: 'mute' }) }, { first: true })}
           {btn('pad', 'Keypad', Grid3x3, call.pad, () => act({ type: 'pad' }), { title: 'Tones for carrier menus' })}
           {btn('spk', 'Speaker', Volume2, call.speaker, () => act({ type: 'speaker' }))}
-          {btn('hold', call.held ? 'Resume' : 'Hold', call.held ? Play : Pause, call.held, () => act({ type: 'hold' }))}
+          {btn('hold', call.held ? 'Resume' : 'Hold', call.held ? Play : Pause, call.held, () => { srv(call.held ? 'resume' : 'hold', { party: partyOf(p) }); act({ type: 'hold' }) })}
           {waiting
-            ? btn('merge', 'Merge', Merge, false, () => act({ type: 'merge' }), { press: false, cls: 'is-merge', aria: 'Merge everyone into one call' })
+            ? btn('merge', 'Merge', Merge, false, () => { srv('merge'); act({ type: 'merge' }) }, { press: false, cls: 'is-merge', aria: 'Merge everyone into one call' })
             : btn('add', 'Add caller', UserPlus, sheet === 'add', () => setSheet(s => (s === 'add' ? null : 'add')), { press: false, aria: 'Add a carrier or the agent to the call' })}
           {btn('xfer', 'Transfer', PhoneForwarded, sheet === 'xfer' || xferOpen(call.xfer), () => setSheet(s => (s === 'xfer' ? null : 'xfer')), { press: false, disabled: !isLead || !!call.xfer, title: isLead ? 'Live transfer to the agent' : 'Live transfer is for leads. For a coverage question, Add caller → the agent' })}
           {btn('notes', 'Notes', NotebookPen, sheet === 'notes', () => setSheet(s => (s === 'notes' ? null : 'notes')), { press: false })}
-          {btn('rec', call.rec ? 'Recording' : 'Record', CircleDot, call.rec, () => act({ type: 'rec' }), { cls: 'is-rec' })}
+          {btn('help', 'Need help', LifeBuoy, !!call.help, doHelp, { press: false, disabled: !!call.help, aria: 'Need help: ping both admins' })}
         </div>
-        <div className="fs-cs-endrow"><span className="fs-rbw"><button type="button" className="fs-rb is-end is-big" aria-label="End the call" onClick={() => act({ type: 'end' })}><PhoneOff size={26} /></button><small>End</small></span></div>
+        <div className="fs-cs-more">
+          {carrierHold && <button type="button" className="tp-primary fx-accent" onClick={() => setSheet('handoff')}><ArrowRightLeft size={16} />Hand off hold</button>}
+          {person && personOn && <button type="button" className="fx-pillbtn" onClick={doVoicemail} title="Leaves the voicemail message and drops their line"><Voicemail size={14} />Voicemail</button>}
+          {person && <button type="button" className="fx-pillbtn fs-cs-dnc" disabled={call.dnc} onClick={() => setSheet('dnc')}><Ban size={14} />{call.dnc ? 'Opted out' : 'Do not call'}</button>}
+        </div>
+        <div className="fs-cs-endrow"><span className="fs-rbw"><button type="button" className="fs-rb is-end is-big" aria-label="End the call" onClick={() => { srv('end_all'); rl?.hangUp(); act({ type: 'end' }) }}><PhoneOff size={26} /></button><small>End</small></span></div>
       </div>
     )
   } else if (call) {
-    body = <Result call={call} took={took} agent={xAgent} onDone={finish} save={r => {
-      const p = call.who
-      if (p.callId && (r.pick === 'cancelled' || r.pick === 'no_answer')) {
-        if (r.pick === 'cancelled') { markCall(p.callId, 'cancelled', { confirmation: r.conf.trim().toUpperCase(), notes: r.notes }); note('Cancelled. It shows on Pay as checking') }
-        else { markCall(p.callId, 'no_answer', { notes: r.notes || 'No answer.' }); note(`No answer logged for ${p.name.split(' ')[0]}`) }
-      } else note(`Call with ${p.name} logged`)
-      const word = CALL_WORD[r.pick] || r.pick
-      setLog(l => [{ id: `d-${Date.now()}`, name: p.name, number: p.number, outcome: word, tone: /cancel|reached|transfer/i.test(word) ? 'cancelled' : 'no_answer', when: `Today, ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`, who: p }, ...l])
-      finish()
-    }} />
+    body = <Result call={call} took={took} agent={xAgent} pres={pres} now={now}
+      onMore={() => { presDo({ type: 'more' }); rl?.wrapMore().catch(() => {}) }}
+      save={r => {
+        const p = call.who
+        if (p.callId && (r.pick === 'cancelled' || r.pick === 'no_answer')) {
+          if (r.pick === 'cancelled') { markCall(p.callId, 'cancelled', { confirmation: r.conf.trim().toUpperCase(), notes: r.notes }); note('Cancelled. It shows on Pay as checking') }
+          else { markCall(p.callId, 'no_answer', { notes: r.notes || 'No answer.' }); note(`No answer logged for ${p.name.split(' ')[0]}`) }
+        } else note(`Call with ${p.name} logged · you're Available`)
+        const word = CALL_WORD[r.pick] || r.pick
+        presDo({ type: 'done', outcome: word })
+        rl?.wrapDone(word).catch(() => {})
+        setLog(l => [{ id: `d-${Date.now()}`, name: p.name, number: p.number, outcome: word, tone: /cancel|reached|transfer/i.test(word) ? 'cancelled' : 'no_answer', when: `Today, ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`, who: p }, ...l])
+        finish()
+      }} />
   } else {
     const recent = [
       ...log,
@@ -281,12 +413,17 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
         </div>
         {tab === 'todo' ? (
           <>
+            {pres.paused && (
+              <button type="button" className="fs-ph-back is-task" onClick={() => { const to = pres.paused.path; presDo({ type: 'resume' }); rl?.pauseTask(null); slideAway(); navigate(to) }}>
+                <Undo2 size={15} aria-hidden="true" /><span className="tp-grow"><b>Back to: {pres.paused.label}</b><small>A call came in while you were on it. Your draft is where you left it.</small></span>
+              </button>
+            )}
             <p className="tp-sub fs-ph-rule">Calls come in, or start from what you were given here. You don't dial numbers yourself.</p>
             {todo.length === 0 && <p className="fx-calm">Nothing to call right now. Calls that come in ring here.</p>}
             {todo.map(([head, rows]) => (
               <section key={head} className="fs-ph-group" aria-label={head}>
                 <h3 className="fs-ph-gh">{head}<span className="tp-num">{rows.length}</span></h3>
-                <ul className="tp-list fs-ph-todo">{rows.map(w => <TodoRow key={w.key} w={w} onCall={() => start(w)} onOpen={() => openRec(w)} />)}</ul>
+                <ul className="tp-list fs-ph-todo">{rows.map(w => { const c = check(w); return <TodoRow key={w.key} w={w} block={c.ok ? null : predialLine(c, w.state, clockNow)} onCall={() => start(w)} onOpen={() => openRec(w)} /> })}</ul>
               </section>
             ))}
           </>
@@ -308,19 +445,28 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
   }
 
   const onCall = view === 'call'
-  const head = ring ? 'A call is coming in' : onCall ? `On a call · ${took}` : view === 'result' ? 'How did it go?' : CALLING_ON ? 'Ready' : 'Calling is off right now'
-  const lesson = ring ? 'answer' : call ? 'logging' : 'dialer'
+  const head = ringing ? 'A call is coming in' : onCall ? `On a call · ${took}` : view === 'result' ? 'How did it go?' : CALLING_ON || rl ? 'Ready' : 'Calling is off right now'
+  const lesson = ringing ? 'answer' : call ? 'logging' : 'dialer'
+  // Available / Away: only between calls (a ring, a call and the wrap-up set it themselves).
+  const busy = ['ringing', 'on_call', 'wrap'].includes(pres.status) || !!call || !!ringing
+  const presTo = pres.status === 'away' || pres.status === 'offline' ? 'available' : 'away'
 
   // Portaled to <body> like the record drawers. No scrim: the page behind stays usable and never moves.
   return createPortal(
     <div className="tp fx-layer fs-call-layer">
-      <section ref={box} className={`fs-call${open ? ' is-in' : ''}${onCall || ring ? ' is-live' : ''}`} role="dialog" aria-label="Phone" aria-hidden={!open}>
+      <section ref={box} className={`fs-call${open ? ' is-in' : ''}${onCall || ringing ? ' is-live' : ''}`} role="dialog" aria-label="Phone" aria-hidden={!open}>
         <button type="button" className="fs-call-tab" aria-label={call && !call.end ? 'Slide the phone away. The call keeps going' : 'Slide the phone away'} title={call && !call.end ? 'Slide away (the call keeps going)' : 'Slide away'} onClick={slideAway}>
           <ChevronRight size={18} aria-hidden="true" />
         </button>
         <header className="fs-ph-h">
-          <span className={`fs-ph-ic${ring || onCall ? ' is-live' : ''}`} aria-hidden="true"><PhoneIc size={16} /></span>
+          <span className={`fs-ph-ic${ringing || onCall ? ' is-live' : ''}`} aria-hidden="true"><PhoneIc size={16} /></span>
           <span className="tp-grow"><b>Phone</b><small>{head}</small></span>
+          <button type="button" className={`fs-ph-pres is-${pres.status}`} disabled={busy}
+            aria-label={`Status: ${PRESENCE_WORDS[pres.status]}.${busy ? '' : ` Set to ${PRESENCE_WORDS[presTo]}`}`}
+            title={busy ? 'Set by the call' : `Set to ${PRESENCE_WORDS[presTo]}`}
+            onClick={() => { presDo({ type: 'set', status: presTo }); rl?.setStatus(presTo) }}>
+            <i aria-hidden="true" />{PRESENCE_WORDS[pres.status]}
+          </button>
           <HelpDot lesson={lesson} />
         </header>
         <div className="fs-ph-b">{body}</div>
@@ -330,14 +476,50 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
   )
 }
 
-function TodoRow({ w, onCall, onOpen }) {
+function TodoRow({ w, block, onCall, onOpen }) {
   return (
-    <li className="fs-ph-row">
+    <li className={`fs-ph-row${block ? ' is-blocked' : ''}`}>
       <button type="button" className="fx-mrow" onClick={onOpen} aria-label={`Open ${w.name}'s record`}>
-        <Avatar name={w.name} /><span className="tp-grow"><b>{w.name}</b><small>{w.reason}</small><small className="tp-num">{w.when}</small></span>
+        <Avatar name={w.name} /><span className="tp-grow"><b>{w.name}</b><small>{w.reason}</small>{block ? <small className="fs-ph-block"><CircleSlash size={12} aria-hidden="true" />{block}</small> : <small className="tp-num">{w.when}</small>}</span>
       </button>
-      <button type="button" className="fs-rb is-go is-sm" aria-label={`Call ${w.name}`} title={`Call ${w.name.split(' ')[0]}`} onClick={onCall}><PhoneIc size={16} /></button>
+      <button type="button" className="fs-rb is-go is-sm" aria-label={block ? `Can't call ${w.name} now: ${block}` : `Call ${w.name}`} title={block || `Call ${w.name.split(' ')[0]}`} disabled={!!block} onClick={onCall}><PhoneIc size={16} /></button>
     </li>
+  )
+}
+
+// P882 — Hand off hold: a carrier hold with no client goes to the next free VA with the menu path and notes. If no VA
+// is free (shift end), ask the admins for overtime, or put it back in the queue (the client gets an automatic text).
+function HandOff({ call, rl, note, onDone, onClose }) {
+  const [path, setPath] = useState(call.tones ? `Pressed ${call.tones}` : '')
+  const [notes, setNotes] = useState(call.notes || '')
+  const [noOne, setNoOne] = useState(false)
+  const carrier = call.parties.find(p => p.role === 'carrier')
+  const go = async () => {
+    if (rl && call.lineId) {
+      try {
+        const r = await rl.handoff(call.lineId, { carrier: carrier?.name, menu_path: path, notes })
+        if (r?.no_one) { setNoOne(true); return }
+      } catch (e) { note(e.message); return }
+    }
+    note('Handed off to the next free VA')
+    onDone({ path, notes })
+  }
+  return (
+    <section className="fs-cs-sheet" aria-label="Hand off hold">
+      <header className="fs-cs-sh"><b>Hand off the {carrier?.name || 'carrier'} hold</b><button type="button" className="fx-x" aria-label="Close" onClick={onClose}><X size={15} /></button></header>
+      <p className="tp-sub">The next free VA takes your place on hold and gets these. You leave the call.</p>
+      <Field label="Menu path" hint="The keys you pressed to get here"><input data-first value={path} placeholder="e.g. 2, then 4, then 0" onChange={e => setPath(e.target.value)} /></Field>
+      <Field label="Notes for the next VA"><textarea className="tp-input fx-ta" rows={2} value={notes} placeholder="What the carrier needs once they pick up" onChange={e => setNotes(e.target.value)} /></Field>
+      {noOne ? (
+        <>
+          <p className="fs-cs-why" role="note">No VA is free to take it.</p>
+          <div className="fs-ph-acts">
+            <button type="button" className="tp-primary fx-accent" onClick={() => { rl?.overtime(call.lineId, 30).catch(e => note(e.message)); note('Overtime asked for. You stay on the hold until an admin answers'); onClose() }}><Timer size={16} />Ask for overtime</button>
+            <button type="button" className="tp-btn ov-ghost" onClick={() => { rl?.send(call.lineId, 'end_all').catch(() => {}); note('Put back in the queue. The client gets an automatic text'); onDone({ path, notes }) }}>Re-queue</button>
+          </div>
+        </>
+      ) : <div className="fs-ph-acts"><button type="button" className="tp-primary fx-accent" onClick={go}><ArrowRightLeft size={16} />Hand off</button></div>}
+    </section>
   )
 }
 
@@ -442,28 +624,43 @@ function XferCard({ x, agent, now, onTransfer, onBook, onClear }) {
 
 // After the call: the result and notes (a cancellation call: Cancelled with the carrier's confirmation number, or No
 // answer). A lead or servicing call keeps a simple outcome; a transferred lead says so.
+// P882 wrap-up: the outcome is required before the VA is Available again (no Skip). 60 seconds, +60 s at a time (each
+// one counted); past 3 minutes the admins are told.
 const FREE = ['Reached them', 'No answer', 'Left a voicemail']
-function Result({ call, took, agent, save, onDone }) {
+function Result({ call, took, agent, pres, now, onMore, save }) {
   const p = call.who
   const transferred = call.outcome === 'transferred'
-  const opts = transferred ? [[`Transferred to ${agent?.name || 'the agent'}`, `Transferred to ${agent?.name.split(' ')[0] || 'the agent'}`]] : p.callId ? [['cancelled', 'Cancelled'], ['no_answer', 'No answer']] : FREE.map(f => [f, f])
-  const [pick, setPick] = useState(opts[0][0])
+  const handed = call.outcome === 'handed_off'
+  const free = call.dnc ? ['Asked not to be called', ...FREE] : FREE
+  const opts = transferred ? [[`Transferred to ${agent?.name || 'the agent'}`, `Transferred to ${agent?.name.split(' ')[0] || 'the agent'}`]]
+    : handed ? [['Handed off the hold', 'Handed off the hold']]
+      : p.callId ? [['cancelled', 'Cancelled'], ['no_answer', 'No answer']] : free.map(f => [f, f])
+  const [pick, setPick] = useState(call.vm && !p.callId ? 'Left a voicemail' : opts[0][0])
   const [conf, setConf] = useState('')
   const [notes, setNotes] = useState(call.notes || '')
-  const ready = !p.callId || pick !== 'cancelled' || conf.trim().length >= 4
+  const ready = !!pick && (!p.callId || pick !== 'cancelled' || conf.trim().length >= 4)
+  const left = wrapLeft(pres, now)
+  const over = left != null && left < 0
+  const stuck = wrapStuck(pres, now)
   return (
     <div className="fs-ph-call">
       <div className="fs-ph-who"><Avatar name={p.name} /><span className="tp-grow"><b>{p.name}</b><small>Call ended · {took}{heldFor(call) ? ` · on hold ${clock(heldFor(call) / 1000)}` : ''}</small></span></div>
+      {left != null && (
+        <div className={`fs-cs-wrap${over ? ' is-over' : ''}`} role="timer" aria-live="off">
+          <Timer size={15} aria-hidden="true" />
+          <span className="tp-grow"><b>Wrap-up <span className="tp-num">{over ? `over by ${clock(-left / 1000)}` : clock(left / 1000)}</span></b>
+            <small>{stuck ? 'Wrap-up passed 3 minutes, so the admins were told.' : 'Save the outcome to be Available for the next call.'}{pres.wrapExtra ? ` · +60 s used ${pres.wrapExtra}×` : ''}</small></span>
+          <button type="button" className="fx-pillbtn" onClick={onMore} aria-label="60 more seconds"><Plus size={13} />60 s</button>
+        </div>
+      )}
       <div className="tp-field"><span>How did it go?</span>
         <PillTabs role="radiogroup" label="How did it go?" className="fx-chips" itemClass="fx-chip" value={pick} onChange={setPick} items={opts.map(([v, l]) => ({ key: v, label: <b>{l}</b> }))} />
       </div>
       {p.callId && pick === 'cancelled' && <Field label="Confirmation number" hint="From the carrier, on the call"><input data-first value={conf} placeholder="e.g. GL-301977" onChange={e => setConf(e.target.value)} /></Field>}
       <Field label="Notes" hint={p.agent ? `${p.agent.split(' ')[0]} sees these` : undefined}><textarea className="tp-input fx-ta" rows={3} placeholder="What happened on the call" value={notes} onChange={e => setNotes(e.target.value)} /></Field>
       <div className="fs-ph-acts">
-        <button type="button" className="tp-primary fx-accent" data-first disabled={!ready} onClick={() => save({ pick, conf, notes })}><CircleCheck size={16} />Save result</button>
-        <button type="button" className="tp-btn ov-ghost" onClick={onDone}>Skip</button>
+        <button type="button" className="tp-primary fx-accent" data-first disabled={!ready} onClick={() => save({ pick, conf, notes })}><CircleCheck size={16} />Save · Available</button>
       </div>
     </div>
   )
 }
-

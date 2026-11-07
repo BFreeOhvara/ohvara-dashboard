@@ -7,6 +7,7 @@ import { RecordDrawer, Block, Stepper } from '../../Record'
 import { fp } from '../paths'
 import { KIND, kindTone, outcomesOf, outcomeLabel, SEND_REASONS, TASK_GROUPS } from '../words'
 import { HelpDot } from '../../../fulshell/training/HelpDot'
+import { MissedPayDesk, MissedFacts } from '../MissedPay885'
 
 // P845 — Servicing: the steps agents asked for (packet checks, payment and beneficiary changes, review calls, lapse
 // saves). A board like the Queue: overdue, due today, coming up, no date; each card takes its kind's colour (lib/
@@ -68,6 +69,7 @@ function TaskDrawer({ id, onClose }) {
         <p className="tp-mid">{t.note || `${KIND[t.kind]} for ${t.name}.`}</p>
         <dl className="fx-facts">{[['Agent', t.agent], ['Policy', t.client.policy_number], ['Carrier', t.carrier], ['Due', t.due_text]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       </Block>
+      {t.missed && <MissedFacts t={t} />}
       <Block title="Results you can pick" sub="Anything about coverage or advice goes to the agent">
         <ul className="fs-outs">{outcomesOf(t.kind).map(([k, label]) => <li key={k} className={t.outcome === k ? 'is-on' : ''}>{label}</li>)}</ul>
       </Block>
@@ -125,6 +127,8 @@ export default function Servicing() {
           )
         })}
       </div>
+
+      <MissedPayDesk />
 
       <section className="fx-tile fs-donelist" aria-label="Done this week">
         <header className="fx-tile-h"><span className="tp-grow"><h2>Done this week</h2><p>{done.length} steps</p></span></header>

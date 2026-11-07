@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { useSampleBugs, setSampleBugStatus } from '../template/bugReport.js'
 import { SETUP_STEPS, setupOf, stepsFor } from './setup.js'
+import { DRAFT } from '../lib/priceBook.js'
 
 // P849 — the one door to the Admin side's sample info, like src/template/ful/data.js for the VA side. Screens read only
 // through the hooks below; every read returns { data, isLoading: false, error: null }, the react-query shape, so the
@@ -219,7 +220,7 @@ const seedRevenue = [
 // P864 — Money: the owners who split the profit, their draws, and what each period cost besides VA pay (sample).
 // Brought in = what agents paid (lead budgets charged, servicing plans, setup fees). VA payouts count when the run is paid.
 export const OWNERS = [{ id: 'ow-brayden', name: 'Brayden' }, { id: 'ow-jordan', name: 'Jordan' }]
-export const SETUP_FEE = 297
+export const SETUP_FEE = DRAFT.setupFee // P884: from the one price source
 const seedSetupFees = [
   { id: 'su-1', agent: 'Elena Torres', paid: 'Mon, Oct 12', period: 'last' },
   { id: 'su-2', agent: 'Ben Carter', paid: 'Mon, Oct 19', period: 'last' },
@@ -239,7 +240,7 @@ const PERIOD_COSTS = {
   last: { ads: 6140, tools: 412 },
 }
 export const PERIODS = [['week', 'This week', 'Mon, Nov 2 to today'], ['month', 'This month', 'Nov 1 to today'], ['last', 'Last month', 'October']]
-export const CARD_FEE = 0.03
+export const CARD_FEE = DRAFT.cardFee // P884: from the one price source
 
 const seedThreads = [
   { id: 'th-dana', who: 'ag-dana', unread: 1, messages: [
@@ -275,7 +276,7 @@ export const SWITCHES = [
   { key: 'recording_live', label: 'Record calls', sub: 'Records cancellation calls and plays the notice first.', group: 'Calling and texting' },
   { key: 'invite_sms_live', label: 'Invite by text', sub: 'Lets Add someone send the invite as a text.', group: 'Calling and texting' },
   { key: 'payouts_live', label: 'Payouts send real money', sub: 'On means the Monday run pays VAs through Stripe.', group: 'Money' },
-  { key: 'billing_enforced', label: 'Lock unpaid agents', sub: 'After 48 hours past due an agent stops getting leads.', group: 'Money' },
+  { key: 'billing_enforced', label: 'Lock unpaid agents', sub: 'Lead spend stops when a payment fails; after 3 days past due the account is on hold.', group: 'Money' },
   { key: 'submit_live', label: 'Submit page live', sub: 'Opens the new Submit page to every agent.', group: 'Agents' },
   { key: 'carrier_lookup_live', label: 'Live carrier lookup', sub: 'Agents can look up carrier hours themselves.', group: 'Agents' },
   { key: 'signup_open', label: 'Sign-up open', sub: 'Lets new agents sign up without an invite.', group: 'Agents' },

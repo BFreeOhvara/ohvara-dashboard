@@ -14,15 +14,17 @@ async function token() {
 const label = d => (d?.label || '').replace(/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)$/i, '') || 'Default'
 
 /**
- * Join the call for `policyId`. Resolves once Twilio has the call; `onAccept`
- * fires when the rep is in the conference, `onEnd` when the rep's line drops.
+ * Join the call for `policyId` (the old cancellation phone) or `lineId` (P882: any VA call, a line the server opened
+ * from a task or an accepted ring). Resolves once Twilio has the call; `onAccept` fires when the rep is in the
+ * conference, `onEnd` when the rep's line drops.
  */
-export async function connectVoice({ policyId, onAccept, onEnd, onError }) {
+export const voiceParams = ({ policyId, lineId }) => (lineId ? { line_id: lineId } : { policy_id: policyId })
+export async function connectVoice({ policyId, lineId, onAccept, onEnd, onError }) {
   const { Device } = await import('@twilio/voice-sdk')
   const device = new Device(await token(), { codecPreferences: ['opus', 'pcmu'], closeProtection: true, logLevel: 'error' })
   device.on('tokenWillExpire', async () => { try { device.updateToken(await token()) } catch { /* the call keeps its media */ } })
   device.on('error', e => onError?.(e))
-  const call = await device.connect({ params: { policy_id: policyId } })
+  const call = await device.connect({ params: voiceParams({ policyId, lineId }) })
   call.on('accept', () => onAccept?.())
   for (const ev of ['disconnect', 'cancel', 'reject']) call.on(ev, () => onEnd?.())
   call.on('error', e => onError?.(e))

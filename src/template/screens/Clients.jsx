@@ -6,6 +6,7 @@ import { Avatar, Chip, Drawer, Money, SampleTag, Empty, PillTabs, useNote } from
 import { RecordDrawer, Stepper, Block } from '../Record'
 import { stageLabel, CLIENT_STEPS } from '../stages'
 import { paths } from '../paths'
+import { MissedPaymentBlock } from '../PaymentIntake'
 
 // How far along servicing is, for the meter on each card.
 const doneShare = c => c.steps.filter(s => s.done).length / c.steps.length
@@ -65,7 +66,7 @@ function ClientDrawer({ id, onClose }) {
         <span className="tp-grow" />
         <Link to={paths.messages()} className="tp-btn ov-ghost"><MessageSquare size={14} />Messages</Link>
       </>}>
-      {c.attention && (
+      {c.missed ? <MissedPaymentBlock c={c} /> : c.attention && (
         <section className="fx-blk fx-attn">
           <header><h3><TriangleAlert size={16} aria-hidden="true" />What you can do</h3></header>
           <p className="tp-mid">We could not reach {c.client_first_name} after two tries. Is {c.client_phone} still right? Confirm and we text tomorrow morning and evening.</p>

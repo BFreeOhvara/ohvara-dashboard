@@ -6,7 +6,7 @@ import { Field, Pending, Seg, Switch, useNote } from '../kit'
 import { Select } from '../Select'
 import { paths } from '../paths'
 import { LicenceForm } from '../Licence'
-import { licenceReady } from '../licenceModel'
+import { licenceReady, licenceCanGoOn, EMPTY_LICENCE } from '../licenceModel'
 import { HoursEditor, CalendarConnect } from '../Hours'
 import { SpendSliders, SpendSummary } from '../PlanBuilder'
 import { TalkDrawer } from '../Talk'
@@ -80,7 +80,7 @@ export default function Welcome() {
   const [talk, setTalk] = useState(false)
   const [s, setS] = useState(() => saved || load() || {
     step: 'video', watched: 0, captions: true, lowData: false,
-    licence: { npn: '', states: [], attested: {}, verified: 'Not checked yet' },
+    licence: EMPTY_LICENCE,
     products: 'both', calendar: { provider: null }, tz: settings.timeZone || 'America/Chicago', tzOk: false,
     week: DEFAULT_WEEK, spend: { appts: 40, live: 20 }, push: null, terms: false,
   })
@@ -93,7 +93,8 @@ export default function Welcome() {
   const roomy = s.spend.appts === 0 || openSlots >= slotsNeeded(s.spend)
   const STEPS = [
     { key: 'video', label: 'Watch the intro', done: s.watched >= VIDEO_SECONDS },
-    { key: 'licence', label: 'Your licence', done: licenceReady(s.licence) },
+    // P881 (N-H-09/10): a manual check pending or no life licence yet lets setup carry on (ok); leads wait for done.
+    { key: 'licence', label: 'Your licence', done: licenceReady(s.licence), ok: licenceCanGoOn(s.licence) },
     { key: 'products', label: 'What you want', done: true },
     { key: 'calendar', label: 'Calendar and hours', done: s.tzOk && openSlots > 0 },
     ...(servicingOnly ? [] : [{ key: 'spend', label: 'Lead spend', done: spendOk(plan, s.spend) && dailyTotal(s.spend) > 0 && roomy }]),
@@ -103,7 +104,9 @@ export default function Welcome() {
   const at = Math.max(0, STEPS.findIndex(x => x.key === s.step))
   const cur = STEPS[at]
   const go = key => { const n = { ...s, step: key }; setS(n); saveSetup(n) }
-  const allDone = STEPS.every(x => x.done)
+  const passed = x => x.ok ?? x.done
+  const allDone = STEPS.every(passed)
+  const licenceWaits = !licenceReady(s.licence)
 
   return (
     <div className="tp tp-solo">
@@ -113,7 +116,7 @@ export default function Welcome() {
           <ol className="wz-steps" aria-label="Setup steps">
             {STEPS.map((x, i) => (
               <li key={x.key}><button type="button" className={`${i === at ? 'is-on' : ''}${x.done ? ' is-done' : ''}`} aria-current={i === at ? 'step' : undefined}
-                disabled={i > at && !STEPS.slice(0, i).every(y => y.done)} onClick={() => go(x.key)}>
+                disabled={i > at && !STEPS.slice(0, i).every(passed)} onClick={() => go(x.key)}>
                 <i>{x.done ? <Check size={13} /> : i + 1}</i><span>{x.label}</span></button></li>
             ))}
           </ol>
@@ -121,7 +124,7 @@ export default function Welcome() {
             {cur.key === 'video' && <VideoStep s={s} up={stable} />}
             {cur.key === 'licence' && <>
               <header className="fx-form-h"><h2>Your licence</h2><p>Leads only come from states you{'’'}re licensed in.</p></header>
-              <LicenceForm value={s.licence} onChange={v => stable(x => ({ ...x, licence: v }))} />
+              <LicenceForm value={s.licence} onChange={v => stable(x => ({ ...x, licence: v }))} accountName={settings.profile?.name} />
             </>}
             {cur.key === 'products' && <>
               <header className="fx-form-h"><h2>What do you want from us?</h2><p>You can change this later in Billing.</p></header>
@@ -151,10 +154,10 @@ export default function Welcome() {
               {at > 0 && <button type="button" className="tp-btn ov-ghost" onClick={() => go(STEPS[at - 1].key)}>Back</button>}
               <span className="tp-grow" />
               {at < STEPS.length - 1
-                ? <button type="button" className="tp-primary fx-accent" disabled={!cur.done} onClick={() => go(STEPS[at + 1].key)}>Next</button>
+                ? <button type="button" className="tp-primary fx-accent" disabled={!passed(cur)} onClick={() => go(STEPS[at + 1].key)}>Next</button>
                 : <Link to={paths.home()} className={`tp-primary fx-accent${allDone ? '' : ' wz-off'}`} aria-disabled={!allDone} onClick={e => { if (!allDone) e.preventDefault() }}>Open my portal</Link>}
             </footer>
-            <p className="wz-saved">Your progress is saved. {allDone ? 'All set: your portal opens now, no approval needed.' : `${STEPS.filter(x => x.done).length} of ${STEPS.length} done.`} <button type="button" className="tp-link" onClick={() => setTalk(true)}><MessageCircleQuestion size={13} /> Talk to someone</button></p>
+            <p className="wz-saved">Your progress is saved. {allDone ? (licenceWaits ? 'All set: your portal opens now. Leads start once your licence is verified.' : 'All set: your portal opens now, no approval needed.') : `${STEPS.filter(x => x.done).length} of ${STEPS.length} done.`} <button type="button" className="tp-link" onClick={() => setTalk(true)}><MessageCircleQuestion size={13} /> Talk to someone</button></p>
           </div>
         </section>
         <p className="tp-sub" style={{ textAlign: 'center' }}><Link to={paths.signup()} className="tp-link">Back to sign-up</Link></p>

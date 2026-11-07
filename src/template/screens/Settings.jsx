@@ -13,6 +13,7 @@ import { dailyTotal, rangeWords, tierOf } from '../spendPlan'
 import { BookedMeter } from '../PlanBuilder'
 import { HoursEditor } from '../Hours'
 import { LicenceCard } from '../Licence'
+import { PaymentIntakeCard } from '../PaymentIntake'
 
 const TABS = [['profile', 'Profile', User], ['licence', 'Licence', BadgeCheck], ['alerts', 'Notifications', Bell], ['calls', 'Hours and calls', Radio], ['billing', 'Billing', CreditCard], ['look', 'Appearance', SunMoon]]
 const NEEDS = ['ringing', 'showed']
@@ -148,6 +149,7 @@ export default function Settings() {
               alerts.forEach(n => { const was = s.notifications.find(x => x.key === n.key); if (was.push !== n.push) setNotification(n.key, 'push', n.push); if (was.email !== n.email) setNotification(n.key, 'email', n.email) })
               note('Notifications saved')
             }} />
+            <PaymentIntakeCard />
           </>}
 
           {tab === 'calls' && <>

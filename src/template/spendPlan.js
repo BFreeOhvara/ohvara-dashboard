@@ -6,6 +6,8 @@
 // finding their leads. Pilot agents pay only that spend, prepaid weekly (unspent money rolls into next week; leads
 // stop when it runs out). Paid agents also pay a monthly membership tiered by total daily spend.
 
+import { DRAFT } from '../lib/priceBook.js'
+
 export const LEAD_TYPES = [
   { key: 'appts', label: 'Booked appointments', short: 'Appointments', unit: 'appointments' },
   { key: 'live', label: 'Live calls', short: 'Live calls', unit: 'live calls' },
@@ -17,15 +19,11 @@ export const EST = {
   live: { perCall: 55, delivered: 0.7, close: 0.3 },
 }
 
-// Membership by total daily spend (draft). Scale is priced one to one.
-export const TIERS = [
-  { key: 'starter', label: 'Starter', from: 0, to: 50, monthly: 997 },
-  { key: 'growth', label: 'Growth', from: 51, to: 100, monthly: 1797 },
-  { key: 'pro', label: 'Pro', from: 101, to: 200, monthly: 3497 },
-  { key: 'scale', label: 'Scale', from: 201, to: null, monthly: null },
-]
-export const SERVICING_ONLY = 497
-export const PAID_MIN_DAILY = 50
+// Membership by total daily spend (draft). Scale is priced one to one. P884: the prices come from the one price
+// source (src/lib/priceBook.js = billing_price_book version 1), never from here.
+export const TIERS = DRAFT.tiers
+export const SERVICING_ONLY = DRAFT.servicingOnly
+export const PAID_MIN_DAILY = DRAFT.paidMinDaily
 export const SLIDER = { min: 0, max: 300, step: 5 }
 export const RECOMMENDED = 'Most full-time agents spend $100 to $150 a day. Starting out or part-time: $50 to $75.'
 

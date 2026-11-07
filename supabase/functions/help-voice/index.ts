@@ -11,7 +11,7 @@
 // tracking number, read-only: the VA legs' From).
 // The tracking number's Voice URL = https://jjextitmbptoaolacocs.supabase.co/functions/v1/help-voice
 import { createClient } from 'npm:@supabase/supabase-js'
-import { handle, type Store } from './core.ts'
+import { handle, type Store, type RouteStore } from './core.ts'
 import { twilioClient } from '../_shared/twilio.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -65,8 +65,34 @@ const store: Store = {
   },
 }
 
+// P882 — routing: one VA at a time through call_queue (SQL), after-hours greeting, rescue, the sweep's timeout.
+const rpc = async (fn: string, args: Record<string, unknown>) => {
+  const { data, error } = await admin.rpc(fn, args)
+  if (error) throw new Error(error.message)
+  return data
+}
+const route: RouteStore = {
+  deskOpen: async () => !!(await rpc('route_desk_open', {})),
+  async afterHoursText() {
+    const { data } = await admin.from('recovery_config').select('after_hours_text').limit(1).maybeSingle()
+    return data?.after_hours_text ?? null
+  },
+  routeInbound: async (callSid, caller) => (await rpc('route_inbound', { p_call_sid: callSid, p_caller: caller })) ?? { queue_id: null },
+  afterHoursCall: async (callSid, caller) => { await rpc('route_after_hours_call', { p_call_sid: callSid, p_caller: caller }) },
+  inboundGone: async callSid => { await rpc('route_inbound_gone', { p_call_sid: callSid }) },
+  async vaLeftLine(callSid, vaLegSid) {
+    const { data } = await admin.from('va_lines').select('id').eq('help_call_sid', callSid).neq('status', 'ended')
+      .order('created_at', { ascending: false }).limit(1).maybeSingle()
+    return data?.id ? !!(await rpc('line_va_left', { p_line: data.id, p_call_sid: vaLegSid })) : false
+  },
+  async isCron(secret) {
+    const { data } = await admin.rpc('fulfillment_cron_ok', { p_secret: secret })
+    return data === true
+  },
+}
+
 Deno.serve(req => handle(req, store, SID && TOKEN ? twilioClient(SID, TOKEN) : null, {
   authToken: TOKEN,
   publicUrl: `${SUPABASE_URL}/functions/v1/help-voice`,
   trackingNumber: Deno.env.get('HELP_TRACKING_NUMBER') ?? null,
-}))
+}, route))

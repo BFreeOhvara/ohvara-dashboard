@@ -11,9 +11,10 @@
 // ── Stripe REST, injectable ─────────────────────────────────────────────────
 
 export class StripeError extends Error {
-  code?: string; type?: string; param?: string; status: number
+  code?: string; type?: string; param?: string; status: number; raw?: any
   constructor(e: any, status: number, fallback: string) {
     super(e?.message || fallback)
+    this.raw = e // P884: a decline names its PaymentIntent here
     this.code = e?.code
     this.type = e?.type
     this.param = e?.param
