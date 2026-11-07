@@ -68,8 +68,11 @@ test('toSampleBilling maps the server view onto the Billing page shape (dollars)
   }
   const b = toSampleBilling(view)
   assert.equal(b.plan, 'pilot')
-  assert.deepEqual(b.spend, { appts: 60, live: 40 })
-  assert.deepEqual(b.pending, { appts: 80, live: 40, from: '2026-11-12' })
+  // P889: the agent gets one spend line; the old per-type view adds up.
+  assert.deepEqual(b.spend, { daily: 100 })
+  assert.deepEqual(b.pending, { daily: 120, from: '2026-11-12' })
+  const one = toSampleBilling({ ...view, spend: { daily: 9000, next: 10000, next_from: '2026-11-12' }, week: { ...view.week, types: undefined, billed_cents: 41200 }, lead_product: { mode: 'both', hours: { Mon: { on: true, start: '9:00 AM', end: '5:00 PM' } }, tz: 'America/Chicago' } })
+  assert.deepEqual([one.spend, one.pending, one.wallet.spent, one.take.mode], [{ daily: 90 }, { daily: 100, from: '2026-11-12' }, 412, 'both'])
   assert.equal(b.wallet.topUp, 665)
   assert.equal(b.wallet.rolled, 35)
   assert.equal(b.wallet.spent, 412)

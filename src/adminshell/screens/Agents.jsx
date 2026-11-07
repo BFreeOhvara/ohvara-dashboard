@@ -9,6 +9,7 @@ import { Dropdown, DField } from '../kit'
 import { ap } from '../paths'
 import { BILL_WORD, STAGE_WORD, stageTone } from '../words'
 import { PilotBlock, CampaignBlock } from './Pilot879'
+import { SplitBlock } from './Split889'
 
 // P849 — Agents: every agent, their plan and weekly lead budget, whether they take live transfers, this week's results
 // and billing. A row opens the agent in a drawer at its own address (/admin/agents/:id) with every admin control the
@@ -63,6 +64,7 @@ function AgentDrawer({ id, onClose }) {
         <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Comped</b><p className="tp-sub">Comped agents use the portal without a plan charge.</p></div><Switch on={a.comped} label="Comped" onChange={v => { setComped(a.id, v); note(v ? 'Account comped' : 'Comp ended') }} /></div>
       </Block>
       <PilotBlock key={`p-${a.id}`} agent={a} />
+      <SplitBlock key={`s-${a.id}`} agent={a} />
       <CampaignBlock agent={a} />
       <Block title="This week"><Funnel w={a.week} /></Block>
       <Block title="Access">

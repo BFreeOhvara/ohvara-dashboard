@@ -8,7 +8,8 @@ import { paths } from '../paths'
 import { LicenceForm } from '../Licence'
 import { pickReady, asPick, EMPTY_PICK } from '../licenceModel'
 import { HoursEditor, CalendarConnect } from '../Hours'
-import { SpendSliders, SpendSummary } from '../PlanBuilder'
+import { SpendSliders, SpendSummary, TakeLeads } from '../PlanBuilder'
+import { DEFAULT_LIVE_HOURS, PITCH, takeOk } from '../../lib/leadSplit'
 import { TalkDrawer } from '../Talk'
 import { openSlotsPerWeek, slotsNeeded, spendOk, dailyTotal } from '../spendPlan'
 import { zoneAbbr, ZONE_CHOICES } from '../../lib/callSlots'
@@ -82,7 +83,7 @@ export default function Welcome() {
     step: 'video', watched: 0, captions: true, lowData: false,
     licence: EMPTY_PICK,
     products: 'both', calendar: { provider: null }, tz: settings.timeZone || 'America/Chicago', tzOk: false,
-    week: DEFAULT_WEEK, spend: { appts: 40, live: 20 }, push: null, terms: false,
+    week: DEFAULT_WEEK, spend: { daily: 60 }, take: { mode: 'both', hours: DEFAULT_LIVE_HOURS }, push: null, terms: false,
   })
   const stable = setS
   useEffect(() => { keep(s) }, [s])
@@ -90,14 +91,17 @@ export default function Welcome() {
   const plan = bill.plan
   const servicingOnly = s.products === 'servicing'
   const openSlots = openSlotsPerWeek(s.week)
-  const roomy = s.spend.appts === 0 || openSlots >= slotsNeeded(s.spend)
+  // P889: one daily spend + how they take leads. An older saved setup ({ appts, live }) reads as its total.
+  const spend = { daily: dailyTotal(s.spend) }
+  const take = { mode: 'both', hours: DEFAULT_LIVE_HOURS, ...s.take, tz: s.tz }
+  const roomy = spend.daily === 0 || openSlots >= slotsNeeded(spend, take.mode)
   const STEPS = [
     { key: 'video', label: 'Watch the intro', done: s.watched >= VIDEO_SECONDS },
     // P848: pick 3 to 10 states and tick the box; no review wait (the NIPR gate is off for launch).
     { key: 'licence', label: 'Your licence', done: pickReady(asPick(s.licence)) },
     { key: 'products', label: 'What you want', done: true },
     { key: 'calendar', label: 'Calendar and hours', done: s.tzOk && openSlots > 0 },
-    ...(servicingOnly ? [] : [{ key: 'spend', label: 'Lead spend', done: spendOk(plan, s.spend) && dailyTotal(s.spend) > 0 && roomy }]),
+    ...(servicingOnly ? [] : [{ key: 'spend', label: 'Lead spend', done: spendOk(plan, spend) && spend.daily > 0 && roomy && takeOk(take) }]),
     { key: 'app', label: 'Phone app', done: s.push === 'yes' },
     { key: 'terms', label: 'Terms', done: s.terms },
   ]
@@ -139,9 +143,10 @@ export default function Welcome() {
               <CalendarConnect value={s.calendar} onPick={p => stable(x => ({ ...x, calendar: { provider: p } }))} />
             </>}
             {cur.key === 'spend' && <>
-              <header className="fx-form-h"><h2>Your lead spend</h2><p>{plan === 'pilot' ? 'During the pilot you pay only your lead spend, prepaid each week. Unspent money rolls over.' : 'Your membership tier follows your total daily spend.'}</p></header>
-              <SpendSliders spend={s.spend} onSpend={v => stable(x => ({ ...x, spend: v }))} plan={plan} id="wz-sp" openSlots={openSlots} />
-              <SpendSummary spend={s.spend} plan={plan} products={s.products}><p className="pb-note">Leads start at 12:00 AM your time, the day after you finish setup.</p></SpendSummary>
+              <header className="fx-form-h"><h2>Your lead spend</h2><p>{PITCH} {plan === 'pilot' ? 'During the pilot you pay only your lead spend, prepaid each week. Unspent money rolls over.' : 'Your membership tier follows your daily spend.'}</p></header>
+              <SpendSliders spend={spend} onSpend={v => stable(x => ({ ...x, spend: v }))} plan={plan} mode={take.mode} id="wz-sp" openSlots={openSlots} />
+              <TakeLeads take={take} onTake={({ mode, hours }) => stable(x => ({ ...x, take: { mode, hours } }))} id="wz-take" />
+              <SpendSummary spend={spend} plan={plan} products={s.products}><p className="pb-note">Leads start at 12:00 AM your time, the day after you finish setup.</p></SpendSummary>
             </>}
             {cur.key === 'app' && <PushStep s={s} up={stable} />}
             {cur.key === 'terms' && <>

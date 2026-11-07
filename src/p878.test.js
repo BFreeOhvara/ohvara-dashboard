@@ -87,12 +87,11 @@ test('the prepaid wallet, the pilot VA cost line, and what each type bought', ()
   assert.equal(w.out, true)
   assert.equal(vaCost({ on: true, hours: 6.5, rate: 8 }), 52)
   assert.equal(vaCost({ on: false, hours: 6.5, rate: 8 }), 0)
-  const a = bought({ type: 'appts', spent: 300, leads: 12, booked: 4, showed: 2, sold: 1, premium: 1000 })
-  assert.equal(a.perBooked, 75)
-  assert.equal(a.showRate, 0.5)
-  const l = bought({ type: 'live', spent: 200, calls: 4, offered: 4, delivered: 2, sold: 1, premium: 900 })
-  assert.equal(l.perDelivered, 100)
-  assert.equal(l.pickup, 0.5)
+  // P889: one line. Booked and transferred apart; old per-type rows add up.
+  const r = bought({ spent: 500, leads: 16, booked: 4, offered: 4, transferred: 2, showed: 2, sold: 2, premium: 1900 })
+  assert.deepEqual([r.perLead, r.perHandled, r.perSale, r.showRate, r.pickup, r.closeRate], [31.25, 500 / 6, 250, 0.5, 0.5, 0.5])
+  const old = bought([{ type: 'appts', spent: 300, leads: 12, booked: 4, showed: 2, sold: 1 }, { type: 'live', spent: 200, calls: 4, offered: 4, delivered: 2, sold: 1 }])
+  assert.deepEqual([old.spent, old.leads, old.transferred, old.sold], [500, 16, 2, 2])
 })
 
 test('appointments need room on the calendar; a slow week is said plainly', () => {

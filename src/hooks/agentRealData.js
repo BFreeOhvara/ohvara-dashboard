@@ -9,6 +9,7 @@ import { outcomeArgs } from '../lib/leadOutcomes'
 import { invokeBilling } from '../lib/billing'
 import { zoneOf } from '../lib/callSlots'
 import { wallet as walletOf, expected } from '../template/spendPlan'
+import { DEFAULT_LIVE_HOURS } from '../lib/leadSplit'
 import { useNote } from '../template/kit'
 
 // P848 — the agent portal on real data. The same names and record shapes as the sample door (src/template/data/index.js), read through
@@ -258,13 +259,15 @@ export function useBillingReal() {
     const daily = t => Math.round(((spend.find(r => r.inbound_type === t && !r.paused)?.weekly_cents || 0) / 7) / 100)
     const b = {
       plan: 'pilot', products: profile?.has_servicing === false ? 'leads' : 'both',
-      spend: { appts: daily('booked_appointment'), live: daily('live_call') }, pending: null, booked: 0, usual: 0,
+      // P889: one daily spend (the old per-type rows add up until p889's lead_product_set is live).
+      spend: { daily: daily('booked_appointment') + daily('live_call') }, pending: null, booked: 0, usual: 0,
+      take: { mode: daily('live_call') > 0 ? 'both' : 'appts', hours: DEFAULT_LIVE_HOURS, tz: profile?.timezone || DEFAULT_TZ },
       wallet: { week: 'This week', topUp: Math.max(0, (balance?.balance_cents || 0) / 100), rolled: 0, spent: 0, next: mondayText(now) },
       va: { on: false, hours: 0, rate: 0 }, bought: { week: boughtOf(leads.data, weekFrom), month: boughtOf(leads.data, monthFrom) }, saved: [], paused: null, cancel: null,
       payment: { card: null, failed: profile?.billing_status === 'past_due' || profile?.billing_status === 'unpaid' },
       next_charge: mondayText(now), nextBill: null, servicing: { status: 'active', next: null }, cancellations: null, history: [], real: true,
     }
-    return { ...b, submitted: clients.data.length, walletNow: walletOf(b.wallet, b.spend), expected: expected(b.spend), servicing: { ...b.servicing, status: b.products === 'leads' ? 'off' : 'active' } }
+    return { ...b, submitted: clients.data.length, walletNow: walletOf(b.wallet, b.spend), expected: expected(b.spend, b.take.mode), servicing: { ...b.servicing, status: b.products === 'leads' ? 'off' : 'active' } }
   }, [q.data, profile, now, clients.data.length, leads.data])
   return { data, isLoading: q.isLoading, error: q.error || null }
 }
@@ -417,6 +420,7 @@ export function useActionsReal() {
       talk: soon('Talk to someone'),
       sendFeedback: soon('Feedback on the team'),
       setSpend: soon('Changing your lead spend here'),
+      setTake: soon('Changing how you take leads here'),
       topUp: soon('Topping up here'),
       setProducts: soon('Switching products here'),
       pause: soon('Pausing here'),

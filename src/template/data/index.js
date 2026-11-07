@@ -3,6 +3,7 @@ import { instantOf, clockOf, dateOf, zoneOf } from '../../lib/callSlots.js'
 import { seedEvents, applyMove, closeCallTask, whenLabel, needsYouNow, forYourInfo, addMin, STAGES, SAMPLE_NOW } from '../leadLifecycle.js'
 import { leadText, SENDER } from '../leadTexts.js'
 import { wallet as walletOf, expected, startsText } from '../spendPlan.js'
+import { DEFAULT_LIVE_HOURS } from '../../lib/leadSplit.js'
 
 // The one door to sample info for the clickable template. Screens read only through the named functions below.
 // Every read returns { data, isLoading: false, error: null }, the shape react-query hooks give, and record fields
@@ -206,22 +207,18 @@ const seed = {
   },
   // cancellations: the old cancellation plan, shown only for an agent already on one (this sample agent is not).
   // P878: the pilot (lead spend only, prepaid weekly) or a paid plan (membership by daily spend + lead spend). Every
-  // price is a draft (spendPlan.js). bought = what each lead type bought this week and this month.
+  // price is a draft (spendPlan.js). P889: one daily spend + how they take leads (take); bought = what the spend
+  // bought this week and this month, booked and transferred apart. ?take=appts previews Appointments only.
   billing: {
     plan: param('plan') === 'paid' ? 'paid' : 'pilot', products: 'both',
-    spend: { appts: 60, live: 40 }, pending: null,
+    spend: { daily: 100 }, pending: null,
+    take: { mode: param('take') === 'appts' ? 'appts' : 'both', hours: DEFAULT_LIVE_HOURS, tz: 'America/Chicago' },
     booked: sampleAgent().none ? 0 : 4, usual: 5,
     wallet: { week: 'Mon, Nov 2 to Sun, Nov 8', topUp: 700, rolled: 35, spent: param('billing') === 'low' ? 668 : 412, next: 'Mon, Nov 9' },
     va: { on: true, hours: 6.5, rate: 8 },
     bought: {
-      week: [
-        { type: 'appts', spent: 300, leads: 12, reached: 9, booked: 4, showed: 2, sold: 1, premium: 1036.8 },
-        { type: 'live', spent: 200, calls: 4, reached: 4, offered: 3, delivered: 2, sold: 1, premium: 891 },
-      ],
-      month: [
-        { type: 'appts', spent: 1320, leads: 51, reached: 38, booked: 18, showed: 11, sold: 4, premium: 4410 },
-        { type: 'live', spent: 880, calls: 16, reached: 15, offered: 12, delivered: 9, sold: 3, premium: 2985 },
-      ],
+      week: { spent: 500, leads: 16, reached: 13, booked: 4, offered: 3, transferred: 2, showed: 2, sold: 2, premium: 1927.8 },
+      month: { spent: 2200, leads: 67, reached: 53, booked: 18, offered: 12, transferred: 9, showed: 11, sold: 7, premium: 7395 },
     },
     saved: [{ id: 's1', who: 'Luis Ortega', what: 'Card declined. The team updated the payment with the carrier', at: 'Oct 21', premium: 112 }, { id: 's2', who: 'Carla Jones', what: 'Asked to cancel. The team kept the policy', at: 'Oct 9', premium: 74.25 }],
     paused: null, cancel: null,
@@ -254,7 +251,7 @@ function useBillingSample() { const s = useStore(); return ok(useMemo(() => bill
 // P878: the billing record plus what's worked out from it (the prepaid balance, the week's expected range).
 function billingView(b, submitted) {
   const w = walletOf(b.wallet, b.spend)
-  return { ...b, submitted, walletNow: w, expected: expected(b.spend), servicing: { ...b.servicing, status: b.products === 'leads' ? 'off' : 'active' } }
+  return { ...b, submitted, walletNow: w, expected: expected(b.spend, b.take?.mode), servicing: { ...b.servicing, status: b.products === 'leads' ? 'off' : 'active' } }
 }
 // Billing items that need the agent (N-K-01): a failed card, prepaid lead spend about to run out.
 function billingNeeds(b) {
@@ -406,6 +403,8 @@ function useActionsSample() {
     })),
     // Lead spend (N-A-23): a change starts at midnight; a tier change starts with the next bill.
     setSpend: spend => set(s => ({ ...s, billing: { ...s.billing, pending: { spend, starts: startsText('Tue, Nov 3') }, spend } })),
+    // P889: how they take leads (mode + live-call hours). Starts at midnight like a spend change.
+    setTake: take => set(s => ({ ...s, billing: { ...s.billing, take } })),
     topUp: amount => set(s => ({ ...s, billing: { ...s.billing, wallet: { ...s.billing.wallet, topUp: s.billing.wallet.topUp + amount } } })),
     setProducts: products => set(s => ({ ...s, billing: { ...s.billing, products } })),
     pause: p => set(s => ({ ...s, billing: { ...s.billing, paused: p } })),

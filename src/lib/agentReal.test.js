@@ -73,14 +73,14 @@ test('the sample switch: on by default, admins and test accounts can preview', (
   assert.equal(switchReady({ id: 1, show_sample_data: true }), true)
 })
 
-test('boughtOf counts the agent leads per type in the range', async () => {
+test('boughtOf counts the agent leads in the range: booked and transferred apart (P889)', async () => {
   const { boughtOf } = await import('./agentReal.js')
-  const [a, l] = boughtOf([
+  const r = boughtOf([
     { kind: 'appointment', stage: 'booked', came: '2026-11-03T10:00' },
     { kind: 'appointment', stage: 'sold', came: '2026-11-04T10:00', submitted: { premium: 80 } },
     { kind: 'appointment', stage: 'new', came: '2026-10-20T10:00' },
     { kind: 'live_call', stage: 'showed', came: '2026-11-05T10:00' },
   ], '2026-11-02')
-  assert.deepEqual([a.leads, a.reached, a.booked, a.showed, a.sold, a.premium, a.spent], [2, 2, 2, 1, 1, 80, 0])
-  assert.deepEqual([l.calls, l.delivered, l.sold], [1, 1, 0])
+  assert.deepEqual([r.leads, r.reached, r.booked, r.showed, r.sold, r.premium, r.spent], [3, 3, 2, 1, 1, 80, 0])
+  assert.deepEqual([r.offered, r.transferred], [1, 1])
 })

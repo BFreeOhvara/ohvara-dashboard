@@ -7,6 +7,8 @@ import {
   flagsOf, sourceOf, CONSENT_LINE, agentForState, agentCheck, checkStep, CHECK_WORD, OUTCOMES, WRAP_REMIND_S, ageRule, SOMEONE_ELSE,
   SCRIPTS, BOUNDARY, COVERAGE_CUE, requiredLeft, VOICEMAIL, ALERTS_ADMIN, bestNumberCheck, NOTE_CHIPS, myCallTasks, mmss,
 } from './p879'
+import { liveHoursText } from '../../lib/leadSplit'
+import { zoneAbbr } from '../../lib/callSlots'
 import './p879.css'
 
 // P879 — the lead drawer's new blocks (Queue › a lead), sample only until 852 wires calls, pushes and texts. Calling
@@ -47,6 +49,9 @@ export function HowWeGotYou({ l }) {
   )
 }
 
+// P889: every fresh form lead is called right away. If the agent takes live transfers and it's inside their
+// live-call hours (their time zone) → Check agent; Yes → cold transfer; No or no answer in 30 s → book. Outside
+// their hours, or an Appointments-only agent → book. The route line says which, before the VA asks.
 // N-C-01, N-C-03, N-C-22, N-C-26, N-B-72: from a reached lead, Check agent or Book. Check agent is on only when the
 // agent can take it, else the reason shows. Then Sent → Seen → Yes / No / No answer on a 30 s timer; Yes is a cold
 // transfer (you drop off), and if the agent doesn't pick up in about 20 s it comes back to you to book.
@@ -68,6 +73,7 @@ export function CheckAgent({ l, held, onBook }) {
   const ended = ['no', 'none', 'fail', 'bounced'].includes(step)
   return (
     <Block title="Reached them? Check the agent or book" sub={`${agent.name} · licensed in ${agent.states.join(', ')}`} aside={<SampleTag>Sample mode</SampleTag>}>
+      {elig.route && !start && <p className={`v879-band${elig.route.route === 'check' ? ' is-blue' : ''}`} role="status">{elig.route.route === 'check' ? <BellRing size={14} aria-hidden="true" /> : <CalendarCheck size={14} aria-hidden="true" />}<span><b>{elig.route.route === 'check' ? 'Live transfer if they’re ready now' : 'Book them'}</b><small>{elig.route.why.replace(/: (book them|check the agent.*)$/i, '')}{agent.mode === 'both' ? ` · ${liveHoursText(agent.hours)}, ${zoneAbbr(agent.tz)}` : ''}</small></span></p>}
       {!elig.bookOk && <p className="adm-warn-t v879-warn"><ShieldAlert size={13} aria-hidden="true" />{state ? `${agent.name.split(' ')[0]} isn't licensed in ${state}. Don't transfer or book; the team finds a licensed agent.` : "Confirm the lead's state on the call before checking the agent or booking."}</p>}
       {!start && (
         <div className="tp-row tp-wrap">
