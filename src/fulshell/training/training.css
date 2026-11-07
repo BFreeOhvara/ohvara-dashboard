@@ -187,3 +187,21 @@
   .tr-vkind { width: 100%; }
   .tr-chap ol { grid-template-columns: 1fr; }
 }
+
+/* P877 Phase 2: each lesson ends in a check (where a mistake costs money or breaks a rule) or a Try it on sample data */
+.tr-end { flex: none; font-size: 11.5px; font-weight: 600; color: var(--ov-mid); padding: 2px 8px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--ov-line); }
+.tr-end.is-quiz { color: var(--ov-hi); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); }
+.tr-trying { display: flex; align-items: center; gap: 8px; }
+/* top of the screen: drawer footers (Take it, Save result, Book it) sit at the bottom and must stay pressable */
+.tr-tryit { position: fixed; z-index: 90; left: 50%; top: calc(10px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); width: max-content; max-width: calc(100vw - 32px);
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 10px 12px 10px 16px; border-radius: 16px; font-size: 13.5px; color: var(--ov-hi);
+  background: var(--ov-card-solid, var(--sh-base)); backdrop-filter: blur(14px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 50%, transparent), 0 12px 32px rgb(0 0 0 / .35); }
+.tr-tryit > span { min-width: 0; }
+.tr-tryit b { color: var(--accent); }
+.tr-tryit.is-done b { color: var(--ov-up, var(--accent)); }
+.tr-tryit .tp-btn, .tr-tryit .tp-primary { min-height: 32px; padding: 0 12px; font-size: 13px; }
+@media (max-width: 560px) {
+  .tr-tryit { left: 16px; right: 16px; width: auto; max-width: none; transform: none; padding: 6px 8px 6px 12px; font-size: 12.5px; flex-wrap: nowrap; }
+  .tr-tryit > span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tr-tryit .tr-tryit-back { display: none; }
+}

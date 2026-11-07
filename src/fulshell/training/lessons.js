@@ -5,6 +5,9 @@
 // reads is marked approve: true and shows "Draft: Brayden and Jordan approve" until they sign it off. Legal wording is
 // Brayden's call. No imports on purpose: it runs under node --test.
 //
+// P877: a lesson ends in a quiz (quiz: true, only where a mistake costs money or breaks a rule) or in a Try it (tryIt:
+// do the task once on sample data; it completes when the VA presses tryIt.button on that page).
+//
 // Bump TRAINING_VERSION when a lesson's check changes, so a VA's old pass is shown as "updated, take the check again".
 
 export const TRAINING_VERSION = '2026-11-06.1'
@@ -18,6 +21,7 @@ const ok = (q, options, answer, why) => ({ q, options, answer, why })
 export const LESSONS = [
   {
     id: 'desk',
+    tryIt: { path: ['schedule'], do: 'Open Request a day off, pick any day next week and press Tell the team.', button: 'Tell the team' },
     title: 'The desk and your shifts',
     job: 'When you work, who else is on, and how to ask for a day off.',
     minutes: 4,
@@ -43,6 +47,7 @@ export const LESSONS = [
   },
   {
     id: 'never',
+    quiz: true,
     title: 'What never to say',
     job: 'The lines a VA never crosses, on any call, text or message.',
     minutes: 5,
@@ -78,6 +83,7 @@ export const LESSONS = [
   },
   {
     id: 'optout',
+    quiz: true,
     title: 'Opt-outs and do-not-call',
     job: 'Someone says stop: every call and text stops, at once.',
     minutes: 4,
@@ -111,6 +117,7 @@ export const LESSONS = [
   },
   {
     id: 'logging',
+    tryIt: { path: ['schedule'], do: 'Open the + menu, choose Log a call, pick one of today\'s calls, choose how it went and press Save result.', button: 'Save result' },
     title: 'Logging every call',
     job: 'Every call gets a result and a note, straight after it ends.',
     minutes: 4,
@@ -135,6 +142,7 @@ export const LESSONS = [
   },
   {
     id: 'inbound',
+    quiz: true,
     title: 'Answering a call that comes in',
     job: 'A call rings in: answer as Deedstone, find out what they need, and route it.',
     minutes: 6,
@@ -170,6 +178,7 @@ export const LESSONS = [
   },
   {
     id: 'speed',
+    tryIt: { path: ['queue'], do: 'Open a lead under New and press Take it.', button: 'Take it' },
     title: 'Speed to lead: new leads within 5 minutes',
     job: 'A new lead lands in your Queue. Call them inside five minutes.',
     minutes: 5,
@@ -204,6 +213,7 @@ export const LESSONS = [
   },
   {
     id: 'booking',
+    quiz: true,
     title: 'Booking an appointment',
     job: 'Put a lead on an agent\'s calendar, at a time that works in the lead\'s own time zone.',
     minutes: 6,
@@ -237,6 +247,7 @@ export const LESSONS = [
   },
   {
     id: 'transfer',
+    quiz: true,
     title: 'Live transfers to the agent',
     job: 'A hot lead or a client with a policy question: hand them to the agent live.',
     minutes: 5,
@@ -268,6 +279,7 @@ export const LESSONS = [
   },
   {
     id: 'callbacks',
+    tryIt: { path: ['queue'], do: 'Open a lead, press Call back, pick a time on their clock and press Set callback.', button: 'Set callback' },
     title: 'Callbacks',
     job: 'They asked you to call back later: set it in their time, and call on time.',
     minutes: 3,
@@ -295,6 +307,7 @@ export const LESSONS = [
   },
   {
     id: 'reminders',
+    tryIt: { path: ['schedule'], do: 'Rebook someone: open the + menu, Book for an agent, pick the agent, a day and an open time, then press Book it.', button: 'Book it' },
     title: 'Reminders, no-shows and rebooks',
     job: 'Reminder texts go out by themselves. When someone misses their call, you rebook it.',
     minutes: 4,
@@ -324,6 +337,7 @@ export const LESSONS = [
   },
   {
     id: 'checkins',
+    tryIt: { path: ['queue'], do: 'A check-in reply comes back as New: open a lead under New and press Take it.', button: 'Take it' },
     title: 'Check-in texts at day 30, 60 and 90',
     job: 'Leads we never reached get three check-in texts. You handle the replies.',
     minutes: 3,
@@ -346,6 +360,7 @@ export const LESSONS = [
   },
   {
     id: 'carrier',
+    quiz: true,
     title: 'Carrier calls inside carrier hours',
     job: 'Closing a client\'s old policy with the carrier, on a three-way call, while the carrier is open.',
     minutes: 6,
@@ -379,6 +394,7 @@ export const LESSONS = [
   },
   {
     id: 'packets',
+    tryIt: { path: ['servicing'], do: 'Open a packet check, press Start, then Record the result and Save result.', button: 'Save result' },
     title: 'Servicing: sending packets',
     job: 'Make sure the client actually has their policy packet.',
     minutes: 4,
@@ -407,6 +423,7 @@ export const LESSONS = [
   },
   {
     id: 'payments',
+    tryIt: { path: ['servicing'], do: 'Open a payment step, press Start, then Record the result and Save result.', button: 'Save result' },
     title: 'Servicing: failed payments',
     job: 'A draft failed: help the client fix it fast, before the policy lapses.',
     minutes: 5,
@@ -436,6 +453,7 @@ export const LESSONS = [
   },
   {
     id: 'changes',
+    tryIt: { path: ['servicing'], do: 'Open a change step (beneficiary, address or draft date), press Start, then Record the result and Save result.', button: 'Save result' },
     title: 'Servicing: policy changes',
     job: 'Beneficiary, address, payment method or draft date changes, done with the carrier.',
     minutes: 4,
@@ -464,6 +482,7 @@ export const LESSONS = [
   },
   {
     id: 'saves',
+    tryIt: { path: ['servicing'], do: 'Open a save step, press Start, then Record the result and Save result.', button: 'Save result' },
     title: 'Servicing: cancellation saves',
     job: 'A client wants to cancel or is about to lapse: find out why, and get them to their agent.',
     minutes: 4,
@@ -492,6 +511,7 @@ export const LESSONS = [
   },
   {
     id: 'escalate',
+    quiz: true,
     title: 'When to escalate, and to whom',
     job: 'Know who to bring in, and when.',
     minutes: 4,

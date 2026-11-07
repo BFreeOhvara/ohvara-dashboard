@@ -1,5 +1,6 @@
 import { useCallback, useSyncExternalStore } from 'react'
 import { markSeen, emptySeen } from './videoModel.js'
+import { SEED_WATCHED } from './store.js'
 
 // P877 — how much of each training video a VA has seen, and where they stopped. Sample only (this browser), kept apart
 // from the check results in ./store.js; P852 moves it to the database with the rest of training progress.
@@ -18,10 +19,11 @@ function set(next) {
 const subscribe = f => { subs.add(f); return () => subs.delete(f) }
 const snap = () => state
 const key = (name, id) => `${name}|${id}`
+const seeded = (name, id, duration) => (SEED_WATCHED[name]?.includes(id) ? { ...emptySeen(duration), pct: 1, watched: true } : null)
 
 export function useVideoProgress(name, id, duration) {
   const s = useSyncExternalStore(subscribe, snap)
-  const v = s[key(name, id)] || emptySeen(duration)
+  const v = s[key(name, id)] || seeded(name, id, duration) || emptySeen(duration)
   const seen = useCallback((from, to) => {
     const k = key(name, id)
     const cur = state[k]
@@ -41,6 +43,7 @@ export function useVideoProgress(name, id, duration) {
 export function useWatchedMap(name) {
   const s = useSyncExternalStore(subscribe, snap)
   const out = {}
+  for (const id of SEED_WATCHED[name] || []) out[id] = seeded(name, id, 0)
   for (const [k, v] of Object.entries(s)) { const [n, id] = k.split('|'); if (n === name) out[id] = v }
   return out
 }

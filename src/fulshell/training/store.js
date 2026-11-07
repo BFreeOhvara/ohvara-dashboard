@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react'
 import { LESSONS } from './lessons.js'
-import { emptyProgress, lessonStates, summary, scoreCheck, recordAttempt, assignLesson, resetLesson } from './model.js'
+import { fp } from '../../template/ful/paths'
+import { emptyProgress, lessonStates, summary, scoreCheck, recordAttempt, recordTry, matchesTry, endsInQuiz, assignLesson, resetLesson } from './model.js'
 
 // P872 — training progress and lesson edits, sample only (this browser). One store, so the rail badge, the Overview
 // nudge, the Training page and admin Settings → Training all agree. P852 swaps this for the database: progress per
@@ -9,14 +10,18 @@ import { emptyProgress, lessonStates, summary, scoreCheck, recordAttempt, assign
 
 const KEY = 'ful-training:v1'
 const allRight = id => { const l = LESSONS.find(x => x.id === id); return scoreCheck(l, l.check.map(c => c.answer)) }
-const passFirst = (n, extra = p => p) => extra(LESSONS.slice(0, n).reduce((p, l) => recordAttempt(p, l.id, allRight(l.id), '2026-11-02T15:00:00Z'), emptyProgress))
+const AT = '2026-11-02T15:00:00Z'
+const passFirst = (n, extra = p => p) => extra(LESSONS.slice(0, n).reduce((p, l) => (endsInQuiz(l) ? recordAttempt(p, l.id, allRight(l.id), AT) : recordTry(p, l.id, AT)), emptyProgress))
+const transfer = LESSONS.find(l => l.id === 'transfer')
 const SEED = {
   'Maya Brooks': passFirst(4),
   'Andre Lewis': passFirst(LESSONS.length),
-  'Keisha Grant': passFirst(9, p => assignLesson(recordAttempt(p, LESSONS[9].id, { correct: 2, total: LESSONS[9].check.length, pass: false }, '2026-11-05T19:10:00Z'), 'optout')),
+  'Keisha Grant': passFirst(7, p => assignLesson(recordAttempt(p, transfer.id, { correct: 1, total: transfer.check.length, pass: false }, '2026-11-05T19:10:00Z'), 'optout')),
   'Rosa Diaz': emptyProgress,
 }
 export const TRAINEES = Object.keys(SEED)
+// Sample VAs watched the video of every lesson they finished (P877), so the admin view and the lesson list agree.
+export const SEED_WATCHED = Object.fromEntries(TRAINEES.map(n => [n, Object.keys(SEED[n].results).filter(id => SEED[n].results[id].pass)]))
 
 function load() {
   try {
@@ -26,11 +31,70 @@ function load() {
   return { people: {}, edits: {} }
 }
 let state = load()
+
+// P877 Try it: the lesson page sets `trying` ({ name, id }) and sends the VA to the page. The next press of that
+// lesson's button anywhere in the portal (capture phase, so it is read before the click changes the screen) marks
+// the lesson done. Sample only: P852 replaces this with the real event (the booking, the result, the request).
+function onPress(e) {
+  const tr = state.trying
+  if (!tr) return
+  const b = e.target?.closest?.('button')
+  const l = LESSONS.find(x => x.id === tr.id)
+  if (!b || !matchesTry(l, b.textContent)) return
+  set({ ...state, trying: null, justTried: tr.id, people: { ...state.people, [tr.name]: recordTry(progressOf(tr.name), tr.id) } })
+}
+if (typeof document !== 'undefined') document.addEventListener('click', onPress, true)
+
+// The Try it bar: a small bar at the bottom of every VA page while a Try it is on ("press Take it"), then "Done" for a
+// few seconds. Plain DOM on purpose: the store runs outside any one screen, and the VA frame is not this lane's file.
+let doneTimer = null
+// fp() gives router paths; the preview's router sits under /template, so a plain pushState needs that prefix.
+const go = url => {
+  const base = window.location.pathname.startsWith('/template/') ? '/template' : ''
+  window.history.pushState({}, '', base + url)
+  window.dispatchEvent(new PopStateEvent('popstate'))
+}
+function paintBar() {
+  if (typeof document === 'undefined') return
+  let bar = document.getElementById('tr-tryit')
+  const id = state.trying?.id || state.justTried
+  const l = id && LESSONS.find(x => x.id === id)
+  if (!l || !window.location.pathname.includes('/fulfillment')) { bar?.remove(); return }
+  if (!bar) {
+    bar = document.createElement('div')
+    bar.id = 'tr-tryit'
+    bar.className = 'tr-tryit'
+    bar.setAttribute('role', 'status')
+    bar.setAttribute('aria-live', 'polite')
+    document.body.append(bar)
+  }
+  const lessonUrl = fp('training', l.id)
+  bar.classList.toggle('is-done', !state.trying)
+  bar.replaceChildren()
+  const txt = document.createElement('span')
+  const b = document.createElement('b')
+  const act = (label, run, primary) => { const x = document.createElement('button'); x.type = 'button'; x.className = primary ? 'tp-primary fx-accent' : 'tp-btn ov-ghost'; x.textContent = label; x.addEventListener('click', run); return x }
+  if (state.trying) {
+    b.textContent = 'Try it: '
+    txt.append(b, `press ${l.tryIt.button}. ${l.title}`)
+    const back = act('Back to the lesson', () => go(lessonUrl))
+    back.classList.add('tr-tryit-back')
+    bar.append(txt, back, act('Stop', () => set({ ...state, trying: null })))
+  } else {
+    b.textContent = 'Done. '
+    txt.append(b, `${l.title} is complete.`)
+    bar.append(txt, act('Back to training', () => { set({ ...state, justTried: null }); go(fp('training')) }, true))
+    clearTimeout(doneTimer)
+    doneTimer = setTimeout(() => { if (state.justTried === l.id) set({ ...state, justTried: null }) }, 8000)
+  }
+}
+if (typeof window !== 'undefined') { window.addEventListener('popstate', paintBar); setTimeout(paintBar, 0) }
 const subs = new Set()
 function set(next) {
   state = next
   try { localStorage.setItem(KEY, JSON.stringify(state)) } catch { /* private window: it lasts this visit */ }
   subs.forEach(f => f())
+  paintBar()
 }
 const subscribe = f => { subs.add(f); return () => subs.delete(f) }
 const snap = () => state
@@ -57,7 +121,10 @@ export function useTraining(name) {
     putProgress(name, recordAttempt(progressOf(name), id, result))
     return result
   }, [name])
-  return { progress, states, sum, submit }
+  const trying = s.trying?.name === name ? s.trying.id : null
+  const startTry = useCallback(id => set({ ...state, trying: { name, id }, justTried: null }), [name])
+  const stopTry = useCallback(() => set({ ...state, trying: null }), [])
+  return { progress, states, sum, submit, trying, justTried: s.justTried || null, startTry, stopTry }
 }
 
 export function useTrainingAdmin() {

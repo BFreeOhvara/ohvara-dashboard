@@ -2,11 +2,11 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   GraduationCap, Lock, CircleCheck, ChevronRight, Search, ArrowLeft, ArrowRight, Check, X, MessageSquareQuote, ListOrdered,
-  ThumbsUp, Ban, MousePointerClick, RotateCcw, Trophy, TriangleAlert, Clock3, Sparkles, PlayCircle,
+  ThumbsUp, Ban, MousePointerClick, RotateCcw, Trophy, TriangleAlert, Clock3, Sparkles, PlayCircle, Hand,
 } from 'lucide-react'
 import { useAccount } from '../../template/kit'
 import { fp } from '../../template/ful/paths'
-import { lessonNo, searchLessons } from './model.js'
+import { lessonNo, searchLessons, endsInQuiz } from './model.js'
 import { PASS_MARK } from './lessons.js'
 import { useLessons, useTraining } from './store.js'
 import SHOTS from './shots.json'
@@ -47,7 +47,7 @@ export function TrainingNudge() {
       <span className="tr-nudge-ic" aria-hidden="true"><GraduationCap size={20} /></span>
       <span className="tp-grow">
         <b>Finish your training</b>
-        <small>{sum.passed} of {sum.total} lessons passed{next ? ` · next: ${next.title}` : ''}</small>
+        <small>{sum.passed} of {sum.total} lessons done{next ? ` · next: ${next.title}` : ''}</small>
         <span className="tr-bar" aria-hidden="true"><i style={{ '--w': sum.pct }} /></span>
       </span>
       <Link to={next ? fp('training', next.id) : fp('training')} className="tp-primary fx-accent tr-nudge-go">{sum.passed ? 'Keep going' : 'Start'}<ArrowRight size={15} /></Link>
@@ -70,7 +70,7 @@ function Home({ lessons, t, who }) {
             <h2>{t.sum.complete ? 'Training complete' : 'Finish your training'}</h2>
             <p>{t.sum.complete
               ? `All ${t.sum.total} lessons passed. Come back any time: use How do I…? or the ? on any task.`
-              : `${t.sum.passed} of ${t.sum.total} lessons passed. Lessons open in order: pass each short check to unlock the next.`}</p>
+              : `${t.sum.passed} of ${t.sum.total} lessons done. Watch each video, then pass its check or try it once on sample data to open the next.`}</p>
           </span>
           {next && <Link to={fp('training', next.id)} className="tp-primary fx-accent">{t.sum.passed ? 'Next lesson' : 'Start lesson 1'}<ArrowRight size={16} /></Link>}
         </section>
@@ -88,6 +88,7 @@ function Home({ lessons, t, who }) {
                   {s.assigned && <i className="fx-delta is-warn">Assigned</i>}
                   {s.stale && <i className="fx-delta is-blue">Updated</i>}
                   {s.score && <small className="tp-num tr-score">{s.score.correct}/{s.score.total}</small>}
+                  <small className={`tr-end${endsInQuiz(l) ? ' is-quiz' : ''}`}>{endsInQuiz(l) ? 'Check' : 'Try it'}</small>
                   {hasVideo(l.id)
                     ? <small className={`tr-min tr-hasvid${seen[l.id]?.watched ? ' is-seen' : ''}`} title={seen[l.id]?.watched ? 'Video watched' : 'Has a video'}><PlayCircle size={12} aria-hidden="true" />{fmtTime(videoFor(l.id).duration)}</small>
                     : <small className="tr-min"><Clock3 size={12} aria-hidden="true" />{l.minutes} min</small>}
@@ -124,7 +125,8 @@ function Home({ lessons, t, who }) {
         <section className="fx-tile tr-rules" style={{ '--i': 3 }} aria-label="How training works">
           <header className="fx-tile-h"><span className="tp-grow"><h2>How it works</h2></span></header>
           <ul className="tr-bul">
-            <li><ListOrdered size={15} aria-hidden="true" />Lessons open in order. Pass a check ({pctText(PASS_MARK)} or better) to open the next.</li>
+            <li><PlayCircle size={15} aria-hidden="true" />Every lesson has a short video. Watching about 90% counts as watched.</li>
+            <li><ListOrdered size={15} aria-hidden="true" />Lessons open in order. Where a mistake costs money or breaks a rule, pass a check ({pctText(PASS_MARK)} or better). Everywhere else, try it once on sample data.</li>
             <li><MousePointerClick size={15} aria-hidden="true" />Every task in the portal has a ? that opens its lesson.</li>
             <li><Sparkles size={15} aria-hidden="true" />Wording marked “{APPROVE}” may still change.</li>
           </ul>
@@ -235,13 +237,14 @@ function Lesson({ lesson, lessons, t, who }) {
     window.scrollTo({ top: 0 })
   }
   const approve = (lesson.script?.lines || []).some(x => x.approve)
+  const quiz = endsInQuiz(lesson)
   return (
     <div className="tp-page fx-page fx-ovl tr-lesson">
       <div className="fx-ovl-main">
         <nav className="tr-crumb" aria-label="Training">
           <Link to={fp('training')}><ArrowLeft size={15} aria-hidden="true" />All lessons</Link>
           <span className="tp-num">Lesson {i + 1} of {lessons.length}</span>
-          {st.state === 'passed' && <i className="fx-delta is-up"><Check size={12} aria-hidden="true" />Passed {st.score ? `${st.score.correct}/${st.score.total}` : ''}</i>}
+          {st.state === 'passed' && <i className="fx-delta is-up"><Check size={12} aria-hidden="true" />{st.score ? `Passed ${st.score.correct}/${st.score.total}` : 'Done'}</i>}
           {st.assigned && <i className="fx-delta is-warn">Assigned to you</i>}
         </nav>
 
@@ -286,13 +289,22 @@ function Lesson({ lesson, lessons, t, who }) {
 
       <div className="fx-ovl-side">
         {mode === 'read' && (
-          <section className={`fx-tile tr-cta${locked ? '' : ' is-hero'}`} style={{ '--i': 1 }} aria-label="Check">
+          <section className={`fx-tile tr-cta${locked ? '' : ' is-hero'}`} style={{ '--i': 1 }} aria-label={quiz ? 'Check' : 'Try it'}>
             {locked ? (
               <>
                 <span className="tr-cta-ic" aria-hidden="true"><Lock size={18} /></span>
-                <h2>Check opens later</h2>
-                <p>Lessons open in order. You can read this one now; its check opens after you pass “{blocker?.title || 'the lessons before it'}”.</p>
+                <h2>{quiz ? 'Check opens later' : 'Try it opens later'}</h2>
+                <p>Lessons open in order. You can watch and read this one now; its {quiz ? 'check' : 'Try it'} opens after you finish “{blocker?.title || 'the lessons before it'}”.</p>
                 {blocker && <Link to={fp('training', blocker.id)} className="tp-btn ov-ghost">Go to {blocker.title}<ArrowRight size={15} /></Link>}
+              </>
+            ) : !quiz ? (
+              <>
+                <span className="tr-cta-ic" aria-hidden="true"><Hand size={18} /></span>
+                <h2>{st.state === 'passed' ? 'Done. Try it again?' : t.trying === lesson.id ? 'Your turn' : 'Now try it'}</h2>
+                <p>{lesson.tryIt.do} It’s sample data, so nothing real changes.</p>
+                {t.trying === lesson.id && <p className="fx-calm tr-trying"><MousePointerClick size={15} aria-hidden="true" />Waiting for you to press <b>{lesson.tryIt.button}</b>.</p>}
+                <button type="button" className="tp-primary fx-accent" onClick={() => { t.startTry(lesson.id); navigate(fp(...lesson.tryIt.path)) }}>{t.trying === lesson.id ? 'Go there' : st.state === 'passed' ? 'Try it again' : 'Try it now'}<ArrowRight size={16} /></button>
+                {t.trying === lesson.id && <button type="button" className="tp-btn ov-ghost" onClick={t.stopTry}>Stop</button>}
               </>
             ) : (
               <>

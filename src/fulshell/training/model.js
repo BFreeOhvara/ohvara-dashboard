@@ -1,6 +1,6 @@
 // P872 — VA training rules, pure (node --test): lessons unlock in order, a check scores and passes at PASS_MARK, the
 // "How do I…?" search, and the admin's assign / reset. Progress shape (sample in the browser now; P852 stores it):
-//   { results: { [lessonId]: { correct, total, pass, at, version, tries } }, assigned: [lessonId] }
+//   { results: { [lessonId]: { correct, total, pass, at, version, tries } | { tried, pass, at, version, tries } }, assigned: [lessonId] }
 // An assigned lesson must be taken (again) even if it was passed; it does not lock anything after it.
 import { LESSONS, HELP, PASS_MARK, TRAINING_VERSION } from './lessons.js'
 
@@ -33,7 +33,7 @@ export function lessonStates(p = emptyProgress, lessons = LESSONS) {
     if (state === 'next') nextSet = true
     // The path stays open only while every lesson so far is passed (an assigned re-take of a passed lesson does not close it).
     if (!done && !(assigned && r?.pass)) gateOpen = false
-    return { id: l.id, state, assigned, stale: !!r?.pass && r.version !== TRAINING_VERSION, score: r ? { correct: r.correct, total: r.total } : null, tries: r?.tries || 0 }
+    return { id: l.id, state, assigned, stale: !!r?.pass && !!r.total && r.version !== TRAINING_VERSION, score: r?.total ? { correct: r.correct, total: r.total } : null, tried: !!r?.tried, tries: r?.tries || 0 }
   })
 }
 
@@ -55,6 +55,16 @@ export function recordAttempt(p, id, result, at = new Date().toISOString()) {
   const r = keepPass ? { ...prev, tries: (prev.tries || 0) + 1 } : { correct: result.correct, total: result.total, pass: result.pass, at, version: TRAINING_VERSION, tries: (prev?.tries || 0) + 1 }
   return { results: { ...p.results, [id]: r }, assigned: result.pass ? p.assigned.filter(x => x !== id) : p.assigned }
 }
+// P877: a lesson ends in a quiz (lesson.quiz) or a Try it (lesson.tryIt). Try it is done when the VA presses
+// tryIt.button on sample data; it counts as the lesson's pass (no score), and clears an admin's assign like a pass does.
+export const endsInQuiz = l => !!l?.quiz || !l?.tryIt
+export function recordTry(p, id, at = new Date().toISOString()) {
+  const prev = p.results[id]
+  return { results: { ...p.results, [id]: { tried: true, pass: true, at, version: TRAINING_VERSION, tries: (prev?.tries || 0) + 1 } }, assigned: p.assigned.filter(x => x !== id) }
+}
+const squash = s => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase()
+// The pressed button's text, as the browser reads it (icons add nothing), against the lesson's Try it button.
+export const matchesTry = (lesson, text) => !!lesson?.tryIt && squash(text) === squash(lesson.tryIt.button)
 export const assignLesson = (p, id) => (p.assigned.includes(id) ? p : { ...p, assigned: [...p.assigned, id] })
 export function resetLesson(p, id) {
   const rest = { ...p.results }

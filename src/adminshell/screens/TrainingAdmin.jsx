@@ -4,6 +4,9 @@ import { Field, Chip, Avatar, useNote } from '../../template/kit'
 import { Dropdown, DField } from '../kit'
 import { LESSONS } from '../../fulshell/training/lessons.js'
 import { useLessons, useTrainingAdmin } from '../../fulshell/training/store.js'
+import { endsInQuiz } from '../../fulshell/training/model.js'
+import { hasVideo } from '../../fulshell/training/videoModel.js'
+import { useWatchedMap } from '../../fulshell/training/videoStore.js'
 import '../../fulshell/training/training.css'
 
 // P872 — admin Settings → Training: each VA's progress and check scores, assign or reset a lesson, and edit a
@@ -12,8 +15,19 @@ import '../../fulshell/training/training.css'
 const STATE = { passed: ['Passed', 'green'], next: ['Up next', 'blue'], open: ['Open', 'blue'], locked: ['Locked', 'mute'] }
 const pct = n => `${Math.round(n * 100)}%`
 
+// P877: per lesson, the video (watched, or how much), then the check score or whether Try it was done.
+function lessonLine(l, r, v) {
+  const video = !hasVideo(l.id) ? null : v?.watched ? 'Video watched' : v?.pct ? `Video ${pct(v.pct)} watched` : 'Video not watched'
+  const end = endsInQuiz(l)
+    ? (r?.total ? `Check ${r.correct}/${r.total} · ${r.tries} ${r.tries === 1 ? 'try' : 'tries'}` : 'Check not taken')
+    : (r?.tried ? 'Try it done' : 'Try it not done')
+  return [video, end].filter(Boolean).join(' · ')
+}
+
 function Person({ p, onAssign, onReset, onResetAll }) {
   const [open, setOpen] = useState(false)
+  const seen = useWatchedMap(p.name)
+  const watched = LESSONS.filter(l => seen[l.id]?.watched).length
   const nextIdx = LESSONS.findIndex(l => l.id === p.sum.next)
   const status = p.sum.complete ? ['Complete', 'green'] : p.sum.passed === 0 && !Object.keys(p.progress.results).length ? ['Not started', 'warn'] : [`On lesson ${nextIdx + 1}`, 'blue']
   const assigned = p.states.filter(s => s.assigned).length
@@ -22,7 +36,7 @@ function Person({ p, onAssign, onReset, onResetAll }) {
       <button type="button" className="fx-mrow adm-tr-row" aria-expanded={open} onClick={() => setOpen(o => !o)}>
         <Avatar name={p.name} />
         <span className="tp-grow"><b>{p.name}</b>
-          <small>{p.sum.passed} of {p.sum.total} passed{p.sum.avg != null ? ` · average ${pct(p.sum.avg)}` : ''}{assigned ? ` · ${assigned} assigned` : ''}</small>
+          <small>{p.sum.passed} of {p.sum.total} done · {watched} videos watched{p.sum.avg != null ? ` · checks average ${pct(p.sum.avg)}` : ''}{assigned ? ` · ${assigned} assigned` : ''}</small>
           <span className="tr-bar" aria-hidden="true"><i style={{ '--w': p.sum.pct }} /></span>
         </span>
         <Chip tone={status[1]}>{status[0]}</Chip>
@@ -37,7 +51,7 @@ function Person({ p, onAssign, onReset, onResetAll }) {
               return (
                 <li key={l.id} className="fx-mrow">
                   <span className={`tr-n is-${s.state}`} aria-hidden="true">{s.state === 'passed' ? <Check size={13} /> : i + 1}</span>
-                  <span className="tp-grow"><b>{l.title}</b><small>{r ? `${r.correct}/${r.total} on the check · ${r.tries} ${r.tries === 1 ? 'try' : 'tries'}` : 'Not taken'}</small></span>
+                  <span className="tp-grow"><b>{l.title}</b><small>{lessonLine(l, r, seen[l.id])}</small></span>
                   {s.assigned ? <Chip tone="warn">Assigned</Chip> : <Chip tone={STATE[s.state][1]}>{STATE[s.state][0]}</Chip>}
                   <button type="button" className="fx-pillbtn" disabled={s.assigned} onClick={() => onAssign(l)}><UserPlus size={13} />Assign</button>
                   <button type="button" className="fx-pillbtn" disabled={!r && !s.assigned} onClick={() => onReset(l)}><RotateCcw size={13} />Reset</button>
@@ -98,7 +112,7 @@ export default function TrainingAdmin() {
   const done = people.filter(p => p.sum.complete).length
   return (
     <>
-      <header className="fx-form-h"><h2>Training</h2><p>Every VA's lessons and check scores. Assign a lesson to have it taken again, or reset it. Sample until the backend step.</p></header>
+      <header className="fx-form-h"><h2>Training</h2><p>Every VA's lessons: videos watched, Try it done and check scores. Assign a lesson to have it done again, or reset it. Sample until the backend step.</p></header>
       <ul className="adm-tr-sum" aria-label="Training at a glance">
         <li><b className="tp-num">{done}/{people.length}</b><small>VAs fully trained</small></li>
         <li><b className="tp-num">{LESSONS.length}</b><small>lessons</small></li>
