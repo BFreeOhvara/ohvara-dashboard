@@ -11,7 +11,7 @@ import '../p886.css'
 // doc_request_upload, doc_send_request, doc_send_result, doc_send_confirm, carrier_docs_update, replacement_mark).
 //   DocsBlock      VA: every paper on the client; send a carrier form to sign (prefilled, 1-4 signers), ask for a
 //                  file, send to the carrier the way it takes them, see the receipt or the failure, retry, confirm.
-//   GateBlock      VA, on the old-policy cancel call: issued + first payment, or the call waits.
+//   GateStep       VA, on the old-policy cancel call: issued + first payment, or the call waits (a step, P888).
 //   AgentDocsBlock (../docs886/Docs886.jsx) is the agent's side; it never names engines or ads.
 
 const PREFILL = [['Owner', 'name'], ['Policy', 'policy'], ['Phone', 'phone'], ['Address', 'from intake'], ['Date of birth', 'from intake']]
@@ -158,41 +158,46 @@ function DocRow({ who, d, onSend }) {
 }
 
 // VA: every paper on this client. kinds narrows the forms offered (e.g. a beneficiary change step).
-export function DocsBlock({ who, carrier, task, kinds, title = 'Documents' }) {
+// P888: bare = the same papers as a step inside the task's step list, not a box of its own.
+export function DocsBlock({ who, carrier, task, kinds, title = 'Documents', bare = false }) {
   const { docs } = useDocs(who)
   const note = useNote()
   const [panel, setPanel] = useState(null)
   const [sending, setSending] = useState(null)
   const ask = () => { docActions.requestUpload(who, { doc_type: kinds?.includes('poa') ? 'poa' : 'carrier_letter', title: kinds?.includes('poa') ? 'Power of attorney' : 'Photo of the carrier letter', carrier, task }); note(`Upload link made for ${who.split(' ')[0]}`) }
-  return (
-    <Block title={title} sub="Signed forms, letters and proof, kept on the policy" aside={<span className="fx-count">{docs.length}</span>}>
-      <div className="dc-top">
-        <button type="button" className="tp-btn ov-ghost sm" onClick={() => setPanel('sign')}><FileSignature size={14} />Send a form to sign</button>
-        <button type="button" className="tp-btn ov-ghost sm" onClick={ask}><FileUp size={14} />Ask for a file</button>
-      </div>
-      {docs.length ? <ul className="dc-list">{docs.map(d => <DocRow key={d.id} who={who} d={d} onSend={(x, retry) => setSending({ d: x, retry })} />)}</ul>
-        : <Empty title="No papers yet" sub="Carrier forms they sign and letters they send show here." />}
-      {panel === 'sign' && <SignDrawer who={who} client={who} carrier={carrier} task={task} kinds={kinds} onClose={() => setPanel(null)} />}
-      {sending && <SendDrawer key={sending.d.id + (sending.retry || '')} who={who} d={sending.d} retryOf={sending.retry} onClose={() => setSending(null)} />}
-    </Block>
-  )
+  const inner = <>
+    <div className="dc-top">
+      <button type="button" className="tp-btn ov-ghost sm" onClick={() => setPanel('sign')}><FileSignature size={14} />Send a form to sign</button>
+      <button type="button" className="tp-btn ov-ghost sm" onClick={ask}><FileUp size={14} />Ask for a file</button>
+    </div>
+    {docs.length ? <ul className="dc-list">{docs.map(d => <DocRow key={d.id} who={who} d={d} onSend={(x, retry) => setSending({ d: x, retry })} />)}</ul>
+      : !bare && <Empty title="No papers yet" sub="Carrier forms they sign and letters they send show here." />}
+    {panel === 'sign' && <SignDrawer who={who} client={who} carrier={carrier} task={task} kinds={kinds} onClose={() => setPanel(null)} />}
+    {sending && <SendDrawer key={sending.d.id + (sending.retry || '')} who={who} d={sending.d} retryOf={sending.retry} onClose={() => setSending(null)} />}
+  </>
+  if (bare) return <div className="dc-bare">{inner}</div>
+  return <Block title={title} sub="Signed forms, letters and proof, kept on the policy" aside={<span className="fx-count">{docs.length}</span>}>{inner}</Block>
 }
 
 const TODAY = 'Nov 5'
 // VA, on the cancel call: the old policy goes only after the new one is issued and its first payment clears.
-export function GateBlock({ who }) {
+// P888: a step in the call's step list (an <li> for .tp-tl), not a box of its own.
+export function GateStep({ who }) {
   const g = useGate(who)
   const note = useNote()
   if (!g.applies) return null
   const mark = (what, label) => { docActions.markGate(who, what, TODAY); note(`${label}: ${TODAY}`) }
   return (
-    <section className={`fx-blk dc-gate${g.open ? ' is-open' : ''}`} aria-label="When the old policy can go">
-      <header><h3>{g.open ? <ShieldCheck size={16} aria-hidden="true" /> : <Lock size={16} aria-hidden="true" />}{g.open ? 'Ready to cancel the old policy' : 'Not yet: keep the old policy'}</h3></header>
-      <p className="tp-mid">{gateWords(g)}</p>
-      <dl className="fx-facts">
-        <div><dt>New policy issued</dt><dd>{g.issued_on || <button type="button" className="tp-btn ov-ghost sm" onClick={() => mark('issued', 'Issued')}>Mark issued today</button>}</dd></div>
-        <div><dt>First payment cleared</dt><dd>{g.first_payment_on || <button type="button" className="tp-btn ov-ghost sm" disabled={!g.issued_on} onClick={() => mark('first_payment', 'First payment cleared')}>Mark cleared today</button>}</dd></div>
-      </dl>
-    </section>
+    <li className={`dc-gate${g.open ? ' done is-open' : ' now'}`} aria-label="When the old policy can go">
+      <i />
+      <div>
+        <b>{g.open ? 'Ready: the new policy is in' : 'First: the new policy is in'}</b>
+        <span>{gateWords(g)}</span>
+        <dl className="fx-facts dc-gate-facts">
+          <div><dt>New policy issued</dt><dd>{g.issued_on || <button type="button" className="tp-btn ov-ghost sm" onClick={() => mark('issued', 'Issued')}>Mark issued today</button>}</dd></div>
+          <div><dt>First payment cleared</dt><dd>{g.first_payment_on || <button type="button" className="tp-btn ov-ghost sm" disabled={!g.issued_on} onClick={() => mark('first_payment', 'First payment cleared')}>Mark cleared today</button>}</dd></div>
+        </dl>
+      </div>
+    </li>
   )
 }

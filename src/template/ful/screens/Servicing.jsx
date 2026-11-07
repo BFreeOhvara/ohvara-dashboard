@@ -7,7 +7,6 @@ import { RecordDrawer, Block, Stepper } from '../../Record'
 import { fp } from '../paths'
 import { KIND, kindTone, outcomesOf, outcomeLabel, SEND_REASONS, TASK_GROUPS } from '../words'
 import { HelpDot } from '../../../fulshell/training/HelpDot'
-import { MissedPayDesk, MissedFacts } from '../MissedPay885'
 import { DocsBlock } from '../Docs886'
 
 // P845 — Servicing: the steps agents asked for (packet checks, payment and beneficiary changes, review calls, lapse
@@ -30,6 +29,55 @@ function TaskCard({ t, i }) {
 }
 
 const WHEN = ['Today, 4:30 PM', 'Fri, 10:00 AM', 'Fri, 2:00 PM', 'Mon, 11:00 AM']
+
+// P888: a missed payment, lapse notice or chargeback warning is one ordinary call task (a lapse save). It comes in by
+// itself: the agent's forwarded carrier email, the agent's Request service, or the client calling in. No desk, no
+// portal checks. What happened sits in the first block; the call, the papers and the result are steps.
+const NOTICE = { missed: 'Missed payment', lapse_notice: 'Lapse notice', chargeback_warning: 'Chargeback warning' }
+const sayFor = (t, m) => `Hi ${t.client.client_first_name}, this is (your name) with Deedstone, calling for ${t.agent}. We noticed a payment on your ${t.carrier} policy didn’t go through${m.due ? ` on ${m.due}` : ''}. I want to make sure your coverage stays in place. Can we fix it together now?`
+
+function TaskSteps({ t }) {
+  const m = t.missed
+  const done = t.status === 'done'
+  const agentFirst = t.agent.split(' ')[0]
+  const papers = <li key="papers" className={done ? 'done' : ''}><i /><div><b>Papers, if they need any</b><span>A carrier form to sign, or a letter to send in.</span><DocsBlock bare who={t.name} carrier={t.carrier} task={t.id} /></div></li>
+  const result = (
+    <li key="result" className={done ? 'done' : ''}><i /><div><b>Pick what happened</b>
+      <span>{t.kind === 'lapse_save' ? 'No answer puts the call back on tomorrow’s list, 3 tries in all. Fixing it sets a check in 3 business days.' : 'Anything about coverage or advice goes to the agent.'}</span>
+      <ul className="fs-outs">{outcomesOf(t.kind).map(([k, label]) => <li key={k} className={t.outcome === k ? 'is-on' : ''}>{label}</li>)}</ul>
+    </div></li>
+  )
+  const steps = m && !m.check ? [
+    <li key="who" className={done ? 'done' : t.held ? 'now' : ''}><i /><div><b>Confirm it’s them</b><span>Name and date of birth.</span></div></li>,
+    <li key="say" className={done ? 'done' : ''}><i /><div><b>Say why you’re calling</b><p className="fs-say">“{sayFor(t, m)}”</p></div></li>,
+    <li key="fix" className={done ? 'done' : ''}><i /><div><b>Fix the payment together</b><span>A new draft date, a new card or bank, or call {t.carrier} together. Anything to change in the carrier portal goes to {agentFirst}: use Send to agent.</span></div></li>,
+    papers, result,
+  ] : [
+    <li key="call" className={done ? 'done' : t.held ? 'now' : ''}><i /><div><b>{m ? `Check with ${t.carrier}, then call ${t.client.client_first_name} if it didn’t clear` : `Call ${t.client.client_first_name}`}</b><span>{t.client.client_phone} · {t.carrier}</span></div></li>,
+    papers, result,
+  ]
+  return <Block title="On this call"><ol className="fs-steps">{steps}</ol></Block>
+}
+
+function WhatHappened({ t }) {
+  const m = t.missed
+  if (!m) {
+    return (
+      <Block title="What the agent asked">
+        <p className="tp-mid">{t.note || `${KIND[t.kind]} for ${t.name}.`}</p>
+        <dl className="fx-facts">{[['Agent', t.agent], ['Policy', t.client.policy_number], ['Carrier', t.carrier], ['Due', t.due_text]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+      </Block>
+    )
+  }
+  const facts = [['Policy', t.client.policy_number], ['Carrier', t.carrier], ['Payment due', m.due], ['How we heard', m.how], ['Grace ends', m.grace], ['Call by', t.due_text],
+    ...(m.chargeback ? [['Chargeback watch', `Month ${m.month} of ${m.of}`]] : []), ...(m.repeat ? [['Repeat', 'Second miss in 12 months']] : [])]
+  return (
+    <Block title={`${m.check ? 'Check it cleared' : NOTICE[m.notice] || 'Missed payment'}${m.chargeback ? ' · chargeback risk' : ''}`} sub={`${t.agent} already knows`}>
+      <p className="tp-mid">{m.check ? t.note : m.what}</p>
+      <dl className="fx-facts">{facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+    </Block>
+  )
+}
 
 function TaskDrawer({ id, onClose }) {
   const { data: tasks } = useFulTasks()
@@ -66,16 +114,8 @@ function TaskDrawer({ id, onClose }) {
         <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('send')}><Send size={15} />Send to agent</button>
       </>}>
       {done && <section className="fx-blk fs-done"><header><h3><CircleCheck size={16} aria-hidden="true" />{outcomeLabel(t.kind, t.outcome) || 'Done'}</h3></header><p className="tp-mid">{t.agent} sees the result on the client.</p></section>}
-      <Block title="What the agent asked">
-        <p className="tp-mid">{t.note || `${KIND[t.kind]} for ${t.name}.`}</p>
-        <dl className="fx-facts">{[['Agent', t.agent], ['Policy', t.client.policy_number], ['Carrier', t.carrier], ['Due', t.due_text]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
-      </Block>
-      {t.missed && <MissedFacts t={t} />}
-      {/* P886: forms to sign, letters, and sending them to the carrier. */}
-      <DocsBlock who={t.name} carrier={t.carrier} task={t.id} />
-      <Block title="Results you can pick" sub="Anything about coverage or advice goes to the agent">
-        <ul className="fs-outs">{outcomesOf(t.kind).map(([k, label]) => <li key={k} className={t.outcome === k ? 'is-on' : ''}>{label}</li>)}</ul>
-      </Block>
+      <WhatHappened t={t} />
+      <TaskSteps t={t} />
       <Block title={`Message ${t.agent}`}>
         <Link to={fp('messages')} className="fx-mrow"><MessageSquare size={16} aria-hidden="true" /><span className="tp-grow"><b>Open the thread about {t.client.client_first_name}</b><small>The client doesn't see it</small></span></Link>
       </Block>
@@ -130,8 +170,6 @@ export default function Servicing() {
           )
         })}
       </div>
-
-      <MissedPayDesk />
 
       <section className="fx-tile fs-donelist" aria-label="Done this week">
         <header className="fx-tile-h"><span className="tp-grow"><h2>Done this week</h2><p>{done.length} steps</p></span></header>

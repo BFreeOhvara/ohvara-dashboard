@@ -44,8 +44,22 @@
 .dc-ask { display: grid; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--ov-warn-tint); }
 .dc-ask p { display: flex; gap: 8px; align-items: flex-start; margin: 0; font-size: 13px; color: var(--ov-hi); }
 .dc-ask p > svg { flex: none; margin-top: 2px; color: var(--ov-warn); }
-.dc-gate h3 > svg { color: var(--ov-warn); }
-.dc-gate.is-open h3 > svg { color: var(--ov-good, var(--ov-hi)); }
+/* P888: a task's step list. The gate and the papers are steps in it, not boxes of their own. Same look as .tp-tl,
+   but direct-child rules only, so the papers' own lists inside a step keep their look. */
+.fs-steps { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; }
+.fs-steps > li { position: relative; display: flex; gap: 12px; padding: 0 0 16px 4px; min-width: 0; }
+.fs-steps > li::before { content: ''; position: absolute; left: 9px; top: 18px; bottom: 0; width: 2px; background: var(--ov-line); }
+.fs-steps > li:last-child { padding-bottom: 0; }
+.fs-steps > li:last-child::before { display: none; }
+.fs-steps > li > i { width: 12px; height: 12px; margin-top: 4px; border-radius: 50%; flex: none; background: var(--ov-faint); position: relative; }
+.fs-steps > li.done > i { background: var(--ov-data-b); }
+.fs-steps > li.now > i { background: var(--ov-data-a); box-shadow: 0 0 0 4px var(--ov-data-a-tint); }
+.fs-steps > li > div { flex: 1; min-width: 0; }
+.fs-steps > li > div > b { display: block; font-size: 14px; color: var(--ov-hi); }
+.fs-steps > li > div > span { display: block; font-size: 12.5px; color: var(--ov-mute); line-height: 1.45; }
+.fs-steps .dc-bare, .fs-steps .dc-gate-facts, .fs-steps .fs-outs { margin-top: 8px; }
+.fs-steps .dc-bare .dc-top { margin-bottom: 8px; }
+.fs-say { margin: 8px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--ov-stub); color: var(--ov-hi); font-size: 13.5px; line-height: 1.5; }
 .dc-gate .fx-facts dd .tp-btn { margin-top: 2px; }
 
 /* /sign/<token> */

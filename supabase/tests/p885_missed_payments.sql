@@ -108,7 +108,8 @@ select results_eq($$ select r->>'status', r->>'why' from (select public.payment_
                   $$ values ('unmatched'::text, 'no_policy'::text) $$, 'an unknown policy number waits for a VA');
 select results_eq($$ select r->>'status', r->>'why' from (select public.payment_intake_receive((select a from t_tok), 'm-6', 'x', 'Your statement', 'body', '{"kind":"other","policy_number":"HL-600"}') r) q $$,
                   $$ values ('unmatched'::text, 'unclear'::text) $$, 'an email that isn''t clearly a miss waits for a VA');
-select is((select count(*)::int from public.notifications where profile_id = 'a8850000-0000-4000-8000-0000000000f1' and type = 'payment_intake_unmatched'), 3, 'the VA is told about each waiting email');
+-- P888: the admins are told, not the VAs.
+select is((select count(*)::int from public.notifications where profile_id = 'a8850000-0000-4000-8000-000000000001' and type = 'payment_intake_unmatched'), 3, 'an admin is told about each waiting email');
 select is((select count(*)::int from public.payment_missed_events where policy_id = 'b8850000-0000-4000-8000-000000000006'), 0, 'an unclear email makes no event');
 
 -- ── Who can see and call what ──
@@ -125,27 +126,27 @@ select throws_ok($$ select public.va_payment_intake_match((select id from public
 select throws_ok($$ select public.va_payment_intake_dismiss((select id from public.payment_intake_emails where message_id = 'm-5')) $$, '42501', null, 'an agent can''t set an email aside');
 select throws_ok($$ select public.va_missed_payment_desk() $$, '42501', null, 'an agent can''t open the VA desk');
 
--- ── The VA matches by hand ──
-select pg_temp.as_user('a8850000-0000-4000-8000-0000000000f1');
+-- ── An admin matches by hand (P888: no longer a VA) ──
+select pg_temp.as_user('a8850000-0000-4000-8000-000000000001');
 select throws_ok($$ select public.va_payment_intake_match((select id from public.payment_intake_emails where message_id = 'm-4'), 'b8850000-0000-4000-8000-000000000005') $$,
-                 '42501', null, 'a VA can''t match to another agent''s policy');
+                 '42501', null, 'an admin can''t match to another agent''s policy');
 -- P3 already has an open lapse save (asked by the agent), due in 10 days: the miss reuses it and pulls it in.
 select pg_temp.as_owner();
 insert into public.servicing_tasks (agent_id, policy_id, kind, status, due_at, requested_by)
 values ('a8850000-0000-4000-8000-00000000000a', 'b8850000-0000-4000-8000-000000000003', 'lapse_save', 'requested', now() + interval '10 days', 'agent');
-select pg_temp.as_user('a8850000-0000-4000-8000-0000000000f1');
+select pg_temp.as_user('a8850000-0000-4000-8000-000000000001');
 select isnt(public.va_payment_intake_match((select id from public.payment_intake_emails where message_id = 'm-4'), 'b8850000-0000-4000-8000-000000000003', current_date - 3), null,
-            'a VA matches the email to the right Mary Smith');
+            'an admin matches the email to the right Mary Smith');
 select pg_temp.as_owner();
 select results_eq($$ select (select count(*)::int from public.servicing_tasks where policy_id = 'b8850000-0000-4000-8000-000000000003' and kind = 'lapse_save'),
                             (select t.due_at < now() + interval '4 days' from public.servicing_tasks t where t.policy_id = 'b8850000-0000-4000-8000-000000000003' and t.kind = 'lapse_save'),
                             (select status from public.payment_intake_emails where message_id = 'm-4') $$,
                   $$ values (1, true, 'matched'::text) $$, 'the open lapse save is reused and pulled forward; the email is marked matched');
-select pg_temp.as_user('a8850000-0000-4000-8000-0000000000f1');
-select lives_ok($$ select public.va_payment_intake_dismiss((select id from public.payment_intake_emails where message_id = 'm-6')) $$, 'a VA sets a non-notice aside');
+select pg_temp.as_user('a8850000-0000-4000-8000-000000000001');
+select lives_ok($$ select public.va_payment_intake_dismiss((select id from public.payment_intake_emails where message_id = 'm-6')) $$, 'an admin sets a non-notice aside');
 select throws_ok($$ select public.va_payment_intake_dismiss((select id from public.payment_intake_emails where message_id = 'm-6')) $$, 'P0002', null, 'only once');
 select results_eq($$ select jsonb_array_length(d->'emails'), jsonb_array_length(d->'misses') from (select public.va_missed_payment_desk() d) q $$,
-                  $$ values (1, 3) $$, 'the VA desk shows the one waiting email and the three open misses');
+                  $$ values (1, 3) $$, 'an admin''s desk read shows the one waiting email and the three open misses');
 
 -- ── The save result closes the miss; a later miss is a repeat ──
 select pg_temp.as_owner();
@@ -169,7 +170,8 @@ select results_eq($$ select source, first_year from public.payment_missed_events
 select is(public.payment_intake_receive((select a from t_tok), 'm-8', 'x', 'Payment received', '', '{"kind":"paid","policy_number":"HL-600"}')->>'status', 'paid_notice', 'a payment-received email');
 select is((select resolution from public.payment_missed_events where policy_id = 'b8850000-0000-4000-8000-000000000006'), 'paid', 'closes the open miss');
 
--- ── Carrier portal checks ──
+-- ── Carrier portal checks (P888: off by default; an admin can turn them back on) ──
+update public.payment_settings set portal_checks_on = true;
 select is((select count(*)::int from (select public.payment_portal_checks_seed()) q), 1, 'the seed runs');
 select results_eq($$ select agent_id::text, carrier_name, policies_count from public.carrier_portal_checks
                       where agent_id in ('a8850000-0000-4000-8000-00000000000a', 'a8850000-0000-4000-8000-00000000000b') order by 1, 2 $$,

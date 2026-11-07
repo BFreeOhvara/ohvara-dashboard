@@ -19,7 +19,7 @@ import { fp } from '../paths'
 import { CALL_WORD, CALL_TONE } from '../words'
 import { HelpDot } from '../../../fulshell/training/HelpDot'
 import { SwapsHolidays } from '../Clock879'
-import { DocsBlock, GateBlock } from '../Docs886'
+import { DocsBlock, GateStep } from '../Docs886'
 import { useGate } from '../../docs886/data'
 
 // P846 — Schedule (it was Calls): the VA's week as the same calendar the agent has, with everything they have to do
@@ -110,13 +110,14 @@ export function CallDrawer({ id, onClose }) {
       {k.status === 'cancelled' && (
         <section className="fx-blk fs-done"><header><h3><CircleCheck size={16} aria-hidden="true" />Old policy cancelled</h3></header><p className="tp-mid">Confirmation {k.confirmation}. It counts toward this week's pay once it is checked.</p></section>
       )}
-      {k.status !== 'cancelled' && <GateBlock who={k.name} />}
+      {/* P888: the replacement gate and the cancellation papers are steps on this call, not boxes of their own. */}
       <Block title="On this call">
-        <ol className="tp-tl fx-tl">
-          {[['Confirm it is them', 'Name, date of birth, last four of the old policy'], [`Call ${k.old_carrier} together`, 'Ask to cancel the old policy, end date today'], ['Get the confirmation number', 'Type it in when you mark Cancelled'], ['Questions about coverage', `Those go to ${k.agent}, not on this call`]].map(([a, b], i) => <li key={a} className={k.status === 'cancelled' ? 'done' : i === 0 && open ? 'now' : ''}><i /><div><b>{a}</b><span>{b}</span></div></li>)}
+        <ol className="fs-steps">
+          {k.status !== 'cancelled' && <GateStep who={k.name} />}
+          {[['Confirm it is them', 'Name, date of birth, last four of the old policy'], [`Call ${k.old_carrier} together`, 'Ask to cancel the old policy, end date today'], ['Get the confirmation number', 'Type it in when you mark Cancelled'], ['Questions about coverage', `Those go to ${k.agent}, not on this call`]].map(([a, b], i) => <li key={a} className={k.status === 'cancelled' ? 'done' : i === 0 && open && gate.open ? 'now' : ''}><i /><div><b>{a}</b><span>{b}</span></div></li>)}
+          <li className={k.status === 'cancelled' ? 'done' : ''}><i /><div><b>Cancellation papers</b><span>If {k.old_carrier} wants a signed form or a letter.</span><DocsBlock bare who={k.name} carrier={k.old_carrier} kinds={['cancellation_request']} /></div></li>
         </ol>
       </Block>
-      <DocsBlock who={k.name} carrier={k.old_carrier} kinds={['cancellation_request']} title="Cancellation papers" />
       <Block title="Client">
         <dl className="fx-facts">{[['Phone', k.client.client_phone], ['New policy', k.client.policy_number], ['Premium', `$${k.client.monthly_premium.toFixed(2)} a month`], ['Agent', k.agent]].map(([a, b]) => <div key={a}><dt>{a}</dt><dd>{b}</dd></div>)}</dl>
       </Block>

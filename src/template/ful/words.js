@@ -26,12 +26,13 @@ export function kindTone(kind) {
 const CHANGE = [['completed', 'Done'], ['could_not_complete', "Couldn't finish"]]
 const CALL = [['completed', 'Completed'], ['not_reached', 'Not reached']]
 const OUTCOMES = {
-  lapse_save: [['saved', 'Saved'], ['lapsed', 'Lapsed'], ['client_cancelled', 'Client cancelled']],
+  // P888: the four things a VA hears on a save call (p888 va_servicing_outcome). 'lapsed' is history only.
+  lapse_save: [['saved', 'Saved'], ['fixing', 'Fixing it'], ['client_cancelled', 'Wants to cancel'], ['no_answer', 'No answer']],
   packet_check: [['delivered', 'Delivered'], ['not_delivered', 'Not delivered']],
   review_call: CALL, annual_review: CALL, chargeback_watch: [['on_time', 'Paid on time'], ['missed', 'Missed a payment']],
 }
 export const outcomesOf = kind => OUTCOMES[kind] || CHANGE
-export const outcomeLabel = (kind, v) => outcomesOf(kind).find(o => o[0] === v)?.[1] || null
+export const outcomeLabel = (kind, v) => outcomesOf(kind).find(o => o[0] === v)?.[1] || (kind === 'lapse_save' && v === 'lapsed' ? 'Lapsed' : null)
 export const SEND_REASONS = ['Coverage question', 'Needs advice', 'Something else']
 export const TASK_GROUPS = [
   { key: 'overdue', label: 'Overdue', tone: 'warn', empty: 'Nothing overdue.' },
