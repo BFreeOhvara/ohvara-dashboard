@@ -68,7 +68,7 @@ export function CheckAgent({ l, held, onBook }) {
   const ended = ['no', 'none', 'fail', 'bounced'].includes(step)
   return (
     <Block title="Reached them? Check the agent or book" sub={`${agent.name} · licensed in ${agent.states.join(', ')}`} aside={<SampleTag>Sample mode</SampleTag>}>
-      {!elig.bookOk && <p className="adm-warn-t v879-warn"><ShieldAlert size={13} aria-hidden="true" />{agent.name.split(' ')[0]} isn't licensed in {state}. Don't transfer or book; the team finds a licensed agent.</p>}
+      {!elig.bookOk && <p className="adm-warn-t v879-warn"><ShieldAlert size={13} aria-hidden="true" />{state ? `${agent.name.split(' ')[0]} isn't licensed in ${state}. Don't transfer or book; the team finds a licensed agent.` : "Confirm the lead's state on the call before checking the agent or booking."}</p>}
       {!start && (
         <div className="tp-row tp-wrap">
           <button type="button" className="tp-primary fx-accent" disabled={!held || !elig.ok} onClick={() => { setAnswer(null); setStart(Date.now()) }}><BellRing size={16} />Check agent</button>

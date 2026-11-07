@@ -2,6 +2,7 @@ import { useSyncExternalStore, useMemo } from 'react'
 import { instantOf, clockOf, dateOf, zoneOf } from '../../lib/callSlots.js'
 import { seedEvents, applyMove, closeCallTask, whenLabel, needsYouNow, forYourInfo, addMin, STAGES, SAMPLE_NOW } from '../leadLifecycle.js'
 import { leadText, SENDER } from '../leadTexts.js'
+import { SAMPLE_REGISTRY } from '../licenceModel.js'
 import { wallet as walletOf, expected, startsText } from '../spendPlan.js'
 
 // The one door to sample info for the clickable template. Screens read only through the named functions below.
@@ -164,7 +165,9 @@ const seed = {
     // P878: hours per weekday on the agent's confirmed zone; the calendar link (busy times both ways); the licence.
     week: DEFAULT_WEEK, zoneConfirmed: true,
     calendarSync: { provider: null, status: 'not_connected' },
-    licence: { npn: '19283746', states: ['TX', 'FL', 'AZ', 'GA', 'NC', 'TN', 'CO', 'IN', 'KY', 'WA', 'CA'], attested: { TX: 'Oct 12, 9:14 AM', FL: 'Oct 12, 9:14 AM' }, verified: 'Sample: checks open with the licence lookup' },
+    // P881: checked against the (sample) national registry. Only active life states can be picked; FL expires within
+    // 30 days (reminder), IL lapsed on the daily re-check (dropped, both sides told), OH has no life line, NY not taken.
+    licence: { npn: '19283746', status: 'verified', name: 'DANA M WHITFIELD', checkedAt: 'Nov 7, 6:00 AM (daily check)', licences: SAMPLE_REGISTRY['19283746'], states: ['TX', 'FL', 'AZ', 'GA'], attested: { TX: 'Oct 12, 9:14 AM', FL: 'Oct 12, 9:14 AM', AZ: 'Oct 12, 9:14 AM', GA: 'Oct 12, 9:14 AM' }, review: null },
     // P847: the Overview clock's zone (profiles.timezone values) and the optional caller ID: when fulfillment calls a
     // client, the call shows the agent's number. status: not_set | pending | confirmed. Sample only: no call or text goes out.
     timeZone: 'America/Chicago',

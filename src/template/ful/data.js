@@ -15,10 +15,11 @@ export const ME = { name: 'Maya Brooks', email: 'maya.brooks@example.com', phone
 
 // P854: tz = the agent's own zone; open/close = their hours on that clock (minutes); days = the weekdays they work
 // (0 = Sun); appt = appointment length + buffer in minutes (null = the 30-minute default).
+// P881: states = the agent's verified life-licence states (licence_verified_states); never New York.
 export const AGENTS = [
-  { id: 'ag-dana', name: 'Dana Walker', city: 'Austin, TX', clients: 0, hours: 'Mon to Fri, 9:00 AM to 6:00 PM', duty: true, tz: 'America/Chicago', open: 540, close: 1080, days: [1, 2, 3, 4, 5], appt: null },
-  { id: 'ag-marcus', name: 'Marcus Reed', city: 'Phoenix, AZ', clients: 0, hours: 'Mon to Sat, 8:00 AM to 5:00 PM', duty: false, tz: 'America/Phoenix', open: 480, close: 1020, days: [1, 2, 3, 4, 5, 6], appt: { length: 45, buffer: 15 } },
-  { id: 'ag-priya', name: 'Priya Shah', city: 'Tampa, FL', clients: 0, hours: 'Tue to Sat, 10:00 AM to 7:00 PM', duty: true, tz: 'America/New_York', open: 600, close: 1140, days: [2, 3, 4, 5, 6], appt: null },
+  { id: 'ag-dana', name: 'Dana Walker', city: 'Austin, TX', states: ['TX', 'OK'], clients: 0, hours: 'Mon to Fri, 9:00 AM to 6:00 PM', duty: true, tz: 'America/Chicago', open: 540, close: 1080, days: [1, 2, 3, 4, 5], appt: null },
+  { id: 'ag-marcus', name: 'Marcus Reed', city: 'Phoenix, AZ', states: ['AZ', 'NV', 'TX'], clients: 0, hours: 'Mon to Sat, 8:00 AM to 5:00 PM', duty: false, tz: 'America/Phoenix', open: 480, close: 1020, days: [1, 2, 3, 4, 5, 6], appt: { length: 45, buffer: 15 } },
+  { id: 'ag-priya', name: 'Priya Shah', city: 'Tampa, FL', states: ['FL', 'GA'], clients: 0, hours: 'Tue to Sat, 10:00 AM to 7:00 PM', duty: true, tz: 'America/New_York', open: 600, close: 1140, days: [2, 3, 4, 5, 6], appt: null },
 ]
 export const agentName = id => AGENTS.find(a => a.id === id)?.name || 'Agent'
 

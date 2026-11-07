@@ -52,6 +52,8 @@ export interface Store extends Pick<VoiceStore, 'voiceLive' | 'helpCall' | 'upda
   // of that agent's policies. null when the lead doesn't exist.
   lead(leadId: string): Promise<{ agent_id: string | null; summary: Summary } | null>
   reach(agentId: string): Promise<Reach>
+  // P881: licence_allows(agent, state) — the agent's verified life licence covers the lead's state.
+  licensed(agentId: string, state: string | null): Promise<boolean>
   devices(agentId: string): Promise<Device[]>
   dropDevices(tokens: string[]): Promise<void>
   // null when the agent already has an open check (the one-open-check index).
@@ -212,6 +214,12 @@ async function check(store: Store, env: Env, userId: string, admin: boolean, bod
   const lead = await store.lead(leadId!)
   if (!lead) refuse('Lead not found', 404)
   if (!lead!.agent_id) return { ok: false, code: 'no_agent', message: 'This lead has no agent yet. Book it for admin.' }
+  // P881 (N-C-22): never transfer into a state the agent isn't licensed in (or a state not yet confirmed).
+  if (!(await store.licensed(lead!.agent_id, lead!.summary.state ?? null))) {
+    return lead!.summary.state
+      ? { ok: false, code: 'not_licensed', message: `The agent isn't licensed in ${lead!.summary.state}. Don't transfer or book; the team finds a licensed agent.` }
+      : { ok: false, code: 'state_unknown', message: "Confirm the lead's state before checking the agent." }
+  }
 
   const reach = await store.reach(lead!.agent_id)
   if (!reach.ready) return { ok: false, code: 'not_reachable', reason: reach.reason, message: 'Not reachable for live calls. Book them on the agent\'s calendar.' }

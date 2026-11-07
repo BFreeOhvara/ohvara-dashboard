@@ -70,6 +70,12 @@ export const store: Store = {
     const r = Array.isArray(data) ? data[0] : data
     return { ready: !!r?.ready, reason: r?.reason ?? 'not_tested' }
   },
+  async licensed(agentId, state) {
+    const { data, error } = await admin.rpc('licence_allows', { p_agent: agentId, p_state: state })
+    // P881 not applied yet: no gate (the function doesn't exist), same as before.
+    if (error) { if (/licence_allows/.test(error.message || '') || error.code === 'PGRST202') return true; throw error }
+    return data === true
+  },
   async devices(agentId) {
     const { data } = await admin.from('push_devices').select('token, platform, permission').eq('profile_id', agentId)
     return (data ?? []).filter(d => (d.permission ?? 'granted') === 'granted').map(d => ({ token: d.token, platform: d.platform }))

@@ -11,6 +11,7 @@ import '../leads873.css'
 import '../p878.css'
 import { paths } from '../paths'
 import { PhoneInput } from '../PhoneInput'
+import { verifiedStates } from '../licenceModel'
 import { StateSelect } from '../StateSelect'
 import { CarrierSelect } from '../CarrierSelect'
 import { BookTime } from '../CallTime'
@@ -117,7 +118,8 @@ export default function Submit() {
   const set = k => e => setF({ ...f, [k]: e.target.value })
   const query = f.linked || !typed ? '' : typed === 'phone' ? f.phone : f.name
   const matches = query ? matchPeople(query, leads, clients, 6, chipWords) : []
-  const licensed = settings.licence?.states || null
+  // P881: the states with a verified active life licence (not just the ones picked for leads).
+  const licensed = settings.licence ? verifiedStates(settings.licence) : null
   const opts = { policy: true, licensed }
   const stateName = code => US_STATES.find(x => x.code === code)?.name || code
   const setSpouse = patch => setF(x => ({ ...x, spouse: { ...x.spouse, ...patch } }))
@@ -196,7 +198,7 @@ export default function Submit() {
               <Field label="State"><StateSelect invalid={bad('licence')} value={f.state} onChange={v => setF({ ...f, state: v })} /></Field>
               <Field label="Date of birth"><input type="date" className={bad('dob') ? 'tp-danger' : ''} value={f.dob} max="2008-11-02" onChange={set('dob')} /></Field>
             </div>
-            {missing.includes('licence') && <p className="fx-sub-err" role="alert">You{'’'}re not licensed in {stateName(f.state)} on your profile. Only submit sales you wrote in a state you{'’'}re licensed in, or add the state in Settings, Licence.</p>}
+            {missing.includes('licence') && <p className="fx-sub-err" role="alert">Your verified licence doesn{'’'}t cover {stateName(f.state)}. Only submit sales you wrote in a state you{'’'}re licensed in. Just licensed there? Check your licence again in Settings, Licence.</p>}
             <div className="fx-sub-field"><b>Reaching the client</b><small>Their local time.</small><Seg label="Reaching the client" value={f.reach} onChange={v => setF({ ...f, reach: v })} options={REACH} /></div>
             {f.reach === 'best'
               ? <div className="fx-sub-field" key="best"><b>Best time to reach them</b><Seg label="Best time to reach them" value={f.best} onChange={v => setF({ ...f, best: v })} options={TIMES.map(x => ({ key: x, label: x }))} /></div>

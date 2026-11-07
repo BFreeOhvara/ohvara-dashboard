@@ -32,6 +32,7 @@ type W = ReturnType<typeof world>
 function world(over: {
   voice?: boolean; row?: HelpCall | null; reach?: { ready: boolean; reason: string | null }; phones?: number
   pushOk?: boolean | ((token: string) => boolean); agentPhone?: string | null; ringFails?: boolean; leadAgent?: string | null
+  licensed?: string[]
 } = {}) {
   let clock = T0
   const rows: HelpCall[] = over.row === null ? [] : [over.row ?? live()]
@@ -57,6 +58,7 @@ function world(over: {
     },
     async lead(id) { return id === LEAD ? { agent_id: over.leadAgent === undefined ? AGENT : over.leadAgent, summary: { name: 'Rosa Diaz', age: 64, state: 'TX', need: 'Final expense', your_client: false } } : null },
     async reach() { return over.reach ?? { ready: true, reason: null } },
+    async licensed(_a, st) { return st != null && (over.licensed ?? ['TX']).includes(st) },
     async devices() { return devices.map(d => ({ ...d })) },
     async dropDevices(t) { dropped.push(...t); devices = devices.filter(d => !t.includes(d.token)) },
     async insertCheck(row) {
@@ -324,6 +326,13 @@ test('11. One check per agent; first answer wins; not reachable, no agent and vo
   assert.equal(ur.code, 'not_reachable')
   assert.equal(u.pushes.length, 0)
   assert.equal((await run(world({ leadAgent: null }), VA, { action: 'check', call_sid: 'CA123' })).code, 'no_agent')
+  // P881: the lead is in TX; an agent not licensed there is never pushed.
+  const nl = world({ licensed: ['FL'] })
+  const nlr = await run(nl, VA, { action: 'check', call_sid: 'CA123' })
+  assert.equal(nlr.code, 'not_licensed')
+  assert.match(nlr.message, /isn't licensed in TX/)
+  assert.equal(nl.pushes.length, 0)
+  assert.equal(nl.checks.length, 0)
   await assert.rejects(run(world({ voice: false }), VA, { action: 'check', call_sid: 'CA123' }), /isn't on yet/)
   await assert.rejects(run(world(), OTHER_VA, { action: 'check', call_sid: 'CA123' }), /Only the VA/)
   await assert.rejects(run(world(), AGENT, { action: 'check', call_sid: 'CA123' }), /Unknown action/)
