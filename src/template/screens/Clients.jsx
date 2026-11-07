@@ -7,6 +7,7 @@ import { RecordDrawer, Stepper, Block } from '../Record'
 import { stageLabel, CLIENT_STEPS } from '../stages'
 import { paths } from '../paths'
 import { MissedPaymentBlock } from '../PaymentIntake'
+import { AgentDocsBlock } from '../docs886/Docs886'
 
 // How far along servicing is, for the meter on each card.
 const doneShare = c => c.steps.filter(s => s.done).length / c.steps.length
@@ -86,6 +87,7 @@ function ClientDrawer({ id, onClose }) {
       <Block title="Calls so far" aside={<span className="fx-count">{c.calls.length}</span>}>
         <ul className="tp-list">{c.calls.map(k => <li key={k.at} className="tp-li"><span className="tp-grow"><b>{k.result}</b><small>{k.at} · {k.by}</small></span></li>)}</ul>
       </Block>
+      <AgentDocsBlock who={name} />
       <Block title="Message Fulfillment" sub="The team on this client">
         <ul className="tp-list">{thread.messages.slice(-2).map(m => <li key={m.id} className="tp-li fx-msg"><span className="tp-grow"><b>{m.from === 'me' ? 'You' : 'Fulfillment'}</b><small>{m.text}</small></span></li>)}</ul>
         <textarea className="tp-input fx-ta" aria-label="Message the team" placeholder="Write a message" value={msg} onChange={e => setMsg(e.target.value)} />

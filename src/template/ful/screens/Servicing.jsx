@@ -8,6 +8,7 @@ import { fp } from '../paths'
 import { KIND, kindTone, outcomesOf, outcomeLabel, SEND_REASONS, TASK_GROUPS } from '../words'
 import { HelpDot } from '../../../fulshell/training/HelpDot'
 import { MissedPayDesk, MissedFacts } from '../MissedPay885'
+import { DocsBlock } from '../Docs886'
 
 // P845 — Servicing: the steps agents asked for (packet checks, payment and beneficiary changes, review calls, lapse
 // saves). A board like the Queue: overdue, due today, coming up, no date; each card takes its kind's colour (lib/
@@ -70,6 +71,8 @@ function TaskDrawer({ id, onClose }) {
         <dl className="fx-facts">{[['Agent', t.agent], ['Policy', t.client.policy_number], ['Carrier', t.carrier], ['Due', t.due_text]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       </Block>
       {t.missed && <MissedFacts t={t} />}
+      {/* P886: forms to sign, letters, and sending them to the carrier. */}
+      <DocsBlock who={t.name} carrier={t.carrier} task={t.id} />
       <Block title="Results you can pick" sub="Anything about coverage or advice goes to the agent">
         <ul className="fs-outs">{outcomesOf(t.kind).map(([k, label]) => <li key={k} className={t.outcome === k ? 'is-on' : ''}>{label}</li>)}</ul>
       </Block>
