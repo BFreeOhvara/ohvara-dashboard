@@ -55,8 +55,9 @@ test('the audit row on a changed outcome is on the agent timeline', () => {
 })
 
 test('membership tiers follow total daily spend, and the pilot pays lead spend only', () => {
-  assert.deepEqual([0, 50, 51, 100, 101, 200, 201].map(d => tierOf(d).key), ['starter', 'starter', 'growth', 'growth', 'pro', 'pro', 'scale'])
-  assert.deepEqual(TIERS.map(t => t.monthly), [997, 1797, 3497, null])
+  // P901: three packages, final prices.
+  assert.deepEqual([0, 50, 51, 100, 200, 201, 300].map(d => tierOf(d).key), ['starter', 'starter', 'growth', 'growth', 'growth', 'pro', 'pro'])
+  assert.deepEqual(TIERS.map(t => t.monthly), [799, 1699, 2999])
   const spend = { appts: 60, live: 40 }
   assert.equal(dailyTotal(spend), 100)
   const pilot = monthlyBill({ plan: 'pilot', spend })
@@ -64,8 +65,8 @@ test('membership tiers follow total daily spend, and the pilot pays lead spend o
   assert.equal(pilot.total, pilot.leadSpend)
   const paid = monthlyBill({ plan: 'paid', spend })
   assert.equal(paid.tier.key, 'growth')
-  assert.equal(paid.total, paid.leadSpend + 1797)
-  assert.equal(monthlyBill({ plan: 'paid', spend, products: 'servicing' }).total, 497)
+  assert.equal(paid.total, paid.leadSpend + 1699)
+  assert.equal(monthlyBill({ plan: 'paid', spend, products: 'servicing' }).total, 499)
   assert.equal(spendOk('pilot', { appts: 5, live: 0 }), true)
   assert.equal(spendOk('paid', { appts: 30, live: 15 }), false)
   assert.equal(spendOk('paid', { appts: 50, live: 0 }), true)

@@ -1,6 +1,6 @@
-import { SLIDER, TIERS, PAID_MIN_DAILY, RECOMMENDED, tierOf, dailyTotal, bandShare, expected, rangeWords, monthlyBill, slotsNeeded } from './spendPlan'
+import { SLIDER, TIERS, PAID_MIN_DAILY, SETUP_FEE, RECOMMENDED, tierOf, dailyTotal, bandShare, expected, rangeWords, monthlyBill, slotsNeeded } from './spendPlan'
 import { LEAD_MODES, DAYS, liveHoursOk, liveHoursText, clockMin } from '../lib/leadSplit'
-import { SampleTag, Seg, Switch } from './kit'
+import { Seg, Switch } from './kit'
 import { Select } from './Select'
 import { zoneAbbr } from '../lib/callSlots'
 import { usd } from './motion'
@@ -85,7 +85,6 @@ export function SpendSliders({ spend, onSpend, plan, mode = 'both', id = 'sp', o
       </div>
       <div className="sp-total">
         <span className="tp-grow"><small>Total lead spend</small><b className="tp-money">{money(daily)} a day</b><small>{money(daily * 7)} a week · about {rangeWords(ex.soldMonth)} sales a month</small></span>
-        {plan === 'paid' && <SampleTag>Draft prices</SampleTag>}
       </div>
       {plan === 'paid' && <TierBands daily={daily} />}
       {low && <p className="sp-warn" role="alert">Paid plans start at {money(PAID_MIN_DAILY)} a day. Pause instead if you need a break.</p>}
@@ -95,17 +94,20 @@ export function SpendSliders({ spend, onSpend, plan, mode = 'both', id = 'sp', o
   )
 }
 
-// The monthly picture beside the sliders. Pilot: lead spend only, no fees. Paid: membership tier + lead spend.
-export function SpendSummary({ spend, plan, products = 'both', children, vaAmount = 0 }) {
+// The monthly picture beside the sliders. Pilot: lead spend only, no fees. Paid: membership tier + lead spend, month to
+// month. setup = show the one-time setup fee (sign-up / setup only), separate from the monthly total (P901).
+export function SpendSummary({ spend, plan, products = 'both', children, vaAmount = 0, setup = false }) {
   const bill = monthlyBill({ plan, spend, products })
   return (
     <div className="pb-sum">
-      <div className="pb-sum-h"><h3>{plan === 'pilot' ? 'Your pilot' : 'Your plan'}</h3><SampleTag>Draft prices</SampleTag></div>
+      <div className="pb-sum-h"><h3>{plan === 'pilot' ? 'Your pilot' : 'Your plan'}</h3></div>
       {products !== 'servicing' && <div className="pb-row"><span>Lead spend, about a month</span><b className="tp-money">{money(bill.leadSpend)}</b></div>}
-      {plan === 'paid' && products !== 'servicing' && <div className="pb-row"><span>Membership · {bill.tier.label}</span><b className="tp-money">{bill.tier.monthly == null ? 'Priced with you' : `${money(bill.tier.monthly)} / month`}</b></div>}
+      {plan === 'paid' && products !== 'servicing' && <div className="pb-row"><span>Membership · {bill.tier.label}</span><b className="tp-money">{money(bill.tier.monthly)} / month</b></div>}
       {products === 'servicing' && <div className="pb-row"><span>Servicing only</span><b className="tp-money">{money(bill.membership)} / month</b></div>}
       {vaAmount > 0 && <div className="pb-row"><span>Team time on your leads, at cost</span><b className="tp-money">{money(vaAmount)} / week</b></div>}
-      <div className="pb-row sp-sum-total"><span>{plan === 'pilot' ? 'You pay only your lead spend' : 'About a month'}</span><b className="tp-money">{bill.total == null ? 'Priced with you' : money(bill.total)}</b></div>
+      <div className="pb-row sp-sum-total"><span>{plan === 'pilot' ? 'You pay only your lead spend' : 'About a month'}</span><b className="tp-money">{money(bill.total)}</b></div>
+      {plan === 'paid' && setup && <div className="pb-row"><span>Setup, one time</span><b className="tp-money">{money(SETUP_FEE)}</b></div>}
+      {plan === 'paid' && <p className="pb-note">Month to month. Cancel anytime.</p>}
       {children}
     </div>
   )

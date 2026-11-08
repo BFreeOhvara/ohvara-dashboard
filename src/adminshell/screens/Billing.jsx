@@ -25,12 +25,12 @@ function Revenue() {
   return (
     <div className="fx-ovl">
       <div className="fx-ovl-main">
-        <Tile className="adm-rev-hero" i={0} title="Revenue by week" sub="Plans plus leads charged · sample prices">
+        <Tile className="adm-rev-hero" i={0} title="Revenue by week" sub="Memberships plus leads charged · sample">
           <div className="fx-chart-head fx-bk-head">
             <b className="tp-money fx-bk-num"><CountUp value={m.total} format={money} /></b>
             <span className="fx-bk-side"><b>this week so far</b><small>{money(m.lastWeek)} last week</small><i className={`fx-delta is-${m.total >= m.lastWeek ? 'up' : 'warn'}`}>{m.total >= m.lastWeek ? 'Up' : 'Behind'} {Math.abs(Math.round(((m.total - m.lastWeek) / m.lastWeek) * 100))}%</i></span>
           </div>
-          <div className="fx-key"><span><i className="adm-k is-sold" />Plans</span><span><i className="adm-k is-mid" />Leads</span><SampleTag>Sample prices</SampleTag></div>
+          <div className="fx-key"><span><i className="adm-k is-sold" />Plans</span><span><i className="adm-k is-mid" />Leads</span><SampleTag>Sample</SampleTag></div>
           <div className="adm-revbars" role="img" aria-label={m.weeks.map(w => `${w.wk}: ${money(w.plans + w.leads)}`).join('. ')}>
             {m.weeks.map((w, i) => (
               <span key={w.wk} className={w.now ? 'is-now' : ''} style={{ '--i': i }}>
@@ -132,7 +132,7 @@ function MoneyTop({ period, setPeriod }) {
           <b className="fx-huge tp-money"><CountUp value={p.inTotal} format={money} /></b>
           <ul className="adm-sum">
             <Line icon={Megaphone} label="Lead budgets" sub="Leads charged to agents" n={p.budgets} />
-            <Line icon={BadgeDollarSign} label="Servicing plans" sub="Weekly plan fees" n={p.servicing} />
+            <Line icon={BadgeDollarSign} label="Memberships" sub="Packages and servicing only, month to month" n={p.servicing} />
             <Line icon={Receipt} label="Setup fees" sub={p.setupCount ? `${p.setupCount} new ${p.setupCount === 1 ? 'agent' : 'agents'} · ${money(SETUP_FEE)} each` : 'No new agents'} n={p.setup} />
           </ul>
         </Tile>
@@ -178,7 +178,7 @@ function AgentBills() {
           return (
             <div key={a.id} className="adm-tr" style={{ '--i': i }}>
               <Link to={ap('agents', a.id)} className="adm-who"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>{a.billing.method}</small></span></Link>
-              <span className="adm-cell"><b>{PLANS[a.plan].label}</b><small>{PLANS[a.plan].price ? `${money(PLANS[a.plan].price)} a week` : 'No plan fee'}</small></span>
+              <span className="adm-cell"><b>{PLANS[a.plan].label}</b><small>{money(PLANS[a.plan].price)} a month</small></span>
               <span className="adm-cell"><b className="tp-money">{money(a.spend)}</b><small>a week</small></span>
               <span className="adm-cell"><Chip tone={tone}>{word}</Chip></span>
               <span className="adm-cell"><small>{a.billing.next}</small></span>

@@ -1,27 +1,32 @@
 // P878 — lead spend, the pilot and membership tiers (brain/ohvara/How Ohvara Works.md "Pricing direction" and the
 // P875 decisions). Pure functions, no imports, so Billing, Setup, Results and the tests share one set of numbers.
-// Every price and rate here is a DRAFT (Brayden + Jordan set them after the pilot); nothing is charged.
+// P901: the prices are final (price book version 2, src/lib/priceBook.js). The planning estimates stay drafts until
+// pilot data replaces them.
 //
 // The model (P889, one lead product): the agent sets ONE daily spend and How you take leads (Appointments only, or
 // Appointments + live transfers with live-call hours). 100% of it goes to finding their leads. Pilot agents pay only
 // that spend, prepaid weekly (unspent money rolls into next week; leads stop when it runs out). Paid agents also pay
-// a monthly membership tiered by daily spend. The form/call split behind it is admin only (src/lib/leadSplit.js).
+// a monthly membership tiered by daily spend. The form/call split behind it is admin only (src/lib/leadSplit.js); at
+// launch call ads are off (P901), so all spend goes to form ads and live transfers come from form leads.
 // spend = { daily } dollars a day. The old per-type shape { appts, live } still reads (dailyTotal adds them up).
 
-import { DRAFT } from '../lib/priceBook.js'
-import { effectiveSplit } from '../lib/leadSplit.js'
+import { PRICES } from '../lib/priceBook.js'
+import { effectiveSplit, SPLIT_RULES } from '../lib/leadSplit.js'
 
 // Planning estimates (drafts, replaced by pilot data).
 export const EST = {
-  appts: { perLead: 25, booked: 0.35, show: 0.6, close: 0.4 },
+  // ready: of the form leads a transfer agent gets, the share ready to talk now inside live-call hours (transferred
+  // live after Check agent instead of booked). P901: with call ads off, every live transfer comes from these.
+  appts: { perLead: 25, booked: 0.35, show: 0.6, close: 0.4, ready: 0.15 },
   live: { perCall: 55, delivered: 0.7, close: 0.3 },
 }
 
-// Membership by total daily spend (draft). Scale is priced one to one. P884: the prices come from the one price
-// source (src/lib/priceBook.js = billing_price_book version 1), never from here.
-export const TIERS = DRAFT.tiers
-export const SERVICING_ONLY = DRAFT.servicingOnly
-export const PAID_MIN_DAILY = DRAFT.paidMinDaily
+// Membership by total daily spend: Starter, Growth, Pro (P901, final). The prices come from the one price source
+// (src/lib/priceBook.js = billing_price_book version 2), never from here.
+export const TIERS = PRICES.tiers
+export const SERVICING_ONLY = PRICES.servicingOnly
+export const PAID_MIN_DAILY = PRICES.paidMinDaily
+export const SETUP_FEE = PRICES.setupFee
 export const SLIDER = { min: 0, max: 300, step: 5 }
 export const RECOMMENDED = 'Most full-time agents spend $100 to $150 a day. Starting out or part-time: $50 to $75.'
 
@@ -37,16 +42,19 @@ export function tierOf(daily) {
 export const bandShare = v => Math.max(0, Math.min(1, v / SLIDER.max))
 
 // What a daily spend buys in a week, on the planning estimates. Low/high is ±25% around the estimate, whole numbers.
-// mode = how the agent takes leads; transfer agents are estimated on the starting split (agents never see it).
+// mode = how the agent takes leads; transfer agents are estimated on the split that runs today (agents never see it;
+// at launch that's all form ads). Transfer agents' form leads that are ready now go live instead of being booked.
 const band = x => ({ low: Math.max(0, Math.floor(x * 0.75)), high: Math.ceil(x * 1.25), mid: x })
-export function expected(spend, mode) {
-  const split = spend?.daily != null ? effectiveSplit({ daily: spend.daily, mode: mode || 'both' }) : { form: spend?.appts || 0, call: spend?.live || 0 }
+export function expected(spend, mode, rules = SPLIT_RULES) {
+  const one = spend?.daily != null
+  const split = one ? effectiveSplit({ daily: spend.daily, mode: mode || 'both' }, rules) : { form: spend?.appts || 0, call: spend?.live || 0 }
   const a = split.form * 7
   const l = split.call * 7
   const leads = a / EST.appts.perLead
-  const booked = leads * EST.appts.booked
+  const ready = one && (mode || 'both') === 'both' ? leads * EST.appts.ready : 0
+  const booked = (leads - ready) * EST.appts.booked
   const calls = l / EST.live.perCall
-  const delivered = calls * EST.live.delivered
+  const delivered = calls * EST.live.delivered + ready
   return {
     appts: { leads: band(leads), booked: band(booked), sold: band(booked * EST.appts.show * EST.appts.close) },
     live: { calls: band(calls), delivered: band(delivered), sold: band(delivered * EST.live.close) },

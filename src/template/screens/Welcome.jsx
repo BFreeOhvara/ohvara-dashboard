@@ -150,7 +150,7 @@ export default function Welcome() {
               <header className="fx-form-h"><h2>Your lead spend</h2><p>{PITCH} {plan === 'pilot' ? 'During the pilot you pay only your lead spend, prepaid each week. Unspent money rolls over.' : 'Your membership tier follows your daily spend.'}</p></header>
               <SpendSliders spend={spend} onSpend={v => stable(x => ({ ...x, spend: v }))} plan={plan} mode={take.mode} id="wz-sp" openSlots={openSlots} />
               <TakeLeads take={take} onTake={({ mode, hours }) => stable(x => ({ ...x, take: { mode, hours } }))} id="wz-take" />
-              <SpendSummary spend={spend} plan={plan} products={s.products}><p className="pb-note">Leads start at 12:00 AM your time, the day after you finish setup.</p></SpendSummary>
+              <SpendSummary spend={spend} plan={plan} products={s.products} setup><p className="pb-note">Leads start at 12:00 AM your time, the day after you finish setup.</p></SpendSummary>
             </>}
             {cur.key === 'forward' && <>
               <header className="fx-form-h"><h2>Carrier emails</h2><p>When a carrier emails you about a missed or returned payment, forward it to us and the team calls the client the same day.</p></header>

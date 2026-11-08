@@ -12,7 +12,7 @@
 // Admin:  adminBilling(db, agentId), pilotSet, vaCostSet, toPaid, setupSet, adjustBalance, savePriceBook
 // Shape:  toSampleBilling(view) maps the server view onto the sample billing shape the P878 Billing page draws.
 
-import { pricesOf, DRAFT_BOOK } from './priceBook.js'
+import { pricesOf, BOOK } from './priceBook.js'
 
 const rpc = async (db, name, args) => {
   const { data, error } = await db.rpc(name, args)
@@ -48,7 +48,8 @@ export const lockSplit = (db, agentId, { locked, formPct = null, note = null }) 
   rpc(db, 'admin_lead_split_lock', { p_agent: agentId, p_locked: locked, p_form_pct: formPct, p_note: note })
 export const saveSplitRules = (db, rules) => rpc(db, 'admin_lead_split_rules_save', {
   p_rules: { start_form_pct: rules.startFormPct, max_step: rules.maxStep, floor_pct: rules.floorPct, min_sales: rules.minSales,
-    call_min_daily_cents: toCents(rules.callMinDaily), hold_within: rules.holdWithin, lookback_weeks: rules.lookbackWeeks },
+    call_min_daily_cents: toCents(rules.callMinDaily), hold_within: rules.holdWithin, lookback_weeks: rules.lookbackWeeks,
+    call_ads_on: rules.callAdsOn },
 })
 
 export const adminBilling = (db, agentId) => rpc(db, 'admin_billing_view', { p_agent: agentId })
@@ -88,6 +89,6 @@ export function toSampleBilling(view) {
     membership: view.membership || null,
     toPaid: view.to_paid || null,
     charges: (view.charges || []).map(c => ({ ...c, amount: d(c.cents) })),
-    prices: pricesOf(view.price_book || DRAFT_BOOK),
+    prices: pricesOf(view.price_book || BOOK),
   }
 }

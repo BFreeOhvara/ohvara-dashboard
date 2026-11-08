@@ -14,7 +14,7 @@ import '../p893.css'
 import { Results } from '../Results'
 
 // P878 — Billing, from the hole check (N-G-02, N-G-09, N-H-28, N-A-23, N-A-30, N-I-03, N-I-05). Sample only: nothing is
-// charged, every price is a draft. P889: one daily spend and How you take leads (Appointments only, or Appointments +
+// charged. P901: the prices are final (price book version 2). P889: one daily spend and How you take leads (Appointments only, or Appointments +
 // live transfers with live-call hours); the form/call split behind it is never shown. Two ways to be billed:
 //   Pilot: only lead spend, prepaid each week (unspent money rolls over; leads stop when it runs out). No membership,
 //          setup or fee lines. Shows exactly what each lead type bought. An optional team-time line (admin switches it).
@@ -170,7 +170,7 @@ export default function Billing() {
           <p className="sp-plain">{w.out ? `Your balance ran out. New leads wait until ${w.next}, or top up now.` : `About ${w.daysLeft} days of leads left at ${money(dailyTotal(b.spend))} a day. Unspent money rolls into next week.`}</p>
           {(w.low || w.out) && <button type="button" className="tp-primary fx-accent fx-self" onClick={() => { topUp(dailyTotal(b.spend) * 3); note('Topped up 3 days. Sample only, nothing was charged') }}><PlusCircle size={15} />Top up 3 days</button>}
         </> : <>
-          <div className="tp-row tp-wrap pb-hero"><b className="tp-money fx-huge">{tierNow.monthly == null ? 'Custom' : <CountUp value={tierNow.monthly} format={money} />}</b><span>a month, plus your lead spend</span></div>
+          <div className="tp-row tp-wrap pb-hero"><b className="tp-money fx-huge"><CountUp value={tierNow.monthly} format={money} /></b><span>a month, plus your lead spend</span></div>
           <div className="fx-split">
             <span><i className="is-blue" />Lead spend<b>{money(dailyTotal(b.spend))} a day</b></span>
             <span><i className="is-teal" />Tier<b>{tierNow.label}</b></span>

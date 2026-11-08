@@ -5,7 +5,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
-  SPLIT_RULES, effectiveSplit, nextSplit, freshLeadRoute, afterCheck, inLiveHours, liveHoursText, liveHoursOk, takeOk, DEFAULT_LIVE_HOURS, DAYS,
+  SPLIT_RULES as LAUNCH_RULES, effectiveSplit as splitWith, nextSplit as nextWith, freshLeadRoute, afterCheck, inLiveHours, liveHoursText, liveHoursOk, takeOk, DEFAULT_LIVE_HOURS, DAYS,
 } from './lib/leadSplit.js'
 import { agentCheck, SAMPLE_AGENTS } from './template/ful/p879.js'
 import { expected, dailyTotal, monthlyBill } from './template/spendPlan.js'
@@ -15,6 +15,11 @@ const WED_9AM_CT = Date.UTC(2026, 10, 11, 15, 0)
 const WED_530PM_CT = Date.UTC(2026, 10, 11, 23, 30)
 const SAT_10AM_CT = Date.UTC(2026, 10, 14, 16, 0)
 const transferAgent = { mode: 'both', hours: DEFAULT_LIVE_HOURS, tz: 'America/Chicago' }
+// P901: call ads are off at launch (src/p901.test.js covers that). These tests cover the split itself, so they run
+// with the Call ads (Google) switch on.
+const SPLIT_RULES = { ...LAUNCH_RULES, callAdsOn: true }
+const effectiveSplit = (o, r = SPLIT_RULES) => splitWith(o, r)
+const nextSplit = (o, r = SPLIT_RULES) => nextWith(o, r)
 
 test('the split starts at 70/30 and only transfer agents are split', () => {
   assert.equal(SPLIT_RULES.startFormPct, 70)

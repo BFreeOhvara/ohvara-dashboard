@@ -13,6 +13,13 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select plan(101);
 
+-- P901: the replay also loads p901_price_book_v2.sql (version 2, final, effective the replay day). This file checks the
+-- P884 engine on its own draft version 1, so version 2 is set aside here (inside this transaction, rolled back at the
+-- end). Version 2 has its own checks in supabase/tests/p901_price_book_v2.sql.
+alter table public.billing_price_book disable trigger billing_price_book_block;
+delete from public.billing_price_book where version > 1;
+alter table public.billing_price_book enable trigger billing_price_book_block;
+
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 select '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authenticated', 'p884_' || u.n || '@example.invalid',
        jsonb_build_object('provider', 'email', 'providers', jsonb_build_array('email'), 'role', u.role),

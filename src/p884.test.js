@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, globSync } from 'node:fs'
-import { DRAFT_BOOK, DRAFT, pricesOf, tiersOf } from './lib/priceBook.js'
+import { BOOK_V1 as DRAFT_BOOK, BOOK, PRICES, pricesOf, tiersOf } from './lib/priceBook.js'
 import { TIERS, SERVICING_ONLY, PAID_MIN_DAILY, tierOf, monthlyBill } from './template/spendPlan.js'
 import { SETUP_FEE, CARD_FEE } from './adminshell/data.js'
 import { toSampleBilling, setSpend, loadBilling, pilotSet, adjustBalance } from './lib/leadSpend.js'
@@ -24,20 +24,20 @@ test('the client price book is the migration\'s version 1, number for number', (
   assert.match(SQL, /values \(1, date '2026-11-01', 'draft'/)
 })
 
-test('every old price set now reads the one source', () => {
-  assert.deepEqual(TIERS, tiersOf(DRAFT_BOOK))
-  assert.equal(SERVICING_ONLY, 497)
+test('every old price set now reads the one source (P901: version 2)', () => {
+  assert.deepEqual(TIERS, tiersOf(BOOK))
+  assert.equal(SERVICING_ONLY, 499)
   assert.equal(PAID_MIN_DAILY, 50)
-  assert.equal(SETUP_FEE, DRAFT.setupFee)
-  assert.equal(CARD_FEE, DRAFT.cardFee)
+  assert.equal(SETUP_FEE, PRICES.setupFee)
+  assert.equal(CARD_FEE, PRICES.cardFee)
   assert.equal(tierOf(75).key, 'growth')
-  assert.equal(monthlyBill({ plan: 'paid', spend: { appts: 100, live: 50 } }).membership, 3497)
+  assert.equal(monthlyBill({ plan: 'paid', spend: { appts: 100, live: 50 } }).membership, 1699)
   assert.equal(monthlyBill({ plan: 'pilot', spend: { appts: 100, live: 50 } }).membership, 0)
 })
 
 test('no component carries a membership price of its own', () => {
-  const prices = DRAFT_BOOK.tiers.filter(t => t.monthly_cents).map(t => String(t.monthly_cents / 100))
-  const allowed = ['src/lib/priceBook.js', 'src/template/data/index.js'] // data/index.js: sample invoices only
+  const prices = [...DRAFT_BOOK.tiers, ...BOOK.tiers].filter(t => t.monthly_cents).map(t => String(t.monthly_cents / 100))
+  const allowed = ['src/lib/priceBook.js']
   for (const f of globSync('src/**/*.{js,jsx}').map(p => p.replaceAll('\\', '/'))) {
     if (allowed.includes(f) || f.endsWith('.test.js')) continue
     const src = readFileSync(f, 'utf8')
@@ -49,11 +49,12 @@ test('no component carries a membership price of its own', () => {
 })
 
 test('a price book from the database shapes the same way', () => {
-  const v2 = { ...DRAFT_BOOK, version: 2, status: 'final', tiers: DRAFT_BOOK.tiers.map(t => ({ ...t, monthly_cents: t.monthly_cents && t.monthly_cents - 30000 })) }
-  const p = pricesOf(v2)
+  const p = pricesOf({ ...BOOK, version: 3 })
   assert.equal(p.draft, false)
-  assert.equal(p.tiers[0].monthly, 697)
-  assert.equal(p.tiers[3].monthly, null)
+  assert.equal(p.tiers[0].monthly, 799)
+  assert.equal(p.tiers.length, 3)
+  assert.equal(pricesOf(DRAFT_BOOK).draft, true)
+  assert.equal(pricesOf(DRAFT_BOOK).tiers[3].monthly, null)
 })
 
 test('toSampleBilling maps the server view onto the Billing page shape (dollars)', () => {
@@ -64,7 +65,7 @@ test('toSampleBilling maps the server view onto the Billing page shape (dollars)
     week: { week_start: '2026-11-09', rolled_in_cents: 3500, collected_cents: 66500, types: { appts: { billed_cents: 30000 }, live: { billed_cents: 11200 } } },
     va_cost: { on: true, minutes: 390, rate_cents: 800, cents: 5200 },
     charges: [{ id: 'c1', kind: 'weekly', cents: 66500, status: 'paid' }],
-    price_book: { ...DRAFT_BOOK },
+    price_book: { ...BOOK },
   }
   const b = toSampleBilling(view)
   assert.equal(b.plan, 'pilot')
@@ -80,7 +81,7 @@ test('toSampleBilling maps the server view onto the Billing page shape (dollars)
   assert.deepEqual(b.va, { on: true, hours: 6.5, rate: 8 })
   assert.equal(b.payment.failed, false)
   assert.equal(b.charges[0].amount, 665)
-  assert.equal(b.prices.tiers[1].monthly, 1797)
+  assert.equal(b.prices.tiers[1].monthly, 1699)
   assert.equal(toSampleBilling({ ...view, state: { status: 'past_due', lead_spend: 'stopped_payment' } }).payment.failed, true)
   assert.equal(toSampleBilling(null), null)
 })

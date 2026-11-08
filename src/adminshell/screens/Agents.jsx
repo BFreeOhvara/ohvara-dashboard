@@ -56,8 +56,8 @@ function AgentDrawer({ id, onClose }) {
         <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>{a.active ? 'Active for transfers' : 'Booking only'}</b><p className="tp-sub">{a.onDuty ? 'On duty right now' : 'Not on duty right now'}</p></div>
           <Switch on={a.active} label="Active for transfers" onChange={v => { setAgentActive(a.id, v); note(v ? `${a.name} takes live transfers` : `${a.name} is booking only`) }} /></div>
       </Block>
-      <Block title="Plan and budget" sub="Sample prices">
-        <dl className="fx-facts">{[['Plan', `${a.planInfo.label} · ${a.planInfo.price ? `${money(a.planInfo.price)} a week` : 'no plan fee'}`], ['Next charge', a.billing.next], ['Card', a.billing.method], ['Clients', String(a.clients)]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+      <Block title="Plan and budget" sub="Sample">
+        <dl className="fx-facts">{[['Plan', a.planInfo ? `${a.planInfo.label} · ${money(a.planInfo.price)} a month` : 'No plan yet'], ['Next charge', a.billing.next], ['Card', a.billing.method], ['Clients', String(a.clients)]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
         <DField label="Weekly lead budget" hint="Ads spend up to this each week on this agent's leads.">
           <Dropdown label="Weekly lead budget" value={a.spend} options={BUDGETS} onChange={v => { setAgentSpend(a.id, v); note(`Budget set to ${money(v)} a week`) }} />
         </DField>

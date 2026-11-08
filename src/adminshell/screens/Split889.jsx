@@ -10,6 +10,8 @@ import { SPLIT_RULES, SPLIT_REASON, LEAD_MODES, effectiveSplit, nextSplit, liveH
 // the agent drawer shows each transfer agent's split (form ads vs call ads), what runs today, next Monday's move with
 // the numbers behind it, a lock, and the change log. Sample only until 858 wires admin_lead_split_view /
 // admin_lead_split_lock / admin_lead_split_rules_save (supabase/migrations/p889_one_lead_product.sql).
+// P901 (Meta only at launch): Settings › Lead split has the Call ads (Google) switch, off by default. While it's off
+// every agent runs all form ads, the Monday move waits, and the agent block says so (p901_price_book_v2.sql).
 const money = usd()
 let rules = { ...SPLIT_RULES } // this visit's saved rules (sample)
 const splits = {} // this visit's lock/split changes, by agent
@@ -55,7 +57,8 @@ export function SplitBlock({ agent }) {
         ['Daily spend', `${money(daily)} a day`],
         ['Today', mode === 'both' && now.reason === 'split' ? `${money(now.form)} form · ${money(now.call)} call (${now.formPct}/${100 - now.formPct})` : `${money(now.form)} form · ${SPLIT_REASON[now.reason]}`],
       ].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
-      {mode === 'both' && <>
+      {mode === 'both' && !rules.callAdsOn && <p className="tp-sub">Call ads (Google) are off, so all of this agent{'’'}s spend goes to form ads and the Monday move waits. Live transfers still come from form leads (Check agent). The split starts when call ads are turned on in Settings › Lead split.</p>}
+      {mode === 'both' && rules.callAdsOn && <>
         {now.reason === 'call_min' && <p className="adm-warn-t">Call ads need at least {money(rules.callMinDaily)} a day. At {sp.formPct}/{100 - sp.formPct} the call side gets {money(Math.round(daily * (100 - sp.formPct) / 100))}, so it all goes to form ads.</p>}
         <div className="fx-form-row"><ArrowRightLeft size={16} aria-hidden="true" /><span className="tp-grow"><b>{next.moved ? `Next Monday: ${sp.formPct} → ${next.formPct}% form` : `Next Monday: stays ${sp.formPct}% form`}</b><small className="tp-sub">{SPLIT_REASON[next.reason]} · {costLine(next.numbers)} · last {rules.lookbackWeeks} weeks</small></span><Chip tone={next.moved ? 'blue' : 'mute'}>{next.moved ? `${next.moved > 0 ? '+' : ''}${next.moved} pts` : 'Hold'}</Chip></div>
         <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>{sp.locked ? `Locked at ${sp.formPct}% form` : 'Moves every Monday'}</b><p className="tp-sub">Lock to stop the weekly move for this agent. Logged with before and after.</p></div>
@@ -78,7 +81,9 @@ export function SplitRules() {
   const dirty = JSON.stringify(d) !== JSON.stringify(rules)
   return (
     <>
-      <header className="fx-form-h"><h2>Lead split</h2><p>Agents set one daily spend. For agents who take live transfers, it{'’'}s split between form ads and call ads, and moved every Monday toward the side with the lower cost per sale. Agents never see this.</p></header>
+      <header className="fx-form-h"><h2>Lead split</h2><p>Agents set one daily spend. Once call ads are on, a transfer agent{'’'}s spend is split between form ads and call ads, and moved every Monday toward the side with the lower cost per sale. Agents never see this.</p></header>
+      <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Call ads (Google): {d.callAdsOn ? 'on' : 'off'}</b><p className="tp-sub">{d.callAdsOn ? 'Transfer agents start at the split below and move every Monday.' : 'Off at launch: Meta form ads only. All spend goes to form ads and the Monday move waits. Live transfers still come from form leads.'}</p></div>
+        <Switch on={!!d.callAdsOn} label="Call ads (Google)" onChange={v => setD({ ...d, callAdsOn: v })} /></div>
       <div className="fx-form-grid">
         <Field label="Start (% form ads)" hint={`New transfer agents start ${d.startFormPct}/${100 - d.startFormPct}`}><input className="tp-num" inputMode="numeric" value={d.startFormPct} onChange={num('startFormPct')} /></Field>
         <Field label="Most it moves a week (points)"><input className="tp-num" inputMode="numeric" value={d.maxStep} onChange={num('maxStep', 50)} /></Field>

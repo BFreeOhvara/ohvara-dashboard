@@ -250,7 +250,7 @@ function SpendDrawer({ open, onClose }) {
   const [spend, setDraft] = useState({ daily: dailyTotal(billing.spend) })
   const [take, setTakeDraft] = useState(billing.take)
   return (
-    <Drawer open={open} onClose={onClose} title="Daily lead spend" sub="Draft prices · a change starts tomorrow at 12:00 AM your time"
+    <Drawer open={open} onClose={onClose} title="Daily lead spend" sub="A change starts tomorrow at 12:00 AM your time"
       footer={<button type="button" className="tp-primary fx-accent" disabled={!spendOk(billing.plan, spend) || !takeOk(take)} onClick={() => { setSpend(spend); setTake(take); note('Lead spend saved. Starts tomorrow. Sample only, nothing was charged'); onClose() }}>Save lead spend</button>}>
       <SpendSliders spend={spend} onSpend={setDraft} plan={billing.plan} mode={take.mode} id="leads-spend" openSlots={openSlotsPerWeek(settings.week)} />
       <TakeLeads take={take} onTake={setTakeDraft} id="leads-take" />

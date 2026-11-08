@@ -1,3 +1,4 @@
+import { PRICES, bandText } from '../lib/priceBook.js'
 // P879 — the admin pieces the hole check found missing, as plain sample data and small pure rules (no React, so
 // node --test runs them). Screens: Fulfillment team (Live desk, Time off, Hours & pay, Quality, Records, Holidays),
 // the agent drawer (Pilot, Campaign), Revenue (Pilot results), Leads (consent proof, Unassigned), Settings
@@ -132,7 +133,8 @@ export const PILOT = {
   'ag-james': { on: true, start: 'Nov 2', note: '', vaCost: true, toPaid: null },
 }
 export const pilotOf = id => PILOT[id] || { on: false, start: '', note: '', vaCost: false, toPaid: null }
-export const PAID_PLANS = [{ value: 'Starter', label: 'Starter · up to $50 a day' }, { value: 'Growth', label: 'Growth · $51 to $100 a day' }, { value: 'Pro', label: 'Pro · $101 to $200 a day' }, { value: 'Scale', label: 'Scale · over $200 a day, custom' }]
+// P901: the three packages from the price book (version 2).
+export const PAID_PLANS = PRICES.tiers.map(t => ({ value: t.label, label: `${t.label} · ${bandText(t)} · $${t.monthly.toLocaleString('en-US')} a month` }))
 // The log line for any pilot change, kept with before and after.
 export const pilotLog = (who, field, before, after, at = 'Today') => ({ at, who, field, before: String(before), after: String(after) })
 

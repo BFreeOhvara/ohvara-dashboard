@@ -5,7 +5,9 @@
 // The agent sets ONE daily spend and one setting, How you take leads:
 //   appts  Appointments only: every lead is booked. All spend goes to form ads.
 //   both   Appointments + live transfers: inside the agent's live-call hours a ready lead is transferred live,
-//          everything else is booked. Behind the scenes the spend is split between form ads and call ads.
+//          everything else is booked. Behind the scenes the spend can be split between form ads and call ads.
+// P901 (Meta only at launch): call ads are OFF (SPLIT_RULES.callAdsOn / lead_split_rules.call_ads_on). While off,
+// every agent runs 100% form ads, the Monday move holds, and live transfers come from form leads (Check agent).
 // Agents never see the split, and never hear where a lead came from.
 
 export const LEAD_MODES = [
@@ -16,6 +18,7 @@ export const PITCH = 'Every lead gets a call within seconds. If they’re ready 
 
 // Admin settings (drafts). Dollars a day for the call minimum.
 export const SPLIT_RULES = {
+  callAdsOn: false,   // P901: Call ads (Google). Off at launch: all spend goes to form ads; the split below waits.
   startFormPct: 70,   // where a new transfer agent starts: 70% form / 30% call
   maxStep: 10,        // most the split moves in one week, in points
   floorPct: 20,       // neither side goes under this
@@ -85,6 +88,7 @@ const clampPct = (p, r) => Math.min(100 - r.floorPct, Math.max(r.floorPct, Math.
 export function effectiveSplit({ daily, mode, formPct = SPLIT_RULES.startFormPct }, rules = SPLIT_RULES) {
   const d = Math.max(0, Number(daily) || 0)
   if (mode !== 'both') return { form: d, call: 0, formPct: 100, reason: 'appts_only' }
+  if (!rules.callAdsOn) return { form: d, call: 0, formPct: 100, reason: 'call_ads_off' }
   const pct = clampPct(formPct, rules)
   const call = Math.round((d * (100 - pct)) / 100)
   if (call < rules.callMinDaily) return { form: d, call: 0, formPct: 100, reason: 'call_min' }
@@ -105,6 +109,7 @@ export function nextSplit({ formPct, locked = false, form, call }, rules = SPLIT
   const cf = costOf(form || {}, metric); const cc = costOf(call || {}, metric)
   const numbers = { metric, form: { ...form, cost: cf }, call: { ...call, cost: cc }, sales }
   const hold = reason => ({ formPct: cur, moved: 0, metric, reason, numbers })
+  if (!rules.callAdsOn) return hold('call_ads_off')
   if (locked) return hold('locked')
   if (cf == null || cc == null) return hold('no_spend')
   if (cf === Infinity && cc === Infinity) return hold('no_results')
@@ -116,7 +121,7 @@ export function nextSplit({ formPct, locked = false, form, call }, rules = SPLIT
 }
 
 export const SPLIT_REASON = {
-  appts_only: 'Appointments only: all form ads', call_min: 'Under the call minimum: all form ads', split: 'Split',
+  appts_only: 'Appointments only: all form ads', call_ads_off: 'Call ads off: all form ads', call_min: 'Under the call minimum: all form ads', split: 'Split',
   locked: 'Locked by admin', no_spend: 'Held: one side had no spend', no_results: 'Held: no results yet on either side',
   even: 'Held: costs within 10%', floor: 'Held: at the 20% floor', form_cheaper: 'Form ads cheaper', call_cheaper: 'Call ads cheaper',
 }

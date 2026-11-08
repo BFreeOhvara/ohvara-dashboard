@@ -3,7 +3,10 @@ import { instantOf, clockOf, dateOf, zoneOf } from '../../lib/callSlots.js'
 import { seedEvents, applyMove, rebookLead, closeCallTask, whenLabel, needsYouNow, forYourInfo, addMin, STAGES, SAMPLE_NOW } from '../leadLifecycle.js'
 import { canMove, withSoldLeads } from '../agentView.js'
 import { leadText, SENDER } from '../leadTexts.js'
-import { wallet as walletOf, expected, startsText } from '../spendPlan.js'
+import { wallet as walletOf, expected, startsText, TIERS } from '../spendPlan.js'
+
+// P901: sample invoices use the price book's Growth price, never a number of their own.
+const GROWTH = TIERS.find(t => t.key === 'growth').monthly
 import { DEFAULT_LIVE_HOURS } from '../../lib/leadSplit.js'
 import { formatPhone } from '../phoneMask.js'
 
@@ -250,7 +253,7 @@ const seed = {
     next_charge: 'Mon, Nov 9', nextBill: 'Tue, Dec 1',
     servicing: { status: 'active', next: 'Tue, Dec 1' }, cancellations: null,
     history: param('plan') === 'paid'
-      ? [{ id: 'inv1', at: 'Sun, Nov 1', label: 'Membership, Growth, November (draft price)', amount: 1797 }, { id: 'inv2', at: 'Sun, Nov 1', label: 'Lead spend, October', amount: 2980 }, { id: 'inv3', at: 'Thu, Oct 1', label: 'Membership, Growth, October (draft price)', amount: 1797 }]
+      ? [{ id: 'inv1', at: 'Sun, Nov 1', label: 'Membership, Growth, November', amount: GROWTH }, { id: 'inv2', at: 'Sun, Nov 1', label: 'Lead spend, October', amount: 2980 }, { id: 'inv3', at: 'Thu, Oct 1', label: 'Membership, Growth, October', amount: GROWTH }]
       : [{ id: 'inv1', at: 'Mon, Nov 2', label: 'Lead spend, week of Nov 2 (prepaid)', amount: 665 }, { id: 'inv2', at: 'Mon, Oct 26', label: 'Lead spend, week of Oct 26 (prepaid)', amount: 700 }, { id: 'inv3', at: 'Mon, Oct 19', label: 'Lead spend, week of Oct 19 (prepaid)', amount: 700 }],
   },
   submitted: 11,
