@@ -402,7 +402,7 @@ export const LESSONS = [
       'Cancellation calls are on your Schedule. Open the call to see the client, the old carrier and the new one.',
       'Carriers are only called while they are open. The portal only offers times inside the carrier\'s hours.',
       'If we don\'t have a carrier\'s hours yet, the portal says so and keeps times inside usual carrier hours. If they turn out to be closed, note it and tell the team.',
-      'The old policy goes only after the new one is issued and its first payment clears. Until then, Start call waits. Once it has cleared, mark it in the steps on the call.',
+      'The old policy goes once the new one is issued, and before the old one\'s next draft, so they never pay twice. Until it is issued, Start call waits. The step on the call shows the date to cancel by.',
       'Press Start call to reach the client first, then Add caller to bring in the carrier, so the policy owner is on the line.',
       'Have the client confirm they want the old policy cancelled. You never suggest it.',
       'Get the carrier\'s confirmation number and copy it exactly.',
