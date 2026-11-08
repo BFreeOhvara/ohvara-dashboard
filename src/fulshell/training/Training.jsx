@@ -238,12 +238,14 @@ function Lesson({ lesson, lessons, t, who }) {
   }
   const approve = (lesson.script?.lines || []).some(x => x.approve)
   const quiz = endsInQuiz(lesson)
+  const vid = hasVideo(lesson.id)
   return (
     <div className="tp-page fx-page fx-ovl tr-lesson">
       <div className="fx-ovl-main">
         <nav className="tr-crumb" aria-label="Training">
           <Link to={fp('training')}><ArrowLeft size={15} aria-hidden="true" />All lessons</Link>
           <span className="tp-num">Lesson {i + 1} of {lessons.length}</span>
+          {hasVideo(lesson.id) && mode !== 'check' && <b className="tr-crumb-t">{lesson.title}</b>}
           {st.state === 'passed' && <i className="fx-delta is-up"><Check size={12} aria-hidden="true" />{st.score ? `Passed ${st.score.correct}/${st.score.total}` : 'Done'}</i>}
           {st.assigned && <i className="fx-delta is-warn">Assigned to you</i>}
         </nav>
@@ -253,6 +255,13 @@ function Lesson({ lesson, lessons, t, who }) {
         ) : (
           <>
             <VideoPlayer lessonId={lesson.id} who={who} start={startAt} />
+            {/* P897: a lesson with a video shows only the video (plus its check or Try it and progress); the written
+                steps, script and picture are for lessons without one. */}
+            {vid ? (
+              <>
+                {fromHelp && <p className="fx-calm tr-from"><MousePointerClick size={15} aria-hidden="true" />Opened from the ? on a task. Your page is one step back.</p>}
+              </>
+            ) : (<>
             <section className="fx-tile tr-intro" style={{ '--i': 0 }} aria-label={lesson.title}>
               <h2>{lesson.title}</h2>
               <p className="tr-job">{lesson.job}</p>
@@ -261,7 +270,7 @@ function Lesson({ lesson, lessons, t, who }) {
             </section>
 
             <section className="fx-tile tr-steps" style={{ '--i': 1 }} aria-label="Steps">
-              <header className="fx-tile-h"><span className="tp-grow"><h2>Step by step</h2>{hasVideo(lesson.id) && <p>The same steps as the video, to look back at</p>}</span><ListOrdered size={16} aria-hidden="true" /></header>
+              <header className="fx-tile-h"><span className="tp-grow"><h2>Step by step</h2></span><ListOrdered size={16} aria-hidden="true" /></header>
               <ol className="tr-ol">{lesson.steps.map((s, k) => <li key={s}><b className="tr-cn">{k + 1}</b><span>{s}</span></li>)}</ol>
             </section>
 
@@ -283,6 +292,7 @@ function Lesson({ lesson, lessons, t, who }) {
               <header className="fx-tile-h"><span className="tp-grow"><h2>What to click</h2><p>Sample screen. The numbers match the list.</p></span><MousePointerClick size={16} aria-hidden="true" /></header>
               <Shot portal={lesson.portal} />
             </section>
+            </>)}
           </>
         )}
       </div>
@@ -316,6 +326,7 @@ function Lesson({ lesson, lessons, t, who }) {
             )}
           </section>
         )}
+        {!vid && <>
         <section className="fx-tile tr-do" style={{ '--i': 2 }} aria-label="Do">
           <header className="fx-tile-h"><span className="tp-grow"><h2>Do</h2></span><ThumbsUp size={16} aria-hidden="true" /></header>
           <ul className="tr-bul is-do">{lesson.dos.map(d => <li key={d}><Check size={14} aria-hidden="true" />{d}</li>)}</ul>
@@ -324,6 +335,7 @@ function Lesson({ lesson, lessons, t, who }) {
           <header className="fx-tile-h"><span className="tp-grow"><h2>Don’t</h2></span><Ban size={16} aria-hidden="true" /></header>
           <ul className="tr-bul is-dont">{lesson.donts.map(d => <li key={d}><X size={14} aria-hidden="true" />{d}</li>)}</ul>
         </section>
+        </>}
         <nav className="tr-pn" aria-label="Other lessons">
           {i > 0 && <Link to={fp('training', lessons[i - 1].id)} className="fx-pillbtn"><ArrowLeft size={14} />{lessonNo(lessons[i - 1].id)}. {lessons[i - 1].title}</Link>}
           {i < lessons.length - 1 && t.states[i + 1].state !== 'locked' && <Link to={fp('training', lessons[i + 1].id)} className="fx-pillbtn">{lessonNo(lessons[i + 1].id)}. {lessons[i + 1].title}<ArrowRight size={14} /></Link>}

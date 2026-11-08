@@ -110,7 +110,7 @@ export function CallDrawer({ id, onClose }) {
         <Link to={fp('messages')} className="tp-btn ov-ghost"><MessageSquare size={14} />Message {k.agent.split(' ')[0]}</Link>
       </>}>
       {k.status === 'cancelled' && (
-        <section className="fx-blk fs-done"><header><h3><CircleCheck size={16} aria-hidden="true" />Old policy cancelled</h3></header><p className="tp-mid">Confirmation {k.confirmation}. It counts toward this week's pay once it is checked.</p></section>
+        <section className="fx-blk fs-done"><header><h3><CircleCheck size={16} aria-hidden="true" />Old policy cancelled</h3></header><p className="tp-mid">Confirmation {k.confirmation}.</p></section>
       )}
       {/* P888: the replacement gate and the cancellation papers are steps on this call, not boxes of their own. */}
       <Block title="On this call">
@@ -129,7 +129,7 @@ export function CallDrawer({ id, onClose }) {
       </Block>
 
       <Drawer open={panel === 'cancelled'} center onClose={() => setPanel(null)} title="Old policy cancelled" sub={`${k.name} · ${k.old_carrier}`}
-        footer={<button type="button" className="tp-primary fx-accent" disabled={conf.trim().length < 4} onClick={() => { markCall(k.id, 'cancelled', { confirmation: conf.trim().toUpperCase(), notes }); note('Cancelled. It shows on Pay as checking'); setPanel(null) }}><CircleCheck size={16} />Save</button>}>
+        footer={<button type="button" className="tp-primary fx-accent" disabled={conf.trim().length < 4} onClick={() => { markCall(k.id, 'cancelled', { confirmation: conf.trim().toUpperCase(), notes }); note('Cancelled. Saved with the confirmation number'); setPanel(null) }}><CircleCheck size={16} />Save</button>}>
         <Field label="Confirmation number" hint="From the carrier, on the call"><input value={conf} placeholder="e.g. GL-301977" onChange={e => setConf(e.target.value)} /></Field>
       </Drawer>
       <Drawer open={panel === 'move'} center onClose={() => setPanel(null)} title="Move this call" sub={`${k.name} · the client's time`}

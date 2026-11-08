@@ -205,3 +205,5 @@
   .tr-tryit > span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tr-tryit .tr-tryit-back { display: none; }
 }
+/* P897: video lessons show only the video; the lesson name sits in the crumb line */
+.tr-crumb-t { font-family: var(--font-display); font-weight: 600; color: var(--ov-hi); }

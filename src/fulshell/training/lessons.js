@@ -10,7 +10,7 @@
 //
 // Bump TRAINING_VERSION when a lesson's check changes, so a VA's old pass is shown as "updated, take the check again".
 
-export const TRAINING_VERSION = '2026-11-07.1' // P877: inbound, transfer and carrier checks follow the portal
+export const TRAINING_VERSION = '2026-11-08.1' // P897: desk, optout and speed checks follow the portal (clock in, Do not call, right away)
 export const PASS_MARK = 0.8 // 4 of 5, 4 of 4, 3 of 3: a check passes at 80% or better
 
 const say = (text, o = {}) => ({ who: 'You', text, ...o })
@@ -29,19 +29,20 @@ export const LESSONS = [
     steps: [
       'Shifts run 8:00 AM to 6:00 PM Central, the hours the carriers are open.',
       'Two or three VAs are on each day. It is a rotation, so it is not always the same people. Check the Schedule for who is on with you.',
-      'There is no clock-in and no Active or Away switch. If you are on the rota, you are on the desk for the whole shift.',
+      'Clock in on your Overview, up to 15 minutes either side of your shift. A quick device check runs, then you are Available and calls can ring you. Two missed rings in a row set you to Away.',
+      'Clock out when you finish. You are paid by the hour, from clock in to clock out.',
       'Can\'t work a day? Use Request a day off as early as you can. It starts as pending until an admin approves it.',
       'You can only ask for your own days, not past days, and not more than four months ahead. You can take a request back while it is still ahead.',
       'Something urgent mid-shift? Message the team first, then step away. Never just disappear from the desk.',
     ],
     script: null,
-    dos: ['Check the Schedule at the start of each week', 'Ask for days off early', 'Tell the team before you step away'],
+    dos: ['Clock in at the start, clock out at the end', 'Check the Schedule at the start of each week', 'Ask for days off early', 'Tell the team before you step away'],
     donts: ['Don\'t swap shifts on your own without an admin approving it', 'Don\'t leave the desk without telling the team'],
     portal: { shot: 'schedule', clicks: [{ spot: 'onshift', text: 'Who is on shift today, beside your own shift' }, { spot: 'dayoff', text: 'Request a day off (also in the + menu and your avatar menu)' }] },
     check: [
       ok('What are the shift hours?', ['9 AM to 5 PM your time', '8 AM to 6 PM Central', 'Whenever you are online', '7 AM to 7 PM Eastern'], 1, 'Shifts follow carrier hours: 8 AM to 6 PM Central.'),
       ok('You can\'t work Friday. What do you do?', ['Nothing, someone will cover', 'Request a day off as early as you can', 'Switch yourself to Away on Friday', 'Text another VA to swap'], 1, 'Request a day off. It is pending until an admin approves it.'),
-      ok('How do you go "on duty" at the start of a shift?', ['Press Clock in', 'Turn on Active', 'You don\'t. If you are on the rota, you are on the desk', 'Message the agent'], 2, 'There is no clock-in or Active switch for VAs.'),
+      ok('How do you go "on duty" at the start of a shift?', ['Press Clock in on your Overview', 'Nothing: if you are on the rota, you are on', 'Message the agent', 'Wait for the first call'], 0, 'Clock in, up to 15 minutes either side of your shift. You are paid from clock in to clock out.'),
       ok('Which day-off request is NOT allowed?', ['One for next week', 'One for last Monday', 'One for two months ahead', 'One you later take back'], 1, 'Past days can\'t be requested.'),
     ],
   },
@@ -91,8 +92,8 @@ export const LESSONS = [
     steps: [
       'If anyone says stop, don\'t call, take me off, or unsubscribe, in any words: stop at once.',
       'On a call: thank them, confirm they won\'t hear from us again, and end the call politely.',
-      'Mark them right away: on the lead, press Not interested, then Close them out. They leave the queue and no one calls them again.',
-      'Then message the team "[name] asked us to stop", so their texts stop too. (A stop reason on Close them out is coming.)',
+      'Mark them before you hang up: on the call, press Do not call (a lead\'s record has it too). It stops every call and text to that number at once: queued calls, callbacks and check-in texts.',
+      'Someone you can\'t find in the portal asks to stop? Tell the team.',
       'If they text STOP, the system opts them out by itself and sends one confirmation text. Do not text them again.',
       'Never opt someone back in. Only the person can, by texting START.',
       'Texts only go out between 8 AM and 8 PM in the person\'s own time.',
@@ -102,15 +103,15 @@ export const LESSONS = [
       lines: [
         hear('Please stop calling me.'),
         say('Of course. I\'ve taken you off our list, and you won\'t hear from us again. Have a good day.', { approve: true }),
-        tip('Then, before anything else: Not interested, Close them out, and tell the team. Don\'t argue and don\'t try to save it.'),
+        tip('Then press Do not call before you hang up. Don\'t argue and don\'t try to save it.'),
         tip('The STOP confirmation text is sent by the system. Its wording is set with the phone line.'),
       ],
     },
-    dos: ['Stop the moment they ask', 'Close them out and tell the team before your next call', 'Tell the team if someone you can\'t find in the portal asks to stop'],
+    dos: ['Stop the moment they ask', 'Press Do not call before you hang up', 'Tell the team if someone you can\'t find in the portal asks to stop'],
     donts: ['Don\'t try to change their mind', 'Don\'t text "are you sure?"', 'Never opt anyone back in'],
-    portal: { shot: 'lead-new', clicks: [{ spot: 'notint', text: 'Not interested, then Close them out' }] },
+    portal: { shot: 'phone', clicks: [{ spot: 'phone', text: 'The phone: on a call, Do not call stops every call and text' }] },
     check: [
-      ok('A lead says "don\'t call me again" halfway through the call. You:', ['Finish your questions first', 'Ask if they\'re sure', 'Confirm they won\'t hear from us, end politely, close them out', 'Book them anyway'], 2, 'Stop at once, confirm, close them out and tell the team.'),
+      ok('A lead says "don\'t call me again" halfway through the call. You:', ['Finish your questions first', 'Ask if they\'re sure', 'Confirm they won\'t hear from us, press Do not call, end politely', 'Book them anyway'], 2, 'Stop at once, confirm, and press Do not call.'),
       ok('A client texted STOP last week and now asks you on a call to text them. Who can turn texts back on?', ['You, in the portal', 'An admin', 'Only the client, by texting START', 'The agent'], 2, 'Only the person can opt back in, by texting START.'),
       ok('When can texts go out?', ['Any time', '8 AM to 8 PM in the person\'s own time', '8 AM to 6 PM Central', 'Only on weekdays'], 1, 'Quiet hours: 8 AM to 8 PM in the person\'s time.'),
     ],
@@ -121,7 +122,7 @@ export const LESSONS = [
     title: 'Logging every call',
     job: 'Every call gets a result and a note, straight after it ends.',
     minutes: 4,
-    why: 'Agents see your notes on their client\'s timeline, your pay comes from logged cancellations, and nobody can follow up on a call that was never logged.',
+    why: 'Agents see your notes on their client\'s timeline, and nobody can follow up on a call that was never logged.',
     steps: [
       'After every call, the phone asks How did it go? Pick the result and press Save · Available before anything else. A wrap-up timer counts down, and you are free for the next call once it is saved.',
       'For a cancellation call: Cancelled needs the carrier\'s confirmation number. No answer can carry a short note.',
@@ -177,14 +178,14 @@ export const LESSONS = [
   {
     id: 'speed',
     tryIt: { path: ['queue'], do: 'Open a lead under New and press Take it.', button: 'Take it' },
-    title: 'Speed to lead: new leads within 5 minutes',
-    job: 'A new lead lands in your Queue. Call them inside five minutes.',
+    title: 'Speed to lead: call new leads right away',
+    job: 'A new lead lands in your Queue. Call them right away.',
     minutes: 5,
-    why: 'A lead called in the first five minutes is far more likely to pick up and book than one called an hour later.',
+    why: 'A lead called straight away, in seconds, is far more likely to pick up and book than one called an hour later.',
     steps: [
       'New leads land in the Queue under New. Callbacks due come first, then new leads.',
       'Press Take it on the lead. It holds the lead for you for 15 minutes so no other VA calls them.',
-      'Call within five minutes of the lead coming in.',
+      'Call right away: seconds, not minutes. Once the AI caller is switched on, it calls new form leads first and hands some to you (see Taking a lead from the AI).',
       'Introduce yourself as Deedstone and say why you\'re calling: they asked about life insurance.',
       'Go through the checklist (question type, carrier, state, how soon), then book with an agent or transfer live.',
       'No answer: log Not reached. The follow-up texts go out by themselves, and the lead comes back to the Queue for the next try.',
@@ -201,9 +202,9 @@ export const LESSONS = [
     },
     dos: ['Callbacks due first, then New', 'Take it before you dial', 'Put back anything you can\'t finish'],
     donts: ['Don\'t sit on a lead you took', 'Don\'t call a lead another VA holds', 'Don\'t text a lead from your own phone'],
-    portal: { shot: 'queue', clicks: [{ spot: 'lane0', text: 'Callbacks due: call these first' }, { spot: 'lane1', text: 'New leads: call inside 5 minutes' }, { spot: 'card', text: 'Open a lead, then press Take it' }] },
+    portal: { shot: 'queue', clicks: [{ spot: 'lane0', text: 'Callbacks due: call these first' }, { spot: 'lane1', text: 'New leads: call right away' }, { spot: 'card', text: 'Open a lead, then press Take it' }] },
     check: [
-      ok('How fast should a new lead be called?', ['Within 5 minutes', 'Within the hour', 'By end of day', 'Next morning'], 0, 'Speed to lead: inside five minutes.'),
+      ok('How fast should a new lead be called?', ['Right away, in seconds', 'Within the hour', 'By end of day', 'Next morning'], 0, 'Speed to lead: right away.'),
       ok('What does Take it do?', ['Books the lead', 'Holds the lead for you for 15 minutes', 'Sends a text', 'Closes the lead'], 1, 'It holds the lead so no other VA calls them.'),
       ok('Which do you call first?', ['The oldest New lead', 'A callback that is due', 'Whoever is nearest your time zone', 'Not reached leads'], 1, 'Callbacks due come first, then New.'),
       ok('The lead doesn\'t pick up. You:', ['Text them from your phone', 'Log Not reached. Follow-up texts go out by themselves', 'Call five times in a row', 'Close them out'], 1, 'Log Not reached. The follow-up runs by itself.'),
@@ -221,7 +222,7 @@ export const LESSONS = [
       'Pick the agent. You can only book inside that agent\'s working hours.',
       'Times are shown in the lead\'s time zone, from their state and city. Check it with them: "That\'s 2 PM your time, right?"',
       'If the portal can\'t work out their time zone, it asks you to pick one. Never guess.',
-      'Greyed-out times are too close to another appointment (the agent\'s appointment length plus buffer, 30 minutes if not set). Pick an open one.',
+      'An agent\'s calls keep at least 30 minutes apart (longer if their appointment length plus buffer is longer), so times too close to another call aren\'t offered.',
       'Book at least 30 minutes ahead, and between 8 AM and 8 PM in the lead\'s time.',
       'Confirm the day and time back to them. The confirmation text and reminders go out by themselves.',
     ],
@@ -273,6 +274,40 @@ export const LESSONS = [
       ok('The agent doesn\'t pick up the transfer. You:', ['Hang up', 'Book the first open time within the hour', 'Tell the caller to call back later', 'Keep ringing for ten minutes'], 1, 'Fall back to a booking within the hour.'),
       ok('What does the agent see when you transfer?', ['Nothing', 'The lead\'s name, age, state and need, on their alert', 'The price you discussed', 'The lead source'], 1, 'It is a cold transfer: the alert carries it. Never prices or lead sources.'),
       ok('Before you transfer, you:', ['Finish the checklist', 'Quote a price', 'Ask for their bank details', 'Text the agent'], 0, 'Checklist first.'),
+    ],
+  },
+  {
+    // P897: the From the AI card (P892). The AI caller is off until Brayden switches it on; the lesson is ready for then.
+    id: 'fromai',
+    tryIt: { path: ['queue'], do: 'Open Gloria Price under New, read From the AI, and press Take it.', button: 'Take it' },
+    title: 'Taking a lead from the AI',
+    job: 'The AI caller hands you a lead. Carry on from where it stopped.',
+    minutes: 3,
+    why: 'The lead is on the line and has already answered questions. Starting over sounds like nobody listened, and a lead who feels unheard hangs up.',
+    steps: [
+      'Once the AI caller is switched on, it calls new form leads within seconds. It hands a lead to you when they ask for a person, ask about price or cover, get confused or upset, or when it gets stuck.',
+      'Those cards say From the AI. Open the card and read the From the AI box first: why it handed over, how long it talked, what it already asked, and the agent.',
+      'Don\'t start over. Pick up from what the AI already asked.',
+      'Press Take it, then get the answers the AI didn\'t (question type, carrier, state, how soon).',
+      'The line on the lead says what\'s next: live transfer if they\'re ready now (Check agent), or book them.',
+      'Never talk price or cover. Your licensed agent goes through that with them.',
+      'No VA was free within 60 seconds? The AI told the lead someone calls back shortly, and the card is a callback, due now. Call those first.',
+    ],
+    script: {
+      title: 'Picking up from the AI',
+      lines: [
+        say('Hi [first name], it\'s [your first name] with Deedstone, I\'m here now. Your licensed agent goes through the monthly cost with you. Can I check two quick things first?', { approve: true }),
+        hear('How much is it going to be?'),
+        say('I\'m not licensed to talk about coverage, price or whether you qualify. Your licensed agent will go through all of that with you.', { approve: true }),
+      ],
+    },
+    dos: ['Read the From the AI box before you speak', 'Pick up where the AI stopped', 'Call an AI callback first'],
+    donts: ['Don\'t start the questions over', 'Don\'t talk price or cover', 'Don\'t leave a warm hand-off waiting'],
+    portal: { shot: 'queue', clicks: [{ spot: 'card', text: 'A card marked From the AI: open it and read the box first' }] },
+    check: [
+      ok('A lead comes to you From the AI. What do you do first?', ['Start the questions from the top', 'Read the From the AI box', 'Book them straight away', 'Text them'], 1, 'Read what the AI already learned, then carry on.'),
+      ok('The AI handed her over because she asked about price. You:', ['Give a rough price', 'Say your licensed agent goes through price with her', 'Hang up', 'Ask the AI'], 1, 'Price is the agent\'s.'),
+      ok('An AI callback card says Call now. When do you call?', ['First, before New leads', 'At the end of the day', 'Tomorrow', 'Only if they text again'], 0, 'It is a callback, due now.'),
     ],
   },
   {
@@ -335,24 +370,24 @@ export const LESSONS = [
   },
   {
     id: 'checkins',
-    tryIt: { path: ['queue'], do: 'A check-in reply comes back as New: open a lead under New and press Take it.', button: 'Take it' },
+    tryIt: { path: ['queue'], do: 'Find Hector Ruiz\'s check-in reply under Call tasks from texts on the Queue and press Call.', button: 'Call' },
     title: 'Check-in texts at day 30, 60 and 90',
     job: 'Leads we never reached get three check-in texts. You handle the replies.',
     minutes: 3,
     why: 'Some people are just busy. A friendly check-in brings some of them back.',
     steps: [
       'If we never reach a lead, a check-in text goes out by itself at day 30, 60 and 90. Then it stops.',
-      'If they reply, the lead comes back to the Queue as New. Call within five minutes, like any new lead.',
+      'If they reply, an automatic answer goes out ("we\'ll call you shortly") and a call task lands on your Queue under Call tasks from texts. Call them right away. There is no reply box.',
       'If they reply STOP, they are opted out. Don\'t contact them.',
       'No reply after day 90: the lead is closed as unreachable. You don\'t need to do anything.',
     ],
     script: null,
     dos: ['Treat a reply like a brand-new lead', 'Mention you\'re following up on their text'],
     donts: ['Don\'t send extra check-ins by hand', 'Don\'t contact anyone who replied STOP'],
-    portal: { shot: 'queue', clicks: [{ spot: 'lane1', text: 'A reply brings the lead back here, under New' }] },
+    portal: { shot: 'queue', clicks: [{ spot: 'card', text: 'A reply becomes a call task on the Queue: press Call' }] },
     check: [
       ok('When do check-in texts go out?', ['Every week', 'Day 30, 60 and 90, then stop', 'Every month forever', 'Only on weekends'], 1, 'Three texts, then stop.'),
-      ok('A lead replies to a day-60 check-in. You:', ['Ignore it', 'Call within five minutes, like a new lead', 'Wait for day 90', 'Text back a price'], 1, 'They come back as New. Speed to lead applies.'),
+      ok('A lead replies to a day-60 check-in. You:', ['Ignore it', 'Call them right away from Call tasks from texts', 'Wait for day 90', 'Text back a price'], 1, 'A reply is a call task. Speed to lead applies.'),
       ok('No reply after day 90. What happens?', ['You call every week', 'The lead is closed as unreachable', 'It goes to the agent', 'Texts keep going'], 1, 'Closed as unreachable, by itself.'),
     ],
   },
@@ -389,6 +424,40 @@ export const LESSONS = [
       ok('What must you have before marking Cancelled?', ['The client\'s email', 'The carrier\'s confirmation number', 'The agent\'s OK by text', 'A new premium'], 1, 'The confirmation number.'),
       ok('We don\'t have a carrier\'s hours yet. You:', ['Never call it', 'Call inside usual carrier hours, and tell the team if they\'re closed', 'Call at 7 AM', 'Ask the client to call'], 1, 'Use usual carrier hours and report what you find.'),
       ok('The client sounds unsure about cancelling. You:', ['Push them to cancel', 'Stop, and pass it to their agent', 'Cancel anyway', 'Hang up'], 1, 'Never push. Unsure means it goes back to the agent.'),
+    ],
+  },
+  {
+    // P897: the Welcome call step (P891): clients an agent brings from their own book.
+    id: 'welcome',
+    tryIt: { path: ['servicing'], do: 'Open Maria Lopez\'s welcome call, press Start, then Record the result and Save result.', button: 'Save result' },
+    title: 'Welcome calls for clients an agent added',
+    job: 'An agent hands us a client from their own book. Say hello, check the details, ask about texts.',
+    minutes: 3,
+    why: 'These clients have never heard of us. A warm first call, with their details right, is why they pick up the next time we call.',
+    steps: [
+      'When an agent adds clients from their own book, each one gets a Welcome call step on Servicing.',
+      'Open it and read who added them and the agent\'s note. Press Start, then Call.',
+      'Confirm it\'s them: name and date of birth.',
+      'Say who you are: their agent\'s client care team at Deedstone.',
+      'Read every detail back (name, phone, email, policy, premium, draft day). Anything wrong: note it and pick Details fixed.',
+      'Ask about text updates, word for word. Yes: press Yes, texts are fine (it logs their consent). No: press No texts.',
+      'A wrong policy, a payment problem or a coverage question: pick Problem → agent and say what in your note.',
+      'Record the result: Welcomed, Details fixed, Problem → agent, or No answer (it comes back the next business day, up to three tries).',
+    ],
+    script: {
+      title: 'Saying hello',
+      lines: [
+        say('Hi [first name], this is [your first name] with [agent]\'s client care team at Deedstone. [Agent] asked us to look after your [carrier] policy from now on: payments, changes, your yearly review. Do you have two minutes so I can check we have your details right?', { approve: true }),
+        tip('Then read each detail back, and ask the text question word for word, from the step.'),
+      ],
+    },
+    dos: ['Confirm it\'s them first', 'Read every detail back', 'Ask the text question word for word'],
+    donts: ['Don\'t turn texts on for someone who said no', 'Don\'t answer coverage questions', 'Don\'t skip recording the result'],
+    portal: { shot: 'servicing', clicks: [{ spot: 'card', text: 'Open the Welcome call, then Start' }] },
+    check: [
+      ok('Who gets a welcome call?', ['Every new lead', 'Clients an agent added from their own book', 'Clients who cancelled', 'Agents'], 1, 'Clients an agent brings from their own book.'),
+      ok('The client says no to text updates. You:', ['Press Yes anyway', 'Press No texts', 'Ask again next week', 'Tell the agent to turn texts on'], 1, 'Never turn texts on for someone who said no.'),
+      ok('Their premium on the step is wrong. You:', ['Ignore it', 'Note it and pick Details fixed', 'Cancel the policy', 'Change the cover'], 1, 'Note what was wrong and pick Details fixed.'),
     ],
   },
   {
@@ -491,7 +560,7 @@ export const LESSONS = [
       'Listen first. Ask what\'s behind it: money, a payment problem, or a question about the policy.',
       'Payment problem: fix it as in Failed payments.',
       'Anything else (price, cover, "I don\'t need it"): book them with their agent as soon as possible. That conversation is the agent\'s.',
-      'Never pressure. If they still want to cancel, record it and Send to agent.',
+      'Never pressure. If they still want to cancel, record the result Wants to cancel, with a note of why. Their agent sees it. Price, cover or advice questions: Send to agent.',
     ],
     script: {
       title: 'Opening a save call',
@@ -521,7 +590,6 @@ export const LESSONS = [
       'Wording, consent, a phone or text problem, a bug, or anything legal: the Ohvara team (Brayden or Jordan, both admins). Message the team or email support.',
       'An upset caller who asks for a manager: stay calm, take their details, and message the team straight away.',
       'Anything that sounds like a threat, a complaint to a regulator, or a legal claim: stop, note exactly what was said, and tell the team at once.',
-      'A cancellation that the system can\'t confirm goes to Needs a listen. Brayden checks those.',
     ],
     script: {
       title: 'An upset caller',

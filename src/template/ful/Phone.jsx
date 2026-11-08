@@ -394,20 +394,21 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
       save={r => {
         const p = call.who
         if (p.callId && (r.pick === 'cancelled' || r.pick === 'no_answer')) {
-          if (r.pick === 'cancelled') { markCall(p.callId, 'cancelled', { confirmation: r.conf.trim().toUpperCase(), notes: r.notes }); note('Cancelled. It shows on Pay as checking') }
+          if (r.pick === 'cancelled') { markCall(p.callId, 'cancelled', { confirmation: r.conf.trim().toUpperCase(), notes: r.notes }); note('Cancelled. Saved with the confirmation number') }
           else { markCall(p.callId, 'no_answer', { notes: r.notes || 'No answer.' }); note(`No answer logged for ${p.name.split(' ')[0]}`) }
         } else note(`Call with ${p.name} logged · you're Available`)
         const word = CALL_WORD[r.pick] || r.pick
         presDo({ type: 'done', outcome: word })
         rl?.wrapDone(word).catch(() => {})
-        setLog(l => [{ id: `d-${Date.now()}`, name: p.name, number: p.number, outcome: word, tone: /cancel|reached|transfer/i.test(word) ? 'cancelled' : 'no_answer', when: `Today, ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`, who: p }, ...l])
+        setLog(l => [{ id: `d-${Date.now()}`, callId: p.callId || null, name: p.name, number: p.number, outcome: word, tone: /cancel|reached|transfer/i.test(word) ? 'cancelled' : 'no_answer', when: `Today, ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`, who: p }, ...l])
         finish()
       }} />
   } else {
     const recent = [
       ...log,
       ...missed.map(m => calls.find(k => k.id === m.id)).filter(Boolean).map((k, i) => ({ id: `m-${k.id}-${i}`, name: k.name, number: k.client.client_phone, outcome: 'Missed', tone: 'no_answer', when: 'Today, just now', who: fromCall(k), missed: true })),
-      ...calls.filter(k => !OPEN.includes(k.status) || k.status === 'no_answer').sort((a, b) => b.day - a.day).map(k => ({ id: k.id, name: k.name, number: k.client.client_phone, outcome: CALL_WORD[k.status], tone: k.status, when: k.day === 5 ? `Today, ${k.time}` : `Nov ${k.day}, ${k.time}`, who: fromCall(k) })),
+      // P897: a call saved from the phone is already in `log`, so its call row isn't listed a second time
+      ...calls.filter(k => (!OPEN.includes(k.status) || k.status === 'no_answer') && !log.some(e => e.callId === k.id)).sort((a, b) => b.day - a.day).map(k => ({ id: k.id, name: k.name, number: k.client.client_phone, outcome: CALL_WORD[k.status], tone: k.status, when: k.day === 5 ? `Today, ${k.time}` : `Nov ${k.day}, ${k.time}`, who: fromCall(k) })),
     ]
     body = (
       <>
