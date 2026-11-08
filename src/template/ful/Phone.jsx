@@ -253,7 +253,9 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
     // Dana picks up; Priya doesn't, so the call bounces back after BOUNCE_MS (about 20 s).
     if (xs === 'ringing') return xAgent.id === 'ag-dana' ? later(3000, { type: 'picked' }) : later(BOUNCE_MS, { type: 'bounce' })
     return undefined
-  }, [xs, xAgent])
+    // P897: keyed on the agent's id and duty, not the object: useFulAgents() hands back a new list each render, and the
+    // 1-second countdown re-render kept restarting these timers, so the sample check never got past Sent.
+  }, [xs, xAgent?.id, xAgent?.duty, call?.xfer?.live])
 
   // The screen is not modal: Esc slides it away only while you are in it, and focus goes back to the rail icon.
   const railBack = () => requestAnimationFrame(() => document.querySelector('.fs-ri-phone:not([hidden]), .fs-top-phone')?.focus?.())

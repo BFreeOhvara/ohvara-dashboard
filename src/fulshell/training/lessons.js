@@ -219,10 +219,10 @@ export const LESSONS = [
     why: 'A wrong time zone or a double booking means a no-show and an annoyed agent.',
     steps: [
       'From the lead, press Book an agent (or Book for an agent in the + menu).',
-      'Pick the agent. You can only book inside that agent\'s working hours.',
+      'Pick the agent. Only agents licensed in the lead\'s state can be picked, and you can only book inside that agent\'s working hours.',
       'Times are shown in the lead\'s time zone, from their state and city. Check it with them: "That\'s 2 PM your time, right?"',
       'If the portal can\'t work out their time zone, it asks you to pick one. Never guess.',
-      'An agent\'s calls keep at least 30 minutes apart (longer if their appointment length plus buffer is longer), so times too close to another call aren\'t offered.',
+      'Greyed-out times are within 30 minutes of another of the agent\'s calls (longer if their appointment length plus buffer is longer). Pick an open one.',
       'Book at least 30 minutes ahead, and between 8 AM and 8 PM in the lead\'s time.',
       'Confirm the day and time back to them. The confirmation text and reminders go out by themselves.',
     ],
