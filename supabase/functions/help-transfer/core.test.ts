@@ -396,3 +396,11 @@ test('14. handle(): 401 without a signed-in user; the hand-off keeps the VA on w
   assert.deepEqual(holds(h), ['false'])
   assert.match(whisperWords({ name: 'Al', your_client: true }, false), /your client\. Al\. Press 1/)
 })
+
+test('15. P903: the AI caller\'s whisper is one line for the agent only, no "press 1"', () => {
+  const w = whisperWords({ name: 'Pat', age: '55 to 64', state: 'TX', need: 'Mortgage protection' }, false, 'ai')
+  assert.equal(w, 'Deedstone live caller: Pat, 55 to 64, TX, mortgage protection.')
+  assert.doesNotMatch(w, /Press 1|\bAI\b/)
+  assert.equal(whisperWords({}, false, 'ai'), 'Deedstone live caller: a caller.')
+  assert.match(whisperWords({ name: 'Al' }, true, 'ai'), /test transfer/) // the Setup test is unchanged
+})

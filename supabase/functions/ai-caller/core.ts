@@ -7,8 +7,9 @@
 //   bridge           {call_id, line_id} a VA took the hand-off: transfer the lead into that VA's line (cron secret)
 //   handoff_timeout  {call_id}          nobody took it in 60 s: tell the lead someone will call back, end (cron secret)
 //   twiml            ?line=…            the bridge number's answer: join the VA's line (Twilio)
-import { aiStep, AI_RULES, HANDOFF_REASONS } from './rules.js'
+import { aiStep, AI_RULES, HANDOFF_REASONS, WAIT_QUESTIONS, WAIT_RULE, transferSay } from './rules.js'
 import type { Ev, Provider } from './providers.ts'
+import { whisperWords } from '../help-transfer/core.ts'
 
 export type Phase = 'queued' | 'dialing' | 'talking' | 'checking' | 'transferring' | 'booking' | 'handing_off' | 'done' | 'to_va'
 export type Call = {
@@ -18,7 +19,8 @@ export type Call = {
 }
 export type Lead = { id: string; first: string; phone: string; state: string | null; tz: string | null; need: string | null; age: string | null }
 export type Agent = { id: string; first: string; phone: string | null; mode: 'appts' | 'both'; hours: Record<string, unknown>; tz: string; reachable: boolean }
-export type CheckRow = { id: string; status: string; answer: 'yes' | 'no' | null; expires_at: string | null }
+export type CheckRow = { id: string; status: string; answer: 'yes' | 'no' | null; expires_at: string | null
+  summary?: { name?: string | null; age?: string | null; state?: string | null; need?: string | null } }
 
 export interface Store {
   live(): Promise<{ on: boolean; maxSecs: number }>
@@ -36,6 +38,10 @@ export interface Store {
   insertCheck(row: { agent_id: string; lead_id: string; ai_call_id: string; summary: Record<string, unknown> }): Promise<CheckRow | null>
   check(id: string): Promise<CheckRow | null>
   sendCheck(check: CheckRow, agentId: string): Promise<boolean>
+  // P903: the check row follows the AI's call (ringing → connected + delivered, or bounced / no_answer), and a
+  // check that ran out is replaced on the agent's phones ("Missed. We're booking them on your calendar").
+  markCheck(id: string, patch: Record<string, unknown>, whenStatus?: string[]): Promise<void>
+  clearCheck(check: CheckRow, agentId: string, why: 'booking' | 'gone'): Promise<void>
   lineConference(lineId: string): Promise<string | null>
 }
 export type Env = { now(): number; from: string | null; bridgeNumber: string | null; words: Record<string, string> }
@@ -94,13 +100,25 @@ export async function onEvent(store: Store, provider: Provider, env: Env, ev: Ev
       return { ok: true, outcome: r.s.outcome }
     }
     if (ph === 'handing_off') { await store.result(c.id, 'handed_to_va', { ...patch, callback_task: ev.reason !== 'transferred' }); return { ok: true } }
-    if (ph === 'transferring' && ev.reason === 'transferred') { await store.result(c.id, 'transferred', patch); return { ok: true } }
+    if (ph === 'transferring' && ev.reason === 'transferred') {
+      if (c.check_id) await store.markCheck(c.check_id, { status: 'connected', connected_at: new Date(env.now()).toISOString(), delivered: true }, ['ringing'])
+      await store.result(c.id, 'transferred', patch)
+      return { ok: true }
+    }
     if (c.booked_for) { await store.result(c.id, 'booked', patch); return { ok: true } }
     await store.result(c.id, 'reached', patch)
     return { ok: true }
   }
   // Tool calls: the AI asks us what to do next.
   return provider.toolReply(ev.toolCallId, await tool(store, provider, env, c, ev.name, ev.args))
+}
+
+// Beat 3: no dead air while the agent decides. A provider that can talk while a tool call is pending keeps the caller
+// company with light, useful questions (never coverage or price); one that can't plays a short hold line instead.
+const checkSay = (p: Provider) => (p.talksWhileWaiting ? transferSay('check') : `${transferSay('check')} ${transferSay('holdOnly')}`)
+function waiting(p: Provider, first: boolean) {
+  if (!p.talksWhileWaiting) return { hold: true }
+  return first ? { keep_talking: true, ask: WAIT_QUESTIONS, rule: WAIT_RULE } : { keep_talking: true }
 }
 
 async function slotsReply(store: Store, env: Env, c: Call, say?: string) {
@@ -142,26 +160,44 @@ export async function tool(store: Store, provider: Provider, env: Env, c: Call, 
         return slotsReply(store, env, c) // agent being checked by a VA, or the push failed: book
       }
       await store.status(c.id, 'checking', { routed: r.s.routed, check_id: chk.id, summary: args.summary ?? null })
-      return { say: env.words.hold, next: 'check_status', wait_secs: 3 }
+      return { say: checkSay(provider), next: 'check_status', wait_secs: 3, ...waiting(provider, true) }
     }
     case 'check_status': {
+      if (c.status !== 'checking') return c.status === 'booking' ? slotsReply(store, env, c) : { ok: false, code: 'not_checking' }
       const chk = c.check_id ? await store.check(c.check_id) : null
       const expired = !!chk?.expires_at && Date.parse(chk.expires_at) <= nowMs
       const answer = chk?.answer === 'yes' ? 'yes' : chk?.answer === 'no' || chk?.status === 'failed' || expired ? (chk?.answer ?? 'none') : null
-      if (!answer) return { next: 'check_status', wait_secs: 3 }
+      if (!answer) return { next: 'check_status', wait_secs: 3, ...waiting(provider, false) }
       const r = step(c, { type: 'check_answer', answer })
       if (r.act.includes('transfer_agent') && agent?.phone) {
+        // Beat 4: "connecting you with {Agent}", the agent's phone rings, they hear the whisper alone, the caller is
+        // connected and the AI leaves (cold). Not answered in about 20 s → transfer_failed below.
+        const say = transferSay('connecting', agent.first)
+        const whisper = whisperWords({ ...(chk?.summary ?? {}) }, false, 'ai')
+        const bounceSay = transferSay('bounce', agent.first)
         await store.status(c.id, 'transferring')
-        await provider.transfer(c.provider_call_id ?? '', agent.phone, c.control_url)
-        return { transfer_to: agent.phone, cold: true }
+        if (chk) await store.markCheck(chk.id, { status: 'ringing', ring_started_at: new Date(nowMs).toISOString() }, ['yes', 'seen', 'sent'])
+        await provider.transfer(c.provider_call_id ?? '', agent.phone, c.control_url, { say, whisper, ringSecs: AI_RULES.ringSecs, bounceSay })
+        return { say, transfer_to: agent.phone, cold: true, whisper, ring_secs: AI_RULES.ringSecs, if_not_answered: 'transfer_failed' }
+      }
+      // Beat 5: No, no answer to the push in 30 s, or a failed push → back to the AI, who books.
+      if (chk && answer === 'none') {
+        await store.markCheck(chk.id, { status: 'no_answer' }, ['sent', 'seen'])
+        await store.clearCheck(chk, agent?.id ?? '', 'booking')
       }
       await store.status(c.id, 'booking')
-      return slotsReply(store, env, c)
+      return slotsReply(store, env, c, transferSay('bounce', agent?.first))
     }
-    case 'transfer_failed': { // the agent didn't pick up in about 20 s: the lead is back with the AI, who books
+    case 'transfer_failed': { // the agent's phone wasn't answered in about 20 s: the caller is back with the AI, who books
+      if (c.status !== 'transferring') return c.status === 'booking' ? slotsReply(store, env, c) : { ok: false, code: 'not_transferring' }
       const r = step(c, { type: 'transfer_bounced' })
       await store.status(c.id, r.s.phase as Phase)
-      return slotsReply(store, env, c)
+      if (c.check_id) {
+        await store.markCheck(c.check_id, { status: 'bounced', bounced_at: new Date(nowMs).toISOString(), ended_reason: 'ai_not_answered' }, ['ringing'])
+        const chk = await store.check(c.check_id)
+        if (chk) await store.clearCheck(chk, agent?.id ?? '', 'booking')
+      }
+      return slotsReply(store, env, c, transferSay('bounce', agent?.first))
     }
     case 'slots': return slotsReply(store, env, c)
     case 'book': {

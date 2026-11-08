@@ -1,14 +1,16 @@
 // P892 — AI speed to lead for the portal: the shared rules (supabase/functions/ai-caller/rules.js, the same file the
 // edge function runs), the draft words, the provider choices and the sample calls. Admin and VA screens only: agent
 // screens use agentLine() and never say "AI".
-import { AI_RULES, HANDOFF_REASONS } from '../../supabase/functions/ai-caller/rules.js'
+import { AI_RULES, HANDOFF_REASONS, TRANSFER_WORDS, WAIT_QUESTIONS, WAIT_RULE, transferBeats } from '../../supabase/functions/ai-caller/rules.js'
 import { SCRIPTS, BOUNDARY } from '../template/ful/p879.js'
 export * from '../../supabase/functions/ai-caller/rules.js'
 
 // DRAFT wording, for Brayden and a lawyer. Nothing here is said to a lead until he approves it and switches the AI on.
 export const DRAFT_WORDS = {
   opening: 'Hi {first}, this is Deedstone’s virtual assistant, calling about the request you just sent us. Is now a good time for two quick questions?',
-  hold: 'One moment, I’m checking if your licensed agent can talk right now.',
+  hold: TRANSFER_WORDS.check, // P903: then light questions while the agent decides (WAIT_QUESTIONS)
+  connecting: TRANSFER_WORDS.connecting,
+  bounce: TRANSFER_WORDS.bounce,
   toPerson: 'Let me get one of our team on the line for you. One moment.',
   noPerson: 'Everyone on our team is with someone right now. One of us will call you back in a few minutes.',
   consent: 'The Deedstone form’s consent line must name calls “using an artificial or prerecorded voice” before any lead is called by the AI.',
@@ -25,14 +27,24 @@ export const PROVIDERS = [
   { key: 'ghl', name: 'GoHighLevel Voice AI', perMin: 'about $0.045 engine + voice ($0.015+) + model + LC Phone minutes',
     outbound: 'Beta: started from a GoHighLevel workflow, per-location call limits', transfer: 'Transfer to a number from the workflow', transcripts: 'Kept in GoHighLevel on the contact' },
 ]
+export const beatsOf = c => (c?.transfer ? transferBeats(c.transfer) : [])
 export const providerOf = key => PROVIDERS.find(p => p.key === key) || null
 
 export const SAMPLE_CENTS_PER_MIN = 13
 
 // Sample AI calls, one or more in each outcome (admin AI calls view, sample mode).
+// P903: transfer calls carry `transfer` (rules.js transferBeats) so the admin timeline shows each branch beat by beat.
 export const SAMPLE_AI_CALLS = [
-  { id: 'ai-1', lead_id: 'l-1', name: 'Shirley Adams', state: 'FL', agent: 'Priya Shah', at: 'Today, 1:12 PM', attempt: 1, secs: 7, duration: 214, outcome: 'transferred', note: 'Check agent: Yes in 11 s' },
-  { id: 'ai-2', lead_id: 'l-2', name: 'Marcus Hill', state: 'TX', agent: 'Dana Walker', at: 'Today, 12:40 PM', attempt: 1, secs: 9, duration: 251, outcome: 'booked', note: 'Booked Thu 6:30 PM CT (agent said No)' },
+  { id: 'ai-12', lead_id: 'l-12', name: 'Joyce Bell', state: 'GA', agent: 'Priya Shah', at: 'Today, 2:32 PM', attempt: 1, secs: 7, duration: 158, outcome: 'handed_to_va', note: 'Priya said No · asked for a person · Maya took it in 9 s',
+    transfer: { agent: 'Priya', check: 'no', answerSecs: 6, then: 'asked_person' } },
+  { id: 'ai-11', lead_id: 'l-11', name: 'Walter Kim', state: 'TX', agent: 'Dana Walker', at: 'Today, 2:05 PM', attempt: 1, secs: 9, duration: 262, outcome: 'booked', note: 'Dana said Yes, phone not answered: booked Thu 2:30 PM CT',
+    transfer: { agent: 'Dana', check: 'yes', answerSecs: 9, phone: 'no_answer', then: 'booked', bookedFor: 'Thu 2:30 PM CT' } },
+  { id: 'ai-10', lead_id: 'l-10', name: 'Carol Burke', state: 'FL', agent: 'Priya Shah', at: 'Today, 1:40 PM', attempt: 1, secs: 8, duration: 236, outcome: 'booked', note: 'No answer to the check: booked Thu 11:00 AM ET',
+    transfer: { agent: 'Priya', check: 'none', then: 'booked', bookedFor: 'Thu 11:00 AM ET' } },
+  { id: 'ai-1', lead_id: 'l-1', name: 'Shirley Adams', state: 'FL', agent: 'Priya Shah', at: 'Today, 1:12 PM', attempt: 1, secs: 7, duration: 214, outcome: 'transferred', note: 'Check agent: Yes in 11 s',
+    transfer: { agent: 'Priya', check: 'yes', answerSecs: 11, phone: 'answered' } },
+  { id: 'ai-2', lead_id: 'l-2', name: 'Marcus Hill', state: 'TX', agent: 'Dana Walker', at: 'Today, 12:40 PM', attempt: 1, secs: 9, duration: 251, outcome: 'booked', note: 'Booked Thu 6:30 PM CT (agent said No)',
+    transfer: { agent: 'Dana', check: 'no', answerSecs: 14, then: 'booked', bookedFor: 'Thu 6:30 PM CT' } },
   { id: 'ai-3', lead_id: 'l-3', name: 'Teresa Lane', state: 'AZ', agent: 'Marcus Reed', at: 'Today, 11:58 AM', attempt: 1, secs: 8, duration: 188, outcome: 'booked', note: 'Appointments only: booked Fri 10:00 AM MST' },
   { id: 'ai-4', lead_id: 'l-4', name: 'Gloria Price', state: 'TX', agent: 'Dana Walker', at: 'Today, 11:20 AM', attempt: 1, secs: 8, duration: 96, outcome: 'handed_to_va', note: 'Asked about coverage or price · Maya took it in 14 s' },
   { id: 'ai-5', lead_id: 'l-5', name: 'Daniel Ruiz', state: 'FL', agent: 'Priya Shah', at: 'Today, 10:21 AM', attempt: 1, secs: 6, duration: 0, outcome: 'no_answer', note: 'Try 2 in 2 minutes' },
@@ -62,6 +74,8 @@ export function agentPrompt(words = DRAFT_WORDS) {
     `Call handoff when they ask for a person (asked_person), are confused or upset (confused_upset), or something goes wrong (ai_failed). Reasons: ${Object.keys(HANDOFF_REASONS).join(', ')}.`,
     'If they say stop calling, do not call, or take me off your list: say "Understood, we won’t call again." and call stop.',
     'When the questions are answered, call qualified with a one-line summary. Then follow what it returns: check_status while the agent is checked, transfer when it says so, or read the times it returns in the lead’s own time zone and call book.',
+    `While check_status says keep_talking, never leave silence: ask these, one at a time: ${WAIT_QUESTIONS.join(' ')} ${WAIT_RULE}`,
+    `When it returns transfer_to: say "${words.connecting}" with the agent's first name, then transfer. The agent hears the whisper alone; you leave the call. If they don't answer in ${AI_RULES.ringSecs} seconds you are back with the caller: call transfer_failed, say "${words.bounce}" and book.`,
     `Keep the call under ${Math.round(AI_RULES.maxCallSecs / 60)} minutes. No voicemail: if a machine answers, hang up.`,
   ].join('\n')
 }

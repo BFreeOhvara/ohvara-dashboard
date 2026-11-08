@@ -18,11 +18,18 @@ export type StartArgs = {
 }
 export type Fetch = (url: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => Promise<{ ok: boolean; status: number; json(): Promise<any>; text(): Promise<string> }>
 
+// P903 — the cold hand-off. say: spoken to the caller first ("connecting you with {agent}"). whisper: played to the
+// agent only once they answer, then the caller is connected and the AI leaves. ringSecs: the agent's phone rings this
+// long; not answered → the caller stays with the AI (bounceSay), which calls our transfer_failed tool and books.
+export type TransferOpts = { say?: string; whisper?: string; ringSecs?: number; bounceSay?: string }
+
 export interface Provider {
   key: 'none' | 'retell' | 'vapi' | 'ghl'
   ready: boolean
+  // P903: can the AI keep talking with the caller while a tool call (check_status) is pending? false → a short hold line.
+  talksWhileWaiting: boolean
   start(a: StartArgs): Promise<{ providerCallId: string }>
-  transfer(providerCallId: string, to: string, controlUrl?: string | null): Promise<void>
+  transfer(providerCallId: string, to: string, controlUrl?: string | null, o?: TransferOpts): Promise<void>
   say(providerCallId: string, words: string, end: boolean, controlUrl?: string | null): Promise<void>
   parse(body: any): Ev | null
   toolReply(toolCallId: string | null, result: unknown): unknown
@@ -37,7 +44,7 @@ const s = (v: unknown) => (v == null ? '' : String(v))
 
 // ── None: not connected. Starting a call fails, so the lead goes to a VA. ────────────────────────────────────────
 export const noProvider = (): Provider => ({
-  key: 'none', ready: false,
+  key: 'none', ready: false, talksWhileWaiting: false,
   async start() { throw new Error('not_connected') },
   async transfer() { throw new Error('not_connected') },
   async say() { throw new Error('not_connected') },
@@ -48,7 +55,9 @@ export const noProvider = (): Provider => ({
 // ── Retell ──────────────────────────────────────────────────────────────────────────────────────────────────────
 // Outbound: POST /v2/create-phone-call. Webhook events call_started / call_ended / call_analyzed; custom functions
 // POST { name, args, call } to our URL and get our JSON back. Transfer: the agent's transfer_call tool reads the
-// number from the dynamic variable {{transfer_to}}, which our check_status reply sets.
+// number from the dynamic variable {{transfer_to}}, which our check_status reply sets. P903: set that tool to warm
+// transfer with a private whisper to the agent from {{whisper}}, ring timeout {{ring_secs}}, and on no answer the
+// agent resumes and calls transfer_failed (Retell response variables map transfer_to / whisper / ring_secs).
 export function retell(key: string, agentId: string, fetchFn: Fetch): Provider {
   const h = { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }
   const end: Record<string, EndReason> = {
@@ -56,7 +65,7 @@ export function retell(key: string, agentId: string, fetchFn: Fetch): Provider {
     user_hangup: 'hangup', agent_hangup: 'hangup', call_transfer: 'transferred', max_duration_reached: 'max_duration',
   }
   return {
-    key: 'retell', ready: !!key && !!agentId,
+    key: 'retell', ready: !!key && !!agentId, talksWhileWaiting: true,
     async start(a) {
       const r = await ok(await fetchFn('https://api.retellai.com/v2/create-phone-call', { method: 'POST', headers: h, body: json({
         from_number: a.from, to_number: a.to, override_agent_id: agentId, metadata: { call_id: a.callId },
@@ -102,7 +111,7 @@ export function vapi(key: string, assistantId: string, phoneNumberId: string, fe
     await ok(await fetchFn(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: json(body) }), 'vapi control')
   }
   return {
-    key: 'vapi', ready: !!key && !!assistantId && !!phoneNumberId,
+    key: 'vapi', ready: !!key && !!assistantId && !!phoneNumberId, talksWhileWaiting: true,
     async start(a) {
       const r = await ok(await fetchFn('https://api.vapi.ai/call', { method: 'POST', headers: h, body: json({
         assistantId, phoneNumberId, customer: { number: a.to }, metadata: { call_id: a.callId },
@@ -110,7 +119,9 @@ export function vapi(key: string, assistantId: string, phoneNumberId: string, fe
       }) }), 'vapi start')
       return { providerCallId: s(r.id) }
     },
-    transfer: (_id, to, url) => control(url, { type: 'transfer', destination: { type: 'number', number: to } }),
+    // P903: the whisper is a warm-transfer message the agent hears alone; the AI then leaves (the caller never hears
+    // a three-way). fallbackPlan keeps the caller with the assistant when the agent doesn't answer.
+    transfer: (_id, to, url, o = {}) => control(url, { type: 'transfer', destination: vapiDestination(to, o) }),
     say: (_id, words, endCall, url) => control(url, { type: 'say', content: words, endCallAfterSpoken: endCall }),
     parse(body) {
       const m = body?.message ?? {}
@@ -136,13 +147,23 @@ export function vapi(key: string, assistantId: string, phoneNumberId: string, fe
   }
 }
 
+export function vapiDestination(to: string, o: TransferOpts = {}) {
+  return {
+    type: 'number', number: to, ...(o.say ? { message: o.say } : null),
+    transferPlan: o.whisper
+      ? { mode: 'warm-transfer-say-message', message: o.whisper, timeout: o.ringSecs ?? 20,
+          fallbackPlan: { message: o.bounceSay ?? '', endCallEnabled: false } }
+      : { mode: 'blind-transfer' },
+  }
+}
+
 // ── GoHighLevel Voice AI ────────────────────────────────────────────────────────────────────────────────────────
 // Outbound Voice AI is started by a GoHighLevel workflow (Jordan's side): we add the contact to the "AI speed to
 // lead" workflow through the P850 bridge, and the workflow's webhooks come back here. No live control from our side,
 // so a transfer or a hand-off is the workflow's own transfer step to the number we return.
 export function ghl(push: ((body: unknown) => Promise<void>) | null, workflowId: string | null): Provider {
   return {
-    key: 'ghl', ready: !!push && !!workflowId,
+    key: 'ghl', ready: !!push && !!workflowId, talksWhileWaiting: false,
     async start(a) {
       if (!push || !workflowId) throw new Error('not_connected')
       await push({ kind: 'ai_speed_to_lead', workflow_id: workflowId, call_id: a.callId, phone: a.to, vars: a.vars, max_secs: a.maxSecs })

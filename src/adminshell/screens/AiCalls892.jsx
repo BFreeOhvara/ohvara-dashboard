@@ -6,7 +6,7 @@ import { useAdmSettings, useAdmActions, useAdmAgents } from '../data'
 import { usd } from '../../template/motion'
 import {
   AI_RULES, PROVIDERS, providerOf, DRAFT_WORDS, SAMPLE_AI_CALLS, SAMPLE_AI_SETTINGS, SAMPLE_CENTS_PER_MIN, OUTCOME_WORD, OUTCOME_TONE,
-  HANDOFF_REASONS, aiStats,
+  HANDOFF_REASONS, aiStats, beatsOf,
 } from '../../lib/aiCaller'
 import '../../template/ai892.css'
 
@@ -65,7 +65,7 @@ export function AiCallerSettings() {
       {prov && <dl className="fx-facts ai-prov">{[['Cost', prov.perMin], ['Calls out', prov.outbound], ['Transfers', prov.transfer], ['Transcripts', prov.transcripts]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>}
 
       <h3 className="fx-h3">What it says (drafts)</h3>
-      <ul className="tp-list ai-words">{[['Opening', DRAFT_WORDS.opening], ['While checking the agent', DRAFT_WORDS.hold], ['Handing to a VA', DRAFT_WORDS.toPerson], ['No VA free in 60 s', DRAFT_WORDS.noPerson]].map(([k, v]) => (
+      <ul className="tp-list ai-words">{[['Opening', DRAFT_WORDS.opening], ['While checking the agent', DRAFT_WORDS.hold], ['Agent said Yes', DRAFT_WORDS.connecting], ['Agent said No or didn’t answer', DRAFT_WORDS.bounce], ['Handing to a VA', DRAFT_WORDS.toPerson], ['No VA free in 60 s', DRAFT_WORDS.noPerson]].map(([k, v]) => (
         <li key={k}><small className="tp-sub">{k}</small><p className="tp-mid">“{v}”</p></li>
       ))}</ul>
       <ul className="tp-list tp-sub">
@@ -97,7 +97,8 @@ export function AiCallsView() {
         <ul className="tp-list ai-rows">{calls.map(c => (
           <li key={c.id} className="fx-mrow">
             <PhoneOutgoing size={15} aria-hidden="true" />
-            <span className="tp-grow"><b>{c.name}{c.attempt > 1 ? ` · try ${c.attempt}` : ''}</b><small>{c.state} · {c.agent} · {c.at} · {c.secs} s to call · {c.duration ? `${Math.floor(c.duration / 60)}:${String(c.duration % 60).padStart(2, '0')}` : 'no answer'}</small><small>{c.note}</small></span>
+            <span className="tp-grow"><b>{c.name}{c.attempt > 1 ? ` · try ${c.attempt}` : ''}</b><small>{c.state} · {c.agent} · {c.at} · {c.secs} s to call · {c.duration ? `${Math.floor(c.duration / 60)}:${String(c.duration % 60).padStart(2, '0')}` : 'no answer'}</small><small>{c.note}</small>
+              {c.transfer && <ol className="ai-beats" aria-label={`${c.name}: the transfer, beat by beat`}>{beatsOf(c).map(b => <li key={b}>{b}</li>)}</ol>}</span>
             <Chip tone={OUTCOME_TONE[c.outcome]}>{OUTCOME_WORD[c.outcome]}</Chip>
           </li>
         ))}</ul>

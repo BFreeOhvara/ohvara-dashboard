@@ -8,7 +8,8 @@
 import type { Device, Msg, Senders } from './core.ts'
 
 export type Summary = { name?: string | null; age?: string | number | null; state?: string | null; need?: string | null; your_client?: boolean }
-export type CheckRow = { id: string; summary: Summary; is_test?: boolean }
+// ai_call_id: the AI caller's check (P903): "Live caller ready: {first}" with age band and state, "Take the call?".
+export type CheckRow = { id: string; summary: Summary; is_test?: boolean; ai_call_id?: string | null }
 
 export const TRANSFER_CATEGORY = 'OHVARA_TRANSFER'
 export const CHECK_SECS = 30
@@ -20,11 +21,13 @@ export function summaryLine(s: Summary) {
 export function checkPush(c: CheckRow, seenUrl: string): Msg {
   const s = c.summary || {}
   const who = s.name || 'A lead'
-  const title = c.is_test ? `Test live call: ${who}` : `${s.your_client ? 'Your client · ' : ''}Live call: ${who}`
+  const ai = !c.is_test && !!c.ai_call_id
+  const title = c.is_test ? `Test live call: ${who}` : `${s.your_client ? 'Your client · ' : ''}${ai ? 'Live caller ready' : 'Live call'}: ${who}`
   const line = summaryLine(s)
+  const aiLine = [s.age ? String(s.age) : null, s.state || null].filter(Boolean).join(', ')
   return {
     title,
-    body: `${line ? `${line}. ` : ''}Can you take it now? Answer in 30 seconds.`,
+    body: ai ? `${aiLine ? `${aiLine}. ` : ''}Take the call?` : `${line ? `${line}. ` : ''}Can you take it now? Answer in 30 seconds.`,
     link: `/agent?check=${c.id}`,
     badge: 1,
     type: 'transfer_check',
@@ -43,6 +46,7 @@ export const CLEAR_WORDS = {
   lead_dropped: 'The lead hung up',
   booked: 'Booked on your calendar instead',
   expired: 'Missed. The VA is booking them on your calendar',
+  booking: 'Missed. We’re booking them on your calendar', // P903: the AI's check ran out, or the phone wasn't answered
 } as const
 
 export function clearPush(c: CheckRow, why: keyof typeof CLEAR_WORDS): Msg {

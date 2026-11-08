@@ -489,8 +489,14 @@ const twiml = (inner = '') =>
 export const HOLD_MUSIC = 'https://com.twilio.music.classical.s3.amazonaws.com/BusyStrings.mp3'
 const FINAL = ['completed', 'busy', 'no-answer', 'failed', 'canceled']
 
-export function whisperWords(s: Summary, test: boolean) {
+// via 'ai' (P903): the AI caller's cold hand-off. The provider plays it to the agent only, then connects the caller
+// and the AI leaves, so there is no "press 1". Not answered in about 20 s: the caller bounces back to the AI, not a VA.
+export function whisperWords(s: Summary, test: boolean, via: 'va' | 'ai' = 'va') {
   if (test) return 'This is your Ohvara test transfer. Press 1 to pass the test.'
+  if (via === 'ai') {
+    const bits = [s.name || 'a caller', s.age ? `${s.age}` : null, s.state || null, s.need ? String(s.need).toLowerCase() : null].filter(Boolean)
+    return `Deedstone live caller: ${bits.join(', ')}.`
+  }
   const bits = [s.name || 'A lead', s.age ? `${s.age}` : null, s.state ? `from ${s.state}` : null, s.need ? `looking for ${s.need}` : null].filter(Boolean)
   return `Ohvara live transfer${s.your_client ? ', your client' : ''}. ${bits.join(', ')}. Press 1 to take the call.`
 }

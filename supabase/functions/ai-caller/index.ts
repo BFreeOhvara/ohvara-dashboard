@@ -16,16 +16,16 @@ import { handle, twiml, type Store, type CheckRow } from './core.ts'
 import { noProvider, retell, vapi, ghl, type Provider } from './providers.ts'
 import { isCron } from '../_shared/cronAuth.ts'
 import { sendersFromEnv } from '../notify-push/senders.ts'
-import { checkPush, sendAll } from '../notify-push/transfer.ts'
+import { checkPush, clearPush, sendAll } from '../notify-push/transfer.ts'
 
 const env = (k: string) => Deno.env.get(k) ?? ''
 const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'))
 const senders = sendersFromEnv()
 
 // DRAFT words (src/lib/aiCaller.js DRAFT_WORDS) until Brayden approves them; the provider's agent prompt holds the rest.
+// The transfer beats' words (check, connecting, bounce, hold) live in rules.js TRANSFER_WORDS (P903).
 const WORDS = {
   opening: 'Hi {first}, this is Deedstone’s virtual assistant, calling about the request you just sent us. Is now a good time for two quick questions?',
-  hold: 'One moment, I’m checking if your licensed agent can talk right now.',
   toPerson: 'Let me get one of our team on the line for you. One moment.',
   noPerson: 'Everyone on our team is with someone right now. One of us will call you back in a few minutes.',
 }
@@ -83,20 +83,33 @@ const store: Store = {
   async slots(callId) { return rpc<string[]>('ai_caller_slots', { p_call: callId, p_limit: 6 }) },
   async book(callId, at) { return rpc('ai_caller_book', { p_call: callId, p_at: at }) },
   async insertCheck(row) {
-    const { data, error } = await admin.from('transfer_checks').insert({ ...row, status: 'sent' }).select('id, status, answer, expires_at, seen_token, summary, is_test').maybeSingle()
+    const { data, error } = await admin.from('transfer_checks').insert({ ...row, status: 'sent' }).select('id, status, answer, expires_at, seen_token, summary, is_test, ai_call_id').maybeSingle()
     if (error) return null // 23505: the agent is being checked by a VA right now
     return data
   },
-  async check(id) { const { data } = await admin.from('transfer_checks').select('id, status, answer, expires_at').eq('id', id).maybeSingle(); return data },
+  async check(id) { const { data } = await admin.from('transfer_checks').select('id, status, answer, expires_at, summary, ai_call_id').eq('id', id).maybeSingle(); return data },
   async sendCheck(c: CheckRow & { seen_token?: string; summary?: Record<string, unknown> }, agentId) {
     const { data: devices } = await admin.from('push_devices').select('token, platform, permission').eq('profile_id', agentId)
     const seenUrl = `${env('SUPABASE_URL')}/functions/v1/transfer-voice?${new URLSearchParams({ event: 'seen', check: c.id, t: c.seen_token ?? '' })}`
-    const out = devices?.length ? await sendAll(senders, devices, checkPush({ id: c.id, summary: c.summary ?? {} }, seenUrl)) : { reached: 0, dead: [], errors: ['no_device'] }
+    const out = devices?.length ? await sendAll(senders, devices, checkPush({ id: c.id, summary: c.summary ?? {}, ai_call_id: (c as { ai_call_id?: string }).ai_call_id ?? 'ai' /* every check sent here is the AI's */ }, seenUrl)) : { reached: 0, dead: [], errors: ['no_device'] }
     const okSent = out.reached > 0
     await admin.from('transfer_checks').update(okSent
       ? { sent_at: new Date().toISOString(), expires_at: new Date(Date.now() + 30_000).toISOString(), devices: out.reached }
       : { status: 'failed', fail_reason: out.errors.join('; ').slice(0, 300) || 'no_device' }).eq('id', c.id)
     return okSent
+  },
+  async markCheck(id, patch, whenStatus) {
+    let q = admin.from('transfer_checks').update(patch).eq('id', id)
+    if (whenStatus?.length) q = q.in('status', whenStatus)
+    const { error } = await q
+    if (error) console.error('ai-caller markCheck', id, error.message)
+  },
+  async clearCheck(c, agentId, why) {
+    if (!agentId) return
+    try {
+      const { data: devices } = await admin.from('push_devices').select('token, platform, permission').eq('profile_id', agentId)
+      if (devices?.length) await sendAll(senders, devices, clearPush({ id: c.id, summary: c.summary ?? {} }, why))
+    } catch (e) { console.error('ai-caller clearCheck', c.id, (e as Error).message) }
   },
   async lineConference(lineId) { const { data } = await admin.from('va_lines').select('conference, status').eq('id', lineId).maybeSingle(); return data && data.status !== 'ended' ? data.conference : null },
 }

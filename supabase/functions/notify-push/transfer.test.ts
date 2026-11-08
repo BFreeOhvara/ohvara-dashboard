@@ -48,6 +48,20 @@ test('the clear push replaces the same notification; ordinary alerts are unchang
   assert.equal(summaryLine({ state: 'TX' }), 'TX')
 })
 
+test('P903: the AI caller\'s check reads "Live caller ready: {first}, {age band}, {state}. Take the call?"', () => {
+  const ai = { id: C.id, ai_call_id: 'a1', summary: { name: 'Pat', age: '55 to 64', state: 'TX', need: 'Mortgage protection', your_client: false } }
+  const m = checkPush(ai, 'u')
+  assert.equal(`${m.title}, ${m.body}`, 'Live caller ready: Pat, 55 to 64, TX. Take the call?')
+  assert.equal(m.category, 'OHVARA_TRANSFER') // same Yes / No buttons and 30 s life
+  assert.equal(m.ttlSec, 30)
+  assert.doesNotMatch(`${m.title} ${m.body}`, /\bAI\b|virtual|Mortgage/)
+  assert.equal(checkPush({ ...ai, summary: { name: 'Pat' } }, 'u').body, 'Take the call?')
+  // A VA's check and the Setup test keep their P880 words.
+  assert.equal(checkPush({ ...ai, is_test: true }, 'u').title, 'Test live call: Pat')
+  assert.match(checkPush(C, 'u').body, /Can you take it now\?/)
+  assert.equal(clearPush(ai, 'booking').title, 'Pat: Missed. We’re booking them on your calendar')
+})
+
 test('sendAll: every phone, skips the answering one, keeps going past a failure', async () => {
   const seen: string[] = []
   const out = await sendAll({ ios: async t => { seen.push(t); return t === 'a' ? { ok: false, dead: true, error: 'Unregistered' } : { ok: true } } },

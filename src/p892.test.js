@@ -116,14 +116,15 @@ test('agents see the speed, never "AI"; staff see who called', () => {
 
 test('admin numbers: reached %, booked, transferred, handed, average seconds, minutes, cost', () => {
   const s = aiStats(SAMPLE_AI_CALLS, SAMPLE_CENTS_PER_MIN)
-  assert.equal(s.calls, 9)
-  assert.equal(s.leads, 8)
-  assert.equal(s.reached, 7) // Daniel never answered
-  assert.equal(s.reachedPct, 88)
-  assert.deepEqual([s.booked, s.transferred, s.handed, s.noAnswer, s.optOut], [2, 1, 2, 2, 1])
+  // P903 added three transfer-branch calls (no push answer, phone not answered, No then asked for a person).
+  assert.equal(s.calls, 12)
+  assert.equal(s.leads, 11)
+  assert.equal(s.reached, 10) // Daniel never answered
+  assert.equal(s.reachedPct, 91)
+  assert.deepEqual([s.booked, s.transferred, s.handed, s.noAnswer, s.optOut], [4, 1, 3, 2, 1])
   assert.equal(s.avgSecs, 8)
-  assert.ok(s.minutes > 16 && s.minutes < 17)
-  assert.equal(s.costCents, (4 + 5 + 4 + 2 + 1 + 2 + 3) * 13)
+  assert.ok(s.minutes > 27 && s.minutes < 28)
+  assert.equal(s.costCents, (4 + 5 + 4 + 2 + 1 + 2 + 3 + 4 + 5 + 3) * 13)
   for (const o of OUTCOMES) assert.ok(SAMPLE_AI_CALLS.some(c => c.outcome === o), `sample for ${o}`)
   assert.equal(aiStats([]).reachedPct, 0)
 })
@@ -158,6 +159,8 @@ function fakes({ live = true, ready = true, takes = { by: 'ai', reason: null }, 
     insertCheck: async () => { check = { id: 'chk1', status: 'sent', answer: null, expires_at: new Date(nowMs + 30000).toISOString() }; return check },
     check: async () => check,
     sendCheck: async () => { log.push(['push']); return true },
+    markCheck: async (_id, patch) => { log.push(['check', patch.status]); if (check) Object.assign(check, patch) },
+    clearCheck: async (_c, _a, why) => { log.push(['clear', why]) },
     lineConference: async () => 'line-abc',
   }
   const provider = { ...noProvider(), key: 'retell', ready, start: async () => ({ providerCallId: 'rc1' }), transfer: async (_id, to) => { log.push(['transfer', to]) }, say: async () => { log.push(['say']) }, parse: b => b, toolReply: (_t, r) => r }

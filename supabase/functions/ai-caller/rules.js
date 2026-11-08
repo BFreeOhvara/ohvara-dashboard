@@ -17,6 +17,23 @@ export const AI_RULES = {
   maxCallSecs: 300, // admin setting (60-900)
 }
 
+// P903 — the live transfer, beat by beat. DRAFT words (Brayden approves them with the opening line). {agent} is the
+// agent's first name.
+export const TRANSFER_WORDS = {
+  check: 'Great, let me see who on our team is free to talk with you right now.',
+  connecting: 'Perfect, I’m connecting you with {agent} now. They’ll take great care of you.',
+  bounce: 'Our specialists are all with clients right now, so let’s get you on {agent}’s calendar.',
+  holdOnly: 'One moment while I check.', // only when the provider can't talk while it waits
+}
+// While the agent decides (up to 30 s): light, useful questions, one at a time. Never coverage or price.
+export const WAIT_QUESTIONS = [
+  'Just to confirm, what city are you in?',
+  'Is this the best number to reach you on if we get cut off?',
+  'Is this for you or for a loved one?',
+]
+export const WAIT_RULE = 'Ask these one at a time and wait for each answer. Never talk about coverage, prices or carriers while you wait.'
+export const transferSay = (key, agentFirst) => TRANSFER_WORDS[key].replace('{agent}', agentFirst || 'your agent')
+
 // Why a call goes to a person. Agent screens never show these.
 export const HANDOFF_REASONS = {
   asked_person: 'Asked for a person',
@@ -155,6 +172,24 @@ export function runCall(events, ctx = {}, attempt = 1) {
     acts.push(...r.act)
   }
   return { s, acts }
+}
+
+// ── P903: a transfer call's beats, for staff timelines (admin AI calls, sample) ────────────────────────────────────
+// t: { agent, check: 'yes' | 'no' | 'none', answerSecs, phone: 'answered' | 'no_answer' (after a Yes), then: 'booked' |
+//      'asked_person' (after a bounce or a No), bookedFor }
+export function transferBeats(t) {
+  const out = ['Qualified', `Checked ${t.agent}: “Live caller ready” push sent · kept the caller talking`]
+  if (t.check === 'none') out.push(`No answer to the push in ${AI_RULES.checkSecs} s`)
+  else out.push(`${t.agent} tapped ${t.check === 'yes' ? 'Yes' : 'No'}${t.answerSecs != null ? ` in ${t.answerSecs} s` : ''}`)
+  if (t.check === 'yes') {
+    if (t.phone === 'answered') {
+      out.push(`${t.agent}’s phone rang · whisper played · caller connected · AI left the call`)
+      return out
+    }
+    out.push(`${t.agent}’s phone not answered in ${AI_RULES.ringSecs} s · caller back with the AI`)
+  } else out.push('Back with the AI')
+  out.push(t.then === 'asked_person' ? 'Caller asked for a person · handed to a VA' : `Booked ${t.bookedFor || 'the next open time'}`)
+  return out
 }
 
 // ── Lines on the lead's timeline ──────────────────────────────────────────────────────────────────────────────────
