@@ -193,6 +193,60 @@ export function vaSlots({ date, clocks, clientTz, team, calls = [], prefer = nul
   })
 }
 
+// ── Auto-booking (P907) ───────────────────────────────────────────────────────────────────────────────────────
+// Every VA call is booked by the system: the next open slot inside the client's preferred window, on the client's
+// clock, with a VA on shift who is free (the rule above). Windows are client time; the VA shift still decides what's
+// open, so an evening slot for a West Coast client can fall outside every shift (then the next open time any window).
+export const WINDOWS = {
+  morning: { key: 'morning', label: 'Morning', from: 8 * 60, to: 12 * 60 },
+  afternoon: { key: 'afternoon', label: 'Afternoon', from: 12 * 60, to: 17 * 60 },
+  evening: { key: 'evening', label: 'Evening', from: 17 * 60, to: 20 * 60 },
+}
+export const DEFAULT_WINDOW = 'afternoon'
+// 'Mornings', 'Evening', 'afternoon' → the window key; anything else → null.
+export function windowKey(w) {
+  const t = String(w || '').toLowerCase()
+  return Object.keys(WINDOWS).find(k => t.includes(k)) || null
+}
+// The window a call goes in: the one the agent or client picked, else the one they answered in before, else afternoon.
+export const preferredWindow = (picked, answeredIn) => windowKey(picked) || windowKey(answeredIn) || DEFAULT_WINDOW
+// Which window a clock time on the client's clock falls in (for "answered in"), or null outside all three.
+export function windowOfMinute(m) {
+  return Object.values(WINDOWS).find(w => m >= w.from && m < w.to)?.key || null
+}
+const addDay = (date, n) => new Date(Date.parse(`${date}T12:00:00Z`) + n * 86400000).toISOString().slice(0, 10)
+
+// The next open slot: { iso, clock, date, va, window, inWindow } or null.
+//   from      the earliest instant (now, or the time a call must come after)
+//   window    a window key (see preferredWindow); exact = a clock time ('3:00 PM') on `date` to try first
+//   clientTz  the client's zone (no zone: null; the booker picks one first, never a guess)
+//   team, calls, load, prefer, exceptId: as vaSlots
+//   days      how many calendar days to look ahead (weekends and days nobody is on shift are skipped by the rule)
+//   before    an instant the call must start before (a cancellation before the old policy's next draft), optional
+// An exact time that's taken books the next open slot after it in the same window. Nothing open in the window within
+// `days` → the first open slot at any time in the team's hours (inWindow false), so a call is never left unbooked.
+export function nextSlot({ from, window = DEFAULT_WINDOW, exact = null, date = null, clientTz, team, calls = [], load, prefer = null, exceptId = null, days = 14, step = 30, before = null }) {
+  if (!clientTz || !from) return null
+  const win = WINDOWS[windowKey(window) || DEFAULT_WINDOW]
+  const start = date || dateOf(from, clientTz)
+  const fits = s => s.open && s.iso >= from && (!before || s.iso < before)
+  const scan = (fromMin, toMin, firstDate) => {
+    for (let i = 0; i < days; i++) {
+      const d = addDay(firstDate, i)
+      const clocks = clocksBetween(i === 0 && exact ? Math.max(fromMin, clockMin(exact) ?? fromMin) : fromMin, toMin - step, step)
+      const hit = vaSlots({ date: d, clocks, clientTz, team, calls, prefer, exceptId, load }).find(fits)
+      if (hit) return { ...hit, date: d }
+    }
+    return null
+  }
+  const exactWin = exact != null ? windowOfMinute(clockMin(exact)) : null
+  const w = exact != null && exactWin ? WINDOWS[exactWin] : win
+  const inWin = scan(w.from, w.to, start)
+  if (inWin) return { iso: inWin.iso, clock: inWin.clock, date: inWin.date, va: inWin.va, window: w.key, inWindow: true }
+  const any = scan(0, 24 * 60, start)
+  return any ? { iso: any.iso, clock: any.clock, date: any.date, va: any.va, window: windowOfMinute(clockMin(any.clock)), inWindow: false } : null
+}
+
 // ── The agent rule ────────────────────────────────────────────────────────────────────────────────────────────
 // Open when no appointment of this agent (appts: [{ id, iso }]) starts within length + buffer minutes of `iso`.
 export const AGENT_GAP_MIN = 30

@@ -91,15 +91,10 @@ test('P879 flags, caller check, one dispute per score', () => {
   assert.equal(canDispute({ dispute: { at: 'x' } }), false)
 })
 
-test('P879 VA screens carry the new pieces; pay is hourly, no reply box, no dial pad', () => {
-  const q = src('./screens/Queue.jsx')
-  for (const c of ['<LeadFlags', '<CheckAgent', '<Script', '<Outcome', '<BestNumberNotes', '<HowWeGotYou', '<Recuse', '<CallTasksStrip']) assert.ok(q.includes(c), c)
+test('P879 VA screens carry the new pieces; pay is hourly, no dial pad. P907: no Queue, no lead desk', () => {
   const pay = src('./screens/Pay.jsx')
   assert.match(pay, /an hour/); assert.doesNotMatch(pay, /for each cancellation/)
   assert.match(src('./screens/Overview.jsx'), /<ClockTile \/>/)
   assert.match(src('./screens/Schedule.jsx'), /<SwapsHolidays \/>/)
   assert.match(src('./screens/Clients.jsx'), /<VerifyCaller/)
-  const desk = src('./LeadDesk879.jsx')
-  assert.doesNotMatch(desk, /<textarea/) // no reply box: the VA calls
-  assert.match(desk, /Sample mode/) // voice_live off: Check agent is a labelled sample
 })

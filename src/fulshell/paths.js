@@ -4,7 +4,7 @@
 
 export const FUL = {
   today: '/fulfillment',
-  queue: '/fulfillment/leads',
+  queue: '/fulfillment/leads', // P907: no Queue page; kept so an old link reaches the shell and lands on the Schedule
   calls: '/fulfillment/desk',
   schedule: '/fulfillment/schedule', // P846: Calls became Schedule; the old Calls address stays in the gate and redirects there
   clients: '/fulfillment/pipeline',
@@ -34,11 +34,11 @@ export function showFulShell({ role, pathname, native }) {
 
 // The top tabs, in order. Messages and Settings live on the rail and the top right, as on the agent side.
 export const FUL_TABS = [
-  ['today', 'Today'], ['queue', 'Queue'], ['calls', 'Calls'], ['clients', 'Clients'], ['servicing', 'Servicing'], ['pay', 'Pay'],
+  ['today', 'Today'], ['calls', 'Calls'], ['clients', 'Clients'], ['servicing', 'Servicing'], ['pay', 'Pay'],
 ]
 
 const TITLES = {
-  today: ['Your day', 'Today'], queue: ['Call next', 'Queue'], calls: ['Cancellations', 'Calls'], clients: ['Your book', 'Clients'],
+  today: ['Your day', 'Today'], calls: ['Cancellations', 'Calls'], clients: ['Your book', 'Clients'],
   servicing: ['Client care', 'Servicing'], pay: ['What you earned', 'Pay'], messages: ['Team', 'Messages'], settings: ['Account', 'Settings'],
   more: ['Account', 'More'],
 }

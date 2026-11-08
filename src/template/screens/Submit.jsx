@@ -15,7 +15,7 @@ import { asPick } from '../licenceModel'
 import { StateSelect } from '../StateSelect'
 import { CarrierSelect } from '../CarrierSelect'
 import { BookTime } from '../CallTime'
-import { agentBooksCall } from '../ful/data'
+import { bookAfterSale, useAfterSalePreview, bookedText } from '../ful/data'
 import { formatPhone } from '../phoneMask'
 import { EMPTY_SUBMIT, EMPTY_SPOUSE, NEEDED, TIMES, DRAFT_DAYS, missingFields, buildSubmission, reachText, livesIn } from '../submitModel'
 import { ordinal } from '../../lib/clientCheck.js'
@@ -24,13 +24,22 @@ import { ordinal } from '../../lib/clientCheck.js'
 // live summary beside them. P868: the phone formats itself and saves as E.164, the state is a dropdown, the carrier
 // is the full carrier list, and reaching the client is the best time or a call booked right here (P854's rules: the
 // client's clock, 30-minute slots, a VA on shift who is free). A booked call is saved with the policy.
+// P907: one question, "When is the client easiest to reach?": Morning · Afternoon · Evening, or an exact time. The
+// system books the hand-off call (always) at the next open time in that window on the client's clock with a free VA,
+// and when the sale replaces a policy, the call to cancel the old one too (before its next draft, P899's gate).
 const EMPTY = EMPTY_SUBMIT
 const chipWords = l => agentChip(l)[1]
 const money0 = v => (v ? `$${Number(String(v).replace(/[^\d.]/g, '')).toLocaleString('en-US')}` : 'Not given')
-const REACH = [
-  { key: 'best', label: 'Best time to reach them', icon: Clock3 },
-  { key: 'book', label: 'Book a call', icon: CalendarClock },
-]
+const WHEN = [...TIMES.map(x => ({ key: x, label: x })), { key: 'exact', label: 'Exact time', icon: CalendarClock }]
+// P907: the hand-off call the system would book for this window, shown before Submit (sample; the server books it).
+function AutoBooked({ state, city, window: win }) {
+  const p = useAfterSalePreview({ state, city, window: win })
+  return (
+    <p className="tp-sub tp-row fx-sub-auto" role="status"><Clock3 size={14} aria-hidden="true" />
+      {p ? `The hand-off call books itself: ${p.text}${p.inWindow === false ? ', the next open time' : ''}.` : `Add their city and state, and the hand-off call books itself in their ${win.toLowerCase()}.`}
+    </p>
+  )
+}
 const STEPS = [
   { key: 'client', label: 'The client', sub: 'Who you sold to', Icon: User, needs: ['name', 'phone', 'city', 'state', 'licence', 'booking'] },
   { key: 'policy', label: 'The policy', sub: 'Carrier and draft day', Icon: ShieldCheck, needs: ['carrier', 'draftDay', 'oldCarrier', 'oldDraftDay', 'spouse'] },
@@ -147,12 +156,13 @@ export default function Submit() {
     const sale = buildSubmission(f, 'agent', opts)
     if (!sale) return
     sale.linked = f.linked || null
-    if (sale.booking) {
-      const va = agentBooksCall({ who: sale.name, state: sale.state || '', city: sale.city || '', kind: 'service', mode: 'exact', day: sale.booking.day, time: sale.booking.time, iso: sale.booking.iso, tz: sale.booking.tz, vaId: sale.booking.vaId })
-      sale.booking.va = va?.name || null
-    }
+    const got = bookAfterSale({ who: sale.name, phone: sale.phoneShown, state: sale.state || '', city: sale.city || '', carrier: sale.carrier, window: sale.bestTime,
+      exact: sale.booking ? { iso: sale.booking.iso, tz: sale.booking.tz, vaId: sale.booking.vaId } : null,
+      replaces: sale.replaces ? { carrier: sale.replaces.carrier, draftDay: sale.replaces.draftDay } : null })
+    if (sale.booking) sale.booking.va = got.handoff?.va?.name || null
+    sale.handoff = got.handoff ? { iso: got.handoff.iso, tz: got.handoff.tz, vaId: got.handoff.va?.id || null } : null
     submitSale(sale)
-    setDone({ name: sale.name, call: sale.booking ? reachText(f) : null, spouse: sale.household[0]?.name || null })
+    setDone({ name: sale.name, call: got.handoff ? bookedText(got.handoff.iso, got.handoff.tz) : null, cancel: got.cancel ? bookedText(got.cancel.iso, got.cancel.tz) : null, spouse: sale.household[0]?.name || null })
     note('Sale submitted for servicing')
   }
   const restart = () => { setDone(null); setF(EMPTY); setTried(false); setChecked([]); setStep(0); setTyped(null) }
@@ -163,7 +173,7 @@ export default function Submit() {
         <section className="fx-tile fx-sub-ok" style={{ '--i': 0 }}>
           <span className="fx-sub-okic"><Check size={26} aria-hidden="true" /></span>
           <h2>Submitted</h2>
-          <p>{done.name}{done.spouse ? ` and ${done.spouse} are` : ' is'} on your books{done.spouse ? ', each with their own policy in one household' : ''}. {done.call ? `Their call is booked for ${done.call}.` : 'Our team takes it from here.'} It shows on Clients as Working until it{'’'}s Protected.</p>
+          <p>{done.name}{done.spouse ? ` and ${done.spouse} are` : ' is'} on your books{done.spouse ? ', each with their own policy in one household' : ''}. {done.call ? `Their hand-off call is booked for ${done.call}.` : 'Our team takes it from here.'}{done.cancel ? ` The call to cancel the old policy is booked for ${done.cancel}.` : ''} It shows on Clients as Working until it{'’'}s Protected.</p>
           <ol className="fx-sub-next">{NEXT.map(([Icon, t, s]) => <li key={t}><span className="fx-sub-nic"><Icon size={16} aria-hidden="true" /></span><span><b>{t}</b><small>{s}</small></span></li>)}</ol>
           <div className="tp-row tp-wrap fx-sub-okacts">
             <Link to={paths.clients()} className="tp-primary fx-accent">See your clients</Link>
@@ -198,10 +208,10 @@ export default function Submit() {
               <Field label="State"><StateSelect invalid={bad('licence') || bad('state')} value={f.state} onChange={v => setF({ ...f, state: v })} /></Field>
             </div>
             {missing.includes('licence') && <p className="fx-sub-err" role="alert">Your verified licence doesn{'’'}t cover {stateName(f.state)}. Only submit sales you wrote in a state you{'’'}re licensed in. Just licensed there? Check your licence again in Settings, Licence.</p>}
-            <div className="fx-sub-field"><b>Reaching the client</b><small>Their local time.</small><Seg label="Reaching the client" value={f.reach} onChange={v => setF({ ...f, reach: v })} options={REACH} /></div>
+            <div className="fx-sub-field"><b>When is the client easiest to reach?</b><small>Their local time. We book the hand-off call for you.</small><Seg label="When is the client easiest to reach?" value={f.reach === 'book' ? 'exact' : f.best} onChange={v => setF(v === 'exact' ? { ...f, reach: 'book' } : { ...f, reach: 'best', best: v })} options={WHEN} /></div>
             {f.reach === 'best'
-              ? <div className="fx-sub-field" key="best"><b>Best time to reach them</b><Seg label="Best time to reach them" value={f.best} onChange={v => setF({ ...f, best: v })} options={TIMES.map(x => ({ key: x, label: x }))} /></div>
-              : <div className={`fx-sub-field fx-sub-book${bad('booking') ? ' is-bad' : ''}`} key="book"><b>Book a call</b><small>Pick it together now. It lands on the Schedule of the VA on shift and is saved with the policy.</small>
+              ? <AutoBooked state={f.state} city={f.city} window={f.best} />
+              : <div className={`fx-sub-field fx-sub-book${bad('booking') ? ' is-bad' : ''}`} key="book"><b>Exact time</b><small>Pick it together now. It lands on the Schedule of the VA on shift and is saved with the policy.</small>
                   <BookTime kind="service" value={f.booking} onChange={b => setF(x => ({ ...x, booking: b }))} state={f.state} city={f.city} viewerTz={settings.timeZone} />
                 </div>}
           </>}
@@ -255,7 +265,7 @@ export default function Submit() {
           <dl className="fx-sub-mini">
             <div><dt>Draft day</dt><dd>{f.draftDay ? `The ${ordinal(Number(f.draftDay))}` : 'Not picked'}</dd></div>
             <div><dt>Carrier</dt><dd>{f.carrier.trim() || 'Not picked'}</dd></div>
-            <div><dt>{f.reach === 'book' ? 'Call' : 'Best time'}</dt><dd>{f.reach === 'book' ? (f.booking.iso ? reachText(f) : 'Not picked') : f.best}</dd></div>
+            <div><dt>{f.reach === 'book' ? 'Call' : 'Easiest time'}</dt><dd>{f.reach === 'book' ? (f.booking.iso ? reachText(f) : 'Not picked') : f.best}</dd></div>
           </dl>
           <ul className="fx-sub-check" aria-label="Needed to submit">
             {Object.entries(NEEDED).filter(([k]) => (k !== 'booking' || f.reach === 'book') && (!['oldCarrier', 'oldDraftDay'].includes(k) || f.replacing) && (k !== 'spouse' || f.spouse)).map(([k, label]) => <li key={k} className={missing.includes(k) ? '' : 'is-ok'}><span>{missing.includes(k) ? '' : <Check size={12} aria-hidden="true" />}</span>{label}</li>)}

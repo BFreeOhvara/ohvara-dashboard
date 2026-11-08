@@ -6,7 +6,7 @@ import {
   Volume2, UserPlus, Merge, PhoneForwarded, NotebookPen, X, ArrowUpRight, Building2, ShieldCheck, ListTodo,
   Ban, LifeBuoy, Voicemail, ArrowRightLeft, Undo2, CircleSlash, Timer, Plus,
 } from 'lucide-react'
-import { useFulCalls, useFulActions, useFulDay, useFulQueue, useFulTasks, useFulAgents, useFulClock } from './data'
+import { useFulCalls, useFulActions, useFulDay, useFulTasks, useFulAgents, useFulClock } from './data'
 import { Avatar, Field, PillTabs, useNote } from '../kit'
 import { useClientZone } from '../useClientZone'
 import { clockOf, zoneAbbr } from '../../lib/callSlots'
@@ -30,8 +30,8 @@ import { HelpDot } from '../../fulshell/training/HelpDot'
 // its left edge (arrow pointing right) slides it away, even mid-call: the call keeps going and the rail's phone icon
 // shows it (green pulse + timer). The rail icon is the only way in (the top bar's phone icon on a phone); there is no
 // floating phone button.
-// VAs don't dial numbers (Brayden, Nov 7): every call comes in, or starts from a task the system gave them (Next call,
-// a callback, a lead, a servicing step) with its Call button. The keypad exists only during a call, for carrier
+// VAs don't dial numbers (Brayden, Nov 7): every call comes in, or starts from a booking the system gave them (P907:
+// the Schedule's booked calls; no queue, no leads) with its Call button. The keypad exists only during a call, for carrier
 // menus. Add caller brings a carrier (from the carrier directory) or the agent onto the call, then Merge; each person
 // on the line can be dropped. Transfer is the live transfer (Check agent → push → cold transfer → bounce-back).
 // Calling stays OFF (recovery_config.voice_live): the call screen keeps the time, the line and the notes while the VA
@@ -71,22 +71,18 @@ const fromCall = k => ({
   tz: k.tz || null, agentId: k.client.agent_id, agent: k.agent, reason: `Cancel ${k.old_carrier}, keeping ${k.carrier}`, carrier: k.old_carrier,
   callId: OPEN.includes(k.status) ? k.id : null, notes: k.notes || '', rec: fp('schedule', k.id), when: k.time,
 })
-const LEAD_WHY = { callback_due: 'Callback', new: 'New lead', not_reached: 'Retry' }
-const fromLead = l => ({
-  key: `l-${l.id}`, kind: 'lead', id: l.id, role: 'lead', name: l.name, number: l.phone, state: l.checklist?.state || l.state, city: l.city,
-  reason: `${LEAD_WHY[l.bucket] || 'Lead'}${l.bucket === 'not_reached' ? `, try ${l.tries + 1}` : ''} · ${l.type}`, notes: l.note || '', rec: fp('queue', l.id),
-  when: l.bucket === 'callback_due' ? l.callback : `Came in ${l.came}`,
-})
+// P907: a booked servicing call (a hand-off, save, change, callback...) opens on the Schedule when it's yours.
 const fromTask = t => ({
-  key: `t-${t.id}`, kind: 'task', id: t.id, role: 'client', name: t.name, number: t.client.client_phone, state: t.client.state, city: t.client.city,
-  agentId: t.client.agent_id, agent: t.agent, reason: `${KIND[t.kind] || 'Servicing'} · ${t.carrier}`, carrier: t.carrier, notes: t.note || '',
-  rec: fp('servicing', t.id), when: t.due_text,
+  key: `t-${t.id}`, kind: 'task', id: t.id, role: t.client.lead ? 'lead' : 'client', name: t.name, number: t.client.client_phone, state: t.client.state, city: t.client.city,
+  tz: t.tz || null, agentId: t.client.agent_id || t.agent_id, agent: t.agent, reason: [KIND[t.kind] || 'Servicing', t.carrier].filter(Boolean).join(' · '), carrier: t.carrier, notes: t.note || '',
+  rec: t.iso && t.mine !== false ? fp('schedule', t.id) : fp('servicing', t.id), when: t.when || t.due_text,
 })
+// A Schedule item (P907's one row shape) or, on real data, a call row.
+const fromItem = i => (i.row ? (i.kind === 'task' ? fromTask(i.row) : fromCall(i.row)) : fromCall(i))
 
 export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, onLine: report, missed = [], live, onLive, startReq, onBook }) {
   const { data: calls } = useFulCalls()
   const { data: day } = useFulDay()
-  const { data: queue } = useFulQueue()
   const { data: tasks } = useFulTasks()
   const { markCall, hideLive } = useFulActions()
   const { data: AGENTS } = useFulAgents()
@@ -116,29 +112,22 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
   // attempt limit). A blocked row says why and when; its Call button is off.
   const check = w => {
     if (w.role === 'carrier') return { ok: true }
-    const lead = w.kind === 'lead' ? queue.find(x => x.id === w.id) : null
-    const f = lead ? flagsOf(lead) : {}
+    const f = w.kind === 'lead' ? flagsOf({ id: w.id }) : {}
     const attempts = (SAMPLE_ATTEMPTS[w.id] || []).map(m => Date.parse(NOW_ISO) - m * 60000)
     return predial({ state: w.state, consent: true, writtenConsent: true, optedOut: !!f.optedOut || opted.has(w.number), attempts }, clockNow)
   }
 
-  // What the system gave this VA to call, in the order to call it.
-  const todo = useMemo(() => {
-    const leads = queue.filter(l => !l.closed)
-    return [
-      ['Next call', day.next ? [fromCall(day.next)] : []],
-      ['Callbacks due', leads.filter(l => l.bucket === 'callback_due').map(fromLead)],
-      ['New leads', leads.filter(l => l.bucket === 'new').map(fromLead)],
-      ['Servicing due', tasks.filter(t => t.due === 'overdue' || t.due === 'today').map(fromTask)],
-      ['Not reached yet', leads.filter(l => l.bucket === 'not_reached').map(fromLead)],
-    ].filter(([, rows]) => rows.length)
-  }, [day.next, queue, tasks])
+  // What the system gave this VA to call, in the order to call it. P907: the next booked call, then the rest of
+  // today's bookings. Nothing else (no queue, no leads).
+  const todo = useMemo(() => [
+    ['Next call', day.next ? [fromItem(day.next)] : []],
+    ['Booked today', (day.later || []).map(fromItem)],
+  ].filter(([, rows]) => rows.length), [day.next, day.later])
 
   const resolve = req => {
     if (!req) return null
     const { kind, id } = typeof req === 'string' ? { kind: 'call', id: req } : req
     if (kind === 'call') { const k = calls.find(x => x.id === id); return k ? fromCall(k) : null }
-    if (kind === 'lead') { const l = queue.find(x => x.id === id); return l ? fromLead(l) : null }
     if (kind === 'task') { const t = tasks.find(x => x.id === id); return t ? fromTask(t) : null }
     if (kind === 'client') {
       const k = calls.find(x => x.client_id === id && OPEN.includes(x.status))
@@ -149,8 +138,12 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
   }
 
   // A ring: the server's offer on a real line, else the sample call ringing in from the frame. Both last 15 s.
-  const ring = !call && !offer && ringId ? calls.find(x => x.id === ringId) : null
-  const ringWho = ring ? { ...fromCall(ring), ringKind: 'call_in' } : null
+  // P907: the sample's next call can be any booking, so a ring is a call row or a booked servicing call.
+  const ringCall = !call && !offer && ringId ? calls.find(x => x.id === ringId) : null
+  const ringTask = !call && !offer && ringId && !ringCall ? tasks.find(x => x.id === ringId) : null
+  const ring = ringCall || ringTask
+  const ringWho = ringCall ? { ...fromCall(ringCall), ringKind: 'call_in' } : ringTask ? { ...fromTask(ringTask), ringKind: 'call_in' } : null
+
   const offerWho = !call && offer ? { key: `o-${offer.id}`, kind: offer.leadId ? 'lead' : 'call', id: offer.leadId || offer.policyId, role: offer.leadId ? 'lead' : 'client', name: offer.name, number: offer.last4 ? `…${offer.last4}` : '', state: offer.state, reason: RING_KIND[offer.kind] || 'Call', ringKind: offer.kind, callSid: offer.callSid, leadId: offer.leadId, notes: offer.detail?.notes || '' } : null
   const ringing = ringWho || offerWho
   const ringKey = offer ? `o-${offer.id}` : ringId || null
@@ -355,7 +348,7 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
         {(people > 2 || waiting || pending) && <LineList call={call} onDrop={id => { const x = call.parties.find(q => q.id === id); if (x) srv('end', { party: partyOf(x) }); act({ type: 'drop', id }) }} onMerge={() => { srv('merge'); act({ type: 'merge' }) }} />}
         {call.xfer && <XferCard x={call.xfer} agent={xAgent} now={now}
           onTransfer={() => (real ? real.transfer().catch(e => note(e.message)) : act({ type: 'transfer' }))}
-          onBook={() => { onBook?.(p.kind === 'lead' ? p.id : null); if (real) { real.book().catch(() => {}); real.clear() } act({ type: 'xferClear' }) }}
+          onBook={() => { onBook?.(p); if (real) { real.book().catch(() => {}); real.clear() } act({ type: 'xferClear' }) }}
           onClear={() => { real?.clear(); act({ type: 'xferClear' }) }} />}
         {call.pad && <div className="fs-ph-tones tp-num" aria-label="Keys pressed">{call.tones || ' '}</div>}
         {call.pad && <div className="fs-pad is-small" aria-label="Keypad for tones">{PAD.map(d => <button key={d} type="button" className="fs-key" onClick={() => { act({ type: 'tone', key: d }); srv('dtmf', { digits: d }) }}>{d}</button>)}</div>}
@@ -365,7 +358,7 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
         {sheet === 'dnc' && (
           <section className="fs-cs-sheet" aria-label="Do not call">
             <header className="fs-cs-sh"><b>Do not call {p.name.split(' ')[0]}?</b><button type="button" className="fx-x" aria-label="Close" onClick={() => setSheet(null)}><X size={15} /></button></header>
-            <p className="tp-sub">Stops every call and text to {p.number} right away: queued calls, callbacks, check-in texts and the text system.</p>
+            <p className="tp-sub">Stops every call and text to {p.number} right away: booked calls, callbacks, check-in texts and the text system.</p>
             <div className="fs-ph-acts"><button type="button" className="tp-primary fs-cs-dncgo" data-first onClick={doDnc}><Ban size={16} />Do not call</button><button type="button" className="tp-btn ov-ghost" onClick={() => setSheet(null)}>Keep calling</button></div>
           </section>
         )}
@@ -494,7 +487,7 @@ function TodoRow({ w, block, onCall, onOpen }) {
 }
 
 // P882 — Hand off hold: a carrier hold with no client goes to the next free VA with the menu path and notes. If no VA
-// is free (shift end), ask the admins for overtime, or put it back in the queue (the client gets an automatic text).
+// is free (shift end), ask the admins for overtime, or book it as a callback (the client gets an automatic text).
 function HandOff({ call, rl, note, onDone, onClose }) {
   const [path, setPath] = useState(call.tones ? `Pressed ${call.tones}` : '')
   const [notes, setNotes] = useState(call.notes || '')
@@ -521,7 +514,7 @@ function HandOff({ call, rl, note, onDone, onClose }) {
           <p className="fs-cs-why" role="note">No VA is free to take it.</p>
           <div className="fs-ph-acts">
             <button type="button" className="tp-primary fx-accent" onClick={() => { rl?.overtime(call.lineId, 30).catch(e => note(e.message)); note('Overtime asked for. You stay on the hold until an admin answers'); onClose() }}><Timer size={16} />Ask for overtime</button>
-            <button type="button" className="tp-btn ov-ghost" onClick={() => { rl?.send(call.lineId, 'end_all').catch(() => {}); note('Put back in the queue. The client gets an automatic text'); onDone({ path, notes }) }}>Re-queue</button>
+            <button type="button" className="tp-btn ov-ghost" onClick={() => { rl?.send(call.lineId, 'end_all').catch(() => {}); note('Booked as a callback on the Schedule. The client gets an automatic text'); onDone({ path, notes }) }}>Book a callback</button>
           </div>
         </>
       ) : <div className="fs-ph-acts"><button type="button" className="tp-primary fx-accent" onClick={go}><ArrowRightLeft size={16} />Hand off</button></div>}

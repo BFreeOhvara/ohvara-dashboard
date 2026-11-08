@@ -23,8 +23,9 @@ test('nobody on shift falls back to the whole team (nothing sits unassigned)', (
   assert.ok(VAS.some(v => v.id === pickVa(7, '10:00 AM').id))
 })
 
-test('a best-time window is not assigned; an exact time is', () => {
-  assert.equal(agentBooksCall({ who: 'Ana Ruiz', kind: 'cancellation', mode: 'window', window: 'Weekday mornings' }), null)
+// P907: a best-time window is booked too (the next open time in it); an exact time keeps its time.
+test('a best-time window is booked by the system; an exact time is kept', () => {
+  assert.ok(agentBooksCall({ who: 'Ana Ruiz', kind: 'cancellation', mode: 'window', window: 'Weekday mornings' })?.id)
   const va = agentBooksCall({ who: 'Ana Ruiz', kind: 'cancellation', mode: 'exact', day: 6, time: '11:00 AM', oldCarrier: 'Globe Life' })
   assert.ok(rotaOf(6).some(v => v.id === va.id))
 })

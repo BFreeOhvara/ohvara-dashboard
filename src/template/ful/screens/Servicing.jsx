@@ -2,7 +2,10 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Search, CalendarClock, MapPin, Hand, Undo2, Send, CircleCheck, LifeBuoy, Check, MessageSquare, Phone } from 'lucide-react'
 import { useFulTasks, useFulActions } from '../data'
-import { Avatar, Chip, Drawer, Empty, PillTabs, Seg, useNote } from '../../kit'
+import { Avatar, Chip, Drawer, Empty, PillTabs, useNote } from '../../kit'
+import { MoveBooking } from '../MoveBooking'
+import { CALLBACK_WHY, isCallKind } from '../bookings'
+import { WINDOWS } from '../../../lib/callSlots'
 import { RecordDrawer, Block, Stepper } from '../../Record'
 import { fp } from '../paths'
 import { KIND, kindTone, outcomesOf, outcomeLabel, SEND_REASONS, TASK_GROUPS } from '../words'
@@ -12,9 +15,12 @@ import { WELCOME_TEXT_ASK, ordinal } from '../../../lib/bookImport.js'
 import '../../p891.css'
 
 // P845 — Servicing: the steps agents asked for (packet checks, payment and beneficiary changes, review calls, lapse
-// saves). A board like the Queue: overdue, due today, coming up, no date; each card takes its kind's colour (lib/
+// saves). A board: overdue, booked today, booked later, not a call; each card takes its kind's colour (lib/
 // vaServicing toneOf). A step opens in a drawer at its own URL: start it, pick the result from a closed list, or send
 // it back to the agent when it is a coverage or advice question (a VA is unlicensed). Sample only.
+// P907: every step that is a call with the client is booked by the system (the client's preferred window, a VA on
+// shift who is free) and sits on that VA's Schedule. Here the whole team's steps show with who has each one; Move
+// picks another time (the client gets a confirmation text). There is no manual "Schedule it" any more.
 const STEPS = [{ key: 'requested', label: 'Asked for' }, { key: 'scheduled', label: 'Scheduled' }, { key: 'in_progress', label: 'Working on it' }, { key: 'done', label: 'Done' }]
 
 function TaskCard({ t, i }) {
@@ -25,12 +31,11 @@ function TaskCard({ t, i }) {
       <div className="fx-lcard-top"><span className="fx-kind"><LifeBuoy size={13} aria-hidden="true" />{KIND[t.kind]}</span>{t.held && <span className="fx-tag">Working</span>}</div>
       <h3>{t.name}</h3>
       <p>{t.agent}'s client · {t.carrier}</p>
-      <div className="fx-lcard-bot"><span className="fx-big">{t.due_text}</span><Avatar name={t.name} tone={tone} /></div>
+      <div className="fx-lcard-bot"><span className="fx-big">{t.due_text}{t.iso && t.mine === false && <small className="fs-who"> · {t.vaName.split(' ')[0]} has it</small>}</span><Avatar name={t.name} tone={tone} /></div>
     </article>
   )
 }
 
-const WHEN = ['Today, 4:30 PM', 'Fri, 10:00 AM', 'Fri, 2:00 PM', 'Mon, 11:00 AM']
 
 // P888: a missed payment, lapse notice or chargeback warning is one ordinary call task (a lapse save). It comes in by
 // itself: the agent's forwarded carrier email, the agent's Request service, or the client calling in. No desk, no
@@ -78,7 +83,7 @@ function TaskSteps({ t }) {
   const papers = <li key="papers" className={done ? 'done' : ''}><i /><div><b>Papers, if they need any</b><span>A carrier form to sign, or a letter to send in.</span><DocsBlock bare who={t.name} carrier={t.carrier} task={t.id} /></div></li>
   const result = (
     <li key="result" className={done ? 'done' : ''}><i /><div><b>Pick what happened</b>
-      <span>{t.kind === 'lapse_save' ? 'No answer puts the call back on tomorrow’s list, 3 tries in all. Fixing it sets a check in 3 business days.' : 'Anything about coverage or advice goes to the agent.'}</span>
+      <span>{t.kind === 'lapse_save' ? 'No answer books the next try on the next business day, 3 tries in all. Fixing it books a check 3 days on.' : t.kind === 'callback' || t.kind === 'handoff_call' || t.kind === 'cancel_request' ? 'No answer books the next try on the next business day, 3 tries in all. Coverage or advice goes to the agent.' : 'Anything about coverage or advice goes to the agent.'}</span>
       <ul className="fs-outs">{outcomesOf(t.kind).map(([k, label]) => <li key={k} className={t.outcome === k ? 'is-on' : ''}>{label}</li>)}</ul>
     </div></li>
   )
@@ -88,8 +93,8 @@ function TaskSteps({ t }) {
     <li key="fix" className={done ? 'done' : ''}><i /><div><b>Fix the payment together</b><span>A new draft date, a new card or bank, or call {t.carrier} together. Anything to change in the carrier portal goes to {agentFirst}: use Send to agent.</span></div></li>,
     papers, result,
   ] : [
-    <li key="call" className={done ? 'done' : t.held ? 'now' : ''}><i /><div><b>{m ? `Check with ${t.carrier}, then call ${t.client.client_first_name} if it didn’t clear` : `Call ${t.client.client_first_name}`}</b><span>{t.client.client_phone} · {t.carrier}</span></div></li>,
-    papers, result,
+    <li key="call" className={done ? 'done' : t.held ? 'now' : ''}><i /><div><b>{m ? `Check with ${t.carrier}, then call ${t.client.client_first_name} if it didn’t clear` : `Call ${t.client.client_first_name}`}</b><span>{[t.client.client_phone, t.carrier].filter(Boolean).join(" · ")}</span></div></li>,
+    ...(t.kind === "callback" ? [] : [papers]), result,
   ]
   return <Block title="On this call"><ol className="fs-steps">{steps}</ol></Block>
 }
@@ -105,15 +110,31 @@ function WhatHappened({ t }) {
       </Block>
     )
   }
+  if (t.kind === 'callback') {
+    return (
+      <Block title={CALLBACK_WHY[t.why] || 'Call back'} sub={t.client.lead ? 'Not a client yet' : `${t.agent}'s client`}>
+        <p className="tp-mid">{t.note}</p>
+        <dl className="fx-facts">{[['Phone', t.client.client_phone], ['Lives in', [t.client.city, t.client.state].filter(Boolean).join(', ') || 'Not known'], ['Agent', t.agent], ['Booked', t.due_text]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+      </Block>
+    )
+  }
+  if (t.kind === 'handoff_call') {
+    return (
+      <Block title={`Sold by ${t.agent}`} sub="The hand-off call after every sale">
+        <p className="tp-mid">{t.note}</p>
+        <dl className="fx-facts">{[['Carrier', t.carrier || 'Not given'], ['Phone', t.client.client_phone], ['Try', `${t.tries || 1} of 3`], ['Booked', t.due_text]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+      </Block>
+    )
+  }
   if (!m) {
     return (
       <Block title="What the agent asked">
         <p className="tp-mid">{t.note || `${KIND[t.kind]} for ${t.name}.`}</p>
-        <dl className="fx-facts">{[['Agent', t.agent], ['Policy', t.client.policy_number], ['Carrier', t.carrier], ['Due', t.due_text]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+        <dl className="fx-facts">{[['Agent', t.agent], ['Policy', t.client.policy_number], ['Carrier', t.carrier || 'Not given'], [t.iso ? 'Booked' : 'Due', t.due_text]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       </Block>
     )
   }
-  const facts = [['Policy', t.client.policy_number], ['Carrier', t.carrier], ['Payment due', m.due], ['How we heard', m.how], ['Grace ends', m.grace], ['Call by', t.due_text],
+  const facts = [['Policy', t.client.policy_number], ['Carrier', t.carrier], ['Payment due', m.due], ['How we heard', m.how], ['Grace ends', m.grace], [t.iso ? 'Booked' : 'Call by', t.due_text],
     ...(m.chargeback ? [['Chargeback watch', `Month ${m.month} of ${m.of}`]] : []), ...(m.repeat ? [['Repeat', 'Second miss in 12 months']] : [])]
   return (
     <Block title={`${m.check ? 'Check it cleared' : NOTICE[m.notice] || 'Missed payment'}${m.chargeback ? ' · chargeback risk' : ''}`} sub={`${t.agent} already knows`}>
@@ -123,18 +144,31 @@ function WhatHappened({ t }) {
   )
 }
 
-function TaskDrawer({ id, onClose }) {
+// P907: when the call is booked, who has it, and why that time (the system's pick in the client's window).
+function Booked({ t, onMove }) {
+  if (!t.iso || t.status === 'done') return null
+  const win = WINDOWS[t.window]?.label?.toLowerCase()
+  return (
+    <section className="fx-blk fs-booked">
+      <header><h3><CalendarClock size={16} aria-hidden="true" />Booked {t.due_text.replace(/^Today, /, 'today, ')}</h3>{onMove && <button type="button" className="fx-pillbtn" onClick={onMove}><CalendarClock size={13} aria-hidden="true" />Move</button>}</header>
+      <p className="tp-mid">{t.mine === false ? `${t.vaName} has this call. ` : 'On your Schedule. '}{t.inWindow === false ? `Nothing was open in their ${win || 'usual'} window, so the system took the next open time.` : `The system picked the next open time in their ${win || 'usual'} window, their clock.`}{t.tries > 1 ? ` Try ${t.tries} of 3.` : ''}</p>
+    </section>
+  )
+}
+
+export function TaskDrawer({ id, onClose }) {
   const { data: tasks } = useFulTasks()
-  const { startTask, putBack, finishTask, scheduleTask, sendToAgent, showLive } = useFulActions()
+  const { startTask, putBack, finishTask, moveTask, sendToAgent, showLive } = useFulActions()
   const note = useNote()
   const t = tasks.find(x => x.id === id)
   const [panel, setPanel] = useState(null)
   const [result, setResult] = useState(null)
-  const [when, setWhen] = useState(WHEN[0])
   const [why, setWhy] = useState(SEND_REASONS[0])
   if (!t) return <RecordDrawer label="Step not found" kicker="Servicing" onClose={onClose} hero={<h2>Sent back</h2>}><p className="fx-calm"><Check size={16} aria-hidden="true" />This step went back to the agent.</p></RecordDrawer>
   const tone = kindTone(t.kind)
   const done = t.status === 'done'
+  const canMove = !done && isCallKind(t.kind) && !!moveTask
+  const openClient = t.client_id ? <Link to={fp('clients', t.client_id)} className="tp-btn ov-ghost">Open client</Link> : null
   return (
     <RecordDrawer label={`${KIND[t.kind]} for ${t.name}`} kicker={<>Servicing · asked by {t.agent} <HelpDot lesson={t.kind} inline /></>} tone={tone} onClose={onClose}
       hero={<>
@@ -143,8 +177,8 @@ function TaskDrawer({ id, onClose }) {
         <p><MapPin size={13} aria-hidden="true" />{[[t.client.city, t.client.state].filter(Boolean).join(', '), t.carrier].filter(Boolean).join(' · ')}</p>
         <div className="fx-hero-bot"><b className="fx-hero-big tp-num">{t.client.client_phone}</b><Avatar name={t.name} tone={tone} /></div>
       </>}
-      stepper={<Stepper label="Where this step is" steps={STEPS} current={t.status} onPick={k => (k === 'in_progress' ? (startTask(t.id), note('Started')) : k === 'scheduled' ? setPanel('schedule') : k === 'done' ? setPanel('done') : null)} />}
-      actions={done ? <Link to={fp('clients', t.client_id)} className="tp-btn ov-ghost">Open client</Link> : t.held ? <>
+      stepper={<Stepper label="Where this step is" steps={STEPS} current={t.status} onPick={k => (k === 'in_progress' ? (startTask(t.id), note('Started')) : k === 'scheduled' && canMove ? setPanel('move') : k === 'done' ? setPanel('done') : null)} />}
+      actions={done ? openClient : t.held ? <>
         {/* P876: a servicing step is a task the system gave the VA; its Call button starts the call on the phone. */}
         <button type="button" className="tp-primary fx-accent" onClick={() => showLive({ kind: 'task', id: t.id })}><Phone size={16} />Call</button>
         <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('done')}><CircleCheck size={16} />Record the result</button>
@@ -153,11 +187,12 @@ function TaskDrawer({ id, onClose }) {
         <button type="button" className="tp-btn ov-ghost" onClick={() => { putBack(t.id); note('Put back') }}><Undo2 size={15} />Put back</button>
       </> : <>
         <button type="button" className="tp-primary fx-accent" onClick={() => { startTask(t.id); note(`Working on ${t.name}`) }}><Hand size={16} />Start</button>
-        <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('schedule')}><CalendarClock size={15} />Schedule</button>
+        {canMove && <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('move')}><CalendarClock size={15} />Move</button>}
         <span className="tp-grow" />
         <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('send')}><Send size={15} />Send to agent</button>
       </>}>
       {done && <section className="fx-blk fs-done"><header><h3><CircleCheck size={16} aria-hidden="true" />{outcomeLabel(t.kind, t.outcome) || 'Done'}</h3></header><p className="tp-mid">{t.agent} sees the result on the client.</p></section>}
+      <Booked t={t} onMove={canMove ? () => setPanel('move') : null} />
       <WhatHappened t={t} />
       <TaskSteps t={t} />
       <Block title={`Message ${t.agent}`}>
@@ -168,10 +203,7 @@ function TaskDrawer({ id, onClose }) {
         footer={<button type="button" className="tp-primary fx-accent" disabled={!result} onClick={() => { finishTask(t.id, result); note(`${outcomeLabel(t.kind, result)}. ${t.agent} can see it`); setPanel(null) }}><CircleCheck size={16} />Save result</button>}>
         <PillTabs role="radiogroup" label="Result" className="fx-chips fs-wrap" itemClass="fx-chip" value={result} onChange={setResult} items={outcomesOf(t.kind).map(([k, label]) => ({ key: k, label: <b>{label}</b> }))} />
       </Drawer>
-      <Drawer open={panel === 'schedule'} center onClose={() => setPanel(null)} title="Schedule it" sub={`${t.name} · their time`}
-        footer={<button type="button" className="tp-primary fx-accent" onClick={() => { scheduleTask(t.id, when); note(`Scheduled for ${when}`); setPanel(null) }}><CalendarClock size={16} />Schedule</button>}>
-        <Seg label="When" value={when} onChange={setWhen} options={WHEN.map(w => ({ key: w, label: w.replace('Today, ', '') }))} className="fs-wrap" />
-      </Drawer>
+      <MoveBooking open={panel === 'move'} onClose={() => setPanel(null)} name={t.name} state={t.client.state} city={t.client.city} tz={t.tz} exceptId={t.id} onMove={(iso, va) => moveTask(t.id, iso, va)} />
       <Drawer open={panel === 'send'} center onClose={() => setPanel(null)} title={`Send to ${t.agent}`} sub="It leaves your list and goes back to the agent."
         footer={<button type="button" className="tp-primary fx-accent" onClick={() => { sendToAgent(t.id, why); note(`Sent to ${t.agent}`); onClose() }}><Send size={16} />Send</button>}>
         <PillTabs role="radiogroup" label="Why" className="fx-chips fs-wrap" itemClass="fx-chip" value={why} onChange={setWhy} items={SEND_REASONS.map(r => ({ key: r, label: <b>{r}</b> }))} />
@@ -218,7 +250,8 @@ export default function Servicing() {
       <section className="fx-tile fs-donelist" aria-label="Done this week">
         <header className="fx-tile-h"><span className="tp-grow"><h2>Done this week</h2><p>{done.length} steps</p></span></header>
         <ul className="fs-agents">
-          {done.map(t => <li key={t.id}><Avatar name={t.name} tone="green" /><span className="tp-grow"><b>{KIND[t.kind]} · {t.name}</b><small>{t.agent} · {t.due_text}</small></span><Link to={fp('servicing', t.id)} className="fx-delta is-up">{outcomeLabel(t.kind, t.outcome)}</Link></li>)}
+          {done.map(t => <li key={t.id}><Avatar name={t.name} tone="green" /><span className="tp-grow"><b>{KIND[t.kind]} · {t.name}</b><small>{t.agent} · {t.due_text}</small></span><Link to={fp('servicing', t.id)} className="fx-delta is-up">{outcomeLabel(t.kind, t.outcome) || 'Done'}</Link></li>)}
+
         </ul>
       </section>
 

@@ -8,7 +8,9 @@ const stateName = code => US_STATES.find(s => s.code === code)?.name || code || 
 
 // P868 — Submit a policy's form value and what it saves. Reaching the client is one of two: the best time (a window)
 // or a booked call (an exact time on the client's clock, P854's rules). A booked call is saved with the policy.
-export const TIMES = ['Mornings', 'Afternoons', 'Evenings']
+// P907: the window is Morning · Afternoon · Evening (the client's clock); the system books the hand-off call at the
+// next open time in it with a free VA (lib/callSlots nextSlot). "Exact time" is the booked call.
+export const TIMES = ['Morning', 'Afternoon', 'Evening']
 export const EMPTY_BOOKING = { day: 5, time: '', iso: null, tz: null, vaId: null }
 // P899 (Brayden): the client fields are name, phone, city, state, carrier and draft day; monthly premium and notes are
 // optional. Policy number, date of birth, email, face amount and product are no longer asked (the database keeps the
@@ -17,7 +19,7 @@ export const EMPTY_BOOKING = { day: 5, time: '', iso: null, tz: null, vaId: null
 // spouse) is their own client in the same household (N-D-18).
 export const EMPTY_SPOUSE = { name: '', premium: '' }
 export const EMPTY_SUBMIT = {
-  name: '', phone: '', city: '', state: '', reach: 'best', best: 'Evenings', booking: EMPTY_BOOKING, carrier: '',
+  name: '', phone: '', city: '', state: '', reach: 'best', best: 'Afternoon', booking: EMPTY_BOOKING, carrier: '',
   premium: '', draftDay: '', replacing: false, oldCarrier: '', oldDraftDay: '', spouse: null, notes: '',
 }
 export const NEEDED = { name: 'Client name', phone: 'Phone number', city: 'City', state: 'State', licence: 'A state you’re licensed in', booking: 'Call time', carrier: 'Carrier', draftDay: 'Draft day', oldCarrier: 'The carrier being replaced', oldDraftDay: 'The old policy’s draft day', spouse: 'Second insured’s name' }
@@ -52,7 +54,7 @@ export function bookingText(b) {
   const d = BOOK_DAYS.find(x => x[1] === b.day)
   return `${d?.[0] || ''}, Nov ${b.day}, ${b.time} ${zoneAbbr(b.tz, b.iso)} (their time)`
 }
-export const reachText = f => (f.reach === 'book' ? bookingText(f.booking) : `Best time: ${f.best.toLowerCase()}`)
+export const reachText = f => (f.reach === 'book' ? bookingText(f.booking) : `${f.best}, booked at the next open time`)
 export const livesIn = f => [f.city.trim(), f.state ? stateName(f.state) : ''].filter(Boolean).join(', ')
 
 // What gets saved: the phone as E.164 (digits only), the carrier as listed (or as typed, logged for review), and

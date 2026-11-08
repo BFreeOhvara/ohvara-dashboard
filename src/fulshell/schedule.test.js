@@ -9,7 +9,7 @@ test('Schedule is a tab and Calls is gone', () => {
   assert.ok(FUL_TABS.some(([k, label]) => k === 'schedule' && label === 'Schedule'))
   assert.equal(FUL_TABS.some(([k]) => k === 'calls'), false)
   assert.equal(FUL.schedule, '/fulfillment/schedule')
-  assert.deepEqual(fulTitleOf('schedule'), ['Your week', 'Schedule'])
+  assert.deepEqual(fulTitleOf('schedule'), ['Your booked calls', 'Schedule']) // P907
   assert.ok(FUL_ROUTES.some(([k, p]) => k === 'schedule' && p === '/fulfillment/schedule/:id'))
 })
 

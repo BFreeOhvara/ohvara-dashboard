@@ -16,7 +16,7 @@ describe('P868 Submit a policy', () => {
   })
   test('best time: saved as the window, no booking', () => {
     const s = buildSubmission(base)
-    expect(s).toMatchObject({ phone: '+15125550188', phoneShown: '(512) 555-0188', state: 'TX', carrier: 'Globe Life', carrierListed: true, bestTime: 'Evenings', booking: null })
+    expect(s).toMatchObject({ phone: '+15125550188', phoneShown: '(512) 555-0188', state: 'TX', carrier: 'Globe Life', carrierListed: true, bestTime: 'Afternoon', booking: null })
   })
   test('book a call: needs a picked time, then the appointment is saved with the policy', () => {
     expect(missingFields({ ...base, reach: 'book' })).toEqual(['booking'])

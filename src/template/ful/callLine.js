@@ -112,7 +112,7 @@ export const XFER_WORDS = {
   // P880
   lateyes: 'The agent said Yes late. They’re still free: transfer now',
   withdrew: 'The agent withdrew. Book them on the agent’s calendar',
-  cancelled: 'Check cancelled. The lead is back in your queue as a callback',
+  cancelled: 'Check cancelled. A callback is booked on your Schedule',
   booked: 'Booked on the agent’s calendar',
   busy: 'Agent being checked by another VA. Book them',
   unreachable: 'Not reachable for live calls. Book them on the agent’s calendar',

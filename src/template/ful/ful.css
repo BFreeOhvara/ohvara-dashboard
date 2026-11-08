@@ -506,3 +506,33 @@
    words were squashed and clipped; here the chips size to their words and wrap. */
 .fs-call :is(.fs-ph-call, .fs-cs-sheet) .fx-chips { flex-wrap: wrap; }
 .fs-call :is(.fs-ph-call, .fs-cs-sheet) .fx-chip { width: auto; min-width: 46px; height: auto; min-height: 44px; padding: 8px 14px; text-align: center; white-space: nowrap; }
+
+/* P907 — Overview in bookings. The right column: a small "Next calls" box (a few rows, its own height, no tall box)
+   over Your agents (one column). Below 1000px the page is one column in reading order: clock, the next call, Next
+   calls, the two small tiles, agents. Peek rule: every tile keeps its natural height, so the next one peeks in. */
+@media (min-width: 1000px) {
+  .fs-ov .fs-ov-side { display: flex; flex-direction: column; gap: 14px; align-self: start; }
+  .fs-ov-side .fs-agents { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .fs-ov-side .fs-agents li { padding: 10px 12px; flex-wrap: nowrap; }
+}
+.fs-uplist { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.fs-uplist a { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 14px; border: 1px solid var(--fx-edge);
+  background: color-mix(in srgb, var(--cf, var(--ov-hi)) 40%, transparent); transition: background-color .2s; }
+.fs-uplist a:hover { background: var(--cf, color-mix(in srgb, var(--ov-hi) 8%, transparent)); }
+.fs-uplist a > small { width: 64px; flex: none; font-size: 12.5px; font-weight: 600; color: var(--ov-hi); }
+.fs-uplist b { display: block; font-size: 13.5px; font-weight: 600; color: var(--ov-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fs-uplist .tp-grow { min-width: 0; }
+.fs-uplist .tp-grow small { display: block; font-size: 11.5px; color: var(--ov-mid); }
+.fs-uplist .fs-upmore a { justify-content: center; padding: 6px 12px; font-size: 12.5px; font-weight: 600; color: var(--ov-mid); background: none; border-style: dashed; }
+@media (max-width: 999.98px) {
+  .fs-ov.fx-ovl { display: flex; flex-direction: column; gap: 12px; }
+  .fs-ov .fx-ovl-main, .fs-ov .fx-ovl-side { display: contents; }
+  .fs-ov .v879-clock { order: 1; } .fs-ov .fs-ov-hero { order: 2; } .fs-ov .fs-ov-up { order: 3; } .fs-ov .fs-ov-pair { order: 4; } .fs-ov .fs-ov-agents { order: 5; }
+}
+@media (max-width: 760px) {
+  .fs-ov .fs-ov-pair { grid-template-columns: minmax(0, 1fr); }
+  .fs-ov .fs-agents { grid-template-columns: minmax(0, 1fr); }
+}
+/* P907 — Clients: the request tag under the status, and the kind of the next booked call */
+.fs-cl-req { display: block; margin-top: -4px; font-size: 11.5px; font-weight: 600; color: var(--ov-mid); }
+.fs-cl-next { display: block; font-size: 11px; color: var(--ov-mid); }

@@ -51,8 +51,9 @@ test('a check lesson still needs a pass', () => {
 
 test('the pressed button must be the lesson\'s own, ignoring spacing and case', () => {
   const speed = LESSONS.find(l => l.id === 'speed')
-  assert.equal(matchesTry(speed, '  Take it '), true)
-  assert.equal(matchesTry(speed, 'take IT'), true)
+  // P907: speed is Working in bookings; its Try it is Start on the next booked call.
+  assert.equal(matchesTry(speed, '  Start '), true)
+  assert.equal(matchesTry(speed, 'START'), true)
   assert.equal(matchesTry(speed, 'Put back'), false)
-  assert.equal(matchesTry(LESSONS.find(l => l.id === 'never'), 'Take it'), false)
+  assert.equal(matchesTry(LESSONS.find(l => l.id === 'never'), 'Start'), false)
 })

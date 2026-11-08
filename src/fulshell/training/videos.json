@@ -1237,8 +1237,8 @@
     }
    ],
    "helpAt": {
-    "queue": 6.4,
-    "lead": 41.9
+    "bookings": 6.4,
+    "handoff_call": 41.9
    },
    "sizeBytes": 6665244,
    "builtAt": "2026-11-08T06:15:59.749Z"

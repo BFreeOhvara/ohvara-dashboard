@@ -10,7 +10,7 @@
 //
 // Bump TRAINING_VERSION when a lesson's check changes, so a VA's old pass is shown as "updated, take the check again".
 
-export const TRAINING_VERSION = '2026-11-08.1' // P897: desk, optout and speed checks follow the portal (clock in, Do not call, right away)
+export const TRAINING_VERSION = '2026-11-08.2' // P907: speed is now Working in bookings; callbacks, check-ins, fromai, reminders follow the bookings
 export const PASS_MARK = 0.8 // 4 of 5, 4 of 4, 3 of 3: a check passes at 80% or better
 
 const say = (text, o = {}) => ({ who: 'You', text, ...o })
@@ -92,7 +92,7 @@ export const LESSONS = [
     steps: [
       'If anyone says stop, don\'t call, take me off, or unsubscribe, in any words: stop at once.',
       'On a call: thank them, confirm they won\'t hear from us again, and end the call politely.',
-      'Mark them before you hang up: on the call, press Do not call (a lead\'s record has it too). It stops every call and text to that number at once: queued calls, callbacks and check-in texts.',
+      'Mark them before you hang up: on the call, press Do not call (a lead\'s record has it too). It stops every call and text to that number at once: booked calls, callbacks and check-in texts.',
       'Someone you can\'t find in the portal asks to stop? Tell the team.',
       'If they text STOP, the system opts them out by itself and sends one confirmation text. Do not text them again.',
       'Never opt someone back in. Only the person can, by texting START.',
@@ -176,38 +176,38 @@ export const LESSONS = [
     ],
   },
   {
+    // P907: VAs don't do speed to lead any more (the AI caller does). The lesson keeps its id (its video, the "?" map)
+    // and now teaches working in bookings.
     id: 'speed',
-    tryIt: { path: ['queue'], do: 'Open a lead under New and press Take it.', button: 'Take it' },
-    title: 'Speed to lead: call new leads right away',
-    job: 'A new lead lands in your Queue. Call them right away.',
-    minutes: 5,
-    why: 'A lead called straight away, in seconds, is far more likely to pick up and book than one called an hour later.',
+    tryIt: { path: ['overview'], do: 'Open your next call from Next calls on your Overview and press Start.', button: 'Start' },
+    title: 'Working in bookings',
+    job: 'The AI calls new leads. You work booked calls, at the time the system set.',
+    minutes: 4,
+    why: 'The AI caller reaches every new lead in seconds. Your time goes to clients, each at a time that suits them.',
     steps: [
-      'New leads land in the Queue under New. Callbacks due come first, then new leads.',
-      'Press Take it on the lead. It holds the lead for you for 15 minutes so no other VA calls them.',
-      'Call right away: seconds, not minutes. Once the AI caller is switched on, it calls new form leads first and hands some to you (see Taking a lead from the AI).',
-      'Introduce yourself as Deedstone and say why you\'re calling: they asked about life insurance.',
-      'Go through the checklist (question type, carrier, state, how soon), then book with an agent or transfer live.',
-      'No answer: log Not reached. The follow-up texts go out by themselves, and the lead comes back to the Queue for the next try.',
-      'Can\'t finish it? Put back, so the lead goes to another VA right away.',
+      'New leads are called by the AI caller, in seconds. You never work a list of leads.',
+      'Everything you do is a booked call on your Schedule: hand-off calls after a sale, cancelling the old policy, saves, change and cancel requests, callbacks, welcome calls and yearly reviews.',
+      'The system books each call itself: the next open time in the client\'s window (morning, afternoon or evening, on their clock) with a VA who is free.',
+      'Your Overview shows the next call with a countdown, and Next calls lists the rest of today.',
+      'Call at the booked time. No answer: log it, and the system books the next try for the next business day.',
+      'The client wants another time? Open the call and press Move. They get a text with the new time.',
     ],
     script: {
-      title: 'First call to a new lead',
+      title: 'Opening a booked call',
       lines: [
-        say('Hi, is this [first name]? This is [your first name] with Deedstone. You just asked about life insurance, so I\'m calling to help you get set up with a licensed agent. Do you have two minutes?', { approve: true }),
-        hear('Sure.'),
-        say('Great. Is this coverage for yourself? And which state are you in?', { approve: true }),
-        tip('Then carrier (if they have one now) and how soon they want it.'),
+        say('Hi [first name], this is [your first name] with Deedstone, calling at the time we set up. Is now still a good time?', { approve: true }),
+        hear('Yes, go ahead.'),
+        tip('Then the reason for the call: the hand-off, the old policy, the change they asked for.'),
       ],
     },
-    dos: ['Callbacks due first, then New', 'Take it before you dial', 'Put back anything you can\'t finish'],
-    donts: ['Don\'t sit on a lead you took', 'Don\'t call a lead another VA holds', 'Don\'t text a lead from your own phone'],
-    portal: { shot: 'queue', clicks: [{ spot: 'lane0', text: 'Callbacks due: call these first' }, { spot: 'lane1', text: 'New leads: call right away' }, { spot: 'card', text: 'Open a lead, then press Take it' }] },
+    dos: ['Call at the booked time', 'Move a call when the client asks', 'Check Next calls on your Overview'],
+    donts: ['Don\'t call a client outside their booking unless they ask', 'Don\'t text a client from your own phone'],
+    portal: { shot: 'schedule', clicks: [{ spot: 'cal', text: 'Your booked calls: every one has its time already' }] },
     check: [
-      ok('How fast should a new lead be called?', ['Right away, in seconds', 'Within the hour', 'By end of day', 'Next morning'], 0, 'Speed to lead: right away.'),
-      ok('What does Take it do?', ['Books the lead', 'Holds the lead for you for 15 minutes', 'Sends a text', 'Closes the lead'], 1, 'It holds the lead so no other VA calls them.'),
-      ok('Which do you call first?', ['The oldest New lead', 'A callback that is due', 'Whoever is nearest your time zone', 'Not reached leads'], 1, 'Callbacks due come first, then New.'),
-      ok('The lead doesn\'t pick up. You:', ['Text them from your phone', 'Log Not reached. Follow-up texts go out by themselves', 'Call five times in a row', 'Close them out'], 1, 'Log Not reached. The follow-up runs by itself.'),
+      ok('Who calls a brand-new lead?', ['You, right away', 'The AI caller, in seconds', 'The agent', 'Nobody'], 1, 'New leads are the AI caller\'s.'),
+      ok('Who picks the time of a booked call?', ['You', 'The system: the next open time in the client\'s window', 'The client, by text', 'The agent'], 1, 'The system books it, on the client\'s clock.'),
+      ok('A client asks for another time. You:', ['Tell them to text in', 'Open the call, press Move and pick a new time', 'Call them whenever you can', 'Pass it to the agent'], 1, 'Move it. They get a text with the new time.'),
+      ok('No answer on a booked call. What happens?', ['You call five times in a row', 'Log it. The system books the next try', 'It is dropped', 'You text them from your phone'], 1, 'Log it; the next try books itself.'),
     ],
   },
   {
@@ -218,7 +218,7 @@ export const LESSONS = [
     minutes: 6,
     why: 'A wrong time zone or a double booking means a no-show and an annoyed agent.',
     steps: [
-      'From the lead, press Book an agent (or Book for an agent in the + menu).',
+      'On a live call, press Book an agent on the transfer card.',
       'Pick the agent. Only agents licensed in the lead\'s state can be picked, and you can only book inside that agent\'s working hours.',
       'Times are shown in the lead\'s time zone, from their state and city. Check it with them: "That\'s 2 PM your time, right?"',
       'If the portal can\'t work out their time zone, it asks you to pick one. Never guess.',
@@ -236,7 +236,7 @@ export const LESSONS = [
     },
     dos: ['Offer two times', 'Say "your time" every time', 'Read the booking back'],
     donts: ['Never book outside the agent\'s hours', 'Never double-book', 'Never guess a time zone'],
-    portal: { shot: 'book', clicks: [{ spot: 'agent', text: 'Pick the agent. Their hours show underneath' }, { spot: 'slots', text: 'Times in the lead\'s time zone. Greyed out means too close to another appointment' }, { spot: 'bookit', text: 'Book it' }] },
+    portal: { shot: 'phone', clicks: [{ spot: 'phone', text: 'On a live call: the transfer card has Book an agent' }] },
     check: [
       ok('Whose time zone are booking times shown in?', ['Yours', 'Central', 'The lead\'s, from their state and city', 'The agent\'s'], 2, 'The lead\'s own time, which you confirm with them.'),
       ok('A time is greyed out. Why?', ['The agent is on holiday', 'It is too close to another appointment', 'The lead is asleep', 'It is a bug'], 1, 'Within the agent\'s appointment length plus buffer of another booking.'),
@@ -269,7 +269,7 @@ export const LESSONS = [
     },
     dos: ['Checklist first', 'Check the agent is on before you transfer', 'Fall back to a booking within the hour'],
     donts: ['Don\'t leave a caller in silence', 'Don\'t transfer someone who asked us to stop', 'Don\'t promise the agent will call "right back" unless it\'s booked'],
-    portal: { shot: 'lead', clicks: [{ spot: 'book', text: 'No agent picks up? Book an agent, first open time within the hour' }, { spot: 'callback', text: 'They\'d rather talk later: Call back' }] },
+    portal: { shot: 'phone-ring', clicks: [{ spot: 'answer', text: 'Answer, then transfer from the call' }, { spot: 'opencall', text: 'Open the call to see the full record' }] },
     check: [
       ok('The agent doesn\'t pick up the transfer. You:', ['Hang up', 'Book the first open time within the hour', 'Tell the caller to call back later', 'Keep ringing for ten minutes'], 1, 'Fall back to a booking within the hour.'),
       ok('What does the agent see when you transfer?', ['Nothing', 'The lead\'s name, age, state and need, on their alert', 'The price you discussed', 'The lead source'], 1, 'It is a cold transfer: the alert carries it. Never prices or lead sources.'),
@@ -279,19 +279,19 @@ export const LESSONS = [
   {
     // P897: the From the AI card (P892). The AI caller is off until Brayden switches it on; the lesson is ready for then.
     id: 'fromai',
-    tryIt: { path: ['queue'], do: 'Open Gloria Price under New, read From the AI, and press Take it.', button: 'Take it' },
+    tryIt: { path: ['schedule'], do: 'Open a callback on your Schedule, read why it was booked, and press Start.', button: 'Start' },
     title: 'Taking a lead from the AI',
     job: 'The AI caller hands you a lead. Carry on from where it stopped.',
     minutes: 3,
     why: 'The lead is on the line and has already answered questions. Starting over sounds like nobody listened, and a lead who feels unheard hangs up.',
     steps: [
       'Once the AI caller is switched on, it calls new form leads within seconds. It hands a lead to you when they ask for a person, ask about price or cover, get confused or upset, or when it gets stuck.',
-      'Those cards say From the AI. Open the card and read the From the AI box first: why it handed over, how long it talked, what it already asked, and the agent.',
+      'It hands over live: the call rings on your phone marked From the AI. Read the From the AI box first: why it handed over, how long it talked, what it already asked, and the agent.',
       'Don\'t start over. Pick up from what the AI already asked.',
-      'Press Take it, then get the answers the AI didn\'t (question type, carrier, state, how soon).',
+      'Then get the answers the AI didn\'t (question type, carrier, state, how soon).',
       'The line on the lead says what\'s next: live transfer if they\'re ready now (Check agent), or book them.',
       'Never talk price or cover. Your licensed agent goes through that with them.',
-      'No VA was free within 60 seconds? The AI told the lead someone calls back shortly, and the card is a callback, due now. Call those first.',
+      'No VA was free within 60 seconds? The AI told the lead someone calls back shortly, and the system booked a callback at the next open time. It is on the Schedule of the VA who has it.',
     ],
     script: {
       title: 'Picking up from the AI',
@@ -301,27 +301,28 @@ export const LESSONS = [
         say('I\'m not licensed to talk about coverage, price or whether you qualify. Your licensed agent will go through all of that with you.', { approve: true }),
       ],
     },
-    dos: ['Read the From the AI box before you speak', 'Pick up where the AI stopped', 'Call an AI callback first'],
+    dos: ['Read the From the AI box before you speak', 'Pick up where the AI stopped', 'Call an AI callback at its booked time'],
     donts: ['Don\'t start the questions over', 'Don\'t talk price or cover', 'Don\'t leave a warm hand-off waiting'],
-    portal: { shot: 'queue', clicks: [{ spot: 'card', text: 'A card marked From the AI: open it and read the box first' }] },
+    portal: { shot: 'phone-ring', clicks: [{ spot: 'answer', text: 'A call From the AI: answer, then read the box first' }] },
     check: [
       ok('A lead comes to you From the AI. What do you do first?', ['Start the questions from the top', 'Read the From the AI box', 'Book them straight away', 'Text them'], 1, 'Read what the AI already learned, then carry on.'),
       ok('The AI handed her over because she asked about price. You:', ['Give a rough price', 'Say your licensed agent goes through price with her', 'Hang up', 'Ask the AI'], 1, 'Price is the agent\'s.'),
-      ok('An AI callback card says Call now. When do you call?', ['First, before New leads', 'At the end of the day', 'Tomorrow', 'Only if they text again'], 0, 'It is a callback, due now.'),
+      ok('The AI booked a callback because no VA was free. When do you call?', ['At its booked time, on your Schedule', 'At the end of the day', 'Tomorrow', 'Only if they text again'], 0, 'It is a booked call, like any other.'),
     ],
   },
   {
     id: 'callbacks',
-    tryIt: { path: ['queue'], do: 'Open a lead, press Call back, pick a time on their clock and press Set callback.', button: 'Set callback' },
+    tryIt: { path: ['schedule'], do: 'Open a callback on your Schedule, press Move, pick an open time on their clock and press Move it.', button: 'Move it' },
     title: 'Callbacks',
-    job: 'They asked you to call back later: set it in their time, and call on time.',
+    job: 'A callback is a booked call: the system sets it in their time, you call on time.',
     minutes: 3,
     why: 'A callback is a promise. Calling late, or in the wrong time zone, breaks trust.',
     steps: [
-      'On the lead, press Call back, pick a time on the lead\'s clock, then Set callback.',
-      'A time within 30 minutes of your own calls goes to another VA, so nobody is double-booked. Times are greyed out only when every VA is busy.',
-      'It shows in the Queue under Callback due. When it is due, call it first.',
-      'Reached: carry on as a normal call. Not reached: log Not reached, and set a new callback if they asked for one.',
+      'Callbacks book themselves: someone asked us to call back, a call to us was missed, or a text reply needs a person.',
+      'The system takes the next open time in their window, on their clock, with a VA who is free. It lands on that VA\'s Schedule.',
+      'Yours show on your Schedule and in Next calls on your Overview. Call at that time.',
+      'They want another time? Press Move and pick one on their clock. A time within 30 minutes of a VA\'s calls goes to another VA; greyed out means every VA is busy. They get a text with the new time.',
+      'Reached: carry on as a normal call. No answer: log it, and the next try is booked for the next business day.',
     ],
     script: {
       title: 'Calling back',
@@ -329,18 +330,18 @@ export const LESSONS = [
         say('Hi [first name], it\'s [your first name] with Deedstone, calling back like you asked. Is now still a good time?', { approve: true }),
       ],
     },
-    dos: ['Set the time in their zone', 'Call on time', 'Callbacks due first'],
-    donts: ['Don\'t set a callback without a time', 'Don\'t call late without a note'],
-    portal: { shot: 'lead', clicks: [{ spot: 'callback', text: 'Call back: pick a time on their clock, then Set callback' }] },
+    dos: ['Call at the booked time', 'Move it when they ask', 'Say you are calling back like they asked'],
+    donts: ['Don\'t call late without a note', 'Don\'t move a callback without telling them'],
+    portal: { shot: 'schedule', clicks: [{ spot: 'cal', text: 'Callbacks sit on your Schedule at their booked time' }] },
     check: [
-      ok('Where does a callback show when it is due?', ['In your email', 'At the top of the Queue, Callback due', 'On Pay', 'Nowhere'], 1, 'Callback due, top of the Queue.'),
-      ok('Whose clock do you set a callback on?', ['Yours', 'The lead\'s', 'The agent\'s', 'Central'], 1, 'Always the lead\'s own time.'),
+      ok('Where does a callback show?', ['In your email', 'On your Schedule, at its booked time', 'On Pay', 'Nowhere'], 1, 'On your Schedule, and in Next calls on your Overview.'),
+      ok('Whose clock is a callback booked on?', ['Yours', 'The person\'s own', 'The agent\'s', 'Central'], 1, 'Always their own time.'),
       ok('How close can a callback be to your other calls?', ['Any time', 'Not within 30 minutes', 'Not within 2 hours', 'Not the same day'], 1, 'Callbacks keep 30 minutes clear.'),
     ],
   },
   {
     id: 'reminders',
-    tryIt: { path: ['schedule'], do: 'Rebook someone: open the + menu, Book for an agent, pick the agent, a day and an open time, then press Book it.', button: 'Book it' },
+    tryIt: { path: ['schedule'], do: 'Rebook someone: open a booked call on your Schedule, press Move, pick an open time and press Move it.', button: 'Move it' },
     title: 'Reminders, no-shows and rebooks',
     job: 'Reminder texts go out by themselves. When someone misses their call, you rebook it.',
     minutes: 4,
@@ -351,7 +352,7 @@ export const LESSONS = [
       'Call to rebook within the hour, at a new time in their zone. Try up to twice.',
       'A "sorry we missed you" text with a link to rebook also goes out by itself.',
       'Reached: rebook (see Booking). Not reached twice: log it, and the lead goes back to follow-up.',
-      'One of OUR cancellation calls missed by us? It is rebooked the same time the next day, in the client\'s zone.',
+      'One of our own booked calls not answered? The system books the next try for the next business day, in the client\'s window.',
     ],
     script: {
       title: 'Rebooking a no-show',
@@ -361,7 +362,7 @@ export const LESSONS = [
     },
     dos: ['Rebook within the hour', 'Be warm: no blame', 'Two tries, then log it'],
     donts: ['Don\'t send reminders by hand', 'Don\'t make the lead feel bad'],
-    portal: { shot: 'schedule', clicks: [{ spot: 'cal', text: 'Your week: calls, callbacks and bookings in one place' }] },
+    portal: { shot: 'schedule', clicks: [{ spot: 'cal', text: 'Your week: every booked call in one place' }] },
     check: [
       ok('Who sends reminder texts?', ['You, by hand', 'They go out by themselves', 'The agent', 'Nobody'], 1, 'They go out by themselves.'),
       ok('How many tries to rebook a no-show?', ['One', 'Up to two', 'Five', 'Until they answer'], 1, 'Up to twice, then log it.'),
@@ -370,24 +371,24 @@ export const LESSONS = [
   },
   {
     id: 'checkins',
-    tryIt: { path: ['queue'], do: 'Find Hector Ruiz\'s check-in reply under Call tasks from texts on the Queue and press Call.', button: 'Call' },
+    tryIt: { path: ['schedule'], do: 'Open a callback on your Schedule (a text reply books one) and press Start.', button: 'Start' },
     title: 'Check-in texts at day 30, 60 and 90',
     job: 'Leads we never reached get three check-in texts. You handle the replies.',
     minutes: 3,
     why: 'Some people are just busy. A friendly check-in brings some of them back.',
     steps: [
       'If we never reach a lead, a check-in text goes out by itself at day 30, 60 and 90. Then it stops.',
-      'If they reply, an automatic answer goes out ("we\'ll call you shortly") and a call task lands on your Queue under Call tasks from texts. Call them right away. There is no reply box.',
+      'If they reply, an automatic answer goes out ("we\'ll call you shortly") and the system books a callback at the next open time with a free VA. Call at that time. There is no reply box.',
       'If they reply STOP, they are opted out. Don\'t contact them.',
       'No reply after day 90: the lead is closed as unreachable. You don\'t need to do anything.',
     ],
     script: null,
-    dos: ['Treat a reply like a brand-new lead', 'Mention you\'re following up on their text'],
+    dos: ['Call at the booked callback time', 'Mention you\'re following up on their text'],
     donts: ['Don\'t send extra check-ins by hand', 'Don\'t contact anyone who replied STOP'],
-    portal: { shot: 'queue', clicks: [{ spot: 'card', text: 'A reply becomes a call task on the Queue: press Call' }] },
+    portal: { shot: 'schedule', clicks: [{ spot: 'cal', text: 'A reply becomes a booked callback on the Schedule' }] },
     check: [
       ok('When do check-in texts go out?', ['Every week', 'Day 30, 60 and 90, then stop', 'Every month forever', 'Only on weekends'], 1, 'Three texts, then stop.'),
-      ok('A lead replies to a day-60 check-in. You:', ['Ignore it', 'Call them right away from Call tasks from texts', 'Wait for day 90', 'Text back a price'], 1, 'A reply is a call task. Speed to lead applies.'),
+      ok('A lead replies to a day-60 check-in. You:', ['Ignore it', 'Call them at the callback the system booked', 'Wait for day 90', 'Text back a price'], 1, 'A reply books a callback. Call at that time.'),
       ok('No reply after day 90. What happens?', ['You call every week', 'The lead is closed as unreachable', 'It goes to the agent', 'Texts keep going'], 1, 'Closed as unreachable, by itself.'),
     ],
   },
@@ -609,9 +610,9 @@ export const LESSONS = [
   },
 ]
 
-// Which lesson a "?" opens, per task in the VA portal (Queue, phone, booking, servicing, schedule).
+// Which lesson a "?" opens, per task in the VA portal (phone, booking, servicing, schedule). P907: no Queue.
 export const HELP = {
-  queue: 'speed', callback: 'callbacks', lead: 'speed', closeout: 'optout',
+  bookings: 'speed', callback: 'callbacks', handoff_call: 'speed', cancel_request: 'saves', closeout: 'optout',
   dialer: 'logging', answer: 'inbound', logging: 'logging', transfer: 'transfer',
   booking: 'booking', schedule: 'carrier', dayoff: 'desk',
   servicing: 'packets', packet_check: 'packets', review_call: 'packets', chargeback_watch: 'payments', payment_change: 'payments',

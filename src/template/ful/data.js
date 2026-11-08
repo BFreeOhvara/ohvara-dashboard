@@ -1,7 +1,8 @@
 import { useSyncExternalStore, createContext, useContext, createElement } from 'react'
-import { CALL_WORD, CALL_TONE } from './words.js'
 import { shortDate } from '../../lib/clientCheck.js'
-import { instantOf, clockOf, dateOf, zoneOf, freeVa, blockTime } from '../../lib/callSlots.js'
+import { instantOf, clockOf, dateOf, zoneOf, freeVa, blockTime, nextSlot, preferredWindow, windowOfMinute, minuteOf, zoneAbbr } from '../../lib/callSlots.js'
+import { typeOfKind, isCallKind, callType, CALL_TYPES, RETRY_KINDS, CALLBACK_WHY } from './bookings.js'
+import { draftIn } from '../../lib/clientCheck.js'
 
 // P845 — the one door to the Fulfillment (VA) side's sample info, like ../data for the agent side. Screens read only
 // through the hooks below; every read returns { data, isLoading: false, error: null }, the react-query shape, so the
@@ -59,6 +60,7 @@ export function teamOn(iso, offDays = [], meTz = VA_TZ) {
   return (ROTA[d] || []).map(id => { const v = VAS.find(x => x.id === id); return { ...v, tz: v.me ? meTz : v.tz, off: !!v.me && offDays.includes(d) } })
 }
 // Every call start a VA has: Maya's calls (not passed on) and the ones that went to other VAs.
+// P907: plus every booked servicing call (extra carries them with their VA).
 export const busyOf = (calls = [], extra = []) => [
   ...calls.filter(k => k.status !== 'passed').map(k => ({ id: k.id, va_id: k.va_id || 'va-maya', iso: k.iso || atVa(k.day, k.time) })),
   ...extra.map(k => ({ ...k, iso: k.iso || atVa(k.day, k.time) })),
@@ -83,23 +85,23 @@ const mkClient = (id, first, last, agent, o) => ({
   next_step: '', submitted: 'Oct 21', attention: null, note: '', calls: [], ...o,
 })
 const seedClients = [
-  mkClient('fc-gloria', 'Gloria', 'Santos', 'ag-dana', { client_phone: '(305) 555-0156', city: 'Miami', state: 'FL', stage: 'setting_up', next_step: 'Cancellation call today 2:00 PM', carrier_name: 'Americo', product_name: 'Mortgage Protection 25', policy_number: 'AM-2209184', monthly_premium: 88.4, note: 'Replacing an older Globe policy. Wants the old one closed the day the new one starts.' }),
+  mkClient('fc-gloria', 'Gloria', 'Santos', 'ag-dana', { client_phone: '(305) 555-0156', city: 'Miami', state: 'FL', stage: 'setting_up', next_step: 'Cancellation call today 2:00 PM', carrier_name: 'Americo', product_name: 'Mortgage Protection 25', policy_number: 'AM-2209184', monthly_premium: 88.4, note: 'Replacing an older Globe policy. Wants the old one closed the day the new one starts.', answered_in: 'afternoon' }),
   mkClient('fc-robert', 'Robert', 'Chen', 'ag-marcus', { client_phone: '(480) 555-0142', city: 'Phoenix', state: 'AZ', stage: 'protected', carrier_name: 'Foresters', product_name: 'Strong Foundation', policy_number: 'FF-7712406', monthly_premium: 52.1 }),
-  mkClient('fc-luis', 'Luis', 'Ortega', 'ag-priya', { client_phone: '(813) 555-0119', city: 'Tampa', state: 'FL', stage: 'needs_attention', attention: 'Draft failed on Nov 1', next_step: 'Payment change call', carrier_name: 'Transamerica', product_name: 'Trendsetter Super 20', policy_number: 'TA-5530981', monthly_premium: 71.25 }),
+  mkClient('fc-luis', 'Luis', 'Ortega', 'ag-priya', { client_phone: '(813) 555-0119', city: 'Tampa', state: 'FL', stage: 'needs_attention', attention: 'Draft failed on Nov 1', next_step: 'Payment change call', carrier_name: 'Transamerica', product_name: 'Trendsetter Super 20', policy_number: 'TA-5530981', monthly_premium: 71.25, best_window: 'Evening' }),
   mkClient('fc-denise', 'Denise', 'Walker', 'ag-dana', { client_phone: '(214) 555-0171', city: 'Dallas', state: 'TX', stage: 'requests', next_step: 'Beneficiary change', carrier_name: 'Mutual of Omaha', policy_number: 'MO-4471188', monthly_premium: 47.9 }),
   mkClient('fc-harold', 'Harold', 'Nguyen', 'ag-marcus', { client_phone: '(713) 555-0188', city: 'Houston', state: 'TX', stage: 'setting_up', next_step: 'Cancellation call today 3:30 PM', carrier_name: 'Americo', policy_number: 'AM-2209377', monthly_premium: 96 }),
-  mkClient('fc-carla', 'Carla', 'Jones', 'ag-priya', { client_phone: '(404) 555-0133', city: 'Atlanta', state: 'GA', stage: 'protected', carrier_name: 'Foresters', policy_number: 'FF-7712589', monthly_premium: 39.75 }),
+  mkClient('fc-carla', 'Carla', 'Jones', 'ag-priya', { client_phone: '(404) 555-0133', city: 'Atlanta', state: 'GA', stage: 'protected', carrier_name: 'Foresters', policy_number: 'FF-7712589', monthly_premium: 39.75, draft_day: 1, check_from: '2026-05-20' }),
   mkClient('fc-renee', 'Renee', 'Ortiz', 'ag-dana', { client_phone: '(303) 555-0127', city: 'Denver', state: 'CO', stage: 'needs_attention', attention: 'Packet not delivered', next_step: 'Policy packet check', carrier_name: 'Transamerica', policy_number: 'TA-5531044', monthly_premium: 58.3 }),
   mkClient('fc-walter', 'Walter', 'Price', 'ag-marcus', { client_phone: '(602) 555-0194', city: 'Mesa', state: 'AZ', stage: 'setting_up', next_step: 'Cancellation call today 4:15 PM', carrier_name: 'Mutual of Omaha', policy_number: 'MO-4471342', monthly_premium: 61 }),
   mkClient('fc-irene', 'Irene', 'Baker', 'ag-priya', { client_phone: '(727) 555-0109', city: 'Clearwater', state: 'FL', stage: 'protected', carrier_name: 'Americo', policy_number: 'AM-2209455', monthly_premium: 73.6 }),
   mkClient('fc-tom', 'Tom', 'Fischer', 'ag-dana', { client_phone: '(512) 555-0122', city: 'Round Rock', state: 'TX', stage: 'requests', next_step: 'Address change', carrier_name: 'Foresters', policy_number: 'FF-7712633', monthly_premium: 44.2 }),
   mkClient('fc-nadia', 'Nadia', 'Khan', 'ag-marcus', { client_phone: '(480) 555-0177', city: 'Tempe', state: 'AZ', stage: 'protected', carrier_name: 'Transamerica', policy_number: 'TA-5531102', monthly_premium: 82.9 }),
-  mkClient('fc-paul', 'Paul', 'Rivera', 'ag-priya', { client_phone: '(813) 555-0165', city: 'Brandon', state: 'FL', stage: 'setting_up', next_step: 'Cancellation call Fri 10:00 AM', carrier_name: 'Mutual of Omaha', policy_number: 'MO-4471399', monthly_premium: 55.5 }),
+  mkClient('fc-paul', 'Paul', 'Rivera', 'ag-priya', { client_phone: '(813) 555-0165', city: 'Brandon', state: 'FL', stage: 'setting_up', next_step: 'Cancellation call Fri 10:00 AM', carrier_name: 'Mutual of Omaha', policy_number: 'MO-4471399', monthly_premium: 55.5, best_window: 'Morning', submitted: 'Nov 4' }),
   // P885: a year-one client whose Nov 3 draft was returned (found from Dana's forwarded carrier email).
   // P891: clients Dana brought in from her own book (Add clients / Import), waiting for their welcome call.
-  mkClient('fc-maria', 'Maria', 'Lopez', 'ag-dana', { added: true, client_phone: '(512) 555-0199', city: 'Austin', state: 'TX', stage: 'setting_up', next_step: 'Welcome call today', carrier_name: 'Americo', product_name: 'Mortgage Protection 25', policy_number: 'AM-1234567', monthly_premium: 84.2, face_amount: 250000, draft_day: 3, effective: 'Jun 1, 2025', email: 'maria@example.com', submitted: 'Nov 3', note: 'Prefers evenings.' }),
+  mkClient('fc-maria', 'Maria', 'Lopez', 'ag-dana', { added: true, client_phone: '(512) 555-0199', city: 'Austin', state: 'TX', stage: 'setting_up', next_step: 'Welcome call today', carrier_name: 'Americo', product_name: 'Mortgage Protection 25', policy_number: 'AM-1234567', monthly_premium: 84.2, face_amount: 250000, draft_day: 3, effective: 'Jun 1, 2025', email: 'maria@example.com', submitted: 'Nov 3', note: 'Prefers evenings.', best_window: 'Evening' }),
   mkClient('fc-gene', 'Gene', 'Wallace', 'ag-dana', { added: true, client_phone: '(512) 555-0131', city: 'Cedar Park', state: 'TX', stage: 'setting_up', next_step: 'Welcome call Fri', carrier_name: 'Foresters', product_name: 'Strong Foundation', policy_number: 'FF-5520881', monthly_premium: 47.6, face_amount: 120000, draft_day: 20, effective: 'Jan 1, 2024', submitted: 'Nov 3' }),
-  mkClient('fc-ann', 'Ann', 'Lee', 'ag-dana', { client_phone: '(512) 555-0164', city: 'Round Rock', state: 'TX', stage: 'needs_attention', attention: 'Payment missed Nov 3', next_step: 'Save call today', carrier_name: 'Harborline Life', policy_number: 'HL-4410917', monthly_premium: 64.1, submitted: 'Jul 6' }),
+  mkClient('fc-ann', 'Ann', 'Lee', 'ag-dana', { client_phone: '(512) 555-0164', city: 'Round Rock', state: 'TX', stage: 'needs_attention', attention: 'Payment missed Nov 3', next_step: 'Save call today', carrier_name: 'Harborline Life', policy_number: 'HL-4410917', monthly_premium: 64.1, submitted: 'Jul 6', answered_in: 'morning' }),
 ]
 
 // Cancellation calls: the VA calls the old carrier with the client to close the old policy once the new one is in
@@ -122,55 +124,41 @@ const seedCalls = [
   mkCall('cl-12', 'fc-denise', 6, '1:00 PM', { old_carrier: 'Globe Life' }),
 ]
 
-// The queue: people who asked for help with a policy. bucket = callback_due | new | not_reached (lib/vaQueue).
-// checklist = what the VA fills before booking an agent (question type, carrier, state, urgency).
-const mkLead = (id, name, o) => ({
-  id, name, phone: '(555) 555-0100', city: 'Austin', state: 'TX', type: 'Policy help', bucket: 'new', came: 'Today, 12:58 PM', tries: 0,
-  callback: null, note: '', checklist: { question_type: '', carrier: '', state: '', urgency: '' }, held_until: null, ...o,
-})
-const seedQueue = [
-  mkLead('vq-1', 'Angela Moore', { bucket: 'callback_due', callback: 'Today, 1:45 PM', tries: 1, phone: '(210) 555-0147', city: 'San Antonio', note: 'Asked us to call back after lunch.', checklist: { question_type: 'Coverage question', carrier: 'Globe Life', state: 'TX', urgency: '' } }),
-  mkLead('vq-2', 'Kevin Brooks', { bucket: 'callback_due', callback: 'Today, 2:30 PM', tries: 1, phone: '(602) 555-0113', city: 'Phoenix', state: 'AZ', type: 'Mortgage protection' }),
-  mkLead('vq-3', 'Shirley Adams', { came: 'Today, 1:12 PM', phone: '(904) 555-0138', city: 'Jacksonville', state: 'FL' }),
-  mkLead('vq-4', 'Marcus Hill', { came: 'Today, 12:40 PM', phone: '(469) 555-0152', city: 'Plano', type: 'Mortgage protection' }),
-  mkLead('vq-5', 'Teresa Lane', { came: 'Today, 11:58 AM', phone: '(520) 555-0129', city: 'Tucson', state: 'AZ' }),
-  mkLead('vq-6', 'Daniel Ruiz', { came: 'Today, 10:21 AM', phone: '(727) 555-0186', city: 'St. Petersburg', state: 'FL', type: 'Mortgage protection' }),
-  mkLead('vq-7', 'Brenda Cole', { bucket: 'not_reached', tries: 2, came: 'Wed, 4:05 PM', phone: '(817) 555-0174', city: 'Fort Worth' }),
-  mkLead('vq-8', 'Frank Ellis', { bucket: 'not_reached', tries: 1, came: 'Wed, 2:30 PM', phone: '(480) 555-0105', city: 'Chandler', state: 'AZ' }),
-  mkLead('vq-9', 'Joyce Turner', { bucket: 'not_reached', tries: 3, came: 'Tue, 6:12 PM', phone: '(352) 555-0191', city: 'Ocala', state: 'FL' }),
-  // P892: two leads the AI handed over. Gloria asked about price mid-call (warm, on the line); Owen asked for a person
-  // and no VA was free in 60 s, so he became a callback task.
-  mkLead('vq-10', 'Gloria Price', { came: 'Today, 1:20 PM', phone: '(214) 555-0172', city: 'Dallas', type: 'Mortgage protection', tries: 1,
-    checklist: { question_type: '', carrier: '', state: 'TX', urgency: 'Today' },
-    fromAi: { reason: 'coverage_or_price', secs: 8, talked: '1:36', agent: 'Dana Walker (takes live transfers now)', asked: ['Age and state (61, TX)', 'What to protect (the mortgage, $240k left)'],
-      summary: 'Gloria, 61, in Dallas wants to protect her mortgage ($240k left). She asked what it would cost each month, so the AI handed her to a person before checking Dana.' } }),
-  mkLead('vq-11', 'Owen Price', { bucket: 'callback_due', callback: 'Today, now', came: 'Today, 8:31 AM', phone: '(702) 555-0119', city: 'Henderson', state: 'NV', type: 'Mortgage protection', tries: 1,
-    fromAi: { reason: 'asked_person', secs: 7, talked: '2:12', agent: 'Marcus Reed (Appointments only)', asked: ['Age and state (47, NV)'], callbackTask: true,
-      summary: 'Owen asked to talk to a real person after the first question. No VA was free within 60 seconds; he was told someone would call back shortly.' } }),
-]
-
 // Servicing steps the agents asked for. kind = lib/vaServicing KIND_LABEL keys; due = overdue | today | later | none.
-const mkTask = (id, kind, client, o) => ({ id, kind, client_id: client, due: 'today', due_text: 'Today', status: 'requested', outcome: null, held: false, note: '', ...o })
+const mkTask = (id, kind, client, o) => ({ id, kind, client_id: client, due: 'none', due_text: 'Booking…', status: 'requested', outcome: null, held: false, note: '', ...o })
 const seedTasks = [
-  mkTask('st-1', 'payment_change', 'fc-luis', { due: 'overdue', due_text: 'Was due Wed', status: 'requested', note: 'Draft failed on Nov 1. Client has a new card ending 4410.' }),
+  // P907: every step that is a call with the client is booked by the system (bookTask below): the next open slot in
+  // the client's preferred window. `at` = a seed fixed at a team-clock time; the rest book themselves at load.
+  mkTask('st-1', 'payment_change', 'fc-luis', { note: 'Draft failed on Nov 1. Client has a new card ending 4410. Works nights: evenings are best.' }),
   mkTask('st-2', 'packet_check', 'fc-renee', { due: 'overdue', due_text: 'Was due Tue', note: 'Carrier says the packet went out Oct 28.' }),
-  mkTask('st-3', 'beneficiary_change', 'fc-denise', { due: 'today', due_text: 'Today, 1:00 PM', status: 'scheduled', note: 'Add her daughter Kayla as 50% beneficiary.' }),
-  mkTask('st-4', 'address_change', 'fc-tom', { due: 'today', due_text: 'Today, 4:00 PM', note: 'Moved to 18 Oak Hollow Dr, Round Rock.' }),
-  mkTask('st-5', 'review_call', 'fc-carla', { due: 'today', due_text: 'Today, 5:00 PM', status: 'scheduled' }),
+  mkTask('st-3', 'beneficiary_change', 'fc-denise', { at: [5, '1:00 PM'], status: 'done', outcome: 'completed', note: 'Add her daughter Kayla as 50% beneficiary.' }),
+  mkTask('st-4', 'address_change', 'fc-tom', { note: 'Moved to 18 Oak Hollow Dr, Round Rock.' }),
+  mkTask('st-5', 'review_call', 'fc-carla', { at: [5, '5:30 PM'] }),
   mkTask('st-6', 'chargeback_watch', 'fc-harold', { due: 'later', due_text: 'Mon, Nov 9' }),
-  mkTask('st-7', 'draft_date_change', 'fc-irene', { due: 'later', due_text: 'Tue, Nov 10', note: 'Wants the draft on the 3rd, after payday.' }),
-  mkTask('st-8', 'annual_review', 'fc-nadia', { due: 'none', due_text: 'No date yet' }),
+  mkTask('st-7', 'draft_date_change', 'fc-irene', { note: 'Wants the draft on the 3rd, after payday.' }),
+  mkTask('st-8', 'annual_review', 'fc-nadia', { window: 'Morning', note: 'A year since her policy started. Check it still fits.' }),
   mkTask('st-9', 'packet_check', 'fc-robert', { due: 'done', due_text: 'Done Tue', status: 'done', outcome: 'delivered' }),
   mkTask('st-10', 'lapse_save', 'fc-irene', { due: 'done', due_text: 'Done Mon', status: 'done', outcome: 'saved' }),
-  // P885: opened by a Payment missed event, due by the end of the next business day.
-  mkTask('st-11', 'lapse_save', 'fc-ann', { due: 'today', due_text: 'Today by 5:00 PM', note: 'Ann’s Nov 3 payment didn’t go through. Call her and get it fixed.',
+  // P885: opened by a Payment missed event.
+  mkTask('st-11', 'lapse_save', 'fc-ann', { note: 'Ann’s Nov 3 payment didn’t go through. Call her and get it fixed.',
     missed: { notice: 'missed', what: 'The Nov 3 draft was returned', due: 'Nov 3', how: 'Dana’s forwarded carrier email', grace: 'about Dec 4', chargeback: true, month: 4, of: 12, repeat: false } }),
-  // P891: welcome calls for clients an agent added. Dana imported 2 on Tue; 25 a day go out, so both land this week.
-  mkTask('st-13', 'welcome_call', 'fc-maria', { due: 'today', due_text: 'Today by 5:00 PM', note: 'Added by Dana from her own book. Introduce her client care team, check the details, ask about texts.' }),
-  mkTask('st-14', 'welcome_call', 'fc-gene', { due: 'later', due_text: 'Fri by 5:00 PM', note: 'Added by Dana from her own book (import of 2 on Tue).' }),
-  // P888: a lapse notice the agent passed on with Request service → payment problem; a call task like any other.
-  mkTask('st-12', 'lapse_save', 'fc-nadia', { due: 'later', due_text: 'Mon by 5:00 PM', note: 'Transamerica sent a lapse notice. Call Nadia and get the payment back on.',
+  // P891: welcome calls for clients an agent added.
+  mkTask('st-13', 'welcome_call', 'fc-maria', { note: 'Added by Dana from her own book. Introduce her client care team, check the details, ask about texts.' }),
+  mkTask('st-14', 'welcome_call', 'fc-gene', { note: 'Added by Dana from her own book (import of 2 on Tue).' }),
+  // P888: a lapse notice the agent passed on with Request service → payment problem.
+  mkTask('st-12', 'lapse_save', 'fc-nadia', { note: 'Transamerica sent a lapse notice. Call Nadia and get the payment back on.',
     missed: { notice: 'lapse_notice', what: 'Lapse notice: the Oct 28 payment is in its grace period', due: 'Oct 28', how: 'Marcus asked (Request service)', grace: 'about Nov 27', chargeback: false, repeat: false } }),
+  // P907: the hand-off call after every sale (welcome, check the details, explain who to call), even with no replacement.
+  mkTask('ho-1', 'handoff_call', 'fc-paul', { note: 'Sold by Priya on Nov 4. Replacing a Globe Life policy: the cancel call is booked too.' }),
+  mkTask('ho-2', 'handoff_call', 'fc-walter', { due: 'done', due_text: 'Done Wed', status: 'done', outcome: 'welcomed' }),
+  // P907: a cancel request is a save attempt; a name change is a change request.
+  mkTask('st-15', 'cancel_request', 'fc-robert', { note: 'Robert called in and asked to cancel: money is tight this month. Try to save it (a lower amount, a later draft date).' }),
+  mkTask('st-16', 'name_change', 'fc-irene', { window: 'Morning', note: 'Got married: Irene Baker becomes Irene Cole. Carrier needs the marriage certificate.' }),
+  // P907: callbacks. A missed incoming call, a text reply that needs a person, or someone who asked: each one is a
+  // booked call, never a queue. who = the person when they aren't a client yet.
+  mkTask('cb-1', 'callback', null, { why: 'asked', agent_id: 'ag-dana', who: { name: 'Angela Moore', phone: '(210) 555-0147', city: 'San Antonio', state: 'TX' }, window: 'Afternoon', note: 'Asked us to call back after lunch. A question about her Globe Life policy.' }),
+  mkTask('cb-2', 'callback', null, { why: 'missed_call', agent_id: 'ag-marcus', who: { name: 'Owen Price', phone: '(702) 555-0119', city: 'Henderson', state: 'NV' }, note: 'Asked the AI for a real person at 8:31 AM. No VA was free within 60 seconds; he was told someone would call back.' }),
+  mkTask('cb-3', 'callback', null, { why: 'reply', agent_id: 'ag-dana', who: { name: 'Hector Ruiz', phone: '(469) 555-0193', city: 'Plano', state: 'TX' }, note: 'Replied “yes call me” to the day-60 check-in text. The automatic answer already went.' }),
 ]
 
 // Pay: a flat amount per cancellation the carrier confirms (sample amount). status = verified | checking | needs_listen.
@@ -211,7 +199,7 @@ const seedThreads = [
 
 const seedFeed = [
   { id: 'f1', who: 'Dana Walker', text: 'Wrote about Gloria Santos', at: '9:25 AM', kind: 'message' },
-  { id: 'f2', who: 'Angela Moore', text: 'Callback due at 1:45 PM', at: '1:30 PM', kind: 'queue' },
+  { id: 'f2', who: 'Angela Moore', text: 'Callback booked on your Schedule', at: '1:30 PM', kind: 'call' },
   { id: 'f3', who: 'Tom Fischer', text: 'Cancellation confirmed, checking now', at: '10:52 AM', kind: 'pay' },
   { id: 'f4', who: 'Priya Shah', text: 'Asked for a payment change for Luis Ortega', at: 'Wed', kind: 'servicing' },
   { id: 'f5', who: 'Robert Chen', text: 'Cancellation needs a listen', at: 'Wed', kind: 'pay' },
@@ -231,8 +219,7 @@ const seedSettings = {
   timeZone: 'America/Chicago', // P847: an IANA zone (profiles.timezone), picked in Settings; the Overview clock reads it
   payDetails: { bank: 'Chase', last4: '4821', taxEmail: ME.email, status: 'Payouts on' },
   notifications: [
-    { key: 'queue', label: 'New people in the queue', push: true, email: false },
-    { key: 'callback', label: 'A callback comes due', push: true, email: false },
+    { key: 'callback', label: 'A call is booked on your Schedule', push: true, email: false },
     { key: 'call', label: 'Ten minutes before a call', push: true, email: false },
     { key: 'servicing', label: 'An agent asks for a servicing step', push: true, email: true },
     { key: 'message', label: 'An agent writes to you', push: true, email: true },
@@ -241,7 +228,7 @@ const seedSettings = {
 }
 
 let state = {
-  clients: seedClients, calls: seedCalls, queue: seedQueue, tasks: seedTasks, cancels: seedCancels, payouts: seedPayouts,
+  clients: seedClients, calls: seedCalls, tasks: seedTasks, cancels: seedCancels, payouts: seedPayouts,
   threads: seedThreads, feed: seedFeed, settings: seedSettings, log: [], booked: seedBooked, dayOffs: [], live: null,
   // P847: calls that went to another VA on shift (kept so the auto-assign sees them). P854: a few seeded so the
   // 30-minute rule has something to bump into: on Thu 5 and Fri 6 everyone on shift is busy at some times.
@@ -267,7 +254,28 @@ const callRow = (s, k) => {
   const tz = k.tz || zoneOf(c.state, c.city)
   return { ...k, ...placed(k.iso, viewTz(s)), tz, when: blockTime(k.iso, viewTz(s), tz), name: fullName(c), client: c, agent: agentName(c.agent_id), carrier: c.carrier_name }
 }
-const taskRow = (s, t) => { const c = clientOf(s, t.client_id); return { ...t, name: fullName(c), client: c, agent: agentName(c.agent_id), carrier: c.carrier_name } }
+// P907: a person who isn't a client yet (a callback for a missed call or a text reply) reads like a client row.
+const whoOf = (s, t) => clientOf(s, t.client_id) || (() => {
+  const [first, ...rest] = String(t.who?.name || 'Caller').split(' ')
+  return { id: null, lead: true, client_first_name: first, client_last_name: rest.join(' '), client_phone: t.who?.phone || '', city: t.who?.city || '', state: t.who?.state || '',
+    agent_id: t.agent_id || null, carrier_name: '', product_name: '', policy_number: '', monthly_premium: 0, stage: 'lead' }
+})()
+// A servicing row with its client and agent. P907: a booked call also gets where it sits on the viewer's clock
+// (day, time, when), its due group from that, and who has it.
+const taskRow = (s, t) => {
+  const c = whoOf(s, t)
+  const row = { ...t, name: fullName(c).trim(), client: c, agent: agentName(c.agent_id || t.agent_id), carrier: c.carrier_name, type: typeOfKind(t.kind) }
+  if (!t.iso) return row
+  const vt = viewTz(s)
+  const tz = t.tz || zoneOf(c.state, c.city) || VA_TZ
+  const p = placed(t.iso, vt)
+  const when = blockTime(t.iso, vt, tz)
+  const done = t.status === 'done'
+  const due = done ? 'done' : p.day < TODAY ? 'overdue' : p.day === TODAY ? 'today' : 'later'
+  const dayText = p.day === TODAY ? 'Today' : `${DAY[p.day] || ''}, Nov ${p.day}`
+  return { ...row, ...p, tz, when, due, due_text: done ? `Done ${p.day === TODAY ? 'today' : DAY[p.day] || ''}` : `${dayText}, ${when}`,
+    mine: (t.va_id || 'va-maya') === 'va-maya', vaName: VAS.find(v => v.id === (t.va_id || 'va-maya'))?.name || ME.name }
+}
 const DAY = { 2: 'Mon', 3: 'Tue', 4: 'Wed', 5: 'Thu', 6: 'Fri', 9: 'Mon', 10: 'Tue', 11: 'Wed', 12: 'Thu', 13: 'Fri' }
 export const TODAY = 5
 // P854: the sample clock (1:32 PM on the team's clock): nothing can be booked before the next half hour.
@@ -275,9 +283,65 @@ export const NOW_ISO = atVa(TODAY, '2:00 PM')
 export const dayName = d => DAY[d] || ''
 export const RATE_PER_CANCEL = RATE
 
+// P907 — the system books every call. The next open slot in the client's preferred window (the one picked, else the
+// one they answered in before, else afternoon), on their clock, with a VA on shift who is free (lib/callSlots
+// nextSlot). Seeds with `at` sit at a fixed team-clock time; every other call seed books itself here at load.
+// The sample clock reads 1:32 PM; nothing books before the next half hour (NOW_ISO).
+export const SAMPLE_CLOCK_ISO = atVa(TODAY, '1:32 PM')
+function slotFor(s, { client, tz, window, exact = null, date = null, exceptId = null, before = null, from = NOW_ISO }) {
+  const t = bookingTeam(s)
+  const win = preferredWindow(window || client?.best_window, client?.answered_in)
+  return nextSlot({ from, window: win, exact, date, clientTz: tz, team: t.team, calls: t.calls, load: t.load, prefer: t.me, exceptId, before })
+}
+function bookTask(s, t, opts = {}) {
+  const c = whoOf(s, t)
+  const tz = t.tz || zoneOf(c.state, c.city) || VA_TZ
+  const hit = slotFor(s, { client: c, tz, window: opts.window || t.window, exact: opts.exact, date: opts.date, exceptId: t.id, from: opts.from })
+  if (!hit) return t
+  return { ...t, iso: hit.iso, tz, va_id: hit.va.id, window: hit.window, inWindow: hit.inWindow, status: t.status === 'requested' ? 'scheduled' : t.status, at: undefined }
+}
+const fixedAt = (s, t) => {
+  if (!t.at) return t
+  const c = whoOf(s, t)
+  return { ...t, iso: atVa(t.at[0], t.at[1]), tz: zoneOf(c.state, c.city) || VA_TZ, va_id: 'va-maya', status: t.status === 'requested' ? 'scheduled' : t.status, at: undefined }
+}
+// Seeds book in this order (first come, first served), so Maya's sample day shows a callback, a welcome call and a
+// hand-off among her calls; the rest spread over the team like the live pick.
+const SEED_ORDER = ['cb-1', 'st-13', 'ho-1', 'st-15', 'st-11', 'st-16', 'st-8', 'st-4', 'st-12', 'st-1', 'st-7', 'st-14', 'cb-2', 'cb-3']
+{
+  const booked = new Map()
+  let s = { ...state, tasks: state.tasks.map(t => fixedAt(state, t)) }
+  const ids = [...SEED_ORDER, ...s.tasks.map(t => t.id).filter(id => !SEED_ORDER.includes(id))]
+  ids.forEach(id => {
+    const t = s.tasks.find(x => x.id === id)
+    if (!t || !isCallKind(t.kind) || t.status === 'done' || t.iso) return
+    const b = bookTask(s, t)
+    booked.set(id, b)
+    s = { ...s, tasks: s.tasks.map(x => (x.id === id ? b : x)) }
+  })
+  state = { ...state, tasks: s.tasks }
+}
+// A day after `iso` at 8:00 AM on the team clock: where a No answer's next try starts looking.
+const nextDayFrom = (iso, n = 1) => { const d = new Date(Date.parse(`${dateOf(iso || NOW_ISO, VA_TZ)}T12:00:00Z`) + n * 86400000).toISOString().slice(0, 10); return instantOf(d, '8:00 AM', VA_TZ) }
+// The old policy's next draft (P899's gate: cancel before it), as 8:00 AM on that date on the client's clock.
+function nextDraftIso(day, tz) {
+  const today = dateOf(NOW_ISO, tz)
+  const y = Number(today.slice(0, 4)), m = Number(today.slice(5, 7)) - 1
+  const d = draftIn(y, m, Number(day)) >= today ? draftIn(y, m, Number(day)) : draftIn(m === 11 ? y + 1 : y, (m + 1) % 12, Number(day))
+  return instantOf(d, '8:00 AM', tz)
+}
+// "Thu, Nov 5, 3:00 PM ET (their time)" for a booking.
+export function bookedText(iso, tz) {
+  if (!iso) return ''
+  const day = new Date(`${dateOf(iso, tz)}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' })
+  return `${day}, ${clockOf(iso, tz)} ${zoneAbbr(tz, iso)} (their time)`
+}
+
 function useFulClientsSample() { const s = useStore(); return ok(s.clients.map(c => ({ ...c, name: fullName(c), agent: agentName(c.agent_id) }))) }
 function useFulCallsSample() { const s = useStore(); return ok(s.calls.map(k => callRow(s, k))) }
-function useFulQueueSample() { const s = useStore(); return ok(s.queue) }
+// P907: VAs never see new leads; there is no Queue. Kept empty so an old caller reads nothing, not an error.
+const NO_QUEUE = ok([])
+function useFulQueueSample() { return NO_QUEUE }
 function useFulTasksSample() { const s = useStore(); return ok(s.tasks.map(t => taskRow(s, t))) }
 function useFulThreadsSample() {
   const s = useStore()
@@ -334,34 +398,49 @@ function useSampleShift() {
   })
 }
 
-// Everything the VA has to do at a time, in one list: cancellation calls, booked callbacks (people from the queue)
-// and appointments they booked for agents. ref = the id in the item's own address (/fulfillment/schedule/<ref>).
-function useFulScheduleSample() {
-  const s = useStore()
-  const items = []
-  const vt = viewTz(s)
-  s.calls.map(k => callRow(s, k)).forEach(k => items.push({
-    ref: k.id, kind: 'call', day: k.day, time: k.time, iso: k.iso, tz: k.tz, when: k.when, tone: CALL_TONE[k.status], status: k.status, word: CALL_WORD[k.status],
-    name: k.name, label: `${k.old_carrier} to ${k.carrier}`, sub: `${k.agent}'s client`, done: k.status === 'cancelled' || k.status === 'passed',
-  }))
-  s.queue.filter(l => l.bucket === 'callback_due' && (l.cb_iso || whenOf(l.callback)) && (l.va_id || 'va-maya') === 'va-maya').forEach(l => {
-    const w = whenOf(l.callback)
-    const iso = l.cb_iso || atVa(w.day, w.time)
-    const tz = l.cb_tz || zoneOf(l.state, l.city)
-    items.push({ ref: l.id, kind: 'callback', ...placed(iso, vt), iso, tz, when: blockTime(iso, vt, tz), tone: 'warn', status: 'callback', word: 'Callback', name: l.name, label: `${l.type} · call back`, sub: `${l.city}, ${l.state}`, done: false })
-  })
-  s.booked.forEach(b => items.push({
-    ref: b.id, kind: 'booked', ...placed(b.iso, vt), iso: b.iso, tz: b.tz, when: blockTime(b.iso, vt, b.tz), tone: 'teal', status: 'booked_for', word: `Booked for ${agentName(b.agent_id).split(' ')[0]}`,
-    name: b.name, label: `${b.type} · with ${agentName(b.agent_id)}`, sub: `${b.city}, ${b.state}`, done: false,
-  }))
-  return ok(items.sort((a, b) => a.day - b.day || minutesOf(a.time) - minutesOf(b.time)))
+// P907 — the Schedule is booked calls only: the cancel-the-old-policy calls and every booked servicing call (hand-off,
+// save, change, cancel request, callback, welcome, yearly review) that's this VA's. One row shape for all of them:
+// ref = the id in its address (/fulfillment/schedule/<ref>); kind = 'call' (a cancellation call) | 'task' (a booked
+// servicing call); type = bookings.js CALL_TYPES key; at = the countdown instant (the sample clock runs from load).
+const isMine = x => (x.va_id || 'va-maya') === 'va-maya'
+const atOf = iso => LOAD + (Date.parse(iso) - Date.parse(SAMPLE_CLOCK_ISO))
+const KIND_WORD = {
+  handoff_call: 'Hand-off call', lapse_save: 'Save call', payment_change: 'Bank or card change', beneficiary_change: 'Beneficiary change', address_change: 'Address change',
+  draft_date_change: 'Draft date change', name_change: 'Name change', change_request: 'Change request', cancel_request: 'Cancel request', welcome_call: 'Welcome call',
+  annual_review: 'Yearly review', review_call: 'Review call',
 }
+export const STATE_WORD = { open: 'To call', done: 'Done', no_answer: 'No answer', passed: 'Passed on' }
+function scheduleOf(s) {
+  const items = []
+  s.calls.map(k => callRow(s, k)).forEach(k => {
+    const done = k.status === 'cancelled' || k.status === 'passed'
+    items.push({
+      ref: k.id, id: k.id, kind: 'call', type: 'cancel_old', day: k.day, time: k.time, iso: k.iso, tz: k.tz, when: k.when, status: k.status, done,
+      state: k.status === 'cancelled' ? 'done' : k.status === 'booked' ? 'open' : k.status,
+      tone: done ? (k.status === 'cancelled' ? 'green' : 'mute') : k.status === 'no_answer' ? 'warn' : CALL_TYPES.cancel_old.tone,
+      word: CALL_TYPES.cancel_old.label, name: k.name, label: `${k.old_carrier} to ${k.carrier}`, sub: `${k.agent}'s client`, agent: k.agent, at: atOf(k.iso), row: k,
+    })
+  })
+  s.tasks.filter(t => t.iso && isMine(t) && isCallKind(t.kind)).map(t => taskRow(s, t)).forEach(t => {
+    const done = t.status === 'done'
+    const ct = callType(t.type)
+    items.push({
+      ref: t.id, id: t.id, kind: 'task', type: t.type, day: t.day, time: t.time, iso: t.iso, tz: t.tz, when: t.when, status: t.status, done,
+      state: done ? 'done' : t.tries > 1 ? 'no_answer' : 'open', tone: done ? 'mute' : ct.tone, word: KIND_WORD[t.kind] || ct.label,
+      name: t.name, label: t.kind === 'callback' ? (CALLBACK_WHY[t.why] || ct.label) : ct.sub, sub: t.client.lead ? `${t.client.city}, ${t.client.state}` : `${t.agent}'s client`,
+      agent: t.agent, at: atOf(t.iso), row: t,
+    })
+  })
+  return items.sort((a, b) => a.iso.localeCompare(b.iso))
+}
+function useFulScheduleSample() { const s = useStore(); return ok(scheduleOf(s)) }
 // P847: who an agent's exact-time booking would go to right now (the same pick agentBooksCall makes).
 function useVaForSample(day, time) { const s = useStore(); return time ? pickVa(day, time, s.calls, s.others) : null }
 // P854: what a VA-call picker needs for lib/callSlots vaSlots: the rota at an instant (with days off), every VA's
-// call starts (calls, the ones passed to others, callbacks), the load order, the viewer's zone and who "me" is.
+// call starts (calls, the ones passed to others, booked servicing calls), the load order, the viewer's zone and "me".
 export function bookingTeam(s) {
-  const busy = busyOf(s.calls, [...s.others, ...s.queue.filter(l => l.cb_iso).map(l => ({ id: l.id, va_id: l.va_id || 'va-maya', iso: l.cb_iso }))])
+  const booked = (s.tasks || []).filter(t => t.iso && t.status !== 'done').map(t => ({ id: t.id, va_id: t.va_id || 'va-maya', iso: t.iso }))
+  const busy = busyOf(s.calls, [...s.others, ...booked])
   return { team: iso => teamOn(iso, s.dayOffs.map(o => o.day), viewTz(s)), calls: busy, load: loadOf(busy), viewerTz: viewTz(s), me: 'va-maya' }
 }
 function useVaBookingSample() { const s = useStore(); return bookingTeam(s) }
@@ -382,18 +461,20 @@ function useFulPaySample() {
   })
 }
 
-// The page head and the Overview read these: the day in one place.
+// The page head and the Overview read these: the day in one place. P907: today = every booked call on today's
+// Schedule (any type); next = the first one still to do from now; no queue (kept empty for old readers).
 function useFulDaySample() {
   const s = useStore()
-  const calls = s.calls.map(k => callRow(s, k))
-  const today = calls.filter(k => k.day === TODAY)
-  const next = today.find(k => k.status === 'booked') || null
+  const items = scheduleOf(s)
+  const today = items.filter(k => k.day === TODAY)
+  const ahead = today.filter(k => !k.done && k.iso >= SAMPLE_CLOCK_ISO)
+  const next = ahead[0] || null
   const tasks = s.tasks.map(t => taskRow(s, t))
   return ok({
-    today, next, later: today.filter(k => k.status === 'booked' && k.id !== next?.id), done: today.filter(k => k.status !== 'booked'),
-    tomorrow: calls.filter(k => k.day === TODAY + 1),
-    week: calls,
-    queue: { callback_due: s.queue.filter(l => l.bucket === 'callback_due'), new: s.queue.filter(l => l.bucket === 'new'), not_reached: s.queue.filter(l => l.bucket === 'not_reached') },
+    today, next, later: ahead.slice(1), done: today.filter(k => k.done),
+    tomorrow: items.filter(k => k.day === TODAY + 1),
+    week: s.calls.map(k => callRow(s, k)),
+    queue: { callback_due: [], new: [], not_reached: [] },
     tasks: { overdue: tasks.filter(t => t.due === 'overdue'), today: tasks.filter(t => t.due === 'today'), later: tasks.filter(t => t.due === 'later'), none: tasks.filter(t => t.due === 'none'), done: tasks.filter(t => t.due === 'done') },
     unread: s.threads.reduce((n, t) => n + t.unread, 0),
   })
@@ -401,25 +482,11 @@ function useFulDaySample() {
 
 const stamp = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 const feedAdd = (s, who, text, kind) => ({ feed: [{ id: `f${Date.now()}`, who, text, at: stamp(), kind }, ...s.feed] })
+// P907: a moved booking sends the client the usual confirmation text (P902's rules); the sample keeps a log.
+const textMoved = (s, to, ref, iso, tz) => ({ texts: [...(s.texts || []), { at: stamp(), to, what: 'moved', ref, iso, text: `Your call with Deedstone is now ${bookedText(iso, tz).replace(' (their time)', '')}. Reply C to change it.` }] })
 
 function useFulActionsSample() {
   return {
-    // Queue
-    holdLead: id => set(s => ({ queue: s.queue.map(l => (l.id === id ? { ...l, held_until: Date.now() + 15 * MIN } : l)) })),
-    releaseLead: id => set(s => ({ queue: s.queue.map(l => (l.id === id ? { ...l, held_until: null } : l)) })),
-    setChecklist: (id, checklist) => set(s => ({ queue: s.queue.map(l => (l.id === id ? { ...l, checklist } : l)) })),
-    notReached: id => set(s => ({ queue: s.queue.map(l => (l.id === id ? { ...l, bucket: 'not_reached', tries: l.tries + 1, held_until: null, came: l.came } : l)) })),
-    // P854: iso + tz = the picked instant and the client's zone; vaId = who the 30-minute rule gave it to.
-    callback: (id, when, iso = null, tz = null, vaId = 'va-maya') => set(s => ({ queue: s.queue.map(l => (l.id === id ? { ...l, bucket: 'callback_due', callback: when, cb_iso: iso, cb_tz: tz, va_id: vaId, tries: l.tries + 1, held_until: null } : l)) })),
-    bookLead: (id, agentId, when, iso = null, tz = null) => set(s => {
-      const l = s.queue.find(x => x.id === id)
-      const w = whenOf(when)
-      const at = iso || (w ? atVa(w.day, w.time) : null)
-      // It lands on the Schedule as an appointment booked for the agent.
-      const booked = at ? [...s.booked, { id: `ap-${Date.now()}`, name: l.name, agent_id: agentId, ...placed(at, VA_TZ), iso: at, tz: tz || zoneOf(l.state, l.city), type: l.type, phone: l.phone, city: l.city, state: l.state }] : s.booked
-      return { queue: s.queue.filter(x => x.id !== id), booked, ...feedAdd(s, l.name, `Booked with ${agentName(agentId)}, ${when}`, 'queue') }
-    }),
-    closeLead: id => set(s => ({ queue: s.queue.filter(x => x.id !== id) })),
     // Calls
     markCall: (id, status, extra = {}) => set(s => {
       const k = s.calls.find(x => x.id === id)
@@ -431,32 +498,44 @@ function useFulActionsSample() {
     }),
     saveCallNotes: (id, notes) => set(s => ({ calls: s.calls.map(x => (x.id === id ? { ...x, notes } : x)) })),
     // P854: Move to an instant. When the 30-minute rule gave it to another VA, it leaves this Schedule (passed to them).
+    // P907: the client gets the confirmation text with the new time.
     moveCall: (id, iso, vaId = 'va-maya') => set(s => {
       const mine = vaId === 'va-maya'
+      const k = s.calls.find(x => x.id === id)
+      const c = clientOf(s, k.client_id)
       const calls = s.calls.map(x => (x.id === id ? { ...x, ...placed(iso, VA_TZ), iso, at: null, status: mine ? 'booked' : 'passed', passed_to: mine ? null : vaId } : x))
-      return mine ? { calls } : { calls, others: [...s.others, { id: `${id}-m`, va_id: vaId, iso }] }
+      const sent = textMoved(s, c.client_phone, id, iso, k.tz || zoneOf(c.state, c.city) || VA_TZ)
+      return mine ? { calls, ...sent } : { calls, ...sent, others: [...s.others, { id: `${id}-m`, va_id: vaId, iso }] }
+    }),
+    // P907: move any booked servicing call (the same rule: another VA may end up with it, then it leaves this Schedule).
+    moveTask: (id, iso, vaId = 'va-maya') => set(s => {
+      const t = s.tasks.find(x => x.id === id)
+      const c = whoOf(s, t)
+      return { tasks: s.tasks.map(x => (x.id === id ? { ...x, iso, va_id: vaId, status: x.status === 'requested' ? 'scheduled' : x.status, inWindow: true } : x)),
+        ...textMoved(s, c.client_phone, id, iso, t.tz || zoneOf(c.state, c.city) || VA_TZ) }
     }),
     // Servicing
     startTask: id => set(s => ({ tasks: s.tasks.map(t => (t.id === id ? { ...t, held: true, status: 'in_progress' } : { ...t, held: false })) })),
-    putBack: id => set(s => ({ tasks: s.tasks.map(t => (t.id === id ? { ...t, held: false, status: t.status === 'in_progress' ? 'requested' : t.status } : t)) })),
-    // P888: a save call's No answer puts it back on tomorrow's schedule (3 tries in all); Fixing it opens a
-    // check-it-cleared call in 3 business days. Like p888 payment_servicing_outcome.
+    putBack: id => set(s => ({ tasks: s.tasks.map(t => (t.id === id ? { ...t, held: false, status: t.status === 'in_progress' ? (t.iso ? 'scheduled' : 'requested') : t.status } : t)) })),
+    // P888/P891/P907: a No answer on a call that retries books the next try by itself on the next business day, in
+    // the same window (3 tries in all). Fixing it books a check-it-cleared call 3 days on.
     finishTask: (id, outcome) => set(s => {
       const t = s.tasks.find(x => x.id === id)
       const tries = (t.tries || 1) + 1
-      // P891: a welcome call's No answer comes back the next business day too, 3 tries in all (p891 welcome_outcome).
-      if ((t.kind === 'lapse_save' || t.kind === 'welcome_call') && outcome === 'no_answer' && tries <= 3) {
-        return { tasks: s.tasks.map(x => (x.id === id ? { ...x, held: false, status: 'scheduled', due: 'later', due_text: 'Tomorrow · try again', tries } : x)) }
+      if (RETRY_KINDS.includes(t.kind) && outcome === 'no_answer' && tries <= 3) {
+        const again = bookTask(s, { ...t, held: false, status: 'scheduled', tries }, { from: nextDayFrom(t.iso) })
+        return { tasks: s.tasks.map(x => (x.id === id ? again : x)) }
       }
       const done = s.tasks.map(x => (x.id === id ? { ...x, held: false, status: 'done', due: 'done', due_text: `Done ${stamp()}`, outcome } : x))
       if (t.kind === 'lapse_save' && outcome === 'fixing') {
-        return { tasks: [...done, mkTask(`st-${Date.now()}`, 'lapse_save', t.client_id, { due: 'later', due_text: 'In 3 business days', missed: t.missed && { ...t.missed, check: true },
-          note: 'Check the fixed payment cleared. Call the client if it didn’t.' })] }
+        const check = bookTask({ ...s, tasks: done }, mkTask(`st-${Date.now()}`, 'lapse_save', t.client_id, { missed: t.missed && { ...t.missed, check: true },
+          note: 'Check the fixed payment cleared. Call the client if it didn’t.' }), { from: nextDayFrom(t.iso, 3) })
+        return { tasks: [...done, check] }
       }
-      // P891: Problem → agent closes the welcome call and tells the agent (the VA's note says what).
-      if (t.kind === 'welcome_call' && outcome === 'problem') {
+      // P891: Problem → the agent is told (the VA's note says what). P907: the same for a hand-off call.
+      if ((t.kind === 'welcome_call' || t.kind === 'handoff_call') && outcome === 'problem') {
         const c = clientOf(s, t.client_id)
-        return { tasks: done, ...feedAdd(s, agentName(c.agent_id), `Welcome call found a problem for ${fullName(c)}`, 'servicing') }
+        return { tasks: done, ...feedAdd(s, agentName(c.agent_id), `${t.kind === 'handoff_call' ? 'Hand-off' : 'Welcome'} call found a problem for ${fullName(c)}`, 'servicing') }
       }
       return { tasks: done }
     }),
@@ -465,11 +544,15 @@ function useFulActionsSample() {
       const t = s.tasks.find(x => x.id === id)
       return { tasks: s.tasks.map(x => (x.id === id ? { ...x, texts: yes ? 'yes' : 'no' } : x)), clients: s.clients.map(c => (c.id === t.client_id ? { ...c, sms_consent: !!yes } : c)), log: yes ? [...s.log, { at: stamp(), what: 'text_consent', task: id, client: t.client_id }] : s.log }
     }),
-    scheduleTask: (id, when) => set(s => ({ tasks: s.tasks.map(t => (t.id === id ? { ...t, status: 'scheduled', due: 'later', due_text: when } : t)) })),
     sendToAgent: (id, reason) => set(s => {
       const t = s.tasks.find(x => x.id === id)
-      const c = clientOf(s, t.client_id)
-      return { tasks: s.tasks.filter(x => x.id !== id), ...feedAdd(s, agentName(c.agent_id), `Sent back: ${reason} for ${fullName(c)}`, 'servicing') }
+      const c = whoOf(s, t)
+      return { tasks: s.tasks.filter(x => x.id !== id), ...feedAdd(s, agentName(c.agent_id || t.agent_id), `Sent back: ${reason} for ${fullName(c).trim()}`, 'servicing') }
+    }),
+    // P907: a missed incoming call (or a reply that needs a person) becomes a booked callback, never a queue.
+    bookCallback: ({ name, phone = '', city = '', state = '', why = 'missed_call', agentId = null, clientId = null, note = '' }) => set(s => {
+      const t = bookTask(s, mkTask(`cb-${Date.now()}`, 'callback', clientId, { why, agent_id: agentId, who: clientId ? null : { name, phone, city, state }, note }))
+      return { tasks: [...s.tasks, t], ...feedAdd(s, name || 'Caller', `Callback booked: ${(CALLBACK_WHY[why] || 'call back').toLowerCase()}`, 'call') }
     }),
     // Messages
     sendMessage: (threadId, text) => set(s => ({ threads: s.threads.map(t => (t.id === threadId ? { ...t, messages: [...t.messages, { id: `m${Date.now()}`, from: 'me', text, at: `Today, ${stamp()}` }] } : t)) })),
@@ -484,39 +567,98 @@ function useFulActionsSample() {
     saveSettings: patch => set(s => ({ settings: { ...s.settings, ...patch } })),
   }
 }
+// P907: the sample store as it is now (tests read the bookings and the confirmation texts; nothing leaves the browser).
+export const sampleState = () => state
+export const sampleActions = useFulActionsSample
 
-// P847 — an agent books a cancellation or service call while on the phone with the client (sample: the agent shell
-// calls this). Exact time: the call goes to the VA picked above, so when that's Maya it lands on her Schedule
-// (cancellation) or her Servicing board (service). A best-time window goes to the team's bell to be called inside it.
-// Returns the VA it went to (or null for a window).
-export function agentBooksCall({ who, state = 'TX', city = '', oldCarrier = 'Globe Life', kind, mode, day, time, iso = null, tz = null, vaId = null, window: win, agent = 'ag-dana' }) {
+// P847 — an agent asks for a cancellation or service call (the agent shell calls this). P907: every call is booked by
+// the system. Exact time: that time, with the VA the picker showed. A window (or "let the team set it"): the next open
+// slot in that window on the client's clock. When it lands on Maya it's on her Schedule; another VA's goes to them.
+// kind 'cancellation' = cancel the old policy; anything else is a booked servicing call (request = its kind, default a
+// change request). Returns the VA it went to (null when nothing could be booked).
+export function agentBooksCall({ who, state = 'TX', city = '', oldCarrier = 'Globe Life', kind, mode, day, time, iso = null, tz = null, vaId = null, window: win, agent = 'ag-dana', request = null }) {
   const [first, ...rest] = String(who || 'Client').split(' ')
   let va = null
   set(s => {
-    const id = `fc-${Date.now()}`
-    const client = mkClient(id, first, rest.join(' ') || '', agent, { state, city, stage: 'setting_up', next_step: kind === 'cancellation' ? 'Cancellation call' : 'Service call' })
-    if (mode !== 'exact') {
-      return { ...feedAdd(s, agentName(agent), `Asked for a ${kind === 'cancellation' ? 'cancellation' : 'service'} call with ${who}, best time ${String(win).toLowerCase()}`, 'servicing') }
+    const have = s.clients.find(c => fullName(c) === who && c.agent_id === agent)
+    const id = have?.id || `fc-${Date.now()}`
+    const client = have || mkClient(id, first, rest.join(' ') || '', agent, { state, city, stage: 'setting_up', next_step: kind === 'cancellation' ? 'Cancellation call' : 'Service call', best_window: mode === 'window' ? win : undefined })
+    const s2 = have ? s : { ...s, clients: [...s.clients, client] }
+    const ctz = tz || zoneOf(state, city) || VA_TZ
+    let at
+    if (mode === 'exact' && (iso || (day && time))) {
+      // P854: the instant the picker made on the client's clock, and the VA it showed (the 30-minute rule's pick).
+      at = iso || atVa(day, time)
+      const t = bookingTeam(s2)
+      const fit = vaId || freeVa({ iso: at, team: t.team, calls: t.calls, load: t.load })?.id
+      va = fit ? VAS.find(v => v.id === fit) : pickVa(day, time, s.calls, s.others)
+    } else {
+      const hit = slotFor(s2, { client, tz: ctz, window: mode === 'window' ? win : null })
+      if (!hit) return { ...feedAdd(s, agentName(agent), `Asked for a call with ${who}; no open time in the next two weeks`, 'servicing') }
+      at = hit.iso
+      va = VAS.find(v => v.id === hit.va.id)
     }
-    // P854: the instant the picker made on the client's clock, and the VA it showed (the 30-minute rule's pick).
-    const at = iso || atVa(day, time)
-    const t = bookingTeam(s)
-    const fit = vaId || freeVa({ iso: at, team: t.team, calls: t.calls, load: t.load })?.id
-    va = fit ? VAS.find(v => v.id === fit) : pickVa(day, time, s.calls, s.others)
-    if (!va.me) return { others: [...s.others, { id: `ot-${Date.now()}`, va_id: va.id, iso: at }] }
-    const out = { clients: [...s.clients, client], ...feedAdd(s, agentName(agent), `Booked ${who} for ${dayName(day)} ${time}`, kind === 'cancellation' ? 'call' : 'servicing') }
-    const p = placed(at, VA_TZ)
-    if (kind === 'cancellation') out.calls = [...s.calls, mkCall(`cl-${Date.now()}`, id, p.day, p.time, { iso: at, tz, old_carrier: oldCarrier, va_id: va.id })]
-    else out.tasks = [...s.tasks, mkTask(`st-${Date.now()}`, 'review_call', id, { due: p.day === TODAY ? 'today' : 'later', due_text: `${dayName(p.day)}, Nov ${p.day}, ${p.time}`, status: 'scheduled', note: 'Booked by the agent with the client on the phone.' })]
+    const words = kind === 'cancellation' ? 'cancellation' : 'service'
+    const out = { clients: s2.clients, ...feedAdd(s, agentName(agent), `Booked a ${words} call with ${who}: ${bookedText(at, ctz)}`, kind === 'cancellation' ? 'call' : 'servicing') }
+    if (kind === 'cancellation') {
+      if (!va.me) return { ...out, others: [...s.others, { id: `ot-${Date.now()}`, va_id: va.id, iso: at }] }
+      const p = placed(at, VA_TZ)
+      out.calls = [...s.calls, mkCall(`cl-${Date.now()}`, id, p.day, p.time, { iso: at, tz: ctz, old_carrier: oldCarrier, va_id: va.id })]
+    } else {
+      out.tasks = [...s.tasks, mkTask(`st-${Date.now()}`, request || 'change_request', id, { iso: at, tz: ctz, va_id: va.id, status: 'scheduled', window: windowOfMinute(minuteOf(at, ctz)), note: 'Asked for by the agent with the client on the phone.' })]
+    }
     return out
   })
   return va
 }
 
+// P907 — after a sale (Submit a policy): the system books the hand-off call (always, even with no replacement:
+// welcome, check the details, explain who to call) in the window the agent picked, or at the exact time they picked
+// with the client. Replacing a policy also books the cancel-the-old-policy call: a day after the hand-off at the
+// earliest, before the old policy's next draft when that fits (P899's gate holds the call until the new one is
+// issued). Returns { handoff: { iso, tz, va }, cancel: { iso, tz, va, beforeDraft } | null }.
+export function bookAfterSale({ who, phone = '', state = 'TX', city = '', carrier = '', agent = 'ag-dana', window: win = null, exact = null, replaces = null }) {
+  const [first, ...rest] = String(who || 'Client').split(' ')
+  const out = { handoff: null, cancel: null }
+  set(s => {
+    const id = `fc-${Date.now()}`
+    const client = mkClient(id, first, rest.join(' ') || '', agent, { client_phone: phone, state, city, carrier_name: carrier, product_name: '', policy_number: '', monthly_premium: 0,
+      stage: 'setting_up', next_step: 'Hand-off call', submitted: 'Nov 5', best_window: exact ? undefined : win })
+    let s2 = { ...s, clients: [...s.clients, client] }
+    const tz = exact?.tz || zoneOf(state, city) || VA_TZ
+    let ho = mkTask(`ho-${Date.now()}`, 'handoff_call', id, { tz, note: `Sold by ${agentName(agent)} today. Welcome ${first}, check the details, explain who to call.${replaces ? ` Replacing ${replaces.carrier}: the cancel call is booked too.` : ''}` })
+    ho = exact?.iso ? { ...ho, iso: exact.iso, va_id: exact.vaId || 'va-maya', status: 'scheduled', window: windowOfMinute(minuteOf(exact.iso, tz)) } : bookTask(s2, ho, { window: win })
+    s2 = { ...s2, tasks: [...s2.tasks, ho] }
+    out.handoff = ho.iso ? { iso: ho.iso, tz, va: VAS.find(v => v.id === ho.va_id), inWindow: ho.inWindow !== false } : null
+    let { others, calls } = s
+    if (replaces) {
+      const before = replaces.draftDay ? nextDraftIso(replaces.draftDay, tz) : null
+      const from = ho.iso ? new Date(Date.parse(ho.iso) + 86400000).toISOString() : NOW_ISO
+      const w = ho.window || win
+      const hit = slotFor(s2, { client, tz, window: w, from, before }) || slotFor(s2, { client, tz, window: w, from })
+      if (hit) {
+        out.cancel = { iso: hit.iso, tz, va: VAS.find(v => v.id === hit.va.id), beforeDraft: !before || hit.iso < before }
+        if (hit.va.id === 'va-maya') { const p = placed(hit.iso, VA_TZ); calls = [...calls, mkCall(`cl-${Date.now()}`, id, p.day, p.time, { iso: hit.iso, tz, old_carrier: replaces.carrier, va_id: hit.va.id })] }
+        else others = [...others, { id: `ot-${Date.now()}`, va_id: hit.va.id, iso: hit.iso }]
+      }
+    }
+    return { clients: s2.clients, tasks: s2.tasks, calls, others, ...feedAdd(s, agentName(agent), `Sold a policy to ${who}. Hand-off call booked`, 'call') }
+  })
+  return out
+}
+// P907: what Submit a policy shows before it's sent: the hand-off call the system would book for this window.
+export function useAfterSalePreview({ state, city, window: win }) {
+  const s = useStore()
+  const tz = zoneOf(state, city)
+  if (!tz) return null
+  const hit = slotFor(s, { client: null, tz, window: win })
+  return hit ? { ...hit, tz, text: bookedText(hit.iso, tz), vaName: VAS.find(v => v.id === hit.va.id)?.name } : null
+}
+
 // P899 — the agent said a policy is no longer on the books (the monthly check) or marked it Lapsed: the client goes
-// to Working on the agent side and the VA gets a save call (lapse_save), due by the end of the next business day.
-// Sample: the client is matched by name among this VA's clients, or added. Server: p899 agent_books_check /
-// agent_mark_lapsed insert the same servicing task.
+// to Working on the agent side and the VA gets a save call (lapse_save). P907: booked by the system, the next open
+// slot in the client's window. Sample: the client is matched by name among this VA's clients, or added. Server: p899
+// agent_books_check / agent_mark_lapsed insert the same servicing task.
 export function agentOpensSaveCall({ who, why, draft = null, state = 'TX', city = '', agent = 'ag-dana' }) {
   const [first, ...rest] = String(who || 'Client').split(' ')
   set(s => {
@@ -526,8 +668,9 @@ export function agentOpensSaveCall({ who, why, draft = null, state = 'TX', city 
     const note = why === 'lapsed'
       ? `${agentName(agent)} marked ${first}’s policy lapsed. Call ${first} and get it back on.`
       : `${agentName(agent)} says ${first}’s policy is no longer on the books${draft ? ` (the ${shortDate(draft)} draft)` : ''}. Call ${first} and save it.`
-    const task = mkTask(`st-${Date.now()}-${id}`, 'lapse_save', id, { due: 'later', due_text: 'Next business day by 5:00 PM', note, fromCheck: why })
-    return { clients: have ? s.clients.map(c => (c.id === id ? { ...c, stage: 'needs_attention', next_step: 'Save call' } : c)) : [...s.clients, client], tasks: [...s.tasks, task], ...feedAdd(s, agentName(agent), why === 'lapsed' ? `Marked ${who} lapsed` : `Said ${who} is no longer on the books`, 'servicing') }
+    const clients = have ? s.clients.map(c => (c.id === id ? { ...c, stage: 'needs_attention', next_step: 'Save call' } : c)) : [...s.clients, client]
+    const task = bookTask({ ...s, clients }, mkTask(`st-${Date.now()}-${id}`, 'lapse_save', id, { note, fromCheck: why }))
+    return { clients, tasks: [...s.tasks, task], ...feedAdd(s, agentName(agent), why === 'lapsed' ? `Marked ${who} lapsed` : `Said ${who} is no longer on the books`, 'servicing') }
   })
 }
 

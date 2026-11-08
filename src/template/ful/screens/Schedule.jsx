@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Phone, MessageSquare, CalendarClock, MapPin, CircleCheck, PhoneMissed, Forward, ArrowRight, Users, Clock, ChevronRight, CalendarOff, Undo2, CalendarCheck } from 'lucide-react'
-import { useFulCalls, useFulActions, useFulSchedule, useFulBooked, useFulShift, useVaBooking, useFulAgents, useFulClock, useFulSource, minutesOf } from '../data'
+import { Phone, MessageSquare, CalendarClock, MapPin, CircleCheck, PhoneMissed, Forward, ArrowRight, Users, ChevronRight, CalendarOff, Undo2, Handshake, FileX2, LifeBuoy, PencilLine, Ban, PhoneIncoming, HeartHandshake, CalendarHeart } from 'lucide-react'
+import { useFulCalls, useFulActions, useFulSchedule, useFulShift, useVaBooking, useFulClock, useFulSource, minutesOf, STATE_WORD } from '../data'
 import { FirstRun } from '../../DataState'
 import { Avatar, Chip, Drawer, Empty, Field, Seg, useNote } from '../../kit'
 import { DayBox, WeekStrip, WeekList } from '../../DayBox'
@@ -9,10 +9,11 @@ import { SlotPick } from '../../SlotPick'
 import { useOpenDay, useStickyDay } from '../../useOpenDay'
 import { useClientZone } from '../../useClientZone'
 import { sampleSlots, hoursLine } from '../../carriers'
-import { vaSlots, freeVa, clockOf, zoneAbbr } from '../../../lib/callSlots'
+import { vaSlots, freeVa, zoneAbbr } from '../../../lib/callSlots'
 import { RecordDrawer, Block } from '../../Record'
 import { CountUp } from '../../motion'
-import { LeadDrawer } from './Queue'
+import { TaskDrawer } from './Servicing'
+import { CALL_TYPES } from '../bookings'
 import { DayOffDrawer } from '../Shift'
 import { useDayOffActions } from '../../../hooks/useVaShiftsShell'
 import { companyDay, dateLabel, rangeText } from '../../../lib/vaShifts'
@@ -24,15 +25,18 @@ import { DocsBlock, GateStep } from '../Docs886'
 import { useGate } from '../../docs886/data'
 
 // P846 — Schedule (it was Calls): the VA's week as the same calendar the agent has, with everything they have to do
-// at a time on it: cancellation calls, booked callbacks (people from the Queue) and the appointments they booked for
-// agents. Colours come from the palette (call status, Callback, Booked for an agent). Any item opens its drawer at
-// its own address (/fulfillment/schedule/<id>): a call keeps everything the Calls page had (client facts, the
-// checklist, result buttons, notes, Move, Pass on); a callback opens the Queue's person drawer; a booking opens its
-// details. Under the calendar, the week's rota (who is on which day) and the Request a day off action. Sample only.
+// at a time on it (P907: booked calls only, see below). Any item opens its drawer at its own address
+// (/fulfillment/schedule/<id>): a cancel-the-old-policy call keeps everything the Calls page had (client facts, the
+// checklist, result buttons, notes, Move, Pass on); every other booking opens its servicing drawer. Under the calendar, the week's rota (who is on which day) and the Request a day off action. Sample only.
 // P854: no Week/Day toggle. The week is full width; click a day (its header, a strip chip, or empty space in its
 // column) and the page switches to that day with its box sliding in from the right (shared with the agent Calendar:
 // ../../DayBox, ?day= in the URL). Blocks sit by their instant on the VA's clock, the client's time beside it when it
 // differs. Move and Pass on obey the 30-minute rule (lib/callSlots): a taken time is greyed out.
+// P907: the VA works in bookings. The Schedule is booked calls only, every one given its time by the system: hand-off
+// calls after a sale, cancelling the old policy, save calls, change requests, cancel requests, callbacks (a missed
+// incoming call or a reply that needs a person), welcome calls and yearly reviews. No queue, no appointments booked for
+// agents. Colour = the kind of call (four families, legend below); done is grey. A cancellation opens its call drawer;
+// every other booking opens its servicing drawer here, with Move.
 
 const START = 8 // the grid runs 8:00 AM to 6:00 PM, the carriers' hours
 const ROWS = 10
@@ -41,7 +45,13 @@ const HOURS = Array.from({ length: ROWS }, (_, i) => START + i)
 const label12 = h => `${((h + 11) % 12) + 1} ${h < 12 ? 'AM' : 'PM'}`
 const SAMPLE_NOW = '1:32 PM' // sample clock: the next call is 28 minutes after it
 const WEEK_LABEL = ['This week', 'Next week']
-const KIND_ICON = { call: Phone, callback: Clock, booked: CalendarCheck }
+const TYPE_ICON = { handoff: Handshake, cancel_old: FileX2, save: LifeBuoy, change: PencilLine, cancel_request: Ban, callback: PhoneIncoming, welcome: HeartHandshake, review: CalendarHeart }
+// The legend: the four colour families and grey for done.
+const FAMILIES = [
+  ['blue', 'Hand-offs and callbacks'], ['teal', 'Cancel old policy and changes'], ['warn', 'Saves and cancel requests'], ['green', 'Welcome calls and yearly reviews'], ['mute', 'Done'],
+]
+const typeWord = e => e.word || CALL_TYPES[e.type]?.label || CALL_WORD[e.status] || 'Call'
+const stateWord = e => (e.state ? STATE_WORD[e.state] : CALL_WORD[e.status]) || ''
 
 // Side-by-side lanes for items that overlap: { ref -> [lane, lanes in its cluster] }.
 function lanesOf(list) {
@@ -90,7 +100,7 @@ export function CallDrawer({ id, onClose }) {
   // P886/P899: the old policy goes once the new one is issued, before the old one's next draft.
   const gate = useGate(k.name)
   return (
-    <RecordDrawer label={`Call with ${k.name}`} kicker={<>Cancellation call · {dayName(k.day)}, {dateText(k.day)} <HelpDot lesson="schedule" inline /></>} tone={tone} onClose={onClose}
+    <RecordDrawer label={`Call with ${k.name}`} kicker={<>Cancel the old policy · {dayName(k.day)}, {dateText(k.day)} <HelpDot lesson="schedule" inline /></>} tone={tone} onClose={onClose}
       hero={<>
         <div className="fx-hero-top"><span className="fx-when"><CalendarClock size={13} aria-hidden="true" />{k.day === TODAY ? 'Today' : `${dayName(k.day)}, ${dateText(k.day)}`} · {k.when}</span><Chip tone={tone}>{CALL_WORD[k.status]}</Chip></div>
         <h2>{k.name}</h2>
@@ -136,7 +146,7 @@ export function CallDrawer({ id, onClose }) {
         footer={<button type="button" className="tp-primary fx-accent" disabled={!mPick} onClick={() => {
           const mine = mPick.va.id === book.me
           moveCall(k.id, mPick.iso, mPick.va.id)
-          note(`Moved to ${dayName(mDay)}, ${dateText(mDay)}, ${mTime} ${zoneAbbr(zone.tz, mPick.iso)}, the client's time${mine ? '' : `. ${mPick.va.name} has it`}`)
+          note(`Moved to ${dayName(mDay)}, ${dateText(mDay)}, ${mTime} ${zoneAbbr(zone.tz, mPick.iso)}, their time. ${first} gets a text with the new time${mine ? '' : `. ${mPick.va.name} has it now`}`)
           setPanel(null)
         }}><CalendarClock size={16} />Move it</button>}>
         <SlotPick days={BOOK_DAYS} day={mDay} onDay={setMDay} slots={slots} value={mTime} onPick={setMTime} zone={zone} place={`${k.client.city}, ${k.client.state}`}
@@ -152,40 +162,6 @@ export function CallDrawer({ id, onClose }) {
   )
 }
 
-// An appointment the VA booked for an agent: it is on the agent's calendar; here are its details.
-function BookedDrawer({ id, onClose }) {
-  const { data: booked } = useFulBooked()
-  const { data: agents } = useFulAgents()
-  const { today: TODAY, dayName, dateText } = useFulClock()
-  const note = useNote()
-  const b = booked.find(x => x.id === id)
-  if (!b) return <RecordDrawer label="Not on your schedule" kicker="Schedule" onClose={onClose} hero={<h2>Already handled</h2>}><p className="fx-calm">This one is not on your schedule any more.</p></RecordDrawer>
-  const first = b.agent.split(' ')[0]
-  const ag = agents.find(a => a.id === b.agent_id)
-  const theirs = ag && b.iso ? `${clockOf(b.iso, ag.tz)} ${zoneAbbr(ag.tz, b.iso)}` : b.time
-  const client = b.iso && b.tz ? `${clockOf(b.iso, b.tz)} ${zoneAbbr(b.tz, b.iso)}` : ''
-  return (
-    <RecordDrawer label={`Appointment for ${b.agent} with ${b.name}`} kicker={`Booked for ${first}`} tone="teal" onClose={onClose}
-      hero={<>
-        <div className="fx-hero-top"><span className="fx-when"><CalendarClock size={13} aria-hidden="true" />{b.day === TODAY ? 'Today' : `${dayName(b.day)}, ${dateText(b.day)}`} · {b.when}</span><Chip tone="teal">Booked for {first}</Chip></div>
-        <h2>{b.name}</h2>
-        <p><MapPin size={13} aria-hidden="true" />{b.city}, {b.state} · {b.type}</p>
-        <div className="fx-hero-bot"><b className="fx-hero-big tp-num">{b.phone}</b><Avatar name={b.name} tone="teal" /></div>
-      </>}
-      actions={<>
-        <Link to={fp('messages')} className="tp-primary fx-accent"><MessageSquare size={15} />Message {first}</Link>
-        <span className="tp-grow" />
-        <button type="button" className="tp-btn ov-ghost" onClick={() => { note(`Asked the team to move ${b.name}'s appointment`); onClose() }}><CalendarClock size={15} />Ask to move</button>
-      </>}>
-      <Block title="Appointment" sub="You booked this">
-        <dl className="fx-facts">{[['Agent', b.agent], ['When', `${dayName(b.day)}, ${dateText(b.day)}, ${b.time} your time`], [`${first}'s time`, theirs], ...(client ? [["Client's time", `${client} (${b.city}, ${b.state})`]] : []), ['About', b.type], ['Phone', b.phone]].map(([a, v]) => <div key={a}><dt>{a}</dt><dd>{v}</dd></div>)}</dl>
-      </Block>
-      <Block title="What happens next">
-        <p className="tp-mid">It is on {first}'s calendar inside their hours. {first} calls {b.name.split(' ')[0]} at that time. If the client asks to change it, the team moves it and tells you.</p>
-      </Block>
-    </RecordDrawer>
-  )
-}
 
 // The week's rota: who is on which day (two or three VAs a day), mine marked, with the day-off requests.
 // P851 Phase 2: the real rota once 231 is applied (live), the sample until then.
@@ -261,14 +237,14 @@ export default function Schedule() {
   const pickWeek = w => { setWeek(w); if (day != null) close() }
   const to = ref => ({ pathname: fp('schedule', ref), search })
   const closeDrawer = () => navigate({ pathname: fp('schedule'), search })
-  // A callback that was handled, or a booking that is gone, still opens its drawer (it says so); the id says which kind.
-  const kind = (items.find(i => i.ref === id) || {}).kind || (id?.startsWith('cl-') ? 'call' : id?.startsWith('vq-') ? 'callback' : id?.startsWith('ap-') ? 'booked' : null)
+  // A booking that was moved to another VA, or handled, still opens its drawer (it says so); the id says which kind.
+  const kind = (items.find(i => i.ref === id) || {}).kind || (id ? (id.startsWith('cl-') ? 'call' : 'task') : null)
   const headKey = d => e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(d) } }
 
   const Ev = ({ e, lane: [k, of] }) => {
     const top = Math.max(0, Math.min(100, ((minutesOf(e.time) - START * 60) / (ROWS * 60)) * 100))
     return (
-      <Link to={to(e.ref)} className={`tp-ev is-${e.tone}`} aria-label={`${e.when}, ${e.name}, ${e.word}`}
+      <Link to={to(e.ref)} className={`tp-ev is-${e.tone}`} aria-label={`${e.when}, ${e.name}, ${typeWord(e)}, ${stateWord(e)}`} title={`${typeWord(e)} · ${e.name}`}
         style={{ top: `${top}%`, height: `calc(${(SLOT / (ROWS * 60)) * 100}% - 2px)`, left: `calc(${(k / of) * 100}% + 3px)`, width: `calc(${100 / of}% - 6px)` }}>
         <b>{e.when}</b><span>{e.name}</span>
       </Link>
@@ -288,9 +264,7 @@ export default function Schedule() {
         <HelpDot lesson="schedule" />
       </div>
       <ul className="fs-legend" aria-label="Colours">
-        {Object.entries(CALL_WORD).map(([s, w]) => <li key={s} className={`is-${CALL_TONE[s]}`}><i aria-hidden="true" />{w}</li>)}
-        <li className="is-warn"><i aria-hidden="true" />Callback</li>
-        <li className="is-teal"><i aria-hidden="true" />Booked for an agent</li>
+        {FAMILIES.map(([tone, w]) => <li key={tone} className={`is-${tone}`}><i aria-hidden="true" />{w}</li>)}
       </ul>
 
       <WeekList days={days} today={TODAY} onOpen={open} name={dayName} num={dayNum} itemsOf={ofDay} line={e => `${e.time} ${e.name}`} />
@@ -321,15 +295,15 @@ export default function Schedule() {
           <DayBox title={`${dayName(view)}, ${dateText(view)}`} sub={list.length ? `${list.length} on your schedule` : 'Nothing scheduled'} leaving={leaving} onClose={close}>
             <b className="tp-num fx-huge2"><CountUp value={list.length} /><small> {list.length === 1 ? 'item' : 'items'}</small></b>
             <ul className="fx-rows">
-              {list.map(e => { const Icon = KIND_ICON[e.kind]; return (
-                <li key={e.ref}><Link to={to(e.ref)} className={`fx-row is-${e.tone}`}><span className="fx-row-ic"><Icon size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{e.name}</b><small>{e.when} · {e.word} · {e.sub}</small></span><ChevronRight size={16} aria-hidden="true" /></Link></li>
+              {list.map(e => { const Icon = TYPE_ICON[e.type] || Phone; return (
+                <li key={e.ref}><Link to={to(e.ref)} className={`fx-row is-${e.tone}`}><span className="fx-row-ic"><Icon size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{e.name}</b><small>{e.when} · {typeWord(e)} · {stateWord(e)}</small></span><ChevronRight size={16} aria-hidden="true" /></Link></li>
               ) })}
             </ul>
             {list.length === 0 && <Empty title="A free day" sub={show === 'all' ? 'Nothing is booked for this day.' : 'Try All.'} />}
             {rest.length > 0 && <>
               <h3 className="fx-h3">Rest of the week</h3>
               <ul className="fx-rows">
-                {rest.map(e => <li key={e.ref}><Link to={to(e.ref)} className={`fx-row is-${e.tone}`}><span className="tp-grow"><b>{e.name}</b><small>{dayName(e.day)} {e.when} · {e.word}</small></span></Link></li>)}
+                {rest.map(e => <li key={e.ref}><Link to={to(e.ref)} className={`fx-row is-${e.tone}`}><span className="tp-grow"><b>{e.name}</b><small>{dayName(e.day)} {e.when} · {typeWord(e)}</small></span></Link></li>)}
               </ul>
             </>}
           </DayBox>
@@ -341,8 +315,8 @@ export default function Schedule() {
       <DayOffDrawer open={ask} onClose={() => setAsk(false)} />
 
       {id && kind === 'call' && <CallDrawer key={id} id={id} onClose={closeDrawer} />}
-      {id && kind === 'callback' && <LeadDrawer key={id} id={id} onClose={closeDrawer} />}
-      {id && kind === 'booked' && <BookedDrawer key={id} id={id} onClose={closeDrawer} />}
+      {id && kind && kind !== 'call' && <TaskDrawer key={id} id={id} onClose={closeDrawer} />}
+
       {id && !kind && <RecordDrawer label="Not on your schedule" kicker="Schedule" onClose={closeDrawer} hero={<h2>Not on your schedule</h2>}><p className="fx-calm">That item is not here any more.</p></RecordDrawer>}
     </div>
   )

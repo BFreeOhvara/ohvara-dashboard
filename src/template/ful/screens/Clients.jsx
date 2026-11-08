@@ -4,7 +4,7 @@ import { Search, Phone, MessageSquare, CalendarClock, MapPin, TriangleAlert, Lif
 import { useFulClients, useFulCalls, useFulTasks, useFulThreads, useFulAgents, useFulActions, useFulClock } from '../data'
 import { Avatar, Chip, Money, SampleTag, Empty, PillTabs, useNote } from '../../kit'
 import { RecordDrawer, Block } from '../../Record'
-import { stageLabel } from '../../stages'
+import { clientStatusOf, clientStatus, requestTag } from '../../../lib/clientCheck.js'
 import { fp } from '../paths'
 import { CALL_WORD, CALL_TONE, KIND, kindTone } from '../words'
 import { VerifyCaller } from '../Clock879'
@@ -12,18 +12,37 @@ import { VerifyCaller } from '../Clock879'
 // P845 — Clients: the agent's Clients grid and drawer, adapted for a VA: every client across the agents this VA
 // serves, each card naming its agent, a filter per agent beside the status filter. The drawer shows the policy, the
 // open calls and servicing steps for that client, and the thread with the agent about them (the client never sees it).
-function ClientCard({ c, i, open }) {
+// P907: the statuses are P899's (Working · Needs attention · Protected · Closed, lib/clientCheck), and every client
+// shows their next booked call: the system books every call, so "next step" is a time, not a to-do.
+
+// The next open booking per client, across the team: a cancel-the-old-policy call or a booked servicing call.
+function useNextBooked() {
+  const { data: calls } = useFulCalls()
+  const { data: tasks } = useFulTasks()
+  const { today, dayName } = useFulClock()
+  return useMemo(() => {
+    const m = {}
+    const put = (cid, iso, text, word, to) => { if (cid && iso && (!m[cid] || iso < m[cid].iso)) m[cid] = { iso, text, word, to } }
+    calls.filter(k => k.status === 'booked' || k.status === 'no_answer').forEach(k => put(k.client_id, k.iso || `${String(k.day).padStart(2, '0')}${k.time}`, `${k.day === today ? 'Today' : dayName(k.day)}, ${k.time}`, 'Cancel the old policy', fp('schedule', k.id)))
+    tasks.filter(t => t.iso && t.status !== 'done').forEach(t => put(t.client_id, t.iso, t.due_text, KIND[t.kind] || 'Call', fp('servicing', t.id)))
+    return m
+  }, [calls, tasks, today, dayName])
+}
+const statusOf = (c, day) => clientStatus(clientStatusOf(c, day))
+function ClientCard({ c, i, open, next, day }) {
   const note = useNote()
-  const [tone, label] = stageLabel[c.stage]
+  const { tone, label } = statusOf(c, day)
+  const req = requestTag(c)
   return (
     <article className={`fx-card fx-ccard is-${tone}`} style={{ '--i': i }}>
       <Link to={fp('clients', c.id)} className="fx-cover" aria-label={`Open ${c.name}`} />
       <div className="fx-ccard-top"><Avatar name={c.name} tone={tone} /><span className="fx-tag">{label}</span></div>
+      {req && <small className="fs-cl-req">{req}</small>}
       <h3>{c.name}</h3>
       <p>{c.carrier_name} · {c.city}, {c.state}</p>
       <div className="fx-ccard-mid">
         <span><small>Agent</small><b>{c.agent}</b></span>
-        <span><small>Next step</small><b>{c.next_step || 'Nothing open'}</b></span>
+        <span><small>Next booked call</small><b>{next ? next.text : 'None booked'}</b>{next && <small className="fs-cl-next">{next.word}</small>}</span>
       </div>
       <div className="fx-ccard-bot">
         <span>{open ? `${open} open for you` : 'Nothing open for you'}</span>
@@ -43,10 +62,12 @@ function ClientDrawer({ id, onClose }) {
   const { sendMessage, showLive } = useFulActions()
   const note = useNote()
   const [msg, setMsg] = useState('')
-  const { dateText } = useFulClock()
+  const { dateText, today, isoOf } = useFulClock()
+  const nextBooked = useNextBooked()
   const c = clients.find(x => x.id === id) || clients[0]
   if (!c) return <RecordDrawer label="Not found" kicker="Clients" onClose={onClose} hero={<h2>Not one of your clients</h2>}><p className="fx-calm">This client isn't on your list.</p></RecordDrawer>
-  const [tone, label] = stageLabel[c.stage]
+  const { tone, label, sub } = statusOf(c, isoOf(today))
+  const next = nextBooked[c.id]
   const myCalls = calls.filter(k => k.client_id === c.id)
   const myTasks = tasks.filter(t => t.client_id === c.id)
   // P876: VAs don't dial a client on their own. A call starts from what they were given: an open call or servicing step.
@@ -58,7 +79,7 @@ function ClientDrawer({ id, onClose }) {
   return (
     <RecordDrawer label={c.name} kicker={`${c.agent}'s client · since ${c.submitted}`} tone={tone} onClose={onClose}
       hero={<>
-        <div className="fx-hero-top"><span className="fx-when"><CalendarClock size={13} aria-hidden="true" />{c.next_step || 'Nothing open'}</span><Chip tone={tone}>{label}</Chip></div>
+        <div className="fx-hero-top"><span className="fx-when" title={sub}><CalendarClock size={13} aria-hidden="true" />{next ? `Next call ${next.text} · ${next.word}` : 'No call booked'}</span><Chip tone={tone}>{label}</Chip></div>
         <h2>{c.name}</h2>
         <p><MapPin size={13} aria-hidden="true" />{c.carrier_name} · {c.city}, {c.state}</p>
         <div className="fx-hero-bot"><span><Money v={c.monthly_premium} size="fx-hero-big" /><small> / month · sample</small></span><Avatar name={c.name} tone={tone} /></div>
@@ -82,8 +103,8 @@ function ClientDrawer({ id, onClose }) {
       </Block>
       <Block title="Your work on this client" aside={<span className="fx-count">{myCalls.length + myTasks.length}</span>}>
         <ul className="tp-list">
-          {myCalls.map(k => <li key={k.id}><Link to={fp('schedule', k.id)} className="fx-mrow"><PhoneCall size={16} aria-hidden="true" /><span className="tp-grow"><b>Cancellation call</b><small>{dateText(k.day)}, {k.time}</small></span><Chip tone={CALL_TONE[k.status]}>{CALL_WORD[k.status]}</Chip></Link></li>)}
-          {myTasks.map(t => <li key={t.id}><Link to={fp('servicing', t.id)} className="fx-mrow"><LifeBuoy size={16} aria-hidden="true" /><span className="tp-grow"><b>{KIND[t.kind]}</b><small>{t.due_text}</small></span><Chip tone={kindTone(t.kind)}>{t.status === 'done' ? 'Done' : 'Open'}</Chip></Link></li>)}
+          {myCalls.map(k => <li key={k.id}><Link to={fp('schedule', k.id)} className="fx-mrow"><PhoneCall size={16} aria-hidden="true" /><span className="tp-grow"><b>Cancel the old policy</b><small>{dateText(k.day)}, {k.time}</small></span><Chip tone={CALL_TONE[k.status]}>{CALL_WORD[k.status]}</Chip></Link></li>)}
+          {myTasks.map(t => <li key={t.id}><Link to={fp('servicing', t.id)} className="fx-mrow"><LifeBuoy size={16} aria-hidden="true" /><span className="tp-grow"><b>{KIND[t.kind]}</b><small>{t.due_text}</small></span><Chip tone={kindTone(t.kind)}>{t.status === 'done' ? 'Done' : t.iso ? 'Booked' : 'Open'}</Chip></Link></li>)}
         </ul>
         {myCalls.length + myTasks.length === 0 && <p className="fx-calm">Nothing for you on this client.</p>}
       </Block>
@@ -104,6 +125,9 @@ export default function Clients() {
   const { data: agents } = useFulAgents()
   const { data: calls } = useFulCalls()
   const { data: tasks } = useFulTasks()
+  const { today, isoOf } = useFulClock()
+  const day = isoOf(today)
+  const nextBooked = useNextBooked()
   const [params, setParams] = useSearchParams()
   const [q, setQ] = useState('')
   const stage = params.get('stage') || 'all'
@@ -116,10 +140,12 @@ export default function Clients() {
     return m
   }, [calls, tasks])
   const inAgent = clients.filter(c => agent === 'all' || c.agent_id === agent)
-  const rows = inAgent.filter(c => (stage === 'all' || c.stage === stage) && `${c.name} ${c.policy_number} ${c.client_phone} ${c.agent}`.toLowerCase().includes(q.trim().toLowerCase()))
-  const count = s => inAgent.filter(c => c.stage === s).length
-  const options = [{ key: 'all', label: 'All', count: inAgent.length }, { key: 'needs_attention', label: 'Needs attention', count: count('needs_attention') }, { key: 'setting_up', label: 'Setting up', count: count('setting_up') }, { key: 'requests', label: 'Requests', count: count('requests') }, { key: 'protected', label: 'Protected', count: count('protected') }]
-  const toneOf = key => (stageLabel[key] ? `is-tone is-${stageLabel[key][0]}` : '')
+  const st = new Map(inAgent.map(c => [c.id, clientStatusOf(c, day)]))
+  const rows = inAgent.filter(c => (stage === 'all' || st.get(c.id) === stage) && `${c.name} ${c.policy_number} ${c.client_phone} ${c.agent}`.toLowerCase().includes(q.trim().toLowerCase()))
+  const count = s => inAgent.filter(c => st.get(c.id) === s).length
+  // P899's order: Working · Needs attention · Protected · Closed.
+  const options = [{ key: 'all', label: 'All', count: inAgent.length }, ...['working', 'needs_attention', 'protected', 'closed'].map(k => ({ key: k, label: clientStatus(k).label, count: count(k) }))]
+  const toneOf = key => (key === 'all' ? '' : `is-tone is-${clientStatus(key).tone}`)
   const back = () => navigate({ pathname: fp('clients'), search: params.toString() ? `?${params}` : '' })
   return (
     <div className="tp-page fx-page fs-clients">
@@ -134,7 +160,7 @@ export default function Clients() {
       </div>
 
       <div className="fx-cgrid" aria-label="Clients">
-        {rows.map((c, i) => <ClientCard key={c.id} c={c} i={i} open={openFor[c.id] || 0} />)}
+        {rows.map((c, i) => <ClientCard key={c.id} c={c} i={i} open={openFor[c.id] || 0} next={nextBooked[c.id]} day={day} />)}
         {rows.length === 0 && <section className="fx-tile"><Empty title="No clients match" sub="Check the spelling, or show every status and agent." /></section>}
       </div>
       <span className="fs-cl-tag is-end"><SampleTag>Sample clients</SampleTag></span>

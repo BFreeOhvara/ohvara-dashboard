@@ -1,23 +1,22 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom'
 import {
-  Home, PhoneIncoming, PhoneCall, Users, LifeBuoy, Wallet, Settings, Search, Bell, Sun, Moon, MessageSquare,
+  Home, PhoneCall, Users, LifeBuoy, Wallet, Settings, Search, Bell, Sun, Moon, MessageSquare,
   ChevronRight, LogOut, Ellipsis, CalendarCheck, Clock3, CircleHelp, Mail, Keyboard, TriangleAlert,
-  ShieldCheck, CalendarPlus, CheckCircle2, Hourglass, CalendarDays, CalendarOff, Plus, Phone, AlarmClock, Headset, NotebookPen, Smartphone,
+  ShieldCheck, CheckCircle2, CalendarDays, CalendarOff, Plus, Phone, AlarmClock, Headset, NotebookPen, Smartphone,
   GraduationCap, Trophy, Bug, ShieldAlert,
 } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
-import { Drawer, Avatar, Field, PillTabs, useAccount, useNote, initials } from '../kit'
+import { Drawer, Avatar, PillTabs, useAccount, useNote, initials } from '../kit'
 import { avatarHue } from '../avatarHue'
 import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit } from '../motion'
 import { armEntrance } from '../../adminshell/entrance'
 import Palette from '../Palette'
-import { Select } from '../Select'
 import { LiveClock } from '../Clock'
 import { OhvaraMark } from '../../components/ui/OhvaraMark'
 import { isSearchKey } from '../../lib/searchKey'
 import { SUPPORT_EMAIL } from '../../components/auth/authUtils'
-import { useFulDay, useFulClients, useFulQueue, useFulFeed, useFulSettings, useFulPay, useFulTasks, useFulActions, useFulAgents, useFulShift, useFulSchedule, useAgentAppts, useVaBooking, useFulLive, useFulClock, useFulSource, useFulStatus } from './data'
+import { useFulDay, useFulClients, useFulFeed, useFulSettings, useFulPay, useFulTasks, useFulActions, useFulAgents, useFulShift, useFulSchedule, useAgentAppts, useVaBooking, useFulLive, useFulClock, useFulSource, useFulStatus } from './data'
 import ViewToggle from '../ViewToggle'
 import { DataLoading, DataError, FirstRun } from '../DataState'
 import { SlotPick } from '../SlotPick'
@@ -47,15 +46,17 @@ import '@fontsource/urbanist/700.css'
 // P845 — the Fulfillment (VA) frame, built from the agent shell (TemplateFrame): glass pill tabs up top, the floating
 // rail of actions, the rolling title with three headline numbers, the photo backdrop, light and dark. Same pieces
 // (kit, motion, Palette, flow.css); VA content. Sample info only (./data), at /template/fulfillment and the real VA URLs.
-const ICONS = { overview: Home, queue: PhoneIncoming, schedule: CalendarDays, clients: Users, servicing: LifeBuoy, pay: Wallet }
+const ICONS = { overview: Home, schedule: CalendarDays, clients: Users, servicing: LifeBuoy, pay: Wallet }
 const PAGES = [...FUL_TABS.map(([k, label]) => ({ to: () => fp(k), label })), { to: () => fp('messages'), label: 'Messages' }, { to: () => fp('settings'), label: 'Settings' }, { to: () => fp('training'), label: 'Training' }]
 const money = usd()
+// P907: a Schedule item still to call (sample rows carry done; a real call row is open while booked).
+const openItem = k => (k.done != null ? !k.done : k.status === 'booked')
 
 function BellDrawer({ open, onClose }) {
   const { data: items } = useFulFeed()
   return (
     <Drawer open={open} onClose={onClose} title="Notifications" sub="What happened lately">
-      {!items.length && <FirstRun icon={Bell} title="Nothing yet" sub="New people in the queue, callbacks coming due, agents' requests and payouts show here." />}
+      {!items.length && <FirstRun icon={Bell} title="Nothing yet" sub="Calls booked for you, agents' requests and payouts show here." />}
       <ul className="tp-list">
         {items.slice(0, 6).map(a => <li key={a.id} className="tp-li"><Avatar name={a.who} /><span className="tp-grow"><b>{a.who}</b><small>{a.text}</small></span><small>{a.at}</small></li>)}
       </ul>
@@ -85,23 +86,22 @@ function LogCall({ open, onClose }) {
   )
 }
 
-// Book for an agent: someone from the queue, the agent, a day and a time. Lands on the agent's calendar (sample only).
+// Book for an agent: the caller on the line (an incoming call whose live transfer didn't connect, P880), the agent, a
+// day and a time. Lands on the agent's calendar (sample only). P907: VAs never see new leads, so this opens only from
+// the phone's transfer card for the person on the call; there is no Queue to pick from.
 // P854: the time is the person's (their zone from state + city, or picked), inside the agent's hours on the agent's
 // clock, and never within the agent's appointment length + buffer of another appointment (lib/callSlots agentSlots).
 const APPT_CLOCKS = clocksBetween(8 * 60, 20 * 60) // the person's 8 AM to 8 PM; the agent's hours filter it
-export function BookForAgent({ open, onClose, leadId = null }) {
-  const { data: queue } = useFulQueue()
+export function BookForAgent({ open, onClose, person = null }) {
   const { data: agents } = useFulAgents()
-  const { bookLead } = useFulActions()
   const book = useVaBooking()
   const note = useNote()
   const clock = useFulClock()
   const BOOK_DAYS = clock.bookDays.slice(0, 4)
-  const [ref, setRef] = useState(leadId || '')
   const [picked, setAgent] = useState(null)
   const [date, setDate] = useState(BOOK_DAYS[0][1])
   const [time, setTime] = useState('')
-  const who = queue.find(l => l.id === (leadId || ref)) || queue[0]
+  const who = person ? { name: person.name, phone: person.number, city: person.city || '', state: person.state || '' } : null
   // P881 (N-C-22, N-A-12): only an agent licensed in the person's state can be booked; the database refuses the rest.
   const where = who?.checklist?.state || who?.state || null
   const agent = picked || (agents.find(a => licensedIn(a, where)) || agents[0])?.id
@@ -113,19 +113,18 @@ export function BookForAgent({ open, onClose, leadId = null }) {
   const pick = licensed ? slots.find(x => x.clock === time && x.open && x.iso >= clock.nowIso) : null
   if (!open) return null
   if (!who || !ag) {
-    return <Drawer open center onClose={onClose} title="Book for an agent" sub={who ? 'No agents yet.' : 'The queue is empty.'}><p className="fx-calm">{who ? 'Agents you serve show here once they join.' : 'No one is waiting to be booked.'}</p></Drawer>
+    return <Drawer open center onClose={onClose} title="Book for an agent" sub={who ? 'No agents yet.' : 'Nobody on the line.'}><p className="fx-calm">{who ? 'Agents you serve show here once they join.' : 'Book a caller with an agent from the call, when the transfer does not connect.'}</p></Drawer>
   }
   const gap = (ag.appt?.length || DEFAULT_APPT_MIN) + (ag.appt?.buffer || 0)
   const save = () => {
     const when = `${clock.dayName(date)}, ${clock.dateText(date)}, ${time} ${zoneAbbr(zone.tz, pick.iso)} (their time)`
-    bookLead(who.id, agent, when, pick.iso, zone.tz)
     note(`${who.name} booked with ${ag.name}, ${when}`)
     onClose()
   }
   return (
     <Drawer open center onClose={onClose} title="Book for an agent" sub={<>It goes on the agent's calendar inside their hours. <HelpDot lesson="booking" inline /></>}
       footer={<><button type="button" className="tp-primary fx-accent" disabled={!pick} onClick={save}><CalendarCheck size={16} />Book it</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
-      {!leadId && <Field label="Who"><Select label="Who" value={who.id} onChange={setRef} options={queue.map(l => ({ value: l.id, label: l.name, sub: `${l.city}, ${l.state}` }))} /></Field>}
+      <p className="tp-mid">{who.name}{who.city ? ` · ${who.city}, ${who.state}` : ''}</p>
       <div className="tp-field"><span>Agent</span>
         <PillTabs role="radiogroup" label="Agent" className="fx-chips" itemClass="fx-chip fs-agent" value={agent} onChange={a => { setAgent(a); setTime('') }}
           items={agents.map(a => ({ key: a.id, label: <><Avatar name={a.name} /><b>{a.name.split(' ')[0]}</b>{!licensedIn(a, where) && <small className="fs-unlic">{where ? `not in ${where}` : 'state?'}</small>}</> }))} />
@@ -249,16 +248,14 @@ function useHeadStats(page) {
   const account = useAccount()
   const { sum: tr } = useTraining(account.name)
   const S = (icon, n, label, extra = {}) => ({ icon, n, label, ...extra })
-  const todayLeft = day.today.filter(k => k.status === 'booked').length
+  const todayLeft = day.today.filter(openItem).length
   const doneToday = day.today.length - todayLeft
-  const cb = day.queue.callback_due.length
-  const inQueue = cb + day.queue.new.length + day.queue.not_reached.length
+  const kinds = new Set(day.today.filter(openItem).map(k => k.type || 'cancel_old')).size
   const weekCancelled = day.week.filter(k => k.status === 'cancelled').length
   const att = clients.filter(c => c.stage === 'needs_attention').length
   return {
-    overview: [S(PhoneCall, day.today.length, 'calls today', { chip: [`${doneToday} done`, 'up'] }), S(PhoneIncoming, inQueue, 'in your queue', { chip: cb ? [`${cb} callbacks due`, 'warn'] : null }), S(Wallet, pay.earned, 'earned this week', { fmt: money })],
-    queue: [S(Clock3, cb, 'callbacks due', { chip: cb ? ['Call first', 'warn'] : null }), S(PhoneIncoming, day.queue.new.length, 'new today'), S(Hourglass, day.queue.not_reached.length, 'not reached yet')],
-    schedule: [S(PhoneCall, todayLeft, 'calls left today', { chip: day.next ? [`next ${day.next.time}`, 'blue'] : null }), S(CalendarCheck, sched.filter(i => weeks[0].includes(i.day)).length, 'on your schedule this week'), S(CheckCircle2, weekCancelled, 'cancelled this week', { chip: ['Confirmed', 'up'] })],
+    overview: [S(PhoneCall, day.today.length, 'booked calls today', { chip: [`${doneToday} done`, 'up'] }), S(Clock3, todayLeft, 'still to call', { chip: day.next ? [`next ${day.next.time}`, 'blue'] : null }), S(Wallet, pay.earned, 'earned this week', { fmt: money })],
+    schedule: [S(PhoneCall, todayLeft, 'calls left today', { chip: day.next ? [`next ${day.next.time}`, 'blue'] : null }), S(CalendarCheck, sched.filter(i => weeks[0].includes(i.day)).length, 'booked this week', { chip: kinds > 1 ? [`${kinds} kinds today`, 'up'] : null }), S(CheckCircle2, weekCancelled, 'old policies cancelled', { chip: ['Confirmed', 'up'] })],
     clients: [S(Users, clients.length, 'clients'), S(ShieldCheck, agents.length, 'agents you serve'), S(TriangleAlert, att, 'need attention', { chip: att ? ['See who', 'warn'] : null })],
     servicing: [S(TriangleAlert, day.tasks.overdue.length, 'overdue', { chip: day.tasks.overdue.length ? ['Do first', 'warn'] : null }), S(LifeBuoy, day.tasks.today.length, 'due today'), S(CheckCircle2, day.tasks.done.length, 'done this week')],
     pay: [S(Wallet, pay.earned, 'earned this week', { fmt: money, chip: [`${money(pay.lastWeek)} last week`, 'blue'] }), S(CheckCircle2, pay.verified, 'verified', { fmt: money }), S(CalendarCheck, pay.rows.length, 'cancellations this week')],
@@ -283,8 +280,8 @@ export default function FulFrame() {
   const { data: { timeZone: fulTz } } = useFulSettings()
   const { data: day } = useFulDay()
   const { data: clients } = useFulClients()
-  const { data: queue } = useFulQueue()
   const { data: tasks } = useFulTasks()
+  const { bookCallback } = useFulActions()
   const live = useFulLive()
   const source = useFulSource()
   const status = useFulStatus()
@@ -293,8 +290,8 @@ export default function FulFrame() {
   const close = useCallback(() => setPanel(null), [])
   const open = which => e => { wig.onClick(e); setPanel(which) }
   const flipTheme = e => { wig.onClick(e); setTheme(theme === 'dark' ? 'light' : 'dark') }
-  const tabCount = { queue: day.queue.callback_due.length, servicing: day.tasks.overdue.length }
-  const left = day.today.filter(k => k.status === 'booked').length
+  const tabCount = { servicing: day.tasks.overdue.length }
+  const left = day.today.filter(openItem).length
   const callNow = () => { if (day.next) navigate(fp('schedule', day.next.id)); else { navigate(fp('schedule')); note('No more calls today') } }
 
   // P876 — the phone is a call screen that slides in over the page from the right (./Phone), with its own open state
@@ -325,7 +322,21 @@ export default function FulFrame() {
   const [startReq, setStartReq] = useState(null)
   const startFor = useCallback(req => { setStartReq(r => ({ req, n: (r?.n || 0) + 1 })); openPhone() }, [openPhone])
   const [bookFor, setBookFor] = useState(null)
-  const onBook = useCallback(leadId => { setBookFor(leadId); setPanel('book') }, [])
+  const onBook = useCallback(person => { setBookFor(person); setPanel('book') }, [])
+  // P907: a missed incoming call becomes a booked callback on the Schedule (the system picks the time), never a queue.
+  const missedN = dock.missed.length
+  const seenMissed = useRef(missedN)
+  useEffect(() => {
+    const was = seenMissed.current
+    seenMissed.current = missedN
+    if (missedN <= was) return
+    const m = dock.missed[0] // newest first (phoneDock)
+    const k = day.today.find(x => (x.ref || x.id) === m?.id)
+    const c = k?.row?.client || k?.client
+    if (!c || !bookCallback) return
+    bookCallback({ name: k.name, phone: c.client_phone, city: c.city, state: c.state, clientId: c.lead ? null : c.id, agentId: c.agent_id, why: 'missed_call', note: 'Called in and nobody picked up in time.' })
+    note(`Missed ${k.name.split(' ')[0]}'s call. A callback is booked on the Schedule`)
+  }, [missedN, dock.missed, day.today, bookCallback, note])
   const phoneLabel = line === 'live' ? `Phone, on a call, ${dock.open ? 'showing' : 'slid away'}` : line === 'ringing' ? 'Phone, a call is coming in' : line === 'after' ? 'Phone, save the result of the call' : badge ? `Phone, ${badge.label}` : 'Phone'
   const phoneIcon = cls => (
     <button type="button" className={`${cls} tp-wig${line ? ` is-${line}` : ''}`} aria-label={phoneLabel} aria-haspopup="dialog" aria-expanded={dock.open}
@@ -354,16 +365,14 @@ export default function FulFrame() {
     { key: 'live', icon: Headset, label: 'Live call', sub: 'The call coming in now', run: liveNow },
     { key: 'log', icon: NotebookPen, label: 'Log a call', sub: 'Save the result on the call', run: () => setPanel('log') },
     'line',
-    { key: 'book', icon: CalendarPlus, label: 'Book for an agent', sub: 'From the queue, inside their hours', run: () => setPanel('book') },
     { key: 'dayoff', icon: CalendarOff, label: 'Request a day off', sub: 'Tell the team ahead of time', run: () => setPanel('dayoff') },
   ]
 
-  // Search: clients across every agent, the people in the queue, servicing steps, and the pages.
+  // Search: clients across every agent, booked calls and servicing steps, and the pages.
   const rows = useMemo(() => ({
     clients: clients.map(c => ({ id: `c-${c.id}`, name: c.name, sub: `${c.agent}'s client · ${c.carrier_name}`, hay: `${c.name} ${c.client_phone} ${c.agent} ${c.policy_number}`, go: () => fp('clients', c.id) })),
-    leads: queue.map(l => ({ id: `l-${l.id}`, name: l.name, sub: `In the queue · ${l.city}, ${l.state}`, hay: `${l.name} ${l.phone} ${l.city}`, go: () => fp('queue', l.id) })),
-    policies: tasks.filter(t => t.due !== 'done').map(t => ({ id: `t-${t.id}`, name: t.name, sub: `Servicing · ${t.due_text}`, hay: `${t.name} ${t.kind.replace(/_/g, ' ')} servicing`, go: () => fp('servicing', t.id) })),
-  }), [clients, queue, tasks])
+    policies: tasks.filter(t => t.due !== 'done').map(t => ({ id: `t-${t.id}`, name: t.name, sub: `${t.iso ? 'Booked' : 'Servicing'} · ${t.due_text}`, hay: `${t.name} ${t.kind.replace(/_/g, ' ')} servicing ${t.client?.client_phone || ''}`, go: () => (t.iso && t.mine !== false ? fp('schedule', t.id) : fp('servicing', t.id)) })),
+  }), [clients, tasks])
 
   const appRef = useRef(null)
   useLayoutEffect(() => {
@@ -475,16 +484,17 @@ export default function FulFrame() {
       </div>
 
       <nav className="tp-bar fx-bar" aria-label="Pages">
-        {['overview', 'queue'].map(k => { const I = ICONS[k]; return <Link key={k} to={fp(k)} className={`fx-btab${active === k ? ' is-on' : ''}`}><I size={20} aria-hidden="true" />{k === 'overview' ? 'Overview' : 'Queue'}</Link> })}
+        {['overview', 'clients'].map(k => { const I = ICONS[k]; return <Link key={k} to={fp(k)} className={`fx-btab${active === k ? ' is-on' : ''}`}><I size={20} aria-hidden="true" />{k === 'overview' ? 'Overview' : 'Clients'}</Link> })}
         <button type="button" className="fx-btab is-plus" aria-label="Calls and more" aria-haspopup="menu" aria-expanded={panel === 'create'} onClick={openCreate}><span className="fx-bplus"><Plus size={24} aria-hidden="true" />{left > 0 && <span className="fx-badge" aria-hidden="true">{left}</span>}</span>Calls</button>
         <Link to={fp('schedule')} className={`fx-btab${active === 'schedule' ? ' is-on' : ''}`}><CalendarDays size={20} aria-hidden="true" />Schedule</Link>
         <button type="button" className="fx-btab" aria-label="More" onClick={open('menu')}><Ellipsis size={20} aria-hidden="true" />More</button>
       </nav>
 
-      {panel === 'search' && <Palette onClose={close} pages={PAGES} rows={rows} placeholder="Search clients, the queue, servicing, pages" />}
+      {panel === 'search' && <Palette onClose={close} pages={PAGES} rows={rows} placeholder="Search clients, booked calls, servicing, pages" />}
       <BellDrawer open={panel === 'bell'} onClose={close} />
       <LogCall open={panel === 'log'} onClose={close} />
-      <BookForAgent open={panel === 'book'} onClose={() => { close(); setBookFor(null) }} leadId={bookFor} key={bookFor || 'any'} />
+      <BookForAgent open={panel === 'book'} onClose={() => { close(); setBookFor(null) }} person={bookFor} key={bookFor?.key || 'any'} />
+
       <Help open={panel === 'help'} onClose={close} onBug={() => setPanel('bug')} />
       <ReportBug open={panel === 'bug'} onClose={close} role="Fulfillment" />
       <DayOffDrawer open={panel === 'dayoff'} onClose={close} />
