@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Search, MapPin, MessageSquare, PhoneIncoming, BookUser, Radio, ShieldOff, ShieldCheck, Send, X, Mail, Smartphone } from 'lucide-react'
-import { useAdmAgents, useAdmLeads, useAdmInvites, useAdmActions, useAdmCosts, PLANS } from '../data'
+import { useAdmAgents, useAdmLeads, useAdmInvites, useAdmActions, useAdmCosts, useAdmSettings, PLANS, chargeFor } from '../data'
 import { Avatar, Chip, Drawer, Empty, Seg, Switch, useNote } from '../../template/kit'
 import { RecordDrawer, Block } from '../../template/Record'
 import { usd } from '../../template/motion'
+import { tierOf, PAID_MIN_DAILY, feeWords } from '../../template/spendPlan'
+import { hourText } from '../../lib/priceBook'
 import { Dropdown, DField, EngineSlot } from '../kit'
 import { ap } from '../paths'
 import { BILL_WORD, STAGE_WORD, stageTone } from '../words'
@@ -15,13 +17,13 @@ import { SplitBlock } from './Split889'
 // and billing. A row opens the agent in a drawer at its own address (/admin/agents/:id) with every admin control the
 // Users page has today (transfers, Servicing, access, role) plus plan, budget and comp. Sample only.
 const money = usd()
-const BUDGETS = [0, 150, 250, 300, 350, 400, 450, 500, 600, 750, 1000].map(n => ({ value: n, label: n ? `${money(n)} a week` : 'No lead budget' }))
+const cents = usd(true)
 const SORTS = [{ value: 'sold', label: 'Most sold' }, { value: 'in', label: 'Most leads' }, { value: 'name', label: 'Name' }, { value: 'spend', label: 'Biggest budget' }]
 
 function Funnel({ w }) {
   return (
-    <ul className="adm-mf" aria-label={`${w.in} in, ${w.booked} booked, ${w.transferred} transferred, ${w.sold} sold`}>
-      {[['In', w.in], ['Booked', w.booked], ['Transf.', w.transferred], ['Sold', w.sold]].map(([k, n]) => <li key={k}><b className="tp-num">{n}</b><small>{k}</small></li>)}
+    <ul className="adm-mf" aria-label={`${w.in} in, ${w.booked} booked, ${w.transferred} live calls, ${w.sold} sold`}>
+      {[['In', w.in], ['Booked', w.booked], ['Live', w.transferred], ['Sold', w.sold]].map(([k, n]) => <li key={k}><b className="tp-num">{n}</b><small>{k}</small></li>)}
     </ul>
   )
 }
@@ -36,10 +38,78 @@ function AgentCosts({ id }) {
   return <dl className="fx-facts">{[['Ad spend', money(c.spend)], ['Per lead', f(c.perLead)], ['Per booked', f(c.perBooked)], ['Per sale', f(c.perSale)]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd className="tp-money">{v}</dd></div>)}</dl>
 }
 
+// P906 — plan and budget, on the final pricing (P909): the plan from the daily spend band, daily spend + 12%, days paid
+// ahead, the card on file and its last charge, Pause, the setup fee, the founding lock and the next charge. An admin can
+// change the daily spend (up to the max, or raise the max for this one agent), pause lead spend, and comp the account.
+// The pilot switch is the Pilot block right under it. Sample until the billing backend is wired.
+function PlanBudget({ a }) {
+  const { data: st } = useAdmSettings()
+  const { setAgentSpend, setAgentPaused, setComped, setMaxDaily } = useAdmActions()
+  const note = useNote()
+  const [draft, setDraft] = useState(String(a.spend))
+  const b = a.billing
+  const base = st.billing.maxDaily
+  const raised = st.billing.maxOverride?.[a.id]
+  const max = raised ?? base
+  const plan = PLANS[a.plan] || PLANS[tierOf(a.spend).key]
+  const ch = chargeFor(a)
+  const want = Number(String(draft).replace(/[^0-9]/g, ''))
+  const bad = !want || want < PAID_MIN_DAILY || want > max
+  const nextBand = tierOf(want || 0)
+  const saveSpend = () => {
+    if (!setAgentSpend) { note('Changing spend here is wired with the billing backend'); return }
+    setAgentSpend(a.id, want)
+    note(`${a.name}: ${money(want)} a day${nextBand.key !== a.plan ? `. ${nextBand.label} from the next monthly bill` : ''}`)
+  }
+  const flipMax = () => {
+    if (!setMaxDaily) { note('Raising the max is wired with the billing backend'); return }
+    if (raised) { setMaxDaily(a.id, null); note(`${a.name}: back to the ${money(base)} max`) } else { setMaxDaily(a.id, 750); note(`${a.name} can spend up to ${money(750)} a day`) }
+  }
+  const last = b.last
+  return (
+    <Block title="Plan and budget" sub={a.real ? undefined : 'Sample'} aside={b.founding ? <Chip tone="teal">Founding to {b.founding.until}</Chip> : null}>
+      <div className="adm-plan-top">
+        <b className="fx-hero-big">{a.comped ? 'Comped' : plan.label}</b>
+        <span className="tp-sub">{a.comped ? 'No plan charge' : `${money(plan.price)} a month · ${plan.sub}`}</span>
+        {a.paused && <Chip tone="warn">Leads paused</Chip>}
+      </div>
+      {ch ? (
+        <div className="adm-plan-charge" aria-label="Tonight's charge">
+          <div><small>Daily spend</small><b className="tp-money">{cents(ch.spend)}</b></div>
+          <div><small>Credit</small><b className="tp-money">{ch.credit ? `−${cents(ch.credit)}` : cents(0)}</b></div>
+          <div><small>+{feeWords}</small><b className="tp-money">{cents(ch.fee)}</b></div>
+          <div className="is-total"><small>Tonight, {hourText(st.billing.chargeHour)}</small><b className="tp-money">{cents(ch.total)}</b></div>
+        </div>
+      ) : <p className="tp-sub">{a.paused ? `Nothing charged while paused${a.paused.until ? ` (to ${a.paused.until})` : ''}.` : 'No lead charge: the account is comped.'}</p>}
+      <dl className="fx-facts">{[
+        ['Paid ahead', b.paidAhead ? `${b.paidAhead} day${b.paidAhead === 1 ? '' : 's'} of leads` : 'None'],
+        ['Card on file', b.card || 'None yet'],
+        ['Last charge', last ? <span className={last.result === 'declined' ? 'adm-declined' : undefined}>{last.result === 'declined' ? `Declined${last.why ? `: ${last.why.toLowerCase()}` : ''}` : 'Approved'} · {last.when}</span> : '–'],
+        ['Next charge', b.next],
+        ['Setup fee', b.setup ? `${money(b.setup.amount)} paid ${b.setup.paid}` : a.comped ? 'Comped' : 'Not paid'],
+        ['Founding lock', b.founding ? `Prices locked to ${b.founding.until}` : 'Not founding'],
+      ].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+      {b.failed && <p className="adm-warn">{b.failed.what} {money(b.failed.amount)} failed {b.failed.when}: {b.failed.why}. Tomorrow's ads don't run until it goes through; it retries at {hourText(st.billing.retryHour)}.</p>}
+      <DField label="Daily lead spend" hint={`${money(PAID_MIN_DAILY)} to ${money(max)} a day${raised ? ' (raised for this agent)' : ''}. The plan follows the band from the next monthly bill.`}>
+        <div className="adm-spend">
+          <input className="tp-money" inputMode="numeric" aria-label="Daily lead spend in dollars" value={draft} onChange={e => setDraft(e.target.value.replace(/[^0-9]/g, ''))} />
+          <button type="button" className="tp-primary fx-accent" disabled={bad || want === a.spend} onClick={saveSpend}>Save</button>
+          <button type="button" className="fx-pillbtn" onClick={flipMax}>{raised ? `Back to the ${money(base)} max` : `Raise the max for ${a.name.split(' ')[0]}`}</button>
+        </div>
+      </DField>
+      {want > max && <p className="adm-warn-t" role="alert">Over the {money(max)} max. Raise the max for this agent first.</p>}
+      {want > 0 && want < PAID_MIN_DAILY && <p className="adm-warn-t" role="alert">The least is {money(PAID_MIN_DAILY)} a day.</p>}
+      <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Pause lead spend</b><p className="tp-sub">{a.paused ? `Paused since ${a.paused.since}${a.paused.until ? `, resumes ${a.paused.until}` : ''}. Nothing is charged; membership and servicing keep going.` : 'Stops tonight’s charge and tomorrow’s ads. Membership and servicing keep going.'}</p></div>
+        <Switch on={!!a.paused} label="Pause lead spend" onChange={v => { if (!setAgentPaused) { note('Pausing here is wired with the billing backend'); return } setAgentPaused(a.id, v); note(v ? `${a.name}: lead spend paused` : `${a.name}: lead spend back on tonight`) }} /></div>
+      <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Comped</b><p className="tp-sub">Comped agents use the portal without a plan charge.</p></div><Switch on={a.comped} label="Comped" onChange={v => { setComped(a.id, v); note(v ? 'Account comped' : 'Comp ended') }} /></div>
+    </Block>
+  )
+}
+
 function AgentDrawer({ id, onClose }) {
   const { data: agents } = useAdmAgents()
   const { data: leads } = useAdmLeads()
-  const { setAgentActive, setAgentSpend, setServicing, setComped, setAccess, setRole } = useAdmActions()
+  const { setAgentActive, setServicing, setAccess, setRole } = useAdmActions()
   const note = useNote()
   const navigate = useNavigate()
   const [ask, setAsk] = useState(null)
@@ -51,9 +121,8 @@ function AgentDrawer({ id, onClose }) {
   return (
     <RecordDrawer label={a.name} kicker={`Agent · joined ${a.joined}`} tone={tone} onClose={onClose}
       hero={<>
-        <div className="fx-hero-top"><span className="fx-when"><Radio size={13} aria-hidden="true" />{a.active ? (a.onDuty ? 'On duty for live transfers' : 'Takes transfers, off duty now') : 'Booking only'}</span><Chip tone={billTone}>{billWord}</Chip>{a.paused && <Chip tone="warn">Leads paused</Chip>}</div>
+        <div className="fx-hero-top"><span className="fx-when"><Radio size={13} aria-hidden="true" />{a.active ? (a.onDuty ? 'On duty for live transfers' : 'Takes transfers, off duty now') : 'Appointments only'}</span><Chip tone={billTone}>{billWord}</Chip>{a.paused && <Chip tone="warn">Leads paused</Chip>}</div>
         <h2>{a.name}</h2>
-        {a.paused && <p className="tp-sub">Paused lead spend {a.paused.since}, {a.paused.until ? `resumes ${a.paused.until}` : 'until they resume'}. Membership and servicing keep going.</p>}
         <p><MapPin size={13} aria-hidden="true" />{a.city}, {a.state} · licensed in {a.states.join(', ')}</p>
         <div className="fx-hero-bot"><b className="fx-hero-big tp-num">{a.phone}</b><Avatar name={a.name} tone={tone} /></div>
       </>}
@@ -66,14 +135,7 @@ function AgentDrawer({ id, onClose }) {
         <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>{a.active ? 'Active for transfers' : 'Booking only'}</b><p className="tp-sub">{a.onDuty ? 'On duty right now' : 'Not on duty right now'}</p></div>
           <Switch on={a.active} label="Active for transfers" onChange={v => { setAgentActive(a.id, v); note(v ? `${a.name} takes live transfers` : `${a.name} is booking only`) }} /></div>
       </Block>
-      <Block title="Plan and budget" sub="Sample">
-        <dl className="fx-facts">{[['Plan', a.planInfo ? `${a.planInfo.label} · ${money(a.planInfo.price)} a month` : 'No plan yet'], ['Next charge', a.billing.next], ['Card', a.billing.method], ['Clients', String(a.clients)]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
-        <DField label="Weekly lead budget" hint="Ads spend up to this each week on this agent's leads.">
-          <Dropdown label="Weekly lead budget" value={a.spend} options={BUDGETS} onChange={v => { setAgentSpend(a.id, v); note(`Budget set to ${money(v)} a week`) }} />
-        </DField>
-        {a.billing.failed && <p className="adm-warn">{a.billing.failed.what} {money(a.billing.failed.amount)} failed {a.billing.failed.when}: {a.billing.failed.why}.</p>}
-        <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Comped</b><p className="tp-sub">Comped agents use the portal without a plan charge.</p></div><Switch on={a.comped} label="Comped" onChange={v => { setComped(a.id, v); note(v ? 'Account comped' : 'Comp ended') }} /></div>
-      </Block>
+      <PlanBudget key={`pb-${a.id}-${a.spend}`} a={a} />
       <PilotBlock key={`p-${a.id}`} agent={a} />
       <SplitBlock key={`s-${a.id}`} agent={a} />
       <CampaignBlock agent={a} />
@@ -140,7 +202,7 @@ export default function Agents() {
           return (
             <div key={a.id} className="adm-tr" style={{ '--i': i }}>
               <Link to={ap('agents', a.id)} className="adm-who"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>{a.city}, {a.state} · {a.paused ? `leads paused${a.paused.until ? ` until ${a.paused.until}` : ''}` : a.access ? `on ${a.lastOn}` : 'access off'}</small></span></Link>
-              <span className="adm-cell"><b>{PLANS[a.plan].label}</b><small>{money(a.spend)} a week on leads</small></span>
+              <span className="adm-cell"><b>{a.comped ? 'Comped' : PLANS[a.plan].label}</b><small>{money(a.spend)} a day + {feeWords}{a.paused ? ' · paused' : ''}</small></span>
               <span className="adm-cell adm-sw"><Switch on={a.active} label={`${a.name} takes live transfers`} onChange={v => { setAgentActive(a.id, v); note(v ? `${a.name} takes live transfers` : `${a.name} is booking only`) }} /><small>{a.active ? (a.onDuty ? 'On duty' : 'Off duty') : 'Booking only'}</small></span>
               <span className="adm-cell"><Funnel w={a.week} /></span>
               <span className="adm-cell"><Chip tone={tone}>{word}</Chip><small>{a.billing.next}</small></span>

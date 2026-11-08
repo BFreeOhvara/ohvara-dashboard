@@ -1,72 +1,66 @@
-// P866 — Setup: everything it takes to get a new client (an agent who signed with us) from "invited" to "their leads
-// are flowing". No React, so tests read it under node --test. Sample until P858 wires the real reads.
+// P906 — Setup = one ticket per agent who has PAID (the $299 setup fee plus their first days of lead spend). Agents
+// sign up and pay themselves, so there are no invites and nobody is added by hand here. Each ticket is a short
+// checklist: states and spend checked → Meta campaign created from the template with their agent ID (a request sent
+// through the GoHighLevel engine slot; its status comes back to the ticket) → campaign on → first test lead received
+// → done. No React, so tests read it under node --test. Sample until the backend wires agent_setup_ticks.
 
-// Who does a step. Agent = in their portal; Jordan = in GoHighLevel; Ohvara = us.
+// Who does a step. Ohvara = an admin on the ticket; Engine = GoHighLevel (carries the Engine-slot pill).
 export const OWNERS = {
-  agent: { label: 'Agent', tone: 'blue', where: 'In the portal' },
-  jordan: { label: 'Jordan', tone: 'teal', where: 'In GoHighLevel' },
-  ohvara: { label: 'Ohvara', tone: 'mute', where: 'Us' },
+  ohvara: { label: 'Admin', tone: 'blue', where: 'On this ticket' },
+  engine: { label: 'GoHighLevel', tone: 'teal', where: 'Through the engine' },
 }
 
-// Every step, in order. `wait` is how a card says it is the blocker. `liveOnly` steps count only on a live-calls plan.
-// `ghl` steps are done in GoHighLevel (they carry the Engine-slot pill).
+// The checklist, in order. `wait` is how a ticket says it is the blocker.
 export const SETUP_STEPS = [
-  { key: 'invite', who: 'agent', label: 'Invite accepted', wait: "Hasn't accepted the invite" },
-  { key: 'profile', who: 'agent', label: 'Profile: states, carriers and NPN', wait: 'Profile not finished' },
-  { key: 'plan', who: 'agent', label: 'Plan built', wait: 'Plan not built yet' },
-  { key: 'paid', who: 'agent', label: 'Setup fee and first week paid', wait: 'Setup fee and first week not paid' },
-  { key: 'calendar', who: 'agent', label: 'Calendar hours and time zone', wait: 'Calendar hours not set' },
-  { key: 'callerId', who: 'agent', label: 'Caller ID confirmed', wait: 'Caller ID not confirmed' },
-  { key: 'alerts', who: 'agent', label: 'Text alerts opted in', wait: 'Text alerts not opted in' },
-  { key: 'transfers', who: 'agent', label: 'Live transfers set', wait: 'Live transfers not set', liveOnly: true },
-  { key: 'campaign', who: 'jordan', label: 'Meta campaign created', wait: 'Meta campaign not created', ghl: true },
-  { key: 'budget', who: 'jordan', label: 'Campaign budget = the weekly ad amount', wait: 'Campaign budget not set', ghl: true },
-  { key: 'mapped', who: 'jordan', label: 'Campaign mapped to the agent', wait: 'Campaign not mapped to the agent', ghl: true },
-  { key: 'link', who: 'jordan', label: 'Landing link carries the agent ID', wait: 'Landing link has no agent ID', ghl: true },
-  { key: 'tracking', who: 'jordan', label: 'Tracking number forwards to the VA desk', wait: 'No tracking number yet', ghl: true, liveOnly: true },
-  { key: 'workflows', who: 'jordan', label: 'Workflows on for this agent', wait: 'Workflows not on yet', ghl: true },
-  { key: 'briefed', who: 'ohvara', label: 'VA desk briefed', wait: 'VA desk not briefed' },
-  { key: 'test', who: 'ohvara', label: 'First test lead run and passed', wait: 'Test lead not run yet' },
-  { key: 'live', who: 'ohvara', label: 'Marked Live', wait: 'Not marked live yet' },
+  { key: 'states', who: 'ohvara', label: 'States and spend checked', wait: 'Check their states and daily spend' },
+  { key: 'campaign', who: 'engine', label: 'Meta campaign created from the template', wait: 'Create their campaign', ghl: true },
+  { key: 'on', who: 'engine', label: 'Campaign on', wait: 'Turn their campaign on', ghl: true },
+  { key: 'test', who: 'ohvara', label: 'First test lead received', wait: 'Waiting for the first test lead' },
+  { key: 'live', who: 'ohvara', label: 'Done', wait: 'Mark the ticket done' },
 ]
 
-// The pipeline's columns, left to right.
+// The ticket board's columns, left to right.
 export const SETUP_STAGES = [
-  { key: 'invited', label: 'Invited', tone: 'mute', empty: 'No invites out.' },
-  { key: 'profile', label: 'Profile', tone: 'blue', empty: 'Nobody on their profile.' },
-  { key: 'plan', label: 'Plan & paid', tone: 'blue', empty: 'Nobody building a plan.' },
-  { key: 'calendar', label: 'Calendar & caller ID', tone: 'blue', empty: 'Nobody on this step.' },
-  { key: 'ready', label: 'Ready to launch', tone: 'teal', empty: 'Nobody waiting on launch.' },
-  { key: 'launching', label: 'Launching (Jordan)', tone: 'teal', empty: 'Nothing launching.' },
-  { key: 'live', label: 'Live this week', tone: 'green', empty: 'Nobody went live this week.' },
+  { key: 'new', label: 'New ticket', tone: 'blue', empty: 'No new paid agents.' },
+  { key: 'campaign', label: 'Campaign', tone: 'teal', empty: 'No campaign being made.' },
+  { key: 'test', label: 'Test lead', tone: 'violet', empty: 'Nobody waiting on a test lead.' },
+  { key: 'live', label: 'Done this week', tone: 'green', empty: 'No tickets done this week.' },
 ]
+
+// The "Create campaign" request: none → sent (waiting on GoHighLevel) → created, or failed (with why).
+export const CAMPAIGN_REQ = {
+  none: ['mute', 'Not sent'], sent: ['blue', 'Sent · waiting on GoHighLevel'], created: ['green', 'Created'], failed: ['warn', 'Failed'],
+}
 
 const has = (c, key) => (c.done || []).includes(key)
 
-// The steps that count for this client: the live-calls steps only when their plan takes live calls.
-export const stepsFor = c => SETUP_STEPS.filter(s => !s.liveOnly || c.lead === 'live')
+// A ticket exists only once the agent has paid the setup fee and their first days of spend.
+export const isPaid = c => has(c, 'paid')
 
-// Where a client stands: each step ticked or open, the % done, the column, the blocker and who owns the next step.
+// Every step counts for every ticket (live calls need nothing extra here: the agent sets them in their own portal).
+export const stepsFor = () => SETUP_STEPS
+
+// Where a ticket stands: each step ticked or open, the % done, the column, the blocker and who owns the next step.
 export function setupOf(c) {
   const steps = stepsFor(c).map(s => ({ ...s, done: has(c, s.key) }))
   const count = steps.filter(s => s.done).length
   const pct = Math.round((count / steps.length) * 100)
   const open = steps.filter(s => !s.done)
-  const agentOpen = open.filter(s => s.who === 'agent')
-  const jordanDone = steps.some(s => s.who === 'jordan' && s.done)
   let stage
-  if (!has(c, 'invite')) stage = 'invited'
-  else if (!has(c, 'profile')) stage = 'profile'
-  else if (!has(c, 'plan') || !has(c, 'paid')) stage = 'plan'
-  else if (agentOpen.length) stage = 'calendar'
-  else if (!jordanDone) stage = 'ready'
-  else if (!has(c, 'live')) stage = 'launching'
+  if (!has(c, 'states')) stage = 'new'
+  else if (!has(c, 'campaign') || !has(c, 'on')) stage = 'campaign'
+  else if (!has(c, 'live')) stage = 'test'
   else stage = 'live'
   const next = open[0] || null
+  const req = c.campaignReq?.status || (has(c, 'campaign') ? 'created' : 'none')
+  let blocker = next ? next.wait : null
+  if (next?.key === 'campaign' && req === 'sent') blocker = 'Campaign requested · waiting on GoHighLevel'
+  if (next?.key === 'campaign' && req === 'failed') blocker = `Campaign request failed${c.campaignReq?.why ? `: ${c.campaignReq.why}` : ''}`
   return {
-    steps, count, total: steps.length, pct, stage, next,
+    steps, count, total: steps.length, pct, stage, next, req,
     owner: next ? next.who : null,
-    blocker: next ? (c.note && c.noteOn === next.key ? c.note : next.wait) : null,
+    blocker,
+    warn: req === 'failed',
     canLive: open.length === 1 && open[0].key === 'live',
   }
 }

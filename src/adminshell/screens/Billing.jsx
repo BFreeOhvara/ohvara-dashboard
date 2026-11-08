@@ -186,7 +186,7 @@ function AgentBills() {
             <div key={a.id} className="adm-tr" style={{ '--i': i }}>
               <Link to={ap('agents', a.id)} className="adm-who"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>{a.billing.method}</small></span></Link>
               <span className="adm-cell"><b>{PLANS[a.plan].label}</b><small>{money(PLANS[a.plan].price)} a month</small></span>
-              <span className="adm-cell"><b className="tp-money">{money(Math.round(a.spend / 7))} a day</b>
+              <span className="adm-cell"><b className="tp-money">{money(a.spend)} a day</b>
                 <small>Max {money(max(a.id))}{st.billing.maxOverride[a.id] ? ' (raised)' : ''}{' '}
                   <button type="button" className="fx-pillbtn" onClick={() => {
                     if (st.billing.maxOverride[a.id]) { setMaxDaily(a.id, null); note(`${a.name}: back to ${money(st.billing.maxDaily)} a day`) }

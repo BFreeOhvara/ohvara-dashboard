@@ -1,20 +1,31 @@
 // P849 — the Admin side's shared words and colours (no React, so component files only export components).
 // Tones are flow.css .is-<tone>: blue = sky, teal = butter, green = sage, warn = apricot, mute = stone.
 
-// Lead stages, left to right on the Leads board. "Needs routing" holds leads with no agent and missed transfers.
+// P906 — the admin lead statuses, left to right on the Leads board: Booked · No show · Follow up · Sold · Not
+// interested · No answer (How Ohvara Works, "AI never hands a new lead to a VA"). A live call isn't a status: as on
+// the agent side, it waits on Booked tagged "Live call · Mark result" until the agent picks how it went. A missed
+// transfer bounces back and is booked, so it lands on Booked too. Leads with no agent aren't a status either: they sit
+// in the Unassigned list above the board (stage 'unassigned', no agent_id) until an admin assigns them.
 export const LEAD_LANES = [
-  { key: 'route', label: 'Needs routing', tone: 'warn', stages: ['unassigned', 'missed'], empty: 'Every lead has an agent.' },
   { key: 'booked', label: 'Booked', tone: 'blue', stages: ['booked'], empty: 'No appointments booked.' },
-  { key: 'transferred', label: 'Transferred', tone: 'teal', stages: ['transferred'], empty: 'No live transfers yet.' },
+  { key: 'no_show', label: 'No show', tone: 'warn', stages: ['no_show'], empty: 'No missed appointments.' },
+  { key: 'follow_up', label: 'Follow up', tone: 'teal', stages: ['follow_up'], empty: 'No follow-ups set.' },
   { key: 'sold', label: 'Sold', tone: 'green', stages: ['sold'], empty: 'No sales yet this week.' },
-  { key: 'not_sold', label: 'Not sold', tone: 'mute', stages: ['not_sold'], empty: 'Nothing closed out.' },
+  { key: 'not_interested', label: 'Not interested', tone: 'mute', stages: ['not_interested'], empty: 'No one said no.' },
+  { key: 'no_answer', label: 'No answer', tone: 'violet', stages: ['no_answer'], empty: 'Everyone was reached.' },
 ]
-export const STAGE_WORD = { unassigned: 'No agent yet', missed: 'Missed transfer', booked: 'Booked', transferred: 'Transferred', sold: 'Sold', not_sold: 'Not sold' }
-export const stageTone = stage => LEAD_LANES.find(l => l.stages.includes(stage))?.tone || 'blue'
-export const KIND_WORD = { appointment: 'Appointment', live: 'Live call' }
+export const LEAD_STAGES = LEAD_LANES.map(l => l.key)
+export const STAGE_WORD = { unassigned: 'No agent yet', booked: 'Booked', no_show: 'No show', follow_up: 'Follow up', sold: 'Sold', not_interested: 'Not interested', no_answer: 'No answer' }
+export const stageTone = stage => LEAD_LANES.find(l => l.stages.includes(stage))?.tone || 'warn'
+// No agent yet: the Unassigned list, never a lane.
+export const isUnassigned = l => !l.agent_id
+// A live call the agent took, still waiting for its result (on Booked, tagged).
+export const awaitsResult = l => l.kind === 'live' && l.stage === 'booked'
+export const KIND_WORD = { appointment: 'Appointment', live: 'Live call', none: 'Not reached' }
 
-// Client servicing stages (the agent side's src/template/stages.js stageLabel words and colours).
-export const CLIENT_STAGE = { protected: ['green', 'Protected'], setting_up: ['blue', 'Setting up'], needs_attention: ['warn', 'Needs attention'], requests: ['teal', 'Request open'] }
+// P906 — client statuses (P899): Working · Needs attention · Protected · Closed. A request is a tag, not a status.
+export const CLIENT_STAGE = { working: ['blue', 'Working'], needs_attention: ['warn', 'Needs attention'], protected: ['green', 'Protected'], closed: ['mute', 'Closed'] }
+export const CLIENT_ORDER = ['needs_attention', 'working', 'protected']
 
 // The desk: a cancellation call's status.
 export const CALL_WORD = { cancelled: 'Cancelled', no_answer: 'No answer', live: 'On a call', booked: 'To call', late: 'Past its time' }

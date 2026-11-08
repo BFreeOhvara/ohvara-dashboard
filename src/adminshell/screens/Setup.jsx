@@ -1,27 +1,37 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
-  Unplug, ArrowRight, UserPlus, Send, Rocket, BadgeCheck, Check, CircleDashed, MapPin, Megaphone, MessageSquareText, ShieldCheck,
-  PhoneForwarded, Globe, Link2, Copy, Workflow, Plug, History, Hourglass,
+  Unplug, ArrowRight, Send, BadgeCheck, Check, CircleDashed, MapPin, Megaphone, MessageSquareText, ShieldCheck,
+  PhoneForwarded, Globe, Link2, Copy, Workflow, Plug, History, Hourglass, ExternalLink, CreditCard, RotateCw,
 } from 'lucide-react'
-import { useAdmSetup, useAdmActions, useAdmConnect, useAdmAgents, useAdmSource, PLANS, PLAYBOOK, TRACKING } from '../data'
+import { useAdmSetup, useAdmActions, useAdmConnect, useAdmAgents, useAdmSource, PLANS, PLAYBOOK, TRACKING, paidFor } from '../data'
 import { Chip, Empty, SampleTag, Switch, useNote } from '../../template/kit'
 import { RecordDrawer, Block } from '../../template/Record'
 import { usd } from '../../template/motion'
 import { Tile, EngineSlot, Dropdown } from '../kit'
-import { AddSomeone } from '../AdminFrame'
 import { engineState } from '../engine'
 import { useGhlRow } from '../useGhlRow'
 import { ap } from '../paths'
 import { CAMPAIGN_WORD } from '../words'
-import { OWNERS, SETUP_STAGES, readiness } from '../setup'
+import { OWNERS, SETUP_STAGES, CAMPAIGN_REQ, readiness } from '../setup'
 
-// P866 — Setup (a top tab): everything it takes to get a new client live, from "an agent signs with us" to "their
-// leads are flowing". Top: is the system ready (GoHighLevel and what it runs)? Main: every agent not live yet, in
-// columns by stage, with the blocker and who owns the next step. A card opens the full checklist. Sample until P858.
+// P866 — Setup (a top tab). P906: Setup = one ticket per agent who has PAID (setup fee + first days of lead spend).
+// No adding agents or clients by hand: agents sign up and pay themselves, and appear here once they've paid. Each
+// ticket is a short checklist: states and spend checked → Meta campaign created from the template with their agent
+// ID ("Create campaign" sends the request through the GoHighLevel engine slot; its status comes back to the ticket) →
+// campaign on → first test lead received → done. Meta Ads Manager and GoHighLevel refuse to be shown inside other
+// sites, so anything done there opens in a new tab from a button on the ticket. Below: is the system ready?
 const money = usd()
+const cents = usd(true)
 const ICON = { ghl: Plug, a2p: MessageSquareText, workflows: Workflow, account: Megaphone, tracking: PhoneForwarded, form: Globe }
-const planLine = c => [c.states.length ? c.states.join(', ') : 'States not set yet', c.plan ? PLANS[c.plan].label : 'No plan yet'].join(' · ')
+const LEAD_WORD = { live: 'Appointments + live transfers', appointment: 'Appointments only' }
+const planLine = c => [c.states.length ? c.states.join(', ') : 'States not set', c.plan ? PLANS[c.plan].label : 'No plan', c.spend ? `${money(c.spend)} a day` : null].filter(Boolean).join(' · ')
+// Opened in a new tab: both refuse to be framed inside another site.
+const EXTERNAL = [
+  { key: 'meta', label: 'Open Meta Ads Manager', href: 'https://adsmanager.facebook.com/adsmanager/manage/campaigns' },
+  { key: 'ghl', label: 'Open GoHighLevel', href: 'https://app.gohighlevel.com/' },
+]
+const copyText = (text, note, what) => { try { navigator.clipboard?.writeText(text) } catch { /* no clipboard: the toast still says it */ } note(`${what} copied`) }
 
 // A. Is the system ready? One line per piece GoHighLevel runs. Until it is connected: the Go to Connect state.
 function Readiness({ row, peek, setPeek }) {
@@ -63,68 +73,96 @@ function Readiness({ row, peek, setPeek }) {
   )
 }
 
-// B. One client on the pipeline.
+// B. One ticket on the board.
 function SetupCard({ c, i }) {
   const stage = SETUP_STAGES.find(s => s.key === c.stage)
   const owner = c.owner && OWNERS[c.owner]
   return (
     <article className={`fx-card adm-scard is-${stage.tone}`} style={{ '--i': i }}>
-      <Link to={ap('setup', c.id)} className="fx-cover" aria-label={`Open ${c.name}'s setup`} />
+      <Link to={ap('setup', c.id)} className="fx-cover" aria-label={`Open ${c.name}'s ticket`} />
       <h3>{c.name}</h3>
       <p>{planLine(c)}</p>
       <div className="adm-scard-bar"><span className="fx-meter" aria-hidden="true"><i style={{ '--w': c.pct / 100 }} /></span><b className="adm-scard-pct tp-num" aria-label={`${c.pct}% done`}>{c.pct}%</b></div>
-      <small className={`adm-scard-wait${c.note && c.noteOn === c.next?.key ? ' is-warn' : ''}`}>{c.blocker ? <><Hourglass size={12} aria-hidden="true" />{c.blocker}</> : <><Check size={12} aria-hidden="true" />Every step done</>}</small>
-      <footer className="adm-scard-f">{owner ? <>Next<Chip tone={owner.tone}>{owner.label}</Chip></> : <><BadgeCheck size={13} aria-hidden="true" />Live {c.liveOn}</>}</footer>
+      <small className={`adm-scard-wait${c.warn ? ' is-warn' : ''}`}>{c.blocker ? <><Hourglass size={12} aria-hidden="true" />{c.blocker}</> : <><Check size={12} aria-hidden="true" />Every step done</>}</small>
+      <footer className="adm-scard-f">{owner ? <>Next<Chip tone={owner.tone}>{owner.label}</Chip></> : <><BadgeCheck size={13} aria-hidden="true" />Done {c.liveOn}</>}</footer>
     </article>
   )
 }
 
-// C. The checklist drawer: every step, ticked or open, with who does it.
+// The "Create campaign" step: send the request through the engine slot; its answer comes back here.
+function CampaignRequest({ c, row }) {
+  const { requestCampaign } = useAdmActions()
+  const note = useNote()
+  const [tone, word] = CAMPAIGN_REQ[c.req]
+  const send = () => {
+    if (!requestCampaign) { note('Create campaign goes through GoHighLevel once it is connected'); return }
+    requestCampaign(c.id)
+    note(`Create campaign sent for ${c.name} (sample: GoHighLevel answers in a moment, nothing is sent)`)
+  }
+  return (
+    <div className="adm-req">
+      <Megaphone size={16} aria-hidden="true" />
+      <span className="tp-grow"><b>{c.campaignReq?.name || `Deedstone · ${c.name} · ${c.agentRef}`}</b>
+        <small>{c.req === 'none' ? 'From the template, with their agent ID in the ad link' : `${word}${c.campaignReq?.at ? ` · ${c.campaignReq.at}` : ''}`}</small></span>
+      <Chip tone={tone}>{word}</Chip>
+      {['none', 'failed'].includes(c.req) && <button type="button" className="tp-primary fx-accent" onClick={send}>{c.req === 'failed' ? <RotateCw size={15} /> : <Send size={15} />}{c.req === 'failed' ? 'Try again' : 'Create campaign'}</button>}
+      <EngineSlot settings={row} />
+    </div>
+  )
+}
+
+// C. The ticket: who paid, the checklist, the tools that open in a new tab, and the history.
 function SetupDrawer({ id, onClose, row }) {
   const { data: list } = useAdmSetup()
-  const { tickSetup, markLaunched, markLive, resendInvite, resendSetupInvite } = useAdmActions()
+  const { tickSetup, markLive } = useAdmActions()
   const note = useNote()
   const c = list.find(x => x.id === id)
-  if (!c) return <RecordDrawer label="Not found" kicker="Setup" onClose={onClose} hero={<h2>No client here</h2>}><p className="fx-calm">This client is not in setup any more.</p></RecordDrawer>
+  if (!c) return <RecordDrawer label="Not found" kicker="Setup" onClose={onClose} hero={<h2>No ticket here</h2>}><p className="fx-calm">There's no Setup ticket for this agent. Agents show here once they've paid.</p></RecordDrawer>
   const stage = SETUP_STAGES.find(s => s.key === c.stage)
-  const invited = !!c.invite
-  const jordanOpen = c.steps.some(s => s.who === 'jordan' && !s.done)
-  const resend = () => { (invited ? resendInvite : resendSetupInvite)(c.id); note(`Invite sent again to ${c.name} (sample: nothing was sent)`) }
-  const groups = ['agent', 'jordan', 'ohvara'].map(who => ({ who, steps: c.steps.filter(s => s.who === who) }))
+  const paid = paidFor(c)
+  const tick = (s, v) => { tickSetup(c.id, s.key, v); note(`${v ? 'Ticked' : 'Unticked'} ${s.label.toLowerCase()}`) }
   return (
-    <RecordDrawer label={c.name} kicker={`Setup · started ${c.since}`} tone={stage.tone} onClose={onClose}
+    <RecordDrawer label={c.name} kicker={`Setup ticket · paid ${paid?.on || c.since}`} tone={stage.tone} onClose={onClose}
       hero={<>
-        <div className="fx-hero-top"><span className="fx-when"><Rocket size={13} aria-hidden="true" />{stage.label}</span><Chip tone={c.owner ? OWNERS[c.owner].tone : 'green'}>{c.owner ? `Next: ${OWNERS[c.owner].label}` : 'Live'}</Chip></div>
+        <div className="fx-hero-top"><span className="fx-when"><BadgeCheck size={13} aria-hidden="true" />{stage.label}</span><Chip tone={c.owner ? OWNERS[c.owner].tone : 'green'}>{c.owner ? `Next: ${OWNERS[c.owner].label}` : 'Done'}</Chip></div>
         <h2>{c.name}</h2>
-        <p><MapPin size={13} aria-hidden="true" />{c.city ? `${c.city}, ${c.state} · ` : ''}{planLine(c)}{c.spend ? ` · ${money(c.spend)} a week on leads` : ''}</p>
+        <p><MapPin size={13} aria-hidden="true" />{c.city ? `${c.city}, ${c.state} · ` : ''}{planLine(c)} · {LEAD_WORD[c.lead] || LEAD_WORD.appointment}</p>
         <div className="fx-hero-bot"><b className="fx-hero-big tp-num">{c.count} of {c.total} steps</b><span className="adm-pctbig tp-num">{c.pct}%</span></div>
       </>}
       actions={<>
-        <button type="button" className="tp-btn ov-ghost" disabled={!invited && c.done.includes('invite')} title={!invited ? 'They already accepted' : undefined} onClick={resend}><Send size={15} />Send invite again</button>
-        <button type="button" className="tp-btn ov-ghost" disabled={invited || !jordanOpen || c.stage === 'live'} onClick={() => { markLaunched(c.id); note(`${c.name} marked launched (sample)`) }}><Rocket size={15} />Mark launched (Jordan)</button>
-        <button type="button" className="tp-primary fx-accent" disabled={!c.canLive} title={c.canLive ? undefined : 'Every other step first'} onClick={() => { markLive(c.id); note(`${c.name} is live`) }}><BadgeCheck size={16} />Mark live</button>
+        {c.next?.key === 'campaign' && c.req === 'none' && <CampaignButton c={c} />}
+        <button type="button" className="tp-primary fx-accent" disabled={!c.canLive} title={c.canLive ? undefined : 'Every other step first'} onClick={() => { markLive(c.id); note(`${c.name}'s ticket is done`) }}><BadgeCheck size={16} />Mark done</button>
       </>}>
-      {c.blocker && <p className={`adm-blocker${c.note && c.noteOn === c.next?.key ? ' is-warn' : ''}`}><Hourglass size={14} aria-hidden="true" /><span className="tp-grow">{c.blocker}</span><Chip tone={OWNERS[c.owner].tone}>{OWNERS[c.owner].label}</Chip></p>}
-      {groups.map(g => (
-        <Block key={g.who} title={`${OWNERS[g.who].label} · ${OWNERS[g.who].where}`} sub={`${g.steps.filter(s => s.done).length} of ${g.steps.length} done`} aside={g.who === 'jordan' ? <EngineSlot settings={row} /> : null}>
-          <ul className="adm-steps">{g.steps.map(s => {
-            const canTick = !invited && g.who !== 'agent' && s.key !== 'live'
-            return (
-              <li key={s.key} className={s.done ? 'is-done' : ''}>
-                {s.done ? <Check size={15} aria-hidden="true" /> : <CircleDashed size={15} aria-hidden="true" />}
-                <span className="tp-grow">{s.label}{!s.done && c.next?.key === s.key && <small>Next step</small>}</span>
-                {canTick && <Switch on={s.done} label={s.label} onChange={v => { tickSetup(c.id, s.key, v); note(`${v ? 'Ticked' : 'Unticked'} ${s.label.toLowerCase()}`) }} />}
-              </li>
-            )
-          })}</ul>
-          {g.who === 'agent' && <small className="adm-note">The agent ticks these in their own portal.</small>}
-        </Block>
-      ))}
+      {c.blocker && <p className={`adm-blocker${c.warn ? ' is-warn' : ''}`}><Hourglass size={14} aria-hidden="true" /><span className="tp-grow">{c.blocker}</span><Chip tone={OWNERS[c.owner].tone}>{OWNERS[c.owner].label}</Chip></p>}
+      {paid && <p className="adm-ticket-paid"><CreditCard size={14} aria-hidden="true" />Paid {money(paid.setup)} setup + {cents(paid.leads)} for {paid.days} days of leads ({cents(paid.total)}) · {paid.on}</p>}
+      <Block title="Checklist" sub={`${c.steps.filter(s => s.done).length} of ${c.steps.length} done`}>
+        <ul className="adm-steps">{c.steps.map(s => (
+          <li key={s.key} className={s.done ? 'is-done' : ''}>
+            {s.done ? <Check size={15} aria-hidden="true" /> : <CircleDashed size={15} aria-hidden="true" />}
+            <span className="tp-grow">{s.label}{!s.done && c.next?.key === s.key && <small>Next step</small>}
+              {s.key === 'states' && <small>{c.states.join(', ') || 'No states'} · {money(c.spend)} a day · {LEAD_WORD[c.lead] || LEAD_WORD.appointment}</small>}</span>
+            {['states', 'on', 'test'].includes(s.key) && <Switch on={s.done} label={s.label} onChange={v => tick(s, v)} />}
+          </li>
+        ))}</ul>
+        <CampaignRequest c={c} row={row} />
+      </Block>
+      <Block title="Their agent ID" sub="Rides hidden in their campaign's ad link, so every lead from it goes to them.">
+        <p className="adm-ticket-id"><b className="tp-num">{c.agentRef}</b><button type="button" className="fx-pillbtn" onClick={() => copyText(c.agentRef, note, 'Agent ID')}><Copy size={13} />Copy</button></p>
+      </Block>
+      <Block title="Open in a new tab" sub="Meta Ads Manager and GoHighLevel don't open inside other sites.">
+        <div className="adm-ext">{EXTERNAL.map(x => <a key={x.key} className="tp-btn ov-ghost" href={x.href} target="_blank" rel="noopener noreferrer"><ExternalLink size={15} />{x.label}</a>)}</div>
+      </Block>
       <Block title="History" aside={<History size={15} aria-hidden="true" />}>
         <ul className="adm-log">{c.log.map((l, i) => <li key={`${l.at}-${i}`}><b>{l.what}</b><small>{l.at} · {l.who}</small></li>)}{c.log.length === 0 && <li className="tp-sub">No changes yet.</li>}</ul>
       </Block>
     </RecordDrawer>
   )
+}
+
+function CampaignButton({ c }) {
+  const { requestCampaign } = useAdmActions()
+  const note = useNote()
+  return <button type="button" className="tp-btn ov-ghost" onClick={() => { if (!requestCampaign) { note('Create campaign goes through GoHighLevel once it is connected'); return } requestCampaign(c.id); note(`Create campaign sent for ${c.name} (sample)`) }}><Send size={15} />Create campaign</button>
 }
 
 // P858: the real campaign → agent map (ghl_campaign_agents, migration 232). Campaigns arrive with the daily ad spend
@@ -223,18 +261,16 @@ export default function Setup() {
   const { data: list } = useAdmSetup()
   const row = useGhlRow()
   const [peek, setPeek] = useState(false)
-  const [adding, setAdding] = useState(false)
   const on = engineState(row).on
   let card = 0
   return (
     <div className="tp-page fx-page adm-setup">
-      {/* P867: the new-clients board first (it fills the window, data-fold) so System readiness peeks below it */}
+      {/* P867: the ticket board first (it fills the window, data-fold) so System readiness peeks below it */}
       <div className="adm-setup-top" data-fold>
       <div className="adm-setup-tools">
-        <span className="adm-setup-h"><h2 className="adm-sec-h">New clients</h2><small className="tp-sub">{list.filter(c => c.stage !== 'live').length} getting set up · {list.filter(c => c.stage === 'live').length} live this week</small></span>
-        <button type="button" className="tp-primary fx-accent" onClick={() => setAdding(true)}><UserPlus size={16} />Add a new client</button>
+        <span className="adm-setup-h"><h2 className="adm-sec-h">Paid agents to live</h2><small className="tp-sub">{list.filter(c => c.stage !== 'live').length} open tickets · {list.filter(c => c.stage === 'live').length} done this week · agents show here once they've paid</small></span>
       </div>
-      <div className="fx-board adm-board7" role="region" aria-label="New clients by stage">
+      <div className="fx-board adm-board4" role="region" aria-label="Setup tickets by step">
         {SETUP_STAGES.map((b, li) => {
           const rows = list.filter(c => c.stage === b.key)
           return (
@@ -254,7 +290,6 @@ export default function Setup() {
 
       {(on || peek) && <GhlDetails row={row} sample={!on} />}
 
-      <AddSomeone open={adding} onClose={() => setAdding(false)} />
       {id && <SetupDrawer id={id} row={row} onClose={() => navigate(ap('setup'))} />}
     </div>
   )

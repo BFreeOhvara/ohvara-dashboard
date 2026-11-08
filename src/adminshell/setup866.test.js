@@ -3,14 +3,14 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { admSnapshot, pipelineOf } from './data.js'
 import { ADM, ADM_TABS, ADM_LABELS, admPageOf, admTitleOf } from './paths.js'
-import { SETUP_STAGES, SETUP_STEPS, setupOf, stepsFor, readiness } from './setup.js'
+import { SETUP_STAGES, SETUP_STEPS, setupOf, stepsFor, readiness, isPaid } from './setup.js'
 import { sampleGhlRow, syncFailed, engineState } from './engine.js'
 
 // P866: Setup is a top tab (everything to get a new client live); Connect is only the rail form; Money reads Revenue.
 const src = p => readFileSync(new URL(p, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
 
-test('the top tabs: Overview · Agents · Setup · Fulfillment · Leads · Clients · Revenue', () => {
-  assert.deepEqual(ADM_TABS.map(t => t[1]), ['Overview', 'Agents', 'Setup', 'Fulfillment', 'Leads', 'Clients', 'Revenue'])
+test('the top tabs (P906): Overview · Agents · Fulfillment · Clients · Setup · Revenue · Leads', () => {
+  assert.deepEqual(ADM_TABS.map(t => t[1]), ['Overview', 'Agents', 'Fulfillment', 'Clients', 'Setup', 'Revenue', 'Leads'])
   assert.equal(ADM.setup, '/admin/setup')
   assert.equal(admPageOf('/admin/setup'), 'setup')
   assert.equal(admPageOf('/admin/setup/ob-carl'), 'setup') // a client's checklist drawer has its own address
@@ -45,53 +45,51 @@ test('Connect is only the connection form and its status: no Setup sub-tab', () 
   assert.match(s, /useGhlConnect\(\{ enabled: !!live && !gaveUp \}\)/) // P855's ask-once stays
 })
 
-test('the Setup page: readiness strip with a Go to Connect state, the pipeline, Add a new client, the drawer', () => {
+test('the Setup page (P906): tickets for paying agents only, no adding by hand, Create campaign through the engine slot', () => {
   const s = src('./screens/Setup.jsx')
   assert.match(s, /Nothing connected yet/)
   assert.match(s, /navigate\(ap\('connect'\)\)\}>Go to Connect/)
-  assert.match(s, /Add a new client/)
-  assert.match(s, /<AddSomeone open=\{adding\}/)
-  for (const a of ['Send invite again', 'Mark launched (Jordan)', 'Mark live']) assert.ok(s.includes(a), a)
+  assert.doesNotMatch(s, /Add a new client|AddSomeone|Send invite again|Mark launched/)
+  for (const a of ['Create campaign', 'Mark done', 'Open Meta Ads Manager', 'Open GoHighLevel']) assert.ok(s.includes(a), a)
+  assert.match(s, /target="_blank" rel="noopener noreferrer"/)
   assert.match(s, /<EngineSlot settings=\{row\} \/>/)
-  assert.deepEqual(SETUP_STAGES.map(x => x.label), ['Invited', 'Profile', 'Plan & paid', 'Calendar & caller ID', 'Ready to launch', 'Launching (Jordan)', 'Live this week'])
+  assert.deepEqual(SETUP_STAGES.map(x => x.label), ['New ticket', 'Campaign', 'Test lead', 'Done this week'])
+  assert.deepEqual(SETUP_STEPS.map(x => x.key), ['states', 'campaign', 'on', 'test', 'live'])
 })
 
-test('the sample pipeline has someone at every stage, and every card % matches its checklist ticks', () => {
-  const list = pipelineOf(admSnapshot())
+test('the sample tickets: only paid agents, someone at every step, every % matches its ticks', () => {
+  const snap = admSnapshot()
+  const list = pipelineOf(snap)
+  assert.ok(list.length > 0)
+  assert.ok(list.every(isPaid), 'an unpaid agent is on the board')
+  const unpaid = snap.onboard.filter(c => !isPaid(c))
+  assert.ok(unpaid.length > 0, 'the sample keeps an unpaid sign-up to prove it stays off the board')
+  for (const c of unpaid) assert.ok(!list.some(x => x.id === c.id), c.name)
   for (const st of SETUP_STAGES) assert.ok(list.some(c => c.stage === st.key), `nobody in ${st.label}`)
   for (const c of list) {
     const ticked = c.steps.filter(x => x.done).length
     assert.equal(c.count, ticked, c.name)
     assert.equal(c.pct, Math.round((ticked / c.steps.length) * 100), c.name)
-    assert.equal(c.total, stepsFor(c).length, c.name)
-    if (c.stage === 'live') { assert.equal(c.pct, 100, c.name); assert.equal(c.owner, null) } else { assert.ok(c.blocker, c.name); assert.ok(['agent', 'jordan', 'ohvara'].includes(c.owner), c.name) }
+    if (c.stage === 'live') { assert.equal(c.pct, 100, c.name); assert.equal(c.owner, null) } else { assert.ok(c.blocker, c.name); assert.ok(['ohvara', 'engine'].includes(c.owner), c.name) }
   }
-  // the agent invites are the Invited column (one list, so an invite from anywhere shows up here)
-  assert.deepEqual(list.filter(c => c.stage === 'invited').map(c => c.name), admSnapshot().invites.filter(i => i.role === 'agent').map(i => i.name))
 })
 
-test('stage, blocker and next owner follow the checklist', () => {
-  const all = SETUP_STEPS.map(s => s.key)
-  const agent = SETUP_STEPS.filter(s => s.who === 'agent').map(s => s.key)
-  const jordan = SETUP_STEPS.filter(s => s.who === 'jordan').map(s => s.key)
-  assert.equal(setupOf({ done: [] }).stage, 'invited')
-  assert.equal(setupOf({ done: ['invite'] }).stage, 'profile')
-  assert.equal(setupOf({ done: ['invite', 'profile', 'plan'] }).stage, 'plan')
-  const owing = setupOf({ done: ['invite', 'profile', 'plan'], note: 'Card declined on the setup fee', noteOn: 'paid' })
-  assert.equal(owing.blocker, 'Card declined on the setup fee')
-  assert.equal(owing.owner, 'agent')
-  assert.equal(setupOf({ done: ['invite', 'profile', 'plan', 'paid'] }).stage, 'calendar')
-  assert.equal(setupOf({ done: agent }).stage, 'ready')
-  assert.equal(setupOf({ done: agent }).owner, 'jordan')
-  assert.equal(setupOf({ done: [...agent, 'campaign'] }).stage, 'launching')
-  const allButLive = setupOf({ lead: 'live', done: all.filter(k => k !== 'live') })
-  assert.equal(allButLive.stage, 'launching')
-  assert.equal(allButLive.canLive, true)
-  assert.equal(setupOf({ lead: 'live', done: [...agent, ...jordan] }).canLive, false) // Ohvara's briefing and test first
-  assert.equal(setupOf({ lead: 'live', done: all }).stage, 'live')
-  // live-calls steps count only on a live-calls plan
-  assert.equal(stepsFor({ lead: 'appointment' }).length, SETUP_STEPS.length - 2)
-  assert.equal(stepsFor({ lead: 'live' }).length, SETUP_STEPS.length)
+test('stage, blocker and campaign request follow the checklist', () => {
+  assert.equal(setupOf({ done: ['paid'] }).stage, 'new')
+  assert.equal(setupOf({ done: ['paid', 'states'] }).stage, 'campaign')
+  assert.equal(setupOf({ done: ['paid', 'states'] }).owner, 'engine')
+  assert.equal(setupOf({ done: ['paid', 'states'] }).req, 'none')
+  assert.equal(setupOf({ done: ['paid', 'states'], campaignReq: { status: 'sent' } }).blocker, 'Campaign requested · waiting on GoHighLevel')
+  const failed = setupOf({ done: ['paid', 'states'], campaignReq: { status: 'failed', why: 'template missing' } })
+  assert.equal(failed.warn, true)
+  assert.match(failed.blocker, /template missing/)
+  assert.equal(setupOf({ done: ['paid', 'states', 'campaign'] }).stage, 'campaign') // created but not on yet
+  assert.equal(setupOf({ done: ['paid', 'states', 'campaign', 'on'] }).stage, 'test')
+  const ready = setupOf({ done: ['paid', 'states', 'campaign', 'on', 'test'] })
+  assert.equal(ready.canLive, true)
+  assert.equal(setupOf({ done: ['paid', 'states', 'campaign', 'on'] }).canLive, false)
+  assert.equal(setupOf({ done: ['paid', ...SETUP_STEPS.map(x => x.key)] }).stage, 'live')
+  assert.equal(stepsFor({ lead: 'appointment' }).length, stepsFor({ lead: 'live' }).length)
 })
 
 test('the readiness strip: six lines, all grey until GoHighLevel is connected', () => {

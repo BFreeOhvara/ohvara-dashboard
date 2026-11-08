@@ -30,6 +30,7 @@ import '../template/glass.css'
 import '../template/flow.css'
 import '../template/palette.css'
 import './admin.css'
+import './p906.css'
 import '@fontsource/urbanist/500.css'
 import '@fontsource/urbanist/600.css'
 import '@fontsource/urbanist/700.css'
@@ -58,7 +59,7 @@ export function AddSomeone({ open, onClose }) {
   const { invite } = useAdmActions()
   const { data: settings } = useAdmSettings()
   const note = useNote()
-  const [role, setRole] = useState('agent')
+  const role = 'fulfillment' // P906: agents sign up and pay themselves; only the Fulfillment team is invited here
   const [via, setVia] = useState('email')
   const [name, setName] = useState('')
   const [to, setTo] = useState('')
@@ -71,32 +72,31 @@ export function AddSomeone({ open, onClose }) {
     setName(''); setTo(''); onClose()
   }
   return (
-    <Drawer open center onClose={onClose} title="Add someone" sub="They get a link to set a password and land on their own side."
+    <Drawer open center onClose={onClose} title="Add a VA" sub="They get a link to set a password and land on the Fulfillment side."
       footer={<><button type="button" className="tp-primary fx-accent" disabled={!ready} onClick={send}>{via === 'link' ? <Copy size={16} /> : <UserPlus size={16} />}{via === 'link' ? 'Copy the link' : 'Send invite'}</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
-      <div className="tp-field"><span>They are</span><Seg label="Role" role="radiogroup" value={role} onChange={setRole} options={[{ key: 'agent', label: 'An agent' }, { key: 'fulfillment', label: 'Fulfillment' }]} /></div>
       <Field label="Full name"><input value={name} onChange={e => setName(e.target.value)} placeholder="First and last name" /></Field>
       <div className="tp-field"><span>Send it by</span>
         <Seg label="Send by" role="radiogroup" value={via} onChange={setVia} options={[{ key: 'email', label: 'Email' }, { key: 'text', label: 'Text', title: textOff ? 'Invite by text is off in Settings' : undefined }, { key: 'link', label: 'Copy a link' }]} />
         {via === 'text' && textOff && <small>Invite by text is off in Settings, so this would go as a link to copy.</small>}
       </div>
       {via !== 'link' && <Field label={via === 'email' ? 'Email' : 'Mobile number'}><input type={via === 'email' ? 'email' : 'tel'} value={to} onChange={e => setTo(e.target.value)} placeholder={via === 'email' ? 'name@example.com' : '(555) 555-0100'} /></Field>}
-      <p className="tp-sub">Admins are added by another admin outside the portal.</p>
+      <p className="tp-sub">Agents sign up and pay on their own; they show on Setup once they've paid. Admins are added by another admin outside the portal.</p>
     </Drawer>
   )
 }
 
-// Route a lead: the leads with no agent and the missed transfers. Picking one opens it on the Leads page.
+// Route a lead: the Unassigned leads (no agent ID). Picking one opens it on the Leads page.
 function RouteLead({ open, onClose }) {
   const { data: day } = useAdmDay()
   const navigate = useNavigate()
   if (!open) return null
-  const rows = [...day.unassigned, ...day.missed]
+  const rows = day.unassigned
   return (
     <Drawer open center onClose={onClose} title="Route a lead" sub={rows.length ? 'Pick one to give it to an agent.' : 'Every lead has an agent.'}>
       <ul className="tp-list">
         {rows.map(l => (
           <li key={l.id}><button type="button" className="fx-mrow" onClick={() => { onClose(); navigate(ap('leads', l.id)) }}>
-            <Avatar name={l.name} tone="warn" /><span className="tp-grow"><b>{l.name}</b><small>{STAGE_WORD[l.stage]} · {l.product} · {l.city}, {l.state}</small></span><ChevronRight size={15} aria-hidden="true" />
+            <Avatar name={l.name} tone="warn" /><span className="tp-grow"><b>{l.name}</b><small>Unassigned · {l.product} · {l.city}, {l.state}</small></span><ChevronRight size={15} aria-hidden="true" />
           </button></li>
         ))}
       </ul>
@@ -183,7 +183,7 @@ function useHeadStats(page) {
   const { data: wk } = useAdmPeriod('week')
   const { data: pipe } = useAdmSetup()
   const S = (icon, n, label, extra = {}) => ({ icon, n, label, ...extra })
-  const route = day.unassigned.length + day.missed.length
+  const route = day.unassigned.length
   const att = clients.filter(c => c.stage === 'needs_attention').length
   const linked = plugged(connect).filter(Boolean).length
   return {
@@ -191,7 +191,7 @@ function useHeadStats(page) {
     agents: [S(Users, agents.length, 'agents', { chip: invites.some(i => i.role === 'agent') ? [`${invites.filter(i => i.role === 'agent').length} invites out`.replace(/^1 invites/, '1 invite'), 'blue'] : null }), S(Radio, agents.filter(a => a.active).length, 'taking transfers'), S(TriangleAlert, agents.filter(a => a.billing.status === 'past_due').length, 'past due', { chip: agents.some(a => a.billing.status === 'past_due') ? ['See who', 'warn'] : null })],
     setup: [S(Rocket, pipe.filter(c => c.stage !== 'live').length, 'getting set up'), S(Hourglass, pipe.filter(c => c.owner === 'jordan').length, 'waiting on Jordan', { chip: pipe.some(c => c.owner === 'jordan') ? ['Launch', 'blue'] : null }), S(BadgeCheck, pipe.filter(c => c.stage === 'live').length, 'live this week')],
     team: [S(Headset, day.onShift.length, 'on shift today'), S(CalendarOff, day.requests.length, 'day-off requests', { chip: day.requests.length ? ['To answer', 'warn'] : null }), S(Wallet, vas.reduce((t, v) => t + v.week.verified + v.week.checking, 0), 'VA pay this week', { fmt: money })],
-    leads: [S(PhoneIncoming, day.week.in, 'leads this week'), S(Shuffle, route, 'need routing', { chip: route ? ['Route now', 'warn'] : null }), S(CheckCircle2, day.week.sold, 'sold this week')],
+    leads: [S(PhoneIncoming, day.week.in, 'leads this week'), S(Shuffle, route, 'unassigned', { chip: route ? ['Assign now', 'warn'] : null }), S(CheckCircle2, day.week.sold, 'sold this week')],
     clients: [S(BookUser, clients.length, 'clients'), S(TriangleAlert, att, 'need attention', { chip: att ? ['See who', 'warn'] : null }), S(CalendarDays, clients.reduce((n, c) => n + c.steps.length, 0), 'servicing steps open')],
     billing: [S(CircleDollarSign, wk.inTotal, 'brought in this week', { fmt: money }), S(Wallet, wk.profit, 'profit this week', { fmt: money, chip: [`${wk.split[0].pct}/${wk.split[1].pct} split`, 'blue'] }), S(TriangleAlert, m.failed.length, 'failed payments', { chip: m.failed.length ? ['Follow up', 'warn'] : null })],
     connect: [S(Link2, linked, 'of 5 plugged in'), S(PhoneForwarded, connect.ads.length, 'ad accounts'), S(Plug, connect.sources.forms.filter(f => f.on).length, 'forms on')],
@@ -222,7 +222,7 @@ export default function AdminFrame({ preview = false }) {
   const open = which => e => { wig.onClick(e); setPanel(which) }
   const flipTheme = e => { wig.onClick(e); setTheme(theme === 'dark' ? 'light' : 'dark') }
   const tabs = ADM_TABS
-  const tabCount = { leads: day.unassigned.length + day.missed.length, team: day.requests.length, billing: day.failed.length }
+  const tabCount = { leads: day.unassigned.length, team: day.requests.length, billing: day.failed.length }
 
   const rows = useMemo(() => ({
     clients: [
@@ -230,7 +230,7 @@ export default function AdminFrame({ preview = false }) {
       ...agents.map(a => ({ id: `a-${a.id}`, name: a.name, sub: `Agent · ${a.city}, ${a.state}`, hay: `${a.name} ${a.email} ${a.phone} agent`, go: () => ap('agents', a.id) })),
       ...vas.map(v => ({ id: `v-${v.id}`, name: v.name, sub: 'Fulfillment', hay: `${v.name} ${v.email} ${v.phone} fulfillment va`, go: () => ap('team', v.id) })),
     ],
-    leads: leads.map(l => ({ id: `l-${l.id}`, name: l.name, sub: `${STAGE_WORD[l.stage]} · ${l.agent || 'no agent'}`, hay: `${l.name} ${l.phone} ${l.city} ${l.agent || ''}`, go: () => ap('leads', l.id) })),
+    leads: leads.map(l => ({ id: `l-${l.id}`, name: l.name, sub: `${l.agent_id ? STAGE_WORD[l.stage] : 'Unassigned'} · ${l.agent || 'no agent'}`, hay: `${l.name} ${l.phone} ${l.city} ${l.agent || ''}`, go: () => ap('leads', l.id) })),
   }), [clients, agents, vas, leads])
   const pages = [...tabs.map(([k, label]) => ({ to: () => ap(k), label })), { to: () => ap('messages'), label: 'Messages' }, { to: () => ap('connect'), label: 'Connect' }, { to: () => ap('settings'), label: 'Settings' }]
 
@@ -288,8 +288,8 @@ export default function AdminFrame({ preview = false }) {
       <aside className="tp-rail fx-rail" aria-label="Actions">
         <button type="button" className="tp-ri fx-ri tp-wig" aria-label="Search (Ctrl K)" data-tip="Search  Ctrl K" {...wig} onClick={open('search')}><Search size={20} /></button>
         <i className="fx-hair" />
-        <button type="button" className="fx-ri tp-wig" aria-label="Add someone" data-tip="Add someone" {...wig} onClick={open('add')}><UserPlus size={18} /></button>
-        <button type="button" className="fx-ri tp-wig" aria-label="Route a lead" data-tip={day.unassigned.length + day.missed.length ? `${day.unassigned.length + day.missed.length} leads need routing` : 'Route a lead'} {...wig} onClick={open('route')}><Shuffle size={18} />{day.unassigned.length + day.missed.length > 0 && <span className="fx-badge">{day.unassigned.length + day.missed.length}</span>}</button>
+        <button type="button" className="fx-ri tp-wig" aria-label="Add a VA" data-tip="Add a VA" {...wig} onClick={open('add')}><UserPlus size={18} /></button>
+        <button type="button" className="fx-ri tp-wig" aria-label="Route a lead" data-tip={day.unassigned.length ? `${day.unassigned.length} unassigned leads` : 'Route a lead'} {...wig} onClick={open('route')}><Shuffle size={18} />{day.unassigned.length > 0 && <span className="fx-badge">{day.unassigned.length}</span>}</button>
         <button type="button" className="fx-ri tp-wig" aria-label="Give a call" data-tip={day.late.length ? `${day.late.length} calls past their time` : 'Give a call'} {...wig} onClick={open('give')}><Hand size={18} /></button>
         <i className="fx-hair" />
         <NavLink to={ap('messages')} className="fx-ri tp-wig" aria-label="Messages" data-tip="Messages" {...wig}><MessageSquare size={18} />{day.unread > 0 && <span className="fx-badge">{day.unread}</span>}</NavLink>
@@ -328,7 +328,7 @@ export default function AdminFrame({ preview = false }) {
 
       <nav className="tp-bar fx-bar" aria-label="Pages">
         {['overview', 'leads'].map(k => { const I = ICONS[k]; return <Link key={k} to={ap(k)} className={`fx-btab${active === k ? ' is-on' : ''}`}><I size={20} aria-hidden="true" />{ADM_LABELS[k]}</Link> })}
-        <button type="button" className="fx-btab is-plus" aria-label="Add someone" onClick={() => setPanel('add')}><span className="fx-bplus"><Plus size={22} aria-hidden="true" /></span>Add</button>
+        <button type="button" className="fx-btab is-plus" aria-label="Add a VA" onClick={() => setPanel('add')}><span className="fx-bplus"><Plus size={22} aria-hidden="true" /></span>Add</button>
         <Link to={ap('team')} className={`fx-btab${active === 'team' ? ' is-on' : ''}`}><Headset size={20} aria-hidden="true" />Team</Link>
         <button type="button" className="fx-btab" aria-label="More" onClick={open('menu')}><Ellipsis size={20} aria-hidden="true" />More</button>
       </nav>

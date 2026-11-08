@@ -45,7 +45,7 @@ export function AiCallerSettings() {
     <>
       <header className="fx-form-h"><h2>AI caller</h2><p>An AI calls every new form lead within {AI_RULES.firstCallSecs} seconds, says it{'’'}s Deedstone{'’'}s virtual assistant, asks the VA questions, then checks the agent or books. It never hands a new lead to a VA: if they want a person or ask about coverage or price, it says their agent will go over that, then checks the agent or books. Calls people make to us still ring a VA.</p></header>
       <div className="tp-row tp-wrap"><AiSlot provider={d.provider} /><SampleTag>Sample</SampleTag></div>
-      <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>AI caller on</b><p className="tp-sub">Off: every form lead goes to a VA, exactly as today. Turning it on is Brayden{'’'}s call, after the four items below.</p></div>
+      <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>AI caller on</b><p className="tp-sub">Off: no AI calls go out. Turning it on is Brayden{'’'}s call, after the four items below. Also in Settings › Switches.</p></div>
         <Switch on={live} label="AI caller on" onChange={v => { setSwitch('ai_caller_live', v); note(`AI caller ${v ? 'on' : 'off'} (sample)`) }} /></div>
       <div className="adm-warn ai-stops" role="note"><ShieldAlert size={15} aria-hidden="true" /><div><b>Before it goes on (Brayden{'’'}s yes)</b>
         <ul>{HARD_STOPS.map(([k, v]) => <li key={k}><b>{k}:</b> {v} <SampleTag>Draft</SampleTag></li>)}</ul></div></div>

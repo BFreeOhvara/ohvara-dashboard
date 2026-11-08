@@ -1,21 +1,23 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Search, MessageSquare, Phone, FileText, Hand, Eye, Check } from 'lucide-react'
+import { Search, MessageSquare, Phone, FileText, Hand, Eye, Check, Tag } from 'lucide-react'
 import { useAdmClients, useAdmSteps, useAdmAgents, useAdmVas, useAdmActions } from '../data'
-import { Avatar, Chip, Empty, PillTabs, Seg, useNote } from '../../template/kit'
+import { Avatar, Chip, Empty, PillTabs, Seg, Switch, useNote } from '../../template/kit'
 import { RecordDrawer, Block } from '../../template/Record'
 import { usd } from '../../template/motion'
 import { Dropdown, DField } from '../kit'
 import { ap } from '../paths'
-import { CLIENT_STAGE } from '../words'
+import { CLIENT_STAGE, CLIENT_ORDER } from '../words'
 import { WelcomeLoad } from './WelcomeLoad891'
 import { BookCheck } from './BookCheck899'
 
 // P849 — Clients and Servicing: everyone's clients (view only, as Pipeline is today: the database refuses admin stage
 // changes) with search, an agent filter and stage tabs, a client drawer at /admin/pipeline/:id with Message agent;
 // and every open servicing step across the Fulfillment team, where an admin can give a step to someone else.
+// P906: the P899 client statuses, Working · Needs attention · Protected, with Closed behind "Show closed". A request
+// (an address change...) is a tag on the card, not a status.
 const money = usd(true)
-const STAGE_ORDER = ['needs_attention', 'setting_up', 'requests', 'protected']
+const STAGE_ORDER = CLIENT_ORDER
 
 function ClientDrawer({ id, onClose }) {
   const { data: clients } = useAdmClients()
@@ -35,13 +37,14 @@ function ClientDrawer({ id, onClose }) {
         <Link to={ap('agents', c.agent_id)} className="tp-btn ov-ghost">Open the agent</Link>
       </>}>
       {c.attention && <p className="adm-warn">{c.attention}</p>}
+      {c.tag && <p className="tp-sub"><Tag size={13} aria-hidden="true" /> {c.tag}</p>}
       <Block title="Policy">
         <dl className="fx-facts">{[['Phone', c.phone], ['State', c.state], ['Carrier', c.carrier], ['Policy', c.policy], ['Agent', c.agent], ['Servicing by', c.va]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       </Block>
       <Block title="Servicing steps open" sub={c.steps.length ? undefined : 'None'}>
         <ul className="tp-list">{c.steps.map(s => <li key={s.id} className="fx-mrow"><Hand size={15} aria-hidden="true" /><span className="tp-grow"><b>{s.kind}</b><small>{s.due}</small></span><Chip tone={s.late ? 'warn' : 'blue'}>{s.late ? 'Late' : s.status === 'scheduled' ? 'Scheduled' : 'Asked'}</Chip></li>)}</ul>
       </Block>
-      <p className="tp-sub">Stages are changed by the agent and the team, not from admin.</p>
+      <p className="tp-sub">Statuses are changed by the agent and the team, not from admin.</p>
     </RecordDrawer>
   )
 }
@@ -80,23 +83,27 @@ export default function Clients() {
   const { data: agents } = useAdmAgents()
   const [q, setQ] = useState('')
   const [stage, setStage] = useState('all')
+  const [closed, setClosed] = useState(false)
   const tab = sp.get('tab') === 'servicing' ? 'servicing' : 'clients'
   const agent = sp.get('agent') || 'all'
   const put = (k, v) => { const next = new URLSearchParams(sp); if (!v || v === 'all' || (k === 'tab' && v === 'clients')) next.delete(k); else next.set(k, v); setSp(next, { replace: true }) }
   const n = q.trim().toLowerCase()
-  const shown = clients.filter(c => (agent === 'all' || c.agent_id === agent) && (stage === 'all' || c.stage === stage) && (!n || `${c.name} ${c.phone} ${c.agent} ${c.carrier} ${c.policy}`.toLowerCase().includes(n)))
-    .sort((a, b) => STAGE_ORDER.indexOf(a.stage) - STAGE_ORDER.indexOf(b.stage))
+  const open = clients.filter(c => c.stage !== 'closed')
+  const pool = closed ? clients : open
+  const shown = pool.filter(c => (agent === 'all' || c.agent_id === agent) && (stage === 'all' || c.stage === stage) && (!n || `${c.name} ${c.phone} ${c.agent} ${c.carrier} ${c.policy}`.toLowerCase().includes(n)))
+    .sort((a, b) => [...STAGE_ORDER, 'closed'].indexOf(a.stage) - [...STAGE_ORDER, 'closed'].indexOf(b.stage))
   const total = shown.reduce((t, c) => t + c.premium, 0)
   return (
     <div className="tp-page fx-page adm-clients">
       <PillTabs label="Clients and servicing" className="fx-ptabs adm-pagetabs" itemClass="fx-ptab" value={tab} onChange={v => put('tab', v)}
-        items={[{ key: 'clients', label: 'Clients', count: clients.length }, { key: 'servicing', label: 'Servicing' }]} />
+        items={[{ key: 'clients', label: 'Clients', count: open.length }, { key: 'servicing', label: 'Servicing' }]} />
       <div className="adm-tabpane" key={tab} role="tabpanel">
         {tab === 'servicing' ? <><BookCheck /><WelcomeLoad /><Servicing /></> : <>
           <div className="fx-tools">
             <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a client" placeholder="Find by name, phone, agent, carrier or policy" value={q} onChange={e => setQ(e.target.value)} /></label>
-            <Seg label="Stage" value={stage} onChange={setStage} options={[{ key: 'all', label: 'All', count: clients.length }, ...STAGE_ORDER.map(k => ({ key: k, label: CLIENT_STAGE[k][1], count: clients.filter(c => c.stage === k).length }))]} />
+            <Seg label="Status" value={stage} onChange={setStage} options={[{ key: 'all', label: 'All', count: pool.length }, ...STAGE_ORDER.map(k => ({ key: k, label: CLIENT_STAGE[k][1], count: clients.filter(c => c.stage === k).length })), ...(closed ? [{ key: 'closed', label: 'Closed', count: clients.filter(c => c.stage === 'closed').length }] : [])]} />
             <span className="tp-grow" />
+            <label className="tp-row adm-showclosed"><Switch on={closed} label="Show closed" onChange={v => { setClosed(v); if (!v && stage === 'closed') setStage('all') }} /><span className="tp-sub">Show closed</span></label>
             <Dropdown className="adm-dd-sm" label="Agent" value={agent} onChange={v => put('agent', v)} options={[{ value: 'all', label: 'Every agent' }, ...agents.map(a => ({ value: a.id, label: a.name }))]} />
           </div>
           <div className="fx-cgrid adm-cgrid">
@@ -108,6 +115,7 @@ export default function Clients() {
                   <div className="fx-lcard-top"><span className="fx-kind">{word}</span><span className="fx-tag">{c.agent.split(' ')[0]}</span></div>
                   <h3>{c.name}</h3>
                   <p>{c.carrier} · {c.policy}</p>
+                  {c.tag && <small className="adm-ctag"><Tag size={11} aria-hidden="true" /> {c.tag}</small>}
                   <div className="fx-ccard-bot"><span className="tp-money">{money(c.premium)}/mo</span><span className="adm-came"><Phone size={12} aria-hidden="true" />{c.phone}</span></div>
                 </article>
               )

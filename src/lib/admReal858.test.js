@@ -40,7 +40,7 @@ test('people: agents, billing words, plans that always exist, VAs, invites', () 
   const a = toAgent({ id: AG, role: 'agent', full_name: 'Dana Walker', phone: '5125550143', is_active: true, leads_weekly_cents: 60000, created_at: '2026-08-30T12:00:00Z' },
     { settings: [{ agent_id: AG, active: true, states: ['TX', 'OK'] }], onDuty: [AG], plans: PLANS })
   assert.equal(a.name, 'Dana Walker')
-  assert.equal(a.spend, 600)
+  assert.equal(a.spend, 86) // P906: daily spend on the admin side (600 a week / 7)
   assert.deepEqual(a.states, ['TX', 'OK'])
   assert.equal(a.active && a.onDuty && a.access, true)
   assert.ok(PLANS[a.plan])
@@ -54,9 +54,13 @@ test('people: agents, billing words, plans that always exist, VAs, invites', () 
 test('leads: stage from outcome / transfer, kind from the product, unassigned with why', () => {
   assert.equal(leadStage({ assigned_rep_id: null }), 'unassigned')
   assert.equal(leadStage({ assigned_rep_id: AG, outcome: 'sold' }), 'sold')
-  assert.equal(leadStage({ assigned_rep_id: AG, inbound_stage: 'lost' }), 'not_sold')
-  assert.equal(leadStage({ assigned_rep_id: AG, inbound_product: 'live_call', transfer_status: 'dropped' }), 'missed')
-  assert.equal(leadStage({ assigned_rep_id: AG, inbound_product: 'live_call', transfer_status: 'connected' }), 'transferred')
+  assert.equal(leadStage({ assigned_rep_id: AG, inbound_stage: 'lost' }), 'not_interested')
+  // P906: a dropped transfer bounces back and is booked; a live call waits on Booked for its result
+  assert.equal(leadStage({ assigned_rep_id: AG, inbound_product: 'live_call', transfer_status: 'dropped' }), 'booked')
+  assert.equal(leadStage({ assigned_rep_id: AG, inbound_product: 'live_call', transfer_status: 'connected' }), 'booked')
+  assert.equal(leadStage({ assigned_rep_id: AG, outcome: 'no_show' }), 'no_show')
+  assert.equal(leadStage({ assigned_rep_id: AG, inbound_stage: 'follow_up' }), 'follow_up')
+  assert.equal(leadStage({ assigned_rep_id: AG, va_outcome: 'not_reached' }), 'no_answer')
   assert.equal(leadStage({ assigned_rep_id: AG, inbound_product: 'booked_appointment' }), 'booked')
   const clock = realClock(NOW)
   const l = toLead({ id: 'l1', contact_name: 'Angela Moore', phone: '+15125558201', state: 'TX', inbound_product: 'booked_appointment', lead_type: 'mortgage_protection', lead_source: 'meta', assigned_rep_id: null, created_at: '2026-11-06T15:00:00Z' },
@@ -74,9 +78,14 @@ test('leads: stage from outcome / transfer, kind from the product, unassigned wi
 
 test('clients, servicing steps and the desk', () => {
   assert.equal(toClient({ id: 'p1', agent_id: AG, client_first_name: 'Gloria', client_last_name: 'Santos', status: 'active' }).stage, 'protected')
-  assert.equal(toClient({ id: 'p1', agent_id: AG, status: 'active' }, 2).stage, 'requests')
-  assert.equal(toClient({ id: 'p1', agent_id: AG, status: 'lapsed' }).stage, 'needs_attention')
-  assert.equal(toClient({ id: 'p1', agent_id: AG, pending_underwriting: true }).stage, 'setting_up')
+  // P906: the P899 statuses; a request is a tag, not a status
+  const req = toClient({ id: 'p1', agent_id: AG, status: 'active' }, 2)
+  assert.equal(req.stage, 'protected')
+  assert.equal(req.tag, '2 requests in progress')
+  assert.equal(toClient({ id: 'p1', agent_id: AG, status: 'lapsed' }).stage, 'working')
+  assert.equal(toClient({ id: 'p1', agent_id: AG, pending_underwriting: true }).stage, 'working')
+  assert.equal(toClient({ id: 'p1', agent_id: AG, next_lapse_check_at: '2020-01-01T00:00:00Z' }).stage, 'needs_attention')
+  assert.equal(toClient({ id: 'p1', agent_id: AG, status: 'cancelled' }).stage, 'closed')
   const st = toStep({ id: 's1', policy_id: 'p1', kind: 'review_call', due_at: '2026-11-06T15:00:00Z' }, NOW)
   assert.equal(st.kind, 'Review call')
   assert.equal(st.late, true)
@@ -140,6 +149,6 @@ test('the whole store: same keys as the sample, and Money / Setup run on it with
   assert.equal(m.ads, 50, 'ad spend is the real spend, not Connect\'s sample accounts')
   assert.equal(m.tools, 0)
   assert.equal(moneyFor(s, 'last').ads, 0)
-  assert.equal(pipelineOf(s).length, 1)
+  assert.equal(pipelineOf(s).length, 0) // P906: Setup holds paid agents only; this one hasn't paid
   assert.equal(s.connect.ads[0].spent, 50)
 })

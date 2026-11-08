@@ -1,0 +1,75 @@
+/* P906 — admin catch-up: the six-status Leads board and its Unassigned list, the agent plan and budget panel, Setup
+   tickets, and Settings' launch switches. Colours come from the theme tokens only. */
+
+/* Leads: six statuses */
+.fx .fx-board.adm-board6 { grid-template-columns: repeat(6, minmax(168px, 1fr)); gap: 10px; scrollbar-width: thin; }
+.fx .fx-board.adm-board6.is-one { grid-template-columns: minmax(0, 1fr); }
+.adm-board6 .fx-lane-h { align-items: flex-start; line-height: 1.25; }
+.adm-board6 .fx-lane-h > i { flex: none; margin-top: 4px; }
+.adm-unassigned { flex: none; gap: 4px; }
+.adm-unassigned h2 { display: flex; align-items: center; gap: 6px; }
+.adm-unassigned .adm-rows { max-height: 196px; overflow-y: auto; overscroll-behavior: contain; }
+.adm-un-row .adm-who { flex: 1 1 260px; min-width: 0; }
+.adm-un-row .tp-field { min-width: 200px; }
+@media (max-width: 999.98px) {
+  .fx .fx-board.adm-board6 { grid-template-columns: repeat(6, 80%); margin: 0 -16px; padding: 0 16px 6px; scroll-snap-type: x proximity; scroll-padding: 0 16px; }
+  .adm-unassigned .adm-rows { max-height: none; overflow: visible; }
+  .adm-un-row .tp-field, .adm-un-row .tp-primary { flex: 1 1 100%; justify-content: center; }
+}
+
+/* Agents: plan and budget */
+.adm-plan-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+.adm-plan-top b.fx-hero-big { font-size: 22px; }
+.adm-plan-charge { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 4px 0 2px; }
+.adm-plan-charge > div { padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--ov-hi) 5%, transparent); }
+.adm-plan-charge small { display: block; font-size: 11.5px; color: var(--ov-mid); }
+.adm-plan-charge b { display: block; font-size: 15px; }
+.adm-plan-charge > .is-total { background: color-mix(in srgb, var(--ov-hi) 10%, transparent); }
+.adm-spend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.adm-spend input { width: 110px; }
+.adm-spend .fx-pillbtn { white-space: nowrap; }
+.adm-declined { color: var(--sh-fi-apricot); }
+@media (max-width: 599.98px) {
+  .adm-plan-charge { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Setup: tickets */
+.fx .fx-board.adm-board4 { grid-template-columns: repeat(4, minmax(200px, 1fr)); gap: 10px; }
+.adm-ticket-id { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.adm-ticket-paid { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ov-mid); }
+.adm-ext { display: flex; flex-wrap: wrap; gap: 8px; }
+.adm-req { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--ov-hi) 5%, transparent); }
+.adm-req .tp-grow { min-width: 180px; }
+.adm-req small { display: block; font-size: 12px; color: var(--ov-mid); }
+.adm-unpaid-note { display: flex; align-items: center; gap: 6px; }
+@media (max-width: 999.98px) {
+  .fx .fx-board.adm-board4 { grid-template-columns: repeat(4, 80%); margin: 0 -16px; padding: 0 16px 6px; scroll-snap-type: x proximity; scroll-padding: 0 16px; }
+}
+
+/* Settings: tonight's switches in one place */
+.adm-launch { display: flex; flex-direction: column; gap: 4px; }
+.adm-launch .fx-form-row .tp-field { min-width: 170px; }
+.adm-launch-pair { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.adm-launch-pair input { width: 84px; }
+
+/* Clients: the request tag on a card */
+.adm-ctag { font-size: 11.5px; color: var(--ov-mid); }
+
+/* Overview: Needs you shows what fits, "Show all" lets the page grow (never a box cut off mid-card) */
+.adm-ov .adm-needs { overflow: visible; }
+.adm-needs-more { flex: none; }
+.adm-ov .fx-ovl-needs.is-all .fx-ovl-needs-in { position: static; }
+.adm-ov .fx-ovl-needs.is-all .adm-needs { max-height: none; }
+@media (max-width: 999.98px) {
+  .adm-ov .adm-needs { max-height: none; }
+}
+
+/* P906 — every admin page peeks at 390: the next block shows a quarter to a half above the fold, never a sliver. */
+@media (max-width: 599.98px) {
+  .adm-ov-hero { gap: 10px; }
+  .adm-ov-hero .adm-costs { display: none; } /* the cost line is on Revenue; on a phone it pushed Needs you to a sliver */
+  .fx-tools .adm-showclosed { order: 3; }
+  .fx-tools:has(.adm-showclosed) .adm-dd-sm { flex: 1 1 0; width: auto; min-width: 0; order: 2; }
+  .adm-fall, .adm-money-grid.has-split .adm-fall { height: 100px; }
+  .adm-fall i, .adm-money-grid.has-split .adm-fall i { bottom: calc(24px + var(--b) * 52px); height: calc(var(--h) * 52px); }
+}

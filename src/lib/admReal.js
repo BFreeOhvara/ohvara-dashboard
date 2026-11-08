@@ -74,8 +74,10 @@ export function billingOf(p, plan) {
 export function toAgent(p, { settings = [], onDuty = [], plans = {} } = {}) {
   const s = settings.find(x => x.agent_id === p.id)
   const states = s?.states || []
-  const spend = Math.round((p.leads_weekly_cents || 0) / 100)
-  const plan = planKey(p.billing_tier, spend)
+  // P906: spend is the daily lead spend on the admin side (the weekly column / 7 until a daily one is read).
+  const weekly = Math.round((p.leads_weekly_cents || 0) / 100)
+  const spend = Math.round(weekly / 7)
+  const plan = planKey(p.billing_tier, weekly)
   return {
     id: p.id, name: nameOf(p), role: 'agent', city: '', state: states[0] || '', email: p.email || '', phone: fmtPhone(p.phone),
     spend, active: !!s?.active, onDuty: onDuty.includes(p.id), servicing: !!p.has_servicing, access: p.is_active !== false,
@@ -97,15 +99,17 @@ export function toInvite(r, now = Date.now()) {
 }
 
 // ── leads ────────────────────────────────────────────────────────────────────
-// leads (typed inbound rows) → a Leads-board card. kind from inbound_product; stage from outcome / transfer / booking.
+// leads (typed inbound rows) → a Leads-board card. kind from inbound_product; stage from outcome / stage / reach.
+// P906: the admin statuses Booked · No show · Follow up · Sold · Not interested · No answer. No agent = 'unassigned'
+// (the Unassigned list, not a status). A live call (or a dropped transfer, which bounces back and is booked) is Booked
+// until the agent marks the result.
 export function leadStage(l) {
   if (!l.assigned_rep_id) return 'unassigned'
   if (l.outcome === 'sold' || l.inbound_stage === 'sold') return 'sold'
-  if (l.outcome === 'not_interested' || l.inbound_stage === 'lost') return 'not_sold'
-  if (l.inbound_product === 'live_call') {
-    if (l.transfer_status === 'dropped' || l.va_outcome === 'not_reached') return 'missed'
-    return 'transferred'
-  }
+  if (l.outcome === 'not_interested' || l.inbound_stage === 'lost') return 'not_interested'
+  if (l.outcome === 'no_show' || l.inbound_stage === 'no_show') return 'no_show'
+  if (l.outcome === 'follow_up' || l.inbound_stage === 'follow_up') return 'follow_up'
+  if (l.va_outcome === 'not_reached' || l.outcome === 'unreachable' || l.inbound_stage === 'unreachable') return 'no_answer'
   return 'booked'
 }
 export const ROUTE_WHY = {
@@ -113,35 +117,42 @@ export const ROUTE_WHY = {
   unlicensed: 'The agent in the ad link is not licensed for this state.',
 }
 export function toLead(l, { clock, now = Date.now(), intake = {} } = {}) {
-  const kind = l.inbound_product === 'live_call' ? 'live' : 'appointment'
+  const stage = leadStage(l)
+  const kind = stage === 'no_answer' ? 'none' : l.inbound_product === 'live_call' ? 'live' : 'appointment'
   const ms = Date.parse(l.created_at)
   const inWeek = clock && Number.isFinite(ms) && l.created_at.slice(0, 10) >= clock.weekStartIso
   const p = Number.isFinite(ms) ? partsOf(ms) : null
   const i = intake[l.id]
-  const stage = leadStage(l)
   return {
     id: l.id, name: l.contact_name || l.business_name || 'No name', phone: fmtPhone(l.phone), state: l.state || '', city: l.city || '',
     kind, product: l.lead_type === 'policy_help' ? 'Policy help call' : 'Mortgage protection', day: inWeek && p ? p.d : null, time: p?.time || '',
     came: whenText(l.created_at, now), source: l.lead_source === 'google' ? 'Google · live calls' : i?.meta_option === 'page_only' ? 'Meta · landing page' : 'Meta · form',
     agent_id: l.assigned_rep_id || null, stage, premium: 0,
     appt: kind === 'appointment' ? (l.appointment_at ? whenText(l.appointment_at, now) : 'not booked yet') : null,
-    note: stage === 'missed' ? 'The transfer was not picked up.' : '', why: !l.assigned_rep_id && i?.routing ? ROUTE_WHY[i.routing] || '' : '', campaign: i?.campaign_id || '', agentRef: i?.agent_ref || '',
+    note: stage === 'no_answer' ? 'Never reached.' : '', why: !l.assigned_rep_id && i?.routing ? ROUTE_WHY[i.routing] || '' : '', campaign: i?.campaign_id || '', agentRef: i?.agent_ref || '',
     log: [], real: true,
   }
 }
 
 // ── clients, servicing, desk ─────────────────────────────────────────────────
-export function clientStage(p) {
-  if (p.cancellation_status === 'at_risk' || p.status === 'lapsed' || p.status === 'lapse_pending' || p.next_lapse_check_at) return 'needs_attention'
-  if (p.pending_underwriting || p.status === 'pending' || p.status === 'submitted') return 'setting_up'
+// P906: the P899 client statuses. Closed = gone for good; Working = the team is on it (new policy, a lapse, a missed
+// payment, a save); Needs attention = only the monthly "Still on the books?" check that's due; else Protected.
+// An open request is a tag (openSteps), not a status.
+export function clientStage(p, now = Date.now()) {
+  if (p.closed_at || p.status === 'closed' || p.status === 'cancelled') return 'closed'
+  if (p.cancellation_status === 'at_risk' || p.status === 'lapsed' || p.status === 'lapse_pending' || p.fixing_since) return 'working'
+  if (p.pending_underwriting || p.status === 'pending' || p.status === 'submitted') return 'working'
+  if (p.next_lapse_check_at && Date.parse(p.next_lapse_check_at) <= now) return 'needs_attention'
   return 'protected'
 }
 export function toClient(p, openSteps = 0) {
-  const stage = openSteps > 0 && clientStage(p) === 'protected' ? 'requests' : clientStage(p)
+  const stage = clientStage(p)
   return {
     id: p.id, name: `${p.client_first_name || ''} ${p.client_last_name || ''}`.trim() || 'No name', agent_id: p.agent_id, va_id: p.assigned_fulfillment_id || null,
     phone: fmtPhone(p.client_phone), state: p.state || '', carrier: p.carrier_name || '', product: p.product_name || p.product_type || '', policy: p.policy_number || '',
-    premium: Number(p.monthly_premium) || 0, stage, sold: shortDate(p.policy_sold_date || p.created_at), attention: stage === 'needs_attention' ? (p.status === 'lapsed' ? 'Lapsed' : 'Needs a check') : null, real: true,
+    premium: Number(p.monthly_premium) || 0, stage, sold: shortDate(p.policy_sold_date || p.created_at), real: true,
+    attention: stage === 'needs_attention' ? 'Still on the books?' : stage === 'working' ? (p.status === 'lapsed' ? 'Lapsed: the team is on it' : 'Our team is on it') : null,
+    tag: openSteps > 0 ? `${openSteps} request${openSteps === 1 ? '' : 's'} in progress` : null,
   }
 }
 const KIND_LABEL = { packet_check: 'Packet check', review_call: 'Review call', chargeback_watch: 'Chargeback watch', beneficiary: 'Beneficiary change', address: 'Address change', payment: 'Payment change' }
@@ -263,7 +274,7 @@ export function toOnboard(p, ctx = {}) {
   const live = (ctx.ticks || []).find(t => t.agent_id === p.id && t.step === 'live')
   return {
     id: p.id, name: nameOf(p), city: '', state: s?.states?.[0] || '', states: s?.states || [], lead: p.live_transfer_phone ? 'live' : 'appointment',
-    spend: Math.round((p.leads_weekly_cents || 0) / 100), done, since: shortDate(p.created_at), liveOn: live ? whenText(live.done_at) : undefined,
+    spend: Math.round((p.leads_weekly_cents || 0) / 700), done, since: shortDate(p.created_at), liveOn: live ? whenText(live.done_at) : undefined, campaignReq: null,
     plan: done.includes('plan') ? planKey(p.billing_tier, Math.round((p.leads_weekly_cents || 0) / 100)) : null, real: true,
   }
 }

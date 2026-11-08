@@ -6,7 +6,7 @@ import { switchReady } from '../lib/dataMode'
 // information exactly as today; real reads and writes are built underneath and show once it is off. Admins preview
 // real data for themselves from the avatar menu (View: Sample / Real) without changing what anyone else sees.
 // The value is app_settings.show_sample_data; until that column exists it reads as on and can't be saved.
-export default function SampleSwitch({ live }) {
+export default function SampleSwitch({ live, bare }) {
   const note = useNote()
   const { data } = useAppSettings()
   const save = useUpdateAppSettings()
@@ -20,14 +20,16 @@ export default function SampleSwitch({ live }) {
       onError: () => note('Could not save. Nothing changed'),
     })
   }
+  const row = (
+    <li className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Show sample data</b>
+      <p className="tp-sub">On: every portal shows its sample information. Off: everyone sees their real data. You can preview real data for yourself from your avatar menu (View).{live && !ready && ' Needs a database update before it can be turned off.'}</p></div>
+      <Switch on={on} label="Show sample data" onChange={flip} /></li>
+  )
+  if (bare) return row // P906: one row inside Settings › Switches "Tonight's switches"
   return (
     <div className="adm-swgroup">
       <h3 className="fx-h3">Data</h3>
-      <ul className="tp-list">
-        <li className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Show sample data</b>
-          <p className="tp-sub">On: every portal shows its sample information. Off: everyone sees their real data. You can preview real data for yourself from your avatar menu (View).{live && !ready && ' Needs a database update before it can be turned off.'}</p></div>
-          <Switch on={on} label="Show sample data" onChange={flip} /></li>
-      </ul>
+      <ul className="tp-list">{row}</ul>
     </div>
   )
 }

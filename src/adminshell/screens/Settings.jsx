@@ -18,7 +18,7 @@ import TrainingAdmin from './TrainingAdmin'
 import { BUG_STATUS } from '../../template/bugReport'
 import '../../template/reportbug.css'
 import { Compliance } from './Compliance879'
-import SampleSwitch from '../SampleSwitch'
+import { LaunchSwitches } from './Launch906'
 import { SplitRules } from './Split889'
 import { AiCallerSettings } from './AiCalls892'
 
@@ -108,18 +108,19 @@ function Switches({ live }) {
   const { setSwitch } = useAdmActions()
   const src = useAdmSource()
   const note = useNote()
-  const groups = [...new Set(SWITCHES.map(x => x.group))]
+  const rest = SWITCHES.filter(x => x.key !== 'ai_caller_live') // P906: the AI caller sits in Tonight's switches
+  const groups = [...new Set(rest.map(x => x.group))]
   return (
     <>
       <Head title="Switches" sub="Company-wide on and off. Each says what it does." />
-      <SampleSwitch live={live} />
+      <LaunchSwitches live={live} />
       {src === 'real'
         ? <p className="adm-warn">These are the real company switches: each flip is saved right away.</p>
         : <p className="adm-warn">Sample only: flipping these changes nothing real.{live && <> The real switches are on the <a href="/settings" className="tp-link">current Settings page</a> until the backend step.</>}</p>}
       {groups.map(g => (
         <div key={g} className="adm-swgroup">
           <h3 className="fx-h3">{g}</h3>
-          <ul className="tp-list">{SWITCHES.filter(x => x.group === g).map(x => (
+          <ul className="tp-list">{rest.filter(x => x.group === g).map(x => (
             <li key={x.key} className="fx-form-row fx-form-sw"><div className="tp-grow"><b>{x.label}</b><p className="tp-sub">{x.sub}</p></div>
               <Switch on={s.switches[x.key]} label={x.label} onChange={v => { setSwitch(x.key, v); note(`${x.label} ${v ? 'on' : 'off'} (sample)`) }} /></li>
           ))}</ul>

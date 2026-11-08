@@ -80,17 +80,18 @@ export function admRoutes(preview) {
   return out
 }
 
-// The top tabs, in order (P866: Setup is a top tab; Billing reads Revenue). Messages, Connect (P864) and Settings live on the rail and the top right, as on the other two sides.
+// The top tabs, in order (P866: Setup is a top tab; Billing reads Revenue; P906: Overview · Agents · Fulfillment ·
+// Clients · Setup · Revenue, then Leads). Messages, Connect (P864) and Settings live on the rail and the top right, as on the other two sides.
 // The inbounds page reads "Leads" on screen: the word guard (scripts/check-wording.mjs) bans the word inbound in
 // rendered text anywhere in src. Code names and the /admin/inbounds address keep it.
 export const ADM_TABS = [
-  ['overview', 'Overview'], ['agents', 'Agents'], ['setup', 'Setup'], ['team', 'Fulfillment'], ['leads', 'Leads'], ['clients', 'Clients'], ['billing', 'Revenue'],
+  ['overview', 'Overview'], ['agents', 'Agents'], ['team', 'Fulfillment'], ['clients', 'Clients'], ['setup', 'Setup'], ['billing', 'Revenue'], ['leads', 'Leads'],
 ]
 // Every page's short name (tabs, the phone bar, search), including the rail-only pages.
 export const ADM_LABELS = { ...Object.fromEntries(ADM_TABS), messages: 'Messages', settings: 'Settings', connect: 'Connect' }
 
 const TITLES = {
-  overview: ['The business', 'Overview'], agents: ['Who sells', 'Agents'], setup: ['New clients to live', 'Setup'], team: ['Who serves', 'Fulfillment team'],
+  overview: ['The business', 'Overview'], agents: ['Who sells', 'Agents'], setup: ['Paid agents to live', 'Setup'], team: ['Who serves', 'Fulfillment team'],
   leads: ['Every agent', 'Leads'], clients: ['Every book', 'Clients'], billing: ['In, out and split', 'Revenue'],
   messages: ['Admin lines', 'Messages'], settings: ['Run the portal', 'Settings'], connect: ['Plug it in', 'Connect'],
 }

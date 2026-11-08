@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, Check, Shuffle, PhoneMissed, Hand, CalendarOff, CreditCard, PhoneCall, Radio, Megaphone } from 'lucide-react'
+import { ArrowUpRight, Check, Shuffle, Hand, CalendarOff, CreditCard, PhoneCall, Radio, Megaphone, ChevronDown, ChevronUp } from 'lucide-react'
 import { useAdmDay, useAdmMoney, useAdmAgents, useAdmDesk, useAdmCosts, dateText } from '../data'
 import { Avatar } from '../../template/kit'
 import { CountUp, usd } from '../../template/motion'
@@ -12,6 +13,9 @@ import { adAlerts } from '../p879'
 // right column, colour carried by a few filled tiles). Dominant tile = leads this week as a funnel (in, booked,
 // transferred, sold) with a bar per day; under it, who is on shift today (butter) and revenue this week (sage); the
 // right column = what needs an admin, as stage-coloured cards; along the bottom, the agents. Sample info only.
+// P906: "transferred" reads Live calls; no missed transfers (a missed one bounces back and is booked); Needs you shows
+// what fits with "Show all" instead of a box cut off mid-card, and the page itself scrolls.
+const NEEDS_SHOWN = 4
 const money = usd()
 const cents = usd(true)
 
@@ -56,7 +60,7 @@ function DayBars({ day, top }) {
         </span>
       ))}
     </div>
-    <div className="fx-key"><span><i className="adm-k is-sold" />Sold</span><span><i className="adm-k is-mid" />Booked or transferred</span><span><i className="adm-k is-in" />Came in</span></div>
+    <div className="fx-key"><span><i className="adm-k is-sold" />Sold</span><span><i className="adm-k is-mid" />Booked or live call</span><span><i className="adm-k is-in" />Came in</span></div>
     </>
   )
 }
@@ -68,13 +72,13 @@ export default function Overview() {
   const { data: desk } = useAdmDesk()
   const { data: costs } = useAdmCosts()
   const row = useGhlRow()
+  const [allNeeds, setAllNeeds] = useState(false)
   const w = day.week
-  const steps = [['in', 'Came in', w.in], ['booked', 'Booked', w.booked], ['transferred', 'Transferred', w.transferred], ['sold', 'Sold', w.sold]]
+  const steps = [['in', 'Came in', w.in], ['booked', 'Booked', w.booked], ['transferred', 'Live calls', w.transferred], ['sold', 'Sold', w.sold]]
   const top = Math.max(4, ...day.byDay.map(d => d.in))
   const revTop = Math.max(...m.weeks.map(x => x.plans + x.leads))
   const needs = [
-    ...day.unassigned.map(l => ({ id: l.id, to: ap('leads', l.id), tone: 'warn', icon: Shuffle, kicker: 'No agent yet', title: l.name, sub: `${l.product} · came ${l.came.replace('Today, ', '')}` })),
-    ...day.missed.map(l => ({ id: l.id, to: ap('leads', l.id), tone: 'warn', icon: PhoneMissed, kicker: 'Missed transfer', title: l.name, sub: `${l.agent ? 'Rang the agent' : 'No pickup'} · ${l.came}` })),
+    ...day.unassigned.map(l => ({ id: l.id, to: ap('leads', l.id), tone: 'warn', icon: Shuffle, kicker: 'Unassigned', title: l.name, sub: `No agent ID · ${l.product} · came ${l.came.replace('Today, ', '')}` })),
     ...day.late.map(c => ({ id: c.id, to: `${ap('team')}?call=${c.id}`, tone: 'warn', icon: Hand, kicker: 'Call past its time', title: c.client, sub: `${c.time} · give it to someone free` })),
     ...day.requests.map(r => ({ id: r.id, to: `${ap('team')}?tab=requests`, tone: 'teal', icon: CalendarOff, kicker: 'Day off asked', title: r.va || 'A VA', sub: dateText(r.date) })),
     ...day.failed.map(a => ({ id: a.id, to: `${ap('billing')}?tab=agents`, tone: 'blue', icon: CreditCard, kicker: 'Payment failed', title: a.name, sub: `${a.billing.failed.what} · ${money(a.billing.failed.amount)}` })),
@@ -105,14 +109,19 @@ export default function Overview() {
         </Tile>
 
         <div className="fx-ovl-side">
-          <section className="fx-tile is-deep fx-ovl-needs" style={{ '--i': 4 }} aria-label="Needs you">
+          <section className={`fx-tile is-deep fx-ovl-needs${allNeeds ? ' is-all' : ''}`} style={{ '--i': 4 }} aria-label="Needs you">
             <div className="fx-ovl-needs-in">
               <header className="fx-tile-h">
                 <span className="tp-grow"><h2>Needs you</h2><p>{needs.length ? `${needs.length} things, oldest money first` : 'Nothing waiting'}</p></span>
               </header>
               {needs.length > 0
-                ? <div className="fx-ncards adm-needs">{needs.map((n, i) => <Need key={`${n.kicker}-${n.id}`} {...n} i={i} />)}</div>
+                ? <div className="fx-ncards adm-needs">{(allNeeds ? needs : needs.slice(0, NEEDS_SHOWN)).map((n, i) => <Need key={`${n.kicker}-${n.id}`} {...n} i={i} />)}</div>
                 : <p className="fx-calm"><Check size={16} aria-hidden="true" />Nothing needs an admin right now.</p>}
+              {needs.length > NEEDS_SHOWN && (
+                <button type="button" className="fx-pillbtn fx-self adm-needs-more" aria-expanded={allNeeds} onClick={() => setAllNeeds(v => !v)}>
+                  {allNeeds ? <>Show fewer<ChevronUp size={14} /></> : <>Show all {needs.length}<ChevronDown size={14} /></>}
+                </button>
+              )}
             </div>
           </section>
         </div>
