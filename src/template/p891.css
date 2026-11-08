@@ -57,3 +57,7 @@
 .wl-n b { font-size: 16px; color: var(--ov-hi); }
 .wl-n small { font-size: 11.5px; color: var(--ov-mute); }
 .adm-steps + .adm-steps { margin-top: 16px; }
+/* P909: Add clients shows the count and the cost before saving. */
+.bi-cost { margin: 0 0 8px; font-size: 13px; font-weight: 500; color: var(--ov-mid); }
+.bi-cost b { color: var(--ov-hi); }
+.bi-cost.is-more { padding: 8px 12px; border-radius: 12px; color: var(--ov-hi); background: color-mix(in srgb, var(--nt-amber) 14%, var(--bg-surface)); border: 1px solid color-mix(in srgb, var(--nt-amber) 36%, transparent); }

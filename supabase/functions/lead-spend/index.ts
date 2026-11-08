@@ -1,4 +1,4 @@
-// lead-spend — P884, prepaid weekly lead spend charges (test mode only). Logic: core.ts.
+// lead-spend — P884, lead spend charges (P909: nightly, to the card on file; test mode only). Logic: core.ts.
 //
 // Deploy with --no-verify-jwt: pg_cron calls it every 15 minutes with the x-ohvara-cron secret, not a JWT; core.ts
 // checks the user's JWT or the cron secret on every request.

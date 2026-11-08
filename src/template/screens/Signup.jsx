@@ -57,7 +57,7 @@ export default function Signup() {
               <Field label="Email"><input className={bad('email') ? 'tp-danger' : ''} type="email" value={f.email} onChange={set('email')} autoComplete="email" placeholder="you@example.com" /></Field>
               <Field label="Mobile number" hint="Live calls and alerts come to this phone."><PhoneInput invalid={bad('phone')} value={f.phone} onChange={d => setF({ ...f, phone: d })} autoComplete="tel-national" /></Field>
               <Field label="Password" hint="At least 8 characters."><input className={bad('password') ? 'tp-danger' : ''} type="password" value={f.password} onChange={set('password')} autoComplete="new-password" /></Field>
-              <div className="tp-plan"><span className="tp-grow"><b>During the pilot you pay only your lead spend</b><p className="tp-sub">You set it per day and change it any time. Prepaid each week; what you don{'’'}t use rolls over.</p></span><SampleTag>Pilot</SampleTag></div>
+              <div className="tp-plan"><span className="tp-grow"><b>During the pilot you pay only your lead spend</b><p className="tp-sub">You set it per day and change it any time. It{'’'}s charged to your card each night for the next day; anything not spent comes off the next charge.</p></span><SampleTag>Pilot</SampleTag></div>
               <ul className="tp-list">{data.covers.map(c => <li key={c} className="tp-row tp-sub" style={{ minHeight: 26 }}><Check size={14} />{c}</li>)}</ul>
               <label className="tp-check"><input type="checkbox" checked={agree} onChange={e => setAgree(e.target.checked)} /><span>Agreement checkbox, wording pending</span></label>
               <Pending>Terms, privacy and text-message consent wording pending</Pending>

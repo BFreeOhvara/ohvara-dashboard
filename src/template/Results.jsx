@@ -70,7 +70,7 @@ export function Results() {
           <header className="fx-tile-h"><span className="tp-grow"><h2>Your week vs your usual week</h2><p>Booked appointments, Monday to Sunday</p></span></header>
           <div className="rs-vs-n"><b className="tp-num">{b.booked}</b><small>this week</small><b className="tp-num">{b.usual}</b><small>your usual week</small></div>
           <p className="rs-vs-l">{vs.line} At your spend we expect {rangeWords(range4)} a week.</p>
-          {vs.slow && <p className="rs-slow">A slow week happens: fewer people asked for a quote, or more of them didn{'’'}t pick up. Your spend only pays for what came in, and anything left over rolls into next week.</p>}
+          {vs.slow && <p className="rs-slow">A slow week happens: fewer people asked for a quote, or more of them didn{'’'}t pick up. Your spend only pays for what came in, and anything not spent comes off your next nightly charge.</p>}
           <div className="rs-push" aria-label="Monday summary preview"><Bell size={14} aria-hidden="true" /><span><b>Every Monday, 8:00 AM</b>Last week: {b.booked} booked ({vs.line.replace(/\.$/, '').toLowerCase()}), {r.transferred} transferred. {sold} sold, {money(premium)} in monthly premium.</span></div>
         </section>
         <section className="fx-tile fx-s6 rs-saved" aria-label="Saved by servicing">

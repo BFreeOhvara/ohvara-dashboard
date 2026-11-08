@@ -3,6 +3,9 @@
 // lead-spend edge function (test mode only until Brayden's live switch). Bank and card numbers never pass through here.
 //
 // Agent:  loadBilling(db)                    my_billing(): plan, status, what runs, balance, spend, week, membership
+//                                            (P909: + next_charge, card, credit, founding, settings)
+//         cardCheck(db)                      P909 lead-spend card_check: records the default card (brand + last 4)
+//         addedClientsQuote(db, n)           P909 billing_added_clients_quote: Add clients' count and cost
 //         setLeadProduct(db, { daily, mode, hours, tz })  P889 lead_product_set: ONE daily spend + how they take
 //                                            leads; the server splits it (agents never see the split). A raise is
 //                                            charged by the next lead-spend run (every 15 minutes).
@@ -12,7 +15,7 @@
 // Admin:  adminBilling(db, agentId), pilotSet, vaCostSet, toPaid, setupSet, adjustBalance, savePriceBook
 // Shape:  toSampleBilling(view) maps the server view onto the sample billing shape the P878 Billing page draws.
 
-import { pricesOf, BOOK } from './priceBook.js'
+import { pricesOf, BOOK, hourText } from './priceBook.js'
 
 const rpc = async (db, name, args) => {
   const { data, error } = await db.rpc(name, args)
@@ -35,6 +38,8 @@ const toCents = d => Math.round((Number(d) || 0) * 100)
 export const loadBilling = db => rpc(db, 'my_billing')
 export const setSpend = (db, { appts = 0, live = 0 }) => invoke(db, { action: 'set_spend', appts_cents: toCents(appts), live_cents: toCents(live) })
 export const payNow = db => invoke(db, { action: 'pay_now' })
+export const cardCheck = db => invoke(db, { action: 'card_check' })
+export const addedClientsQuote = (db, n) => rpc(db, 'billing_added_clients_quote', { p_new: n })
 export const pauseSpend = (db, paused) => invoke(db, { action: 'pause', paused: !!paused })
 export const acceptPaid = (db, termsVersion, device = typeof navigator !== 'undefined' ? navigator.userAgent : null) =>
   rpc(db, 'billing_accept_paid', { p_terms_version: termsVersion, p_device: device })
@@ -60,6 +65,13 @@ export const setupSet = (db, agentId, { mode, fee = null, months = null }) =>
   rpc(db, 'admin_billing_setup_set', { p_agent: agentId, p_mode: mode, p_fee_cents: fee == null ? null : toCents(fee), p_min_months: months })
 export const adjustBalance = (db, agentId, dollars, reason) => rpc(db, 'admin_lead_spend_adjust', { p_agent: agentId, p_cents: toCents(dollars), p_reason: reason })
 export const savePriceBook = (db, book, effective, note) => rpc(db, 'admin_price_book_save', { p_book: book, p_effective: effective, p_note: note })
+// P909 admin: billing settings (max daily, charge hours, founding lock), one agent's max, revenue with the 12% apart.
+export const saveBillingSettings = (db, st) => rpc(db, 'admin_billing_settings_save', {
+  p_settings: { max_daily_cents: st.maxDaily == null ? null : toCents(st.maxDaily), charge_hour: st.chargeHour, retry_hour: st.retryHour,
+    founding_count: st.foundingCount, founding_months: st.foundingMonths },
+})
+export const setMaxDaily = (db, agentId, dollars) => rpc(db, 'admin_billing_max_daily_set', { p_agent: agentId, p_cents: dollars == null ? null : toCents(dollars) })
+export const adminRevenue = (db, from, to) => rpc(db, 'admin_billing_revenue', { p_from: from, p_to: to })
 
 // The server view → the sample billing fields (dollars). Fields the server doesn't have yet (what each lead type
 // bought, saved policies, invoice history) stay with their owners: P848 fills bought/history, P852 saved.
@@ -81,6 +93,18 @@ export function toSampleBilling(view) {
     pending: next != null ? { daily: d(next), from: sp.next_from } : null,
     take: { mode: lp.mode || 'appts', hours: lp.hours || null, tz: lp.tz || null },
     wallet: { topUp: d(week.collected_cents) || 0, rolled: d(week.rolled_in_cents) || 0, spent: d(spent) || 0, balance: d(view.balance_cents) || 0, week_start: week.week_start },
+    // P909: the nightly charge (tonight's, for tomorrow), the card on file, credit, the founding lock, settings.
+    nightly: view.next_charge ? {
+      at: `Tonight, ${hourText(view.next_charge.at_hour ?? 20)}`, forDay: view.next_charge.for_day, status: view.next_charge.status,
+      tonight: { spend: d(view.next_charge.spend_cents), credit: d(view.next_charge.credit_cents), net: d(view.next_charge.net_cents),
+        fee: d(view.next_charge.fee_cents), total: d(view.next_charge.total_cents), rate: Number(view.next_charge.fee_rate) || 0 },
+      nights: (view.charges || []).filter(c => c.kind === 'nightly').map(c => ({ day: c.for_day, spend: d(c.spend_cents), fee: d(c.fee_cents), status: c.status })),
+    } : null,
+    card: view.card ? { label: view.card.label, onFile: !!view.card.on_file } : null,
+    credit: d(view.credit_cents) || 0, refund: d(view.refund_cents) || 0,
+    founding: view.founding?.active ? { no: view.founding.no, until: view.founding.until } : null,
+    maxDaily: d(view.settings?.max_daily_cents) ?? null,
+    clients: view.membership?.clients ? { total: view.membership.clients.total, sold: view.membership.clients.sold, added: view.membership.clients.added } : null,
     va: view.va_cost ? { on: !!view.va_cost.on, hours: Math.round((view.va_cost.minutes / 60) * 10) / 10, rate: d(view.va_cost.rate_cents) } : { on: false, hours: 0, rate: 0 },
     status: st.status, leadSpend: st.lead_spend, runs: st,
     payment: { failed: st.lead_spend === 'stopped_payment' || st.status === 'past_due' || st.status === 'suspended' },

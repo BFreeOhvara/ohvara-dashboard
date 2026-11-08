@@ -30,7 +30,8 @@ test('Money adds up for every period: brought in minus costs is profit, and the 
   const s = admSnapshot()
   for (const [period] of PERIODS) {
     const p = moneyFor(s, period)
-    assert.equal(p.inTotal, p.budgets + p.servicing + p.setup, period)
+    assert.equal(p.inTotal, p.budgets + p.leadFee + p.servicing + p.setup, period)
+    assert.equal(p.leadFee, Math.round(p.budgets * 0.12), `${period}: 12% of lead spend, apart from the plan fees (P909)`)
     assert.equal(p.costTotal, p.ads + p.vaPay + p.fees + p.tools, period)
     assert.equal(p.profit, p.inTotal - p.costTotal, period)
     assert.ok(p.profit > 0, `${period} profit is believable`)

@@ -30,7 +30,7 @@ export function PilotBlock({ agent }) {
   }
   const vaMin = PILOT_ROWS.filter(r => r.agent === agent.name && !r.sample).reduce((t, r) => t + r.vaMin, 0)
   return (
-    <Block title="Pilot" sub="Pilot agents pay only their lead spend. No membership, setup or other fee." aside={<SampleTag>Sample</SampleTag>}>
+    <Block title="Pilot" sub="Pilot agents pay only their lead spend. No plan fee, setup or 12%." aside={<SampleTag>Sample</SampleTag>}>
       <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>{p.on ? `In the pilot since ${p.start}` : 'Not in the pilot'}</b><p className="tp-sub">Admin only. Every change is logged with before and after.</p></div>
         <Switch on={p.on} label="Pilot" onChange={v => { save('Pilot', p.on ? 'On' : 'Off', v ? 'On' : 'Off', { ...p, on: v, start: v ? p.start || 'Today' : p.start }); note(v ? `${agent.name} is in the pilot` : `${agent.name} left the pilot`) }} /></div>
       {p.on && <>
@@ -100,9 +100,9 @@ export function PilotResults() {
           </div>
         </Tile>
         <Tile className={`is-fill ${ok ? 'is-green' : 'is-warn'}`} i={1} title="Owner rule" sub={`VA cost at or under ${Math.round(OWNER_LIMIT * 100)}% of revenue`}>
-          <dl className="fx-facts">{[['Revenue', money(all.revenue)], ['VA cost', cents(all.vaCost)], ['Owner take', cents(all.ownerTake)], ['VA % of revenue', all.vaPct == null ? 'No revenue yet' : `${all.vaPct}%`]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd className="tp-money">{v}</dd></div>)}</dl>
-          <small>{all.revenue ? (ok ? 'Inside the rule.' : 'Over the rule. Admins are alerted.') : 'Pilot agents pay lead spend only, so revenue starts with paid plans. Try a membership amount to see the rule.'}</small>
-          <Seg label="Sample membership revenue" value={membership} onChange={setMembership} options={[0, 1800, 5400].map(n => ({ key: n, label: n ? money(n) : 'None' }))} />
+          <dl className="fx-facts">{[['Plan fees', money(all.planFee)], ['12% of lead spend', cents(all.leadFee)], ['Revenue', cents(all.revenue)], ['VA cost', cents(all.vaCost)], ['Owner take', cents(all.ownerTake)], ['VA % of revenue', all.vaPct == null ? 'No revenue yet' : `${all.vaPct}%`]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd className="tp-money">{v}</dd></div>)}</dl>
+          <small>{all.revenue ? (ok ? 'Inside the rule.' : 'Over the rule. Admins are alerted.') : 'Pilot agents pay lead spend only, so revenue starts with paid plans. Try a plan fee amount to see the rule (with 12% of lead spend on top).'}</small>
+          <Seg label="Sample plan fee revenue" value={membership} onChange={setMembership} options={[0, 1800, 5400].map(n => ({ key: n, label: n ? money(n) : 'None' }))} />
         </Tile>
       </div>
       <Tile i={2} title="Pilot by agent, state or week" aside={<Seg label="Group by" value={by} onChange={setBy} options={[{ key: 'agent', label: 'Agent' }, { key: 'state', label: 'State' }, { key: 'week', label: 'Week' }]} />}>

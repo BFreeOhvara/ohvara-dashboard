@@ -3,7 +3,7 @@ import { instantOf, clockOf, dateOf, zoneOf } from '../../lib/callSlots.js'
 import { seedEvents, applyMove, rebookLead, closeCallTask, whenLabel, needsYouNow, forYourInfo, addMin, STAGES, SAMPLE_NOW } from '../leadLifecycle.js'
 import { canMove, withSoldLeads } from '../agentView.js'
 import { leadText, SENDER } from '../leadTexts.js'
-import { wallet as walletOf, expected, startsText, TIERS } from '../spendPlan.js'
+import { nightly as nightlyOf, expected, startsText, TIERS } from '../spendPlan.js'
 
 // P901: sample invoices use the price book's Growth price, never a number of their own.
 const GROWTH = TIERS.find(t => t.key === 'growth').monthly
@@ -196,7 +196,7 @@ const sampleAgent = () => {
   const k = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('agent') : null
   return SAMPLE_AGENTS[k] || SAMPLE_AGENTS.established
 }
-// P878: preview the paid plan with ?plan=paid, a low prepaid balance with ?billing=low, a failed card with ?billing=failed.
+// P878: preview the paid plan with ?plan=paid, no card with ?card=none (P909), a declined nightly charge with ?billing=failed.
 const param = k => (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get(k) : null)
 const WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 export const DEFAULT_WEEK = Object.fromEntries(WEEK.map(d => [d, { on: !['Sat', 'Sun'].includes(d), start: '9:00 AM', end: d === 'Fri' ? '5:00 PM' : '6:00 PM' }]))
@@ -237,15 +237,26 @@ const seed = {
     ],
   },
   // cancellations: the old cancellation plan, shown only for an agent already on one (this sample agent is not).
-  // P878: the pilot (lead spend only, prepaid weekly) or a paid plan (membership by daily spend + lead spend). Every
-  // price is a draft (spendPlan.js). P889: one daily spend + how they take leads (take); bought = what the spend
+  // P878: the pilot (lead spend only) or a paid plan (a plan by daily spend + lead spend + 12%). P909: prices are final
+  // (price book v3) and lead spend is charged each night for the next day; nights = the last charges (spend charged,
+  // what the ads spent; today's isn't in yet). ?billing=failed: last night's card was declined. P889: one daily spend + how they take leads (take); bought = what the spend
   // bought this week and this month, booked and transferred apart. ?take=appts previews Appointments only.
   billing: {
     plan: param('plan') === 'paid' ? 'paid' : 'pilot', products: 'both',
     spend: { daily: 100 }, pending: null,
     take: { mode: param('take') === 'appts' ? 'appts' : 'both', hours: DEFAULT_LIVE_HOURS, tz: 'America/Chicago' },
     booked: sampleAgent().none ? 0 : 4, usual: 5,
-    wallet: { week: 'Mon, Nov 2 to Sun, Nov 8', topUp: 700, rolled: 35, spent: param('billing') === 'low' ? 668 : 412, next: 'Mon, Nov 9' },
+    nightly: {
+      at: 'Tonight, 8 PM', forDay: 'Tue, Nov 3',
+      nights: [
+        { day: 'Sat, Oct 31', spend: 100, delivered: 100, status: 'paid' },
+        { day: 'Sun, Nov 1', spend: 100, delivered: 96, status: 'paid' },
+        { day: 'Mon, Nov 2', spend: 100, delivered: null, status: param('billing') === 'failed' ? 'failed' : 'paid' },
+      ],
+    },
+    card: { label: 'Visa ending 4242', onFile: param('card') !== 'none' },
+    founding: param('plan') === 'paid' ? { no: 7, until: 'Nov 8, 2027' } : null,
+    clients: { total: 38, sold: 26, added: 12 },
     va: { on: true, hours: 6.5, rate: 8 },
     bought: {
       week: { spent: 500, leads: 16, reached: 13, booked: 4, offered: 3, transferred: 2, showed: 2, sold: 2, premium: 1927.8 },
@@ -254,11 +265,11 @@ const seed = {
     saved: [{ id: 's1', who: 'Luis Ortega', what: 'Card declined. The team updated the payment with the carrier', at: 'Oct 21', premium: 112 }, { id: 's2', who: 'Carla Jones', what: 'Asked to cancel. The team kept the policy', at: 'Oct 9', premium: 74.25 }],
     paused: null, cancel: null,
     payment: { card: 'Visa ending 4242', failed: param('billing') === 'failed' },
-    next_charge: 'Mon, Nov 9', nextBill: 'Tue, Dec 1',
+    next_charge: 'Tonight, 8 PM', nextBill: 'Tue, Dec 1',
     servicing: { status: 'active', next: 'Tue, Dec 1' }, cancellations: null,
     history: param('plan') === 'paid'
-      ? [{ id: 'inv1', at: 'Sun, Nov 1', label: 'Membership, Growth, November', amount: GROWTH }, { id: 'inv2', at: 'Sun, Nov 1', label: 'Lead spend, October', amount: 2980 }, { id: 'inv3', at: 'Thu, Oct 1', label: 'Membership, Growth, October', amount: GROWTH }]
-      : [{ id: 'inv1', at: 'Mon, Nov 2', label: 'Lead spend, week of Nov 2 (prepaid)', amount: 665 }, { id: 'inv2', at: 'Mon, Oct 26', label: 'Lead spend, week of Oct 26 (prepaid)', amount: 700 }, { id: 'inv3', at: 'Mon, Oct 19', label: 'Lead spend, week of Oct 19 (prepaid)', amount: 700 }],
+      ? [{ id: 'inv0', at: 'Sun, Nov 1, 8 PM', label: 'Lead spend for Mon, Nov 2 + 12%', amount: 112 }, { id: 'inv1', at: 'Sun, Nov 1', label: 'Plan, Growth, November', amount: GROWTH }, { id: 'inv2', at: 'Sat, Oct 31, 8 PM', label: 'Lead spend for Sun, Nov 1 + 12%', amount: 112 }, { id: 'inv3', at: 'Thu, Oct 1', label: 'Plan, Growth, October', amount: GROWTH }]
+      : [{ id: 'inv1', at: 'Sun, Nov 1, 8 PM', label: 'Lead spend for Mon, Nov 2', amount: 100 }, { id: 'inv2', at: 'Sat, Oct 31, 8 PM', label: 'Lead spend for Sun, Nov 1', amount: 100 }, { id: 'inv3', at: 'Fri, Oct 30, 8 PM', label: 'Lead spend for Sat, Oct 31', amount: 100 }],
   },
   submitted: 11,
 }
@@ -285,17 +296,16 @@ function useAppointmentsSample() { const s = useStore(); return ok(s.appointment
 function useThreadsSample() { const s = useStore(); return ok(s.threads) }
 function useActivitySample() { const s = useStore(); return ok(s.activity) }
 function useBillingSample() { const s = useStore(); return ok(useMemo(() => billingView(s.billing, s.submitted), [s.billing, s.submitted])) }
-// P878: the billing record plus what's worked out from it (the prepaid balance, the week's expected range).
+// P878: the billing record plus what's worked out from it (P909: tonight's charge and the credit, the week's range).
 function billingView(b, submitted) {
-  const w = walletOf(b.wallet, b.spend)
-  return { ...b, submitted, walletNow: w, expected: expected(b.spend, b.take?.mode), servicing: { ...b.servicing, status: b.products === 'leads' ? 'off' : 'active' } }
+  const n = nightlyOf(b.nightly, b.spend, b.plan)
+  return { ...b, submitted, nightNow: n, payment: { ...b.payment, failed: b.payment.failed || n.failed }, expected: expected(b.spend, b.take?.mode), servicing: { ...b.servicing, status: b.products === 'leads' ? 'off' : 'active' } }
 }
-// Billing items that need the agent (N-K-01): a failed card, prepaid lead spend about to run out.
+// Billing items that need the agent (N-K-01): a declined card (tomorrow's leads are off), no card on file.
 function billingNeeds(b) {
-  const w = walletOf(b.wallet, b.spend)
   const out = []
-  if (b.payment.failed) out.push({ key: 'failed', title: 'Payment failed', name: 'Update your card', what: 'Your leads are stopped until it goes through. Servicing keeps going for 3 days.', when: 'Now' })
-  if (b.plan === 'pilot' && !b.paused && w.low) out.push({ key: 'low', title: 'Lead spend running out', name: w.out ? 'Your leads have stopped' : `About ${w.daysLeft} day${w.daysLeft === 1 ? '' : 's'} left`, what: `Top up now or new leads stop until ${b.wallet.next}.`, when: 'Today' })
+  if (b.payment.failed || nightlyOf(b.nightly, b.spend, b.plan).failed) out.push({ key: 'failed', title: 'Card declined', name: 'Fix your card', what: 'Tomorrow’s leads are off until it goes through. We try again at 8 AM.', when: 'Now' })
+  if (b.card && !b.card.onFile && b.products !== 'servicing') out.push({ key: 'card', title: 'No card on file', name: 'Add a card', what: 'Your leads start once a card is on file. Lead spend is charged each night.', when: 'Now' })
   return out
 }
 function useTalksSample() { const s = useStore(); return ok(s.talks) }
@@ -450,13 +460,14 @@ function useActionsSample() {
     setSpend: spend => set(s => ({ ...s, billing: { ...s.billing, pending: { spend, starts: startsText('Tue, Nov 3') }, spend } })),
     // P889: how they take leads (mode + live-call hours). Starts at midnight like a spend change.
     setTake: take => set(s => ({ ...s, billing: { ...s.billing, take } })),
-    topUp: amount => set(s => ({ ...s, billing: { ...s.billing, wallet: { ...s.billing.wallet, topUp: s.billing.wallet.topUp + amount } } })),
+    addCard: () => set(s => ({ ...s, billing: { ...s.billing, card: { label: 'Visa ending 4242', onFile: true } } })),
     setProducts: products => set(s => ({ ...s, billing: { ...s.billing, products } })),
     pause: p => set(s => ({ ...s, billing: { ...s.billing, paused: p } })),
     resume: () => set(s => ({ ...s, billing: { ...s.billing, paused: null } })),
     cancelPlan: c => set(s => ({ ...s, billing: { ...s.billing, cancel: c } })),
     keepPlan: () => set(s => ({ ...s, billing: { ...s.billing, cancel: null } })),
-    fixCard: () => set(s => ({ ...s, billing: { ...s.billing, payment: { ...s.billing.payment, failed: false } } })),
+    fixCard: () => set(s => ({ ...s, billing: { ...s.billing, payment: { ...s.billing.payment, failed: false },
+      nightly: { ...s.billing.nightly, nights: s.billing.nightly.nights.map(x => (x.status === 'failed' ? { ...x, status: 'paid' } : x)) } } })),
     saveSetup: patch => set(s => ({ ...s, setup: { ...(s.setup || {}), ...patch } })),
     addLeadNote: (id, text) => set(s => ({ ...s, leads: s.leads.map(l => (l.id === id ? { ...l, note: l.note ? `${l.note}\n${text}` : text } : l)) })),
     doneTask: id => set(s => ({ ...s, tasks: { ...s.tasks, [id]: true } })),
@@ -494,7 +505,7 @@ function useActionsSample() {
         })
       })
       const who = rows.length === 1 ? `${rows[0].first_name} ${rows[0].last_name}` : `${rows.length} clients`
-      return { ...s, clients: [...made, ...s.clients], activity: log(s, who, `${rows.length === 1 ? 'Added' : `${rows.length} clients added`} by you. The team calls to welcome ${rows.length === 1 ? 'them' : 'each one'}${rows.length > 25 ? ', 25 a day' : ''}.`, 'client') }
+      return { ...s, clients: [...made, ...s.clients], billing: { ...s.billing, clients: { ...s.billing.clients, added: s.billing.clients.added + made.length, total: s.billing.clients.total + made.length } }, activity: log(s, who, `${rows.length === 1 ? 'Added' : `${rows.length} clients added`} by you. The team calls to welcome ${rows.length === 1 ? 'them' : 'each one'}${rows.length > 25 ? ', 25 a day' : ''}.`, 'client') }
     }),
     submitRequest: form => set(s => ({ ...s, activity: log(s, form.name || 'Client', `Service request sent: ${form.kind}.`, 'client') })),
     // P885 (sample): a new forwarding address; the old one stops (rotate_my_payment_intake_address).

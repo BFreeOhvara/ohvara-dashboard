@@ -1,0 +1,323 @@
+[
+ {
+  "w": 1440,
+  "page": "agent-billing-paid",
+  "sideways": false,
+  "prices": [
+   "$1,499",
+   "$186",
+   "$112",
+   "$74"
+  ],
+  "has": [
+   "$1,499",
+   "$299",
+   "$112",
+   "12%",
+   "OHVARA LEADS",
+   "Cancel anytime",
+   "Founding"
+  ],
+  "old": [],
+  "errors": []
+ },
+ {
+  "w": 1440,
+  "page": "agent-billing-declined",
+  "sideways": false,
+  "prices": [
+   "$1,499",
+   "$186",
+   "$112",
+   "$74"
+  ],
+  "has": [
+   "$1,499",
+   "$299",
+   "$112",
+   "12%",
+   "OHVARA LEADS",
+   "Cancel anytime",
+   "Fix card",
+   "Founding"
+  ],
+  "old": [],
+  "errors": []
+ },
+ {
+  "w": 1440,
+  "page": "agent-billing-nocard",
+  "sideways": false,
+  "prices": [
+   "$186",
+   "$112",
+   "$74"
+  ],
+  "has": [
+   "$112",
+   "OHVARA LEADS",
+   "Cancel anytime",
+   "Add a card"
+  ],
+  "old": [],
+  "errors": []
+ },
+ {
+  "w": 1440,
+  "page": "agent-setup-spend-paid",
+  "sideways": false,
+  "prices": [
+   "$1,499"
+  ],
+  "has": [
+   "$1,499",
+   "$299",
+   "$112",
+   "12%",
+   "Cancel anytime"
+  ],
+  "old": [],
+  "errors": []
+ },
+ {
+  "w": 1440,
+  "page": "agent-setup-card-paid",
+  "sideways": false,
+  "prices": [],
+  "has": [
+   "$299",
+   "$112",
+   "OHVARA LEADS",
+   "Add a card"
+  ],
+  "old": [],
+  "errors": []
+ },
+ {
+  "w": 1440,
+  "page": "agent-signup",
+  "sideways": false,
+  "prices": [],
+  "has": [],
+  "old": [],
+  "errors": []
+ },
+ {
+  "w": 1440,
+  "page": "admin-billing",
+  "sideways": false,
+  "prices": [
+   "$699",
+   "$1,499",
+   "$2,999",
+   "$499"
+  ],
+  "has": [
+   "$699",
+   "$1,499",
+   "$2,999",
+   "$499",
+   "12%"
+  ],
+  "old": [],
+  "errors": []
+ },
+ {
+  "w": 1440,
+  "page": "admin-billing-agents",
+  "sideways": false,
+  "prices": [
+   "$1,499",
+   "$699"
+  ],
+  "has": [
+   "$699",
+   "$1,499",
+   "12%"
+  ],
+  "old": [],
+  "errors": []
+ },
+ {
+  "w": 1440,
+  "page": "admin-billing-pilot",
+  "sideways": false,
+  "prices": [],
+  "has": [
+   "12%"
+  ],
+  "old": [],
+  "errors": []
+ },
+ {
+  "w": 1440,
+  "page": "admin-settings-billing",
+  "sideways": false,
+  "prices": [],
+  "has": [
+   "12%",
+   "Founding",
+   "Max daily lead spend"
+  ],
+  "old": [],
+  "errors": []
+ },
+ {
+  "w": 390,
+  "page": "agent-billing-paid",
+  "sideways": false,
+  "prices": [
+   "$1,499",
+   "$186",
+   "$112",
+   "$74"
+  ],
+  "has": [
+   "$1,499",
+   "$299",
+   "$112",
+   "12%",
+   "OHVARA LEADS",
+   "Cancel anytime",
+   "Founding"
+  ],
+  "old": [],
+  "errors": []
+ },
+ {
+  "w": 390,
+  "page": "agent-billing-declined",
+  "sideways": false,
+  "prices": [
+   "$1,499",
+   "$186",
+   "$112",
+   "$74"
+  ],
+  "has": [
+   "$1,499",
+   "$299",
+   "$112",
+   "12%",
+   "OHVARA LEADS",
+   "Cancel anytime",
+   "Fix card",
+   "Founding"
+  ],
+  "old": [],
+  "errors": []
+ },
+ {
+  "w": 390,
+  "page": "agent-billing-nocard",
+  "sideways": false,
+  "prices": [
+   "$186",
+   "$112",
+   "$74"
+  ],
+  "has": [
+   "$112",
+   "OHVARA LEADS",
+   "Cancel anytime",
+   "Add a card"
+  ],
+  "old": [],
+  "errors": []
+ },
+ {
+  "w": 390,
+  "page": "agent-setup-spend-paid",
+  "sideways": false,
+  "prices": [
+   "$1,499"
+  ],
+  "has": [
+   "$1,499",
+   "$299",
+   "$112",
+   "12%",
+   "Cancel anytime"
+  ],
+  "old": [],
+  "errors": []
+ },
+ {
+  "w": 390,
+  "page": "agent-setup-card-paid",
+  "sideways": false,
+  "prices": [],
+  "has": [
+   "$299",
+   "$112",
+   "OHVARA LEADS",
+   "Add a card"
+  ],
+  "old": [],
+  "errors": []
+ },
+ {
+  "w": 390,
+  "page": "agent-signup",
+  "sideways": false,
+  "prices": [],
+  "has": [],
+  "old": [],
+  "errors": []
+ },
+ {
+  "w": 390,
+  "page": "admin-billing",
+  "sideways": false,
+  "prices": [
+   "$699",
+   "$1,499",
+   "$2,999",
+   "$499"
+  ],
+  "has": [
+   "$699",
+   "$1,499",
+   "$2,999",
+   "$499",
+   "12%"
+  ],
+  "old": [],
+  "errors": []
+ },
+ {
+  "w": 390,
+  "page": "admin-billing-agents",
+  "sideways": false,
+  "prices": [],
+  "has": [
+   "12%"
+  ],
+  "old": [],
+  "errors": []
+ },
+ {
+  "w": 390,
+  "page": "admin-billing-pilot",
+  "sideways": false,
+  "prices": [],
+  "has": [
+   "12%"
+  ],
+  "old": [],
+  "errors": []
+ },
+ {
+  "w": 390,
+  "page": "admin-settings-billing",
+  "sideways": false,
+  "prices": [],
+  "has": [
+   "12%",
+   "Founding",
+   "Max daily lead spend"
+  ],
+  "old": [],
+  "errors": []
+ }
+]

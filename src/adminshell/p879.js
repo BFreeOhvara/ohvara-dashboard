@@ -177,13 +177,16 @@ export function pilotTotals(rows, { type = 'all', rate = VA_RATE, membership = 0
   const sum = k => r.reduce((t, x) => t + x[k], 0)
   const spend = sum('spend'); const leads = sum('leads'); const booked = sum('booked'); const transfers = sum('transfers'); const sales = sum('sales')
   const vaMin = sum('vaMin'); const vaCost = Math.round((vaMin / 60) * rate * 100) / 100
-  // In the pilot agents pay lead spend only (all to their ads); revenue is membership once paid plans start.
-  const revenue = membership + sum('revenue')
+  // In the pilot agents pay lead spend only (all to their ads). Once paid plans start, revenue is the plan fees plus
+  // 12% of lead spend (P909), kept as two numbers.
+  const planFee = membership
+  const leadFee = membership ? Math.round(spend * PRICES.leadFee * 100) / 100 : 0
+  const revenue = planFee + leadFee + sum('revenue')
   const ownerTake = Math.round((revenue - vaCost) * 100) / 100
   return {
     spend, leads, reached: sum('reached'), booked, transfers, offered: sum('offered'), shows: sum('shows'), sales, vaMin, vaHours: Math.round((vaMin / 60) * 10) / 10, vaCost,
     perLead: per(spend, leads), perBooked: per(spend, booked), perTransfer: per(spend, transfers), perShow: per(spend, sum('shows')), perSale: per(spend, sales),
-    pickup: per(transfers, sum('offered')), revenue, ownerTake, vaPct: revenue ? Math.round((vaCost / revenue) * 1000) / 10 : null,
+    pickup: per(transfers, sum('offered')), planFee, leadFee, revenue, ownerTake, vaPct: revenue ? Math.round((vaCost / revenue) * 1000) / 10 : null,
   }
 }
 export const OWNER_LIMIT = 1 / 3 // VA cost at or under a third of revenue

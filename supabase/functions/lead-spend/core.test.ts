@@ -4,7 +4,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { handle, outcomeOf, runCharges, type Charge, type Store } from './core.ts'
+import { handle, outcomeOf, runCharges, words, cardOf, type Charge, type Store } from './core.ts'
 import { StripeError, type Stripe } from '../_shared/fulfillmentPayouts.ts'
 
 const AGENT = 'a8840000-0000-4000-8000-00000000000a'
@@ -25,6 +25,8 @@ function world(claims: Charge[] = [charge()], over: { rpcError?: any; setResult?
       if (name === 'lead_spend_claim_charges') return claims.splice(0)
       if (name === 'lead_spend_set') return over.setResult ?? { from: '2026-11-12', charge_id: 'ch1', extra_cents: 30000 }
       if (name === 'lead_spend_retry') return 1
+      if (name === 'billing_customer_of') return 'cus_a'
+      if (name === 'billing_card_saved') return null
       return { status: args.p_status }
     },
   }
@@ -72,7 +74,8 @@ test('a paid charge: off-session PaymentIntent on the default method, idempotent
   assert.equal(post.params.payment_method, 'pm_1')
   assert.equal(post.params.off_session, true)
   assert.equal(post.params.confirm, true)
-  assert.equal(post.params.statement_descriptor_suffix, 'LEAD SPEND')
+  assert.equal(post.params.statement_descriptor_suffix, 'LEADS')
+  assert.deepEqual(post.params.payment_method_types, ['card'])
   assert.equal(post.params.metadata.ohvara, 'lead_spend')
   assert.equal(post.opts.idempotencyKey, 'lead_spend:weekly:a:2026-11-16:1')
   assert.deepEqual(w.results(), [{ p_id: 'ch1', p_status: 'paid', p_pi: 'pi_1', p_failure: null }])
@@ -83,7 +86,7 @@ test('no saved method: failed with a plain reason, no PaymentIntent', async () =
   const s = fakeStripe({ 'GET customers/cus_a': () => ({ id: 'cus_a', invoice_settings: { default_payment_method: null } }) })
   await runCharges(w.store, s.stripe, 'sk_test_x')
   assert.equal(w.results()[0].p_status, 'failed')
-  assert.match(w.results()[0].p_failure, /No card or bank account/)
+  assert.match(w.results()[0].p_failure, /No card on file/)
   assert.ok(!s.calls.some(c => c.method === 'POST'))
 })
 
@@ -115,7 +118,7 @@ test('a network error leaves the charge processing (retried later with the same 
   assert.equal(r.results[0].result.left, 'ch1')
 })
 
-test('ACH: processing now, re-checked by id later and then paid', async () => {
+test('a slow payment: processing now, re-checked by id later and then paid', async () => {
   const w = world(); const s = withCard({ id: 'pi_ach', status: 'processing' })
   await runCharges(w.store, s.stripe, 'sk_test_x')
   assert.equal(w.results()[0].p_status, 'processing')
@@ -187,4 +190,40 @@ test('pause: needs a boolean', async () => {
   assert.equal((await handle(userReq({ action: 'pause', paused: 'yes' }), w.store, null, 'sk_test_x')).status, 400)
   assert.equal((await handle(userReq({ action: 'pause', paused: true }), w.store, null, 'sk_test_x')).status, 200)
   assert.deepEqual(w.rpcs.at(-1), { name: 'lead_spend_pause', args: { p_paused: true, p_agent: AGENT } })
+})
+
+// P909: nightly charges, the card check, the max.
+test('a nightly charge: says the day and the 12%, card only, OHVARA LEADS', async () => {
+  const w = world([charge({ kind: 'nightly', key: 'nightly:a:2026-11-10', amount_cents: 11200, for_day: '2026-11-10', spend_cents: 10000, fee_cents: 1200 })])
+  const s = withCard({ id: 'pi_n', status: 'succeeded', livemode: false })
+  await runCharges(w.store, s.stripe, 'sk_test_x')
+  const post = s.calls.find(c => c.method === 'POST')!
+  assert.equal(post.params.amount, 11200)
+  assert.equal(post.params.description, 'Lead spend for 2026-11-10 + 12%')
+  assert.equal(post.params.statement_descriptor_suffix, 'LEADS')
+  assert.equal(post.params.metadata.fee_cents, '1200')
+  assert.equal(post.opts.idempotencyKey, 'lead_spend:nightly:a:2026-11-10:1')
+  assert.deepEqual(w.results()[0], { p_id: 'ch1', p_status: 'paid', p_pi: 'pi_n', p_failure: null })
+  assert.equal(words(charge({ kind: 'nightly', for_day: '2026-11-10', fee_cents: 0 })), 'Lead spend for 2026-11-10')
+})
+
+test('card_check: records the default card as words, never the number', async () => {
+  const w = world([])
+  const s = fakeStripe({
+    'GET customers/cus_a': () => ({ invoice_settings: { default_payment_method: 'pm_1' } }),
+    'GET payment_methods/pm_1': () => ({ type: 'card', card: { brand: 'visa', last4: '4242' } }),
+  })
+  const res = await handle(userReq({ action: 'card_check' }), w.store, s.stripe, 'sk_test_x')
+  assert.equal((await res.json()).card, 'Visa ending 4242')
+  assert.deepEqual(w.rpcs.find(r => r.name === 'billing_card_saved')!.args, { p_agent: AGENT, p_label: 'Visa ending 4242' })
+  const none = fakeStripe({ 'GET customers/cus_a': () => ({ invoice_settings: { default_payment_method: null } }) })
+  assert.equal(await cardOf(none.stripe, 'cus_a'), null)
+  assert.equal(await cardOf(none.stripe, null), null)
+})
+
+test('set_spend: over the max says so (code max_daily)', async () => {
+  const w = world([], { rpcError: { message: 'Daily lead spend can be up to $500 a day', hint: 'max_daily' } })
+  const res = await handle(userReq({ action: 'set_spend', appts_cents: 60000, live_cents: 0 }), w.store, null, 'sk_test_x')
+  assert.equal(res.status, 400)
+  assert.equal((await res.json()).code, 'max_daily')
 })

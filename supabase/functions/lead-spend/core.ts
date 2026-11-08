@@ -1,22 +1,29 @@
-// lead-spend (Prompt 884) — charges the prepaid weekly lead spend. index.ts wires Deno; all the logic is here, free
+// lead-spend (Prompt 884; P909 nightly) — charges lead spend to the card on file. index.ts wires Deno; all the logic is here, free
 // of Deno globals, so it runs against a mocked Stripe and an in-memory store in core.test.ts.
 //
 // The money rules live in the database (supabase/migrations/p884_billing_engine.sql): what a week needs, rollover,
 // delivered spend capped at the balance, what stops when. This function only moves money for charges the database
 // has already made (lead_spend_charges), and reports each result back (lead_spend_charge_result).
 //
+// P909 (final pricing): the database makes one 'nightly' charge per agent each evening (8 PM Central): tomorrow's
+// spend minus their credit, plus 12% on lead plans. No weekly or mid-week raise charges are made any more, and no bank
+// transfer: cards only. The statement descriptor reads OHVARA LEADS (the account prefix OHVARA + suffix LEADS).
+//
 //   POST (signed-in agent, Bearer JWT)
-//     { action: 'set_spend', appts_cents, live_cents }  lead_spend_set, then charges a raise for the days left at once.
-//                                                       A paid plan under $50 a day → 400 { code: 'min_daily' }.
+//     { action: 'set_spend', appts_cents, live_cents }  lead_spend_set (from tomorrow; the next nightly charge picks it
+//                                                       up). Under $50 → 400 { code: 'min_daily' }; over the agent's
+//                                                       max ($500) → 400 { code: 'max_daily' }.
+//     { action: 'card_check' }                          reads the customer's default card from Stripe and records it
+//                                                       (billing_card_saved: brand + last 4 only). Leads need one.
 //     { action: 'pay_now' }                             after a card update: failed charges back to due, charged now.
 //     { action: 'pause', paused }                       lead_spend_pause.
 //   POST (pg_cron, header x-ohvara-cron)
 //     { action: 'run' }                                 every 15 minutes: charges everything due, re-checks processing.
 //
-// Each charge is an off-session PaymentIntent on the customer's default payment method (the card or bank account the
-// agent saved through agent-billing; card and bank numbers are only ever in Stripe). The idempotency key is the
+// Each charge is an off-session PaymentIntent on the customer's default card (saved through agent-billing; card numbers
+// are only ever in Stripe). The idempotency key is the
 // charge's key plus its attempt number, so a crash and a re-run never charge twice; a retry after a decline is a new
-// attempt. Statement descriptor suffix "LEAD SPEND".
+// attempt. Statement descriptor suffix "LEADS" (shows as OHVARA LEADS).
 //
 // TEST MODE ONLY: unless the key starts with sk_test_, nothing is charged and nothing is sent to Stripe; charges stay
 // due. A livemode PaymentIntent is never accepted. Going live is Brayden's switch (the live key), a hard stop.
@@ -24,8 +31,9 @@
 import { type Stripe, StripeError } from '../_shared/fulfillmentPayouts.ts'
 
 export type Charge = {
-  id: string; agent_id: string; key: string; kind: 'weekly' | 'change' | 'va_cost'; amount_cents: number
+  id: string; agent_id: string; key: string; kind: 'weekly' | 'change' | 'va_cost' | 'nightly'; amount_cents: number
   attempts: number; stripe_pi: string | null; week_start: string; note: string | null; customer: string | null; recheck: boolean
+  for_day?: string | null; spend_cents?: number | null; fee_cents?: number | null
 }
 
 export type Store = {
@@ -57,7 +65,11 @@ export function outcomeOf(pi: any): { status: 'paid' | 'processing' | 'failed'; 
   }
 }
 
-const words = (c: Charge) => c.kind === 'va_cost' ? 'Team time (pilot)' : c.kind === 'change' ? 'Lead spend (raised this week)' : 'Lead spend, week of ' + c.week_start
+export const DESCRIPTOR_SUFFIX = 'LEADS'
+export const words = (c: Charge) =>
+  c.kind === 'va_cost' ? 'Team time (pilot)'
+    : c.kind === 'nightly' ? `Lead spend for ${c.for_day}${c.fee_cents ? ' + 12%' : ''}`
+      : c.kind === 'change' ? 'Lead spend (raised this week)' : 'Lead spend, week of ' + c.week_start
 
 async function chargeOne(store: Store, stripe: Stripe, c: Charge) {
   let pi: any = null
@@ -65,15 +77,17 @@ async function chargeOne(store: Store, stripe: Stripe, c: Charge) {
     if (c.recheck && c.stripe_pi) {
       pi = await stripe('GET', `payment_intents/${c.stripe_pi}`)
     } else {
-      if (!c.customer) return store.rpc('lead_spend_charge_result', { p_id: c.id, p_status: 'failed', p_failure: 'No card or bank account on file' })
+      if (!c.customer) return store.rpc('lead_spend_charge_result', { p_id: c.id, p_status: 'failed', p_failure: 'No card on file' })
       const customer = await stripe('GET', `customers/${c.customer}`)
       const method = customer?.invoice_settings?.default_payment_method
       const pm = typeof method === 'string' ? method : method?.id
-      if (!pm) return store.rpc('lead_spend_charge_result', { p_id: c.id, p_status: 'failed', p_failure: 'No card or bank account on file' })
+      if (!pm) return store.rpc('lead_spend_charge_result', { p_id: c.id, p_status: 'failed', p_failure: 'No card on file' })
       pi = await stripe('POST', 'payment_intents', {
         amount: c.amount_cents, currency: 'usd', customer: c.customer, payment_method: pm,
-        off_session: true, confirm: true, description: words(c), statement_descriptor_suffix: 'LEAD SPEND',
-        metadata: { ohvara: 'lead_spend', charge_id: c.id, agent_id: c.agent_id, kind: c.kind, week_start: c.week_start },
+        off_session: true, confirm: true, description: words(c), statement_descriptor_suffix: DESCRIPTOR_SUFFIX,
+        payment_method_types: ['card'],
+        metadata: { ohvara: 'lead_spend', charge_id: c.id, agent_id: c.agent_id, kind: c.kind, week_start: c.week_start,
+          for_day: c.for_day ?? '', spend_cents: String(c.spend_cents ?? ''), fee_cents: String(c.fee_cents ?? '') },
       }, { idempotencyKey: `lead_spend:${c.key}:${c.attempts}` })
     }
   } catch (e) {
@@ -97,6 +111,19 @@ export async function runCharges(store: Store, stripe: Stripe | null, key: strin
   const results = []
   for (const c of claimed) results.push({ id: c.id, result: await chargeOne(store, stripe, c) })
   return { charged: claimed.length, results }
+}
+
+// The customer's default card, as words ("Visa ending 4242"), or null. Never the number.
+export async function cardOf(stripe: Stripe, customer: string | null): Promise<string | null> {
+  if (!customer) return null
+  const cu = await stripe('GET', `customers/${customer}`)
+  const method = cu?.invoice_settings?.default_payment_method
+  const id = typeof method === 'string' ? method : method?.id
+  if (!id) return null
+  const pm = typeof method === 'object' && method?.card ? method : await stripe('GET', `payment_methods/${id}`)
+  if (pm?.type && pm.type !== 'card') return null
+  const brand = String(pm?.card?.brand || 'Card')
+  return `${brand.charAt(0).toUpperCase()}${brand.slice(1)} ending ${pm?.card?.last4 || '••••'}`
 }
 
 export async function handle(req: Request, store: Store, stripe: Stripe | null, key: string | undefined): Promise<Response> {
@@ -125,6 +152,13 @@ export async function handle(req: Request, store: Store, stripe: Stripe | null, 
         const charged = set?.charge_id ? await runCharges(store, stripe, key, me) : null
         return json({ ...set, charged })
       }
+      case 'card_check': {
+        if (!stripe || !isTestKey(key)) return json({ card: null, skipped: 'test mode only' })
+        const customer = await store.rpc('billing_customer_of', { p_agent: me })
+        const label = await cardOf(stripe, customer)
+        await store.rpc('billing_card_saved', { p_agent: me, p_label: label })
+        return json({ card: label })
+      }
       case 'pay_now': {
         const retried = await store.rpc('lead_spend_retry', { p_agent: me })
         return json({ retried, charged: await runCharges(store, stripe, key, me) })
@@ -137,7 +171,7 @@ export async function handle(req: Request, store: Store, stripe: Stripe | null, 
         return json({ error: 'Unknown action' }, 400)
     }
   } catch (e: any) {
-    if (e?.hint === 'min_daily') return json({ error: e.message, code: 'min_daily' }, 400)
+    if (e?.hint === 'min_daily' || e?.hint === 'max_daily') return json({ error: e.message, code: e.hint }, 400)
     if (e?.code === '42501') return json({ error: e.message || 'Not allowed' }, 403)
     return json({ error: e?.message || 'Something went wrong' }, 500)
   }

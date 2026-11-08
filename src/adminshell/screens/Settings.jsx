@@ -128,9 +128,12 @@ function Switches({ live }) {
 
 function PayRules() {
   const { data: s } = useAdmSettings()
-  const { savePayRules } = useAdmActions()
+  const { savePayRules, saveBilling } = useAdmActions()
   const note = useNote()
   const [d, setD] = useState(s.payRules)
+  const [b, setB] = useState(s.billing)
+  const bnum = (k, lo, hi) => e => setB({ ...b, [k]: Math.min(hi, Math.max(lo, Number(e.target.value.replace(/[^0-9]/g, '')) || lo)) })
+  const bsame = ['maxDaily', 'chargeHour', 'retryHour', 'foundingCount', 'foundingMonths'].every(k => b[k] === s.billing[k])
   const num = k => e => setD({ ...d, [k]: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, '')) || 0) })
   return (
     <>
@@ -139,6 +142,16 @@ function PayRules() {
         <Field label="Hourly rate ($)" hint="Overtime past 40 hours a week at 1.5×"><input className="tp-money" inputMode="decimal" value={d.hourly} onChange={num('hourly')} /></Field>
       </div>
       <FormFoot dirty={!same(d, s.payRules)} onDiscard={() => setD(s.payRules)} onSave={() => { savePayRules(d); note('Pay rules saved (sample)') }} />
+      {/* P909: lead billing. Lead spend is charged each night for the next day; a decline turns the next day's ads off. */}
+      <Head title="Lead billing" sub="Each evening agents' cards are charged the next day's lead spend plus 12%. A decline keeps the next day's ads off and retries in the morning." />
+      <div className="fx-form-grid">
+        <Field label="Max daily lead spend ($)" hint="Per agent. Raise one agent on Revenue › Agent billing"><input className="tp-money" inputMode="numeric" value={b.maxDaily} onChange={bnum('maxDaily', 50, 1000)} /></Field>
+        <Field label="Nightly charge (hour, Central)" hint={`24-hour clock · ${b.chargeHour > 12 ? b.chargeHour - 12 : b.chargeHour} ${b.chargeHour >= 12 ? 'PM' : 'AM'}`}><input className="tp-num" inputMode="numeric" value={b.chargeHour} onChange={bnum('chargeHour', 12, 23)} /></Field>
+        <Field label="Morning retry (hour, Central)" hint={`${b.retryHour} AM`}><input className="tp-num" inputMode="numeric" value={b.retryHour} onChange={bnum('retryHour', 5, 11)} /></Field>
+        <Field label="Founding agents" hint="The first paying agents keep today's prices"><input className="tp-num" inputMode="numeric" value={b.foundingCount} onChange={bnum('foundingCount', 0, 500)} /></Field>
+        <Field label="Founding lock (months)"><input className="tp-num" inputMode="numeric" value={b.foundingMonths} onChange={bnum('foundingMonths', 1, 60)} /></Field>
+      </div>
+      <FormFoot dirty={!bsame} onDiscard={() => setB(s.billing)} onSave={() => { saveBilling(b); note('Lead billing saved (sample)') }} />
     </>
   )
 }

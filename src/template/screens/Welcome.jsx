@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, Play, Pause, Captions, Signal, BellRing, Smartphone, MessageCircleQuestion } from 'lucide-react'
+import { Check, Play, Pause, Captions, Signal, BellRing, Smartphone, MessageCircleQuestion, CreditCard } from 'lucide-react'
 import { useSampleSetup, useSampleSettings, useSampleBilling, useSampleActions, DEFAULT_WEEK } from '../data'
 import { Field, Pending, Seg, Switch, useNote } from '../kit'
 import { Select } from '../Select'
@@ -13,16 +13,19 @@ import { DEFAULT_LIVE_HOURS, PITCH, takeOk } from '../../lib/leadSplit'
 import { TalkDrawer } from '../Talk'
 import { ForwardSetup } from '../PaymentIntake'
 import '../p885.css'
-import { openSlotsPerWeek, slotsNeeded, spendOk, dailyTotal } from '../spendPlan'
+import { openSlotsPerWeek, slotsNeeded, spendOk, dailyTotal, nightlyFor, feeWords, SETUP_FEE } from '../spendPlan'
+import { usd } from '../motion'
 import { zoneAbbr, ZONE_CHOICES } from '../../lib/callSlots'
 import '../p878.css'
 
 // P878 — setup (N-H-03, 05, 11, 13, 14, 19, 20, 38): a short video they can't skip (progress saved, captions, a low-data
 // version), their licence, what they want (leads, servicing, or both), calendar and hours in their own time zone, lead
-// spend (pilot: any amount; paid: $50 a day minimum; appointments stay off until the calendar has room), the phone app
+// spend (pilot: any amount; paid: $50 a day minimum; up to $500; appointments stay off until the calendar has room), a card
+// on file (P909: required before leads start; lead spend is charged nightly as OHVARA LEADS), the phone app
 // with a test notification, and the terms. No approval step: when the steps are done, the portal opens. Progress is
 // kept, so they can stop and come back. Sample only: nothing is charged or sent.
 const VIDEO_SECONDS = 360
+const money = usd()
 const ZONES = ZONE_CHOICES.map(z => ({ value: z.value, label: `${z.label} (${zoneAbbr(z.value)})` }))
 const KEY = 'ov-setup-878'
 const load = () => { try { return JSON.parse(window.localStorage.getItem(KEY) || 'null') } catch { return null } }
@@ -81,6 +84,7 @@ export default function Welcome() {
   const { data: bill } = useSampleBilling()
   const { saveSetup } = useSampleActions()
   const [talk, setTalk] = useState(false)
+  const note = useNote()
   const [s, setS] = useState(() => saved || load() || {
     step: 'video', watched: 0, captions: true, lowData: false,
     licence: EMPTY_PICK,
@@ -104,6 +108,8 @@ export default function Welcome() {
     { key: 'products', label: 'What you want', done: true },
     { key: 'calendar', label: 'Calendar and hours', done: s.tzOk && openSlots > 0 },
     ...(servicingOnly ? [] : [{ key: 'spend', label: 'Lead spend', done: spendOk(plan, spend) && spend.daily > 0 && roomy && takeOk(take) }]),
+    // P909: a card on file before leads start (lead spend is charged nightly, the plan monthly).
+    { key: 'card', label: 'Your card', done: !!s.card },
     // P890: forward carrier emails (missed payments) to the agent's address. Servicing only; skippable.
     ...(s.products === 'leads' ? [] : [{ key: 'forward', label: 'Carrier emails', done: !!(s.forward?.tested || s.forward?.later) }]),
     { key: 'app', label: 'Phone app', done: s.push === 'yes' },
@@ -147,10 +153,18 @@ export default function Welcome() {
               <CalendarConnect value={s.calendar} onPick={p => stable(x => ({ ...x, calendar: { provider: p } }))} />
             </>}
             {cur.key === 'spend' && <>
-              <header className="fx-form-h"><h2>Your lead spend</h2><p>{PITCH} {plan === 'pilot' ? 'During the pilot you pay only your lead spend, prepaid each week. Unspent money rolls over.' : 'Your membership tier follows your daily spend.'}</p></header>
+              <header className="fx-form-h"><h2>Your lead spend</h2><p>{PITCH} {plan === 'pilot' ? 'During the pilot you pay only your lead spend, charged each night for the next day.' : `Your plan follows your daily spend. Each night your card is charged the next day’s spend plus ${feeWords}.`}</p></header>
               <SpendSliders spend={spend} onSpend={v => stable(x => ({ ...x, spend: v }))} plan={plan} mode={take.mode} id="wz-sp" openSlots={openSlots} />
               <TakeLeads take={take} onTake={({ mode, hours }) => stable(x => ({ ...x, take: { mode, hours } }))} id="wz-take" />
               <SpendSummary spend={spend} plan={plan} products={s.products} setup><p className="pb-note">Leads start at 12:00 AM your time, the day after you finish setup.</p></SpendSummary>
+            </>}
+            {cur.key === 'card' && <>
+              <header className="fx-form-h"><h2>Your card</h2><p>{servicingOnly ? 'Your plan is charged to it each month.' : 'Your leads start once a card is on file. Lead spend is charged to it each night for the next day, and your plan each month.'}</p></header>
+              {s.card
+                ? <div className="fx-form-row fx-form-sw"><CreditCard size={16} aria-hidden="true" /><b className="tp-grow">{s.card}</b><button type="button" className="tp-btn ov-ghost sm" onClick={() => stable(x => ({ ...x, card: null }))}>Change</button></div>
+                : <button type="button" className="tp-primary fx-accent fx-self" onClick={() => { stable(x => ({ ...x, card: 'Visa ending 4242' })); note('Sample: no card was saved') }}><CreditCard size={15} />Add a card</button>}
+              {!servicingOnly && <div className="wz-stop"><b>It{'’'}s a daily charge</b><p className="tp-sub">You{'’'}ll see one charge a night on your statement as OHVARA LEADS, about {money(nightlyFor(plan, spend.daily).total)} at {money(spend.daily)} a day. Tell your bank if it asks, so it doesn{'’'}t flag them. No bank transfers: cards only.</p></div>}
+              {plan !== 'pilot' && <p className="tp-sub">Setup is {money(SETUP_FEE)} once, charged when you finish. It isn{'’'}t refunded.</p>}
             </>}
             {cur.key === 'forward' && <>
               <header className="fx-form-h"><h2>Carrier emails</h2><p>When a carrier emails you about a missed or returned payment, forward it to us and the team calls the client the same day.</p></header>

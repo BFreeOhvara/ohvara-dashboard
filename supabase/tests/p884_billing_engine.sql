@@ -19,6 +19,9 @@ select plan(101);
 alter table public.billing_price_book disable trigger billing_price_book_block;
 delete from public.billing_price_book where version > 1;
 alter table public.billing_price_book enable trigger billing_price_book_block;
+-- P909: the replay also loads p909_final_pricing.sql (nightly charging). This file checks P884's weekly engine, so it
+-- runs in charge_mode 'weekly' (rolled back at the end). Nightly charging has its own checks in p909_final_pricing.sql.
+update public.billing_settings set charge_mode = 'weekly' where id;
 
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 select '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authenticated', 'p884_' || u.n || '@example.invalid',

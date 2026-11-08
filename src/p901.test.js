@@ -3,7 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, globSync } from 'node:fs'
-import { BOOK, BOOK_V1, PRICES, bandText } from './lib/priceBook.js'
+import { BOOK_V2 as BOOK, BOOK_V1, PRICES, bandText } from './lib/priceBook.js'
 import { SPLIT_RULES, effectiveSplit, nextSplit } from './lib/leadSplit.js'
 import { TIERS, SERVICING_ONLY, SETUP_FEE, tierOf, monthlyBill, expected } from './template/spendPlan.js'
 import { PAID_PLANS } from './adminshell/p879.js'
@@ -33,9 +33,10 @@ test('the client price book is the migration\'s version 2, number for number, an
   assert.equal(BOOK_V1.version, 1)
 })
 
-test('Brayden\'s prices: three packages, servicing only $499, $299 setup once, month to month', () => {
-  assert.deepEqual(TIERS.map(t => [t.key, t.from, t.to, t.monthly]), [['starter', 0, 50, 799], ['growth', 51, 200, 1699], ['pro', 201, null, 2999]])
-  assert.deepEqual([50, 51, 200, 201, 500].map(d => tierOf(d).key), ['starter', 'growth', 'growth', 'pro', 'pro'])
+// P909: version 3 replaced these prices; the screens now read version 3 (src/p909.test.js checks it number for number).
+test('Brayden\'s prices: three plans, servicing only $499, $299 setup once, month to month', () => {
+  assert.deepEqual(TIERS.map(t => [t.key, t.from, t.to, t.monthly]), [['starter', 50, 75, 699], ['growth', 76, 200, 1499], ['pro', 201, 500, 2999]])
+  assert.deepEqual([50, 75, 76, 200, 201, 500].map(d => tierOf(d).key), ['starter', 'starter', 'growth', 'growth', 'pro', 'pro'])
   assert.equal(SERVICING_ONLY, 499)
   assert.equal(SETUP_FEE, 299)
   assert.equal(PRICES.setupMode, 'fee')
@@ -43,15 +44,15 @@ test('Brayden\'s prices: three packages, servicing only $499, $299 setup once, m
   assert.equal(PRICES.paidMinDaily, 50)
   assert.equal(PRICES.draft, false)
   assert.equal(monthlyBill({ plan: 'paid', spend: { daily: 250 } }).membership, 2999)
-  assert.equal(monthlyBill({ plan: 'paid', spend: { daily: 250 } }).total, Math.round(250 * 30.4) + 2999)
-  assert.deepEqual(TIERS.map(bandText), ['up to $50 a day', '$51 to $200 a day', 'over $200 a day'])
+  assert.equal(monthlyBill({ plan: 'paid', spend: { daily: 250 } }).total, Math.round(250 * 30.4) + Math.round(Math.round(250 * 30.4) * 0.12) + 2999)
+  assert.deepEqual(TIERS.map(bandText), ['$50 to $75 a day', '$76 to $200 a day', '$201 to $500 a day'])
 })
 
 test('admin plan pickers and plan labels read the price book', () => {
   assert.deepEqual(PAID_PLANS.map(p => p.value), ['Starter', 'Growth', 'Pro'])
-  assert.equal(PAID_PLANS[1].label, 'Growth · $51 to $200 a day · $1,699 a month')
+  assert.equal(PAID_PLANS[1].label, 'Growth · $76 to $200 a day · $1,499 a month')
   assert.deepEqual(Object.keys(PLANS), ['starter', 'growth', 'pro', 'servicing'])
-  assert.deepEqual(Object.values(PLANS).map(p => p.price), [799, 1699, 2999, 499])
+  assert.deepEqual(Object.values(PLANS).map(p => p.price), [699, 1499, 2999, 499])
 })
 
 test('no old price, Scale tier, draft price label or minimum term is left on a screen', () => {
@@ -97,5 +98,5 @@ test('agents never see where spend goes or that prices were drafts', () => {
   const agentText = ['src/template/PlanBuilder.jsx', 'src/template/screens/Billing.jsx', 'src/template/screens/Welcome.jsx', 'src/template/screens/Leads.jsx']
     .map(f => readFileSync(f, 'utf8').replace(/\/\/.*$/gm, '').replace(/className="[^"]*"/g, '')).join(' ')
   assert.doesNotMatch(agentText, /\b(Meta|Google|call ads|form ads)\b/i)
-  assert.match(readFileSync('src/template/PlanBuilder.jsx', 'utf8'), /Month to month\. Cancel anytime\./)
+  assert.match(readFileSync('src/template/PlanBuilder.jsx', 'utf8'), /Month to month\. Cancel anytime/)
 })

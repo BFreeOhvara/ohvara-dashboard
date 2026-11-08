@@ -8,6 +8,12 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select plan(24);
 
+-- P909: the replay also loads p909_final_pricing.sql (version 3, effective the replay day). This file checks version 2,
+-- so version 3 is set aside here (rolled back at the end); it has its own checks in p909_final_pricing.sql.
+alter table public.billing_price_book disable trigger billing_price_book_block;
+delete from public.billing_price_book where version > 2;
+alter table public.billing_price_book enable trigger billing_price_book_block;
+
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 select '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authenticated', 'p901_' || u.n || '@example.invalid',
        jsonb_build_object('provider', 'email', 'providers', jsonb_build_array('email'), 'role', u.role),

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { CircleCheck, Landmark, ArrowUpRight, CreditCard, MessageSquare, RotateCw, Wallet, Megaphone, Headset, Receipt, Wrench, BadgeDollarSign, PiggyBank, Pencil, History } from 'lucide-react'
-import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, PLANS, PERIODS, SETUP_FEE, CARD_FEE } from '../data'
+import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, useAdmSettings, PLANS, PERIODS, SETUP_FEE, CARD_FEE } from '../data'
+import { PRICES } from '../../lib/priceBook.js'
 import { Avatar, Chip, PillTabs, SampleTag, Seg, Switch, useNote } from '../../template/kit'
 import { CountUp, usd } from '../../template/motion'
 import { Tile, EngineSlot } from '../kit'
@@ -25,7 +26,7 @@ function Revenue() {
   return (
     <div className="fx-ovl">
       <div className="fx-ovl-main">
-        <Tile className="adm-rev-hero" i={0} title="Revenue by week" sub="Memberships plus leads charged · sample">
+        <Tile className="adm-rev-hero" i={0} title="Revenue by week" sub="Plans plus lead spend and its 12% · sample">
           <div className="fx-chart-head fx-bk-head">
             <b className="tp-money fx-bk-num"><CountUp value={m.total} format={money} /></b>
             <span className="fx-bk-side"><b>this week so far</b><small>{money(m.lastWeek)} last week</small><i className={`fx-delta is-${m.total >= m.lastWeek ? 'up' : 'warn'}`}>{m.total >= m.lastWeek ? 'Up' : 'Behind'} {Math.abs(Math.round(((m.total - m.lastWeek) / m.lastWeek) * 100))}%</i></span>
@@ -46,10 +47,10 @@ function Revenue() {
         <Tile className="is-fill is-teal" i={1} title="Ad spend this week" sub={`Budget ${money(m.adBudget)} across both ad accounts`} to={ap('connect')} label="Open Connect">
           <b className="fx-huge tp-money"><CountUp value={m.adSpend} format={money} /></b>
           <div className="fx-meter" role="img" aria-label="Spent of budget"><i style={{ '--w': m.adBudget ? m.adSpend / m.adBudget : 0 }} /></div>
-          <small>{money(m.leadsCharged)} charged to agents for leads</small>
+          <small>{money(m.leadsCharged)} lead spend charged to agents · {money(m.leadFee)} more as the 12%</small>
         </Tile>
         <Tile i={2} title="By plan" sub="Paying agents">
-          <ul className="adm-sum">{byPlan.map(p => <li key={p.k}><Megaphone size={14} aria-hidden="true" /><span className="tp-grow">{p.label}<small>{p.price ? `${money(p.price)} a week` : 'Leads only'}</small></span><b className="tp-num">{p.n}</b></li>)}</ul>
+          <ul className="adm-sum">{byPlan.map(p => <li key={p.k}><Megaphone size={14} aria-hidden="true" /><span className="tp-grow">{p.label}<small>{p.price ? `${money(p.price)} a month · ${p.sub}` : 'Leads only'}</small></span><b className="tp-num">{p.n}</b></li>)}</ul>
         </Tile>
       </div>
     </div>
@@ -131,8 +132,9 @@ function MoneyTop({ period, setPeriod }) {
         <Tile className="adm-total is-in" i={0} title="Brought in" sub="Everything agents paid">
           <b className="fx-huge tp-money"><CountUp value={p.inTotal} format={money} /></b>
           <ul className="adm-sum">
-            <Line icon={Megaphone} label="Lead budgets" sub="Leads charged to agents" n={p.budgets} />
-            <Line icon={BadgeDollarSign} label="Memberships" sub="Packages and servicing only, month to month" n={p.servicing} />
+            <Line icon={Megaphone} label="Lead spend" sub="Charged nightly, all of it goes to ads" n={p.budgets} />
+            <Line icon={BadgeDollarSign} label={`${Math.round(PRICES.leadFee * 100)}% of lead spend`} sub="Covers the AI calls and the team working every lead" n={p.leadFee} />
+            <Line icon={BadgeDollarSign} label="Plan fees" sub="Starter, Growth, Pro and servicing only, month to month" n={p.servicing} />
             <Line icon={Receipt} label="Setup fees" sub={p.setupCount ? `${p.setupCount} new ${p.setupCount === 1 ? 'agent' : 'agents'} · ${money(SETUP_FEE)} each` : 'No new agents'} n={p.setup} />
           </ul>
         </Tile>
@@ -158,7 +160,10 @@ function MoneyTop({ period, setPeriod }) {
 function AgentBills() {
   const { data: agents } = useAdmAgents()
   const { data: m } = useAdmMoney()
+  const { data: st } = useAdmSettings()
+  const { setMaxDaily } = useAdmActions()
   const note = useNote()
+  const max = id => st.billing.maxOverride[id] ?? st.billing.maxDaily
   return (
     <div className="adm-stack">
       {m.failed.length > 0 && (
@@ -172,14 +177,19 @@ function AgentBills() {
         </Tile>
       )}
       <section className="fx-tile adm-table adm-bills" style={{ '--i': 1 }} aria-label="Agent bills">
-        <div className="adm-tr adm-th" aria-hidden="true"><span>Agent</span><span>Plan</span><span>Lead budget</span><span>Status</span><span>Next</span></div>
+        <div className="adm-tr adm-th" aria-hidden="true"><span>Agent</span><span>Plan</span><span>Lead spend</span><span>Status</span><span>Next</span></div>
         {agents.map((a, i) => {
           const [word, tone] = BILL_WORD[a.billing.status]
           return (
             <div key={a.id} className="adm-tr" style={{ '--i': i }}>
               <Link to={ap('agents', a.id)} className="adm-who"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>{a.billing.method}</small></span></Link>
               <span className="adm-cell"><b>{PLANS[a.plan].label}</b><small>{money(PLANS[a.plan].price)} a month</small></span>
-              <span className="adm-cell"><b className="tp-money">{money(a.spend)}</b><small>a week</small></span>
+              <span className="adm-cell"><b className="tp-money">{money(Math.round(a.spend / 7))} a day</b>
+                <small>Max {money(max(a.id))}{st.billing.maxOverride[a.id] ? ' (raised)' : ''}{' '}
+                  <button type="button" className="fx-pillbtn" onClick={() => {
+                    if (st.billing.maxOverride[a.id]) { setMaxDaily(a.id, null); note(`${a.name}: back to ${money(st.billing.maxDaily)} a day`) }
+                    else { setMaxDaily(a.id, 750); note(`${a.name} can spend up to ${money(750)} a day (sample)`) }
+                  }}>{st.billing.maxOverride[a.id] ? 'Reset' : 'Raise'}</button></small></span>
               <span className="adm-cell"><Chip tone={tone}>{word}</Chip></span>
               <span className="adm-cell"><small>{a.billing.next}</small></span>
             </div>

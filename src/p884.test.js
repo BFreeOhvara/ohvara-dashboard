@@ -24,14 +24,14 @@ test('the client price book is the migration\'s version 1, number for number', (
   assert.match(SQL, /values \(1, date '2026-11-01', 'draft'/)
 })
 
-test('every old price set now reads the one source (P901: version 2)', () => {
+test('every old price set now reads the one source (P909: version 3)', () => {
   assert.deepEqual(TIERS, tiersOf(BOOK))
   assert.equal(SERVICING_ONLY, 499)
   assert.equal(PAID_MIN_DAILY, 50)
   assert.equal(SETUP_FEE, PRICES.setupFee)
   assert.equal(CARD_FEE, PRICES.cardFee)
-  assert.equal(tierOf(75).key, 'growth')
-  assert.equal(monthlyBill({ plan: 'paid', spend: { appts: 100, live: 50 } }).membership, 1699)
+  assert.equal(tierOf(75).key, 'starter')
+  assert.equal(monthlyBill({ plan: 'paid', spend: { appts: 100, live: 50 } }).membership, 1499)
   assert.equal(monthlyBill({ plan: 'pilot', spend: { appts: 100, live: 50 } }).membership, 0)
 })
 
@@ -49,9 +49,9 @@ test('no component carries a membership price of its own', () => {
 })
 
 test('a price book from the database shapes the same way', () => {
-  const p = pricesOf({ ...BOOK, version: 3 })
+  const p = pricesOf({ ...BOOK, version: 4 })
   assert.equal(p.draft, false)
-  assert.equal(p.tiers[0].monthly, 799)
+  assert.equal(p.tiers[0].monthly, 699)
   assert.equal(p.tiers.length, 3)
   assert.equal(pricesOf(DRAFT_BOOK).draft, true)
   assert.equal(pricesOf(DRAFT_BOOK).tiers[3].monthly, null)
@@ -81,7 +81,7 @@ test('toSampleBilling maps the server view onto the Billing page shape (dollars)
   assert.deepEqual(b.va, { on: true, hours: 6.5, rate: 8 })
   assert.equal(b.payment.failed, false)
   assert.equal(b.charges[0].amount, 665)
-  assert.equal(b.prices.tiers[1].monthly, 1699)
+  assert.equal(b.prices.tiers[1].monthly, 1499)
   assert.equal(toSampleBilling({ ...view, state: { status: 'past_due', lead_spend: 'stopped_payment' } }).payment.failed, true)
   assert.equal(toSampleBilling(null), null)
 })

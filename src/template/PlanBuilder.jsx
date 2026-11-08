@@ -1,4 +1,4 @@
-import { SLIDER, TIERS, PAID_MIN_DAILY, SETUP_FEE, RECOMMENDED, tierOf, dailyTotal, bandShare, expected, rangeWords, monthlyBill, slotsNeeded } from './spendPlan'
+import { SLIDER, TIERS, PAID_MIN_DAILY, SETUP_FEE, RECOMMENDED, MAX_DAILY, feeWords, FEE_WHY, tierOf, dailyTotal, bandShare, expected, rangeWords, monthlyBill, slotsNeeded, nightlyFor } from './spendPlan'
 import { LEAD_MODES, DAYS, liveHoursOk, liveHoursText, clockMin } from '../lib/leadSplit'
 import { Seg, Switch } from './kit'
 import { Select } from './Select'
@@ -7,6 +7,7 @@ import { usd } from './motion'
 import './p878.css'
 import './p889.css'
 
+// P909: up to $500 a day (an admin can raise one agent); a paid plan adds 12% of the spend, charged with it each night.
 // P878 + P889 — the lead spend builder: ONE daily spend (any amount in the pilot, a $50/day floor on a paid plan) and
 // How you take leads (Appointments only, or Appointments + live transfers with live-call hours). Under it, what it buys
 // in a week; on a paid plan, the tier bands and the membership tier, live as the slider moves. Used by Billing, the
@@ -65,8 +66,9 @@ export function TierBands({ daily }) {
 
 // spend = { daily } dollars a day. plan = 'pilot' | 'paid'. mode = how they take leads. openSlots = open 30-minute
 // slots a week on their calendar.
-export function SpendSliders({ spend, onSpend, plan, mode = 'both', id = 'sp', openSlots = null }) {
+export function SpendSliders({ spend, onSpend, plan, mode = 'both', id = 'sp', openSlots = null, max = MAX_DAILY }) {
   const daily = dailyTotal(spend)
+  const night = nightlyFor(plan, daily)
   const ex = expected({ daily }, mode)
   const low = plan === 'paid' && daily < PAID_MIN_DAILY
   const need = slotsNeeded({ daily }, mode)
@@ -79,35 +81,39 @@ export function SpendSliders({ spend, onSpend, plan, mode = 'both', id = 'sp', o
           <label htmlFor={`${id}-daily`}>Daily lead spend</label>
           <b className="tp-money" aria-live="polite">{money(daily)}<small> / day</small></b>
         </div>
-        <input id={`${id}-daily`} className="pb-range" type="range" min={SLIDER.min} max={SLIDER.max} step={SLIDER.step} value={daily}
+        <input id={`${id}-daily`} className="pb-range" type="range" min={SLIDER.min} max={max} step={SLIDER.step} value={Math.min(daily, max)}
           style={{ '--w': bandShare(daily) }} aria-valuetext={`${money(daily)} a day`} onChange={e => onSpend({ daily: Number(e.target.value) })} />
         <div className="pb-outs">{outs.map(([k, v]) => <div key={k}><small>{k}</small><b className="tp-num">{daily ? v : 'Off'}</b></div>)}</div>
       </div>
       <div className="sp-total">
-        <span className="tp-grow"><small>Total lead spend</small><b className="tp-money">{money(daily)} a day</b><small>{money(daily * 7)} a week · about {rangeWords(ex.soldMonth)} sales a month</small></span>
+        <span className="tp-grow"><small>Charged each night for the next day</small><b className="tp-money">{money(night.total)}{plan === 'pilot' ? '' : <small> = {money(daily)} + {feeWords}</small>}</b><small>About {rangeWords(ex.soldMonth)} sales a month · up to {money(max)} a day</small></span>
       </div>
       {plan === 'paid' && <TierBands daily={daily} />}
       {low && <p className="sp-warn" role="alert">Paid plans start at {money(PAID_MIN_DAILY)} a day. Pause instead if you need a break.</p>}
       {tight && <p className="sp-warn" role="alert">Your calendar has {openSlots} open half-hours a week. This spend books up to {ex.appts.booked.high} appointments, so open about {need}.</p>}
-      <p className="pb-foot">{plan === 'pilot' ? 'Pilot: any amount, change it any time. ' : ''}100% of your lead spend goes to finding your leads. Every lead gets a call within seconds. A range, not a promise. {RECOMMENDED}</p>
+      <p className="pb-foot">{plan === 'pilot' ? 'Pilot: any amount up to the max, change it any time. ' : ''}100% of your lead spend goes to finding your leads.{plan === 'pilot' ? '' : ` The ${feeWords} on top ${FEE_WHY}.`} Every lead gets a call within seconds. A range, not a promise. {RECOMMENDED}</p>
     </div>
   )
 }
 
-// The monthly picture beside the sliders. Pilot: lead spend only, no fees. Paid: membership tier + lead spend, month to
-// month. setup = show the one-time setup fee (sign-up / setup only), separate from the monthly total (P901).
-export function SpendSummary({ spend, plan, products = 'both', children, vaAmount = 0, setup = false }) {
-  const bill = monthlyBill({ plan, spend, products })
+// The monthly picture beside the sliders. Pilot: lead spend only, no fees. Paid: plan + lead spend + 12%, month to
+// month. setup = show the one-time setup fee (sign-up / setup only), separate from the monthly total (P901, P909).
+// clients = { added, total } for the extra-clients line.
+export function SpendSummary({ spend, plan, products = 'both', children, vaAmount = 0, setup = false, clients = null }) {
+  const bill = monthlyBill({ plan, spend, products, clients })
   return (
     <div className="pb-sum">
       <div className="pb-sum-h"><h3>{plan === 'pilot' ? 'Your pilot' : 'Your plan'}</h3></div>
       {products !== 'servicing' && <div className="pb-row"><span>Lead spend, about a month</span><b className="tp-money">{money(bill.leadSpend)}</b></div>}
-      {plan === 'paid' && products !== 'servicing' && <div className="pb-row"><span>Membership · {bill.tier.label}</span><b className="tp-money">{money(bill.tier.monthly)} / month</b></div>}
-      {products === 'servicing' && <div className="pb-row"><span>Servicing only</span><b className="tp-money">{money(bill.membership)} / month</b></div>}
+      {plan === 'paid' && products !== 'servicing' && <div className="pb-row"><span>{feeWords} of lead spend</span><b className="tp-money">{money(bill.fee)}</b></div>}
+      {plan === 'paid' && products !== 'servicing' && <div className="pb-row"><span>Plan · {bill.tier.label}</span><b className="tp-money">{money(bill.tier.monthly)} / month</b></div>}
+      {products === 'servicing' && <div className="pb-row"><span>Servicing only, up to 100 clients</span><b className="tp-money">{money(bill.membership)} / month</b></div>}
+      {bill.extra > 0 && <div className="pb-row"><span>Extra clients ({bill.over} over)</span><b className="tp-money">{money(bill.extra)} / month</b></div>}
       {vaAmount > 0 && <div className="pb-row"><span>Team time on your leads, at cost</span><b className="tp-money">{money(vaAmount)} / week</b></div>}
       <div className="pb-row sp-sum-total"><span>{plan === 'pilot' ? 'You pay only your lead spend' : 'About a month'}</span><b className="tp-money">{money(bill.total)}</b></div>
       {plan === 'paid' && setup && <div className="pb-row"><span>Setup, one time</span><b className="tp-money">{money(SETUP_FEE)}</b></div>}
-      {plan === 'paid' && <p className="pb-note">Month to month. Cancel anytime.</p>}
+      {plan === 'paid' && <p className="pb-note">Month to month. Cancel anytime: unspent lead spend credit is refunded{setup ? ', the setup fee isn’t' : ''}.</p>}
+      {products !== 'servicing' && <p className="pb-note">Lead spend{plan === 'paid' ? ` and its ${feeWords}` : ''} is charged to your card each night for the next day.</p>}
       {children}
     </div>
   )

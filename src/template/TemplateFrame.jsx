@@ -356,7 +356,7 @@ function useHeadStats(page) {
     calendar: [S(CalendarDays, events.length, 'this week'), S(Clock3, events.filter(e => e.date === 2).length, 'today'), S(PhoneCall, events.filter(e => /call/i.test(e.label)).length, 'client calls')],
     activity: [S(History, activity.filter(a => a.at.startsWith('Today')).length, 'today'), S(CalendarDays, activity.length, 'this week'), S(MessageSquare, activity.filter(a => a.kind === 'text').length, 'texts sent for you')],
     billing: billing.plan === 'pilot'
-      ? [S(Wallet, billing.walletNow.left, 'left this week', { fmt: money, chip: ['Pilot', 'blue'] }), S(Wallet, daily, 'lead spend a day', { fmt: money }), booked(S)]
+      ? [S(Wallet, billing.nightNow.tonight.total, 'charged tonight', { fmt: money, chip: ['Pilot', 'blue'] }), S(Wallet, daily, 'lead spend a day', { fmt: money }), booked(S)]
       : [S(Wallet, daily, 'lead spend a day', { fmt: money }), S(ShieldCheck, tierOf(daily).monthly || 0, `${tierOf(daily).label} a month`, { fmt: money }), booked(S)],
     // P843: no weekly submit count or 'no weekly limit' (old plan language): what is in servicing now
     submit: [S(ShieldCheck, clients.length - by('closed'), 'clients in servicing'), S(FileUp, by('working'), 'working', { chip: by('working') ? ['Team on it', 'blue'] : null }), S(Users, by('protected'), 'protected', { chip: ['On time', 'up'] })],

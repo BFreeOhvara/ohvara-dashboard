@@ -3,7 +3,9 @@ import { Upload, Download, ClipboardPaste, UserPlus, CircleCheck, TriangleAlert,
 import { Drawer, Field, Seg, useNote } from './kit'
 import { PhoneInput } from './PhoneInput'
 import { StateSelect } from './StateSelect'
-import { useSampleClients, useSampleActions } from './data'
+import { useSampleClients, useSampleActions, useSampleBilling } from './data'
+import { addedQuote } from './spendPlan'
+import { usd } from './motion'
 import { FIELDS, parseRows, checkRows, checkRow, TEMPLATE_CSV, TEAM_CALL_ACK, showPhone } from '../lib/bookImport.js'
 import './p891.css'
 
@@ -50,10 +52,28 @@ function Review({ result, only, setOnly }) {
   )
 }
 
+// P909: the count and the cost before saving. Lead plans include every client sold through Ohvara plus 50 added;
+// servicing only includes 100 clients; each started 100 over is +$200 a month from the next bill.
+const money = usd()
+export function AddedCost({ billing, adding }) {
+  const q = addedQuote(billing, adding)
+  if (!q || !adding) return null
+  const what = q.servicingOnly ? 'clients' : 'added clients'
+  return (
+    <p className={`bi-cost${q.change ? ' is-more' : ''}`} role="status">
+      {q.servicingOnly ? `You have ${q.now} clients; your plan includes ${q.included}.` : `You’ve added ${q.now} of the ${q.included} included with your plan.`}{' '}
+      {q.change
+        ? <>These {adding} make {q.after} {what}: <b className="tp-money">+{money(q.change)} a month</b> from your next bill ({money(q.stepPrice)} for each {q.step} over {q.included}).</>
+        : <>These {adding} make {q.after}: no extra cost.</>}
+    </p>
+  )
+}
+
 export function AddClients({ open, onClose }) {
   const note = useNote()
   const { data: clients } = useSampleClients()
   const { addClients } = useSampleActions()
+  const { data: billing } = useSampleBilling()
   const [mode, setMode] = useState('one')
   const [one, setOne] = useState(BLANK)
   const [paste, setPaste] = useState('')
@@ -98,6 +118,7 @@ export function AddClients({ open, onClose }) {
   return (
     <Drawer open={open} onClose={close} title="Add your clients" sub="Clients you sold anywhere. Your client care team calls each one to welcome them, then looks after them like any client."
       footer={<>
+        <AddedCost billing={billing} adding={ready} />
         <label className="tp-check bi-ack"><input type="checkbox" checked={ack} onChange={e => setAck(e.target.checked)} /><span>{TEAM_CALL_ACK} <span className="tp-tag">Draft wording</span></span></label>
         <button type="button" className="tp-primary fx-accent" disabled={!ack || !ready || busy} onClick={save}><UserPlus size={16} />{ready > 1 ? `Add ${ready} clients` : 'Add client'}</button>
       </>}>

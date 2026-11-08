@@ -19,11 +19,11 @@ export default function More() {
   if (isTemplateAddress()) rows.push([paths.signup, 'Sign-up preview', ShieldCheck], [paths.welcome, 'Setup preview', Home], [paths.deedstone, 'What a lead sees', Globe])
   return (
     <div className="tp-page">
-      <section className="ov-card tp-card"><div className="tp-row"><Avatar name={account.name} /><div className="tp-grow"><b>{account.name}</b><p className="tp-sub">Agent · {b.plan === 'pilot' ? 'pilot, lead spend only' : `${tierOf(dailyTotal(b.spend)).label} membership`}</p></div></div></section>
+      <section className="ov-card tp-card"><div className="tp-row"><Avatar name={account.name} /><div className="tp-grow"><b>{account.name}</b><p className="tp-sub">Agent · {b.plan === 'pilot' ? 'pilot, lead spend only' : `${tierOf(dailyTotal(b.spend)).label} plan`}</p></div></div></section>
       <Link to={paths.billing()} className="ov-card ov-link tp-card tp-stack">
         <div className="tp-row"><CreditCard size={18} /><b className="tp-grow">Billing</b><SampleTag /></div>
         <div className="tp-row tp-between"><span><Money v={dailyTotal(b.spend)} size="lg" cents={false} /> <span className="tp-sub">/ day lead spend</span></span><span className="tp-sub">{b.booked} booked · about {rangeWords(b.expected.appts.booked)}</span></div>
-        {b.plan === 'pilot' ? <span className="tp-sub"><Money v={b.walletNow.left} cents={false} /> left this week · tops up {b.wallet.next}</span> : <span className="tp-sub">Next bill {b.nextBill}</span>}
+        <span className="tp-sub"><Money v={b.nightNow.tonight.total} /> charged {b.nightly.at.toLowerCase()}{b.plan === 'pilot' ? '' : ` · next bill ${b.nextBill}`}</span>
       </Link>
       <section className="ov-card tp-card"><ul className="tp-list">
         {rows.map(([to, label, Icon, badge]) => <li key={label}><Link to={to()} className="tp-li"><Icon size={18} aria-hidden="true" /><b className="tp-grow">{label}</b>{badge && <span className="tp-tb">{badge.split(' ')[0]}</span>}<ChevronRight size={16} aria-hidden="true" /></Link></li>)}

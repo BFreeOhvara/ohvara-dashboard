@@ -1,16 +1,16 @@
 // P878 — lead spend, the pilot and membership tiers (brain/ohvara/How Ohvara Works.md "Pricing direction" and the
 // P875 decisions). Pure functions, no imports, so Billing, Setup, Results and the tests share one set of numbers.
-// P901: the prices are final (price book version 2, src/lib/priceBook.js). The planning estimates stay drafts until
-// pilot data replaces them.
+// P909: the prices are final (price book version 3, src/lib/priceBook.js): a plan by daily spend band, plus 12% of
+// lead spend, charged nightly to the card on file. The planning estimates stay drafts until pilot data replaces them.
 //
 // The model (P889, one lead product): the agent sets ONE daily spend and How you take leads (Appointments only, or
 // Appointments + live transfers with live-call hours). 100% of it goes to finding their leads. Pilot agents pay only
-// that spend, prepaid weekly (unspent money rolls into next week; leads stop when it runs out). Paid agents also pay
-// a monthly membership tiered by daily spend. The form/call split behind it is admin only (src/lib/leadSplit.js); at
+// that spend. Paid agents pay a monthly plan by daily spend band plus 12% of the spend. Spend is charged each night
+// for the next day (P909); what the ads didn't spend comes off the next night's charge. The form/call split behind it is admin only (src/lib/leadSplit.js); at
 // launch call ads are off (P901), so all spend goes to form ads and live transfers come from form leads.
 // spend = { daily } dollars a day. The old per-type shape { appts, live } still reads (dailyTotal adds them up).
 
-import { PRICES } from '../lib/priceBook.js'
+import { PRICES, SETTINGS, nightlyCharge, extraClients } from '../lib/priceBook.js'
 import { effectiveSplit, SPLIT_RULES } from '../lib/leadSplit.js'
 
 // Planning estimates (drafts, replaced by pilot data).
@@ -21,21 +21,27 @@ export const EST = {
   live: { perCall: 55, delivered: 0.7, close: 0.3 },
 }
 
-// Membership by total daily spend: Starter, Growth, Pro (P901, final). The prices come from the one price source
-// (src/lib/priceBook.js = billing_price_book version 2), never from here.
+// Plans by total daily spend: Starter, Growth, Pro (P909, final). The prices come from the one price source
+// (src/lib/priceBook.js = billing_price_book version 3), never from here.
 export const TIERS = PRICES.tiers
 export const SERVICING_ONLY = PRICES.servicingOnly
 export const PAID_MIN_DAILY = PRICES.paidMinDaily
 export const SETUP_FEE = PRICES.setupFee
-export const SLIDER = { min: 0, max: 300, step: 5 }
+export const LEAD_FEE = PRICES.leadFee
+export const MAX_DAILY = SETTINGS.maxDaily
+export const INCLUDED_ADDED = PRICES.includedAdded
+export const SLIDER = { min: 0, max: MAX_DAILY, step: 5 }
+export const feeWords = `${Math.round(LEAD_FEE * 100)}%`
+export const FEE_WHY = 'covers the AI calls and the team working every lead'
 export const RECOMMENDED = 'Most full-time agents spend $100 to $150 a day. Starting out or part-time: $50 to $75.'
 
 export const dailyTotal = spend => (spend?.daily != null ? Number(spend.daily) || 0 : (spend?.appts || 0) + (spend?.live || 0))
 export const weeklyTotal = spend => dailyTotal(spend) * 7
 
+// Under the first band reads as the first plan, over the last (an admin raise) as the last.
 export function tierOf(daily) {
   const d = Math.round(daily)
-  return TIERS.find(t => d >= t.from && (t.to == null || d <= t.to)) || TIERS[0]
+  return TIERS.find(t => d >= t.from && (t.to == null || d <= t.to)) || (d > (TIERS.at(-1).to ?? Infinity) ? TIERS.at(-1) : TIERS[0])
 }
 
 // Where a daily total sits on the tier bands (0..1 across 0..SLIDER.max), for the band marks on the slider.
@@ -72,17 +78,37 @@ export function openSlotsPerWeek(week) {
 }
 export const roomFor = (spend, week, booked = 0, mode) => openSlotsPerWeek(week) - booked >= slotsNeeded(spend, mode)
 
-// The monthly bill. Pilot: lead spend only. Paid: membership + lead spend. Servicing only: its own price.
-export function monthlyBill({ plan, spend, products = 'both' }) {
+// The monthly bill, about a month (30.4 days). Pilot: lead spend only. Paid: plan + lead spend + 12% of it, plus extra
+// clients (lead plans: added clients over 50; servicing only: clients over 100). clients = { added, total }.
+export function monthlyBill({ plan, spend, products = 'both', clients = null }) {
   const leadSpend = Math.round(dailyTotal(spend) * 30.4)
-  if (products === 'servicing') return { leadSpend: 0, membership: SERVICING_ONLY, total: SERVICING_ONLY, tier: null }
-  if (plan === 'pilot') return { leadSpend, membership: 0, total: leadSpend, tier: null }
+  if (products === 'servicing') {
+    const x = extraClients(clients?.total ?? 0, PRICES.servicingBase)
+    return { leadSpend: 0, fee: 0, membership: SERVICING_ONLY, extra: x.extra, over: x.over, total: SERVICING_ONLY + x.extra, tier: null }
+  }
+  if (plan === 'pilot') return { leadSpend, fee: 0, membership: 0, extra: 0, over: 0, total: leadSpend, tier: null }
   const tier = tierOf(dailyTotal(spend))
-  return { leadSpend, membership: tier.monthly, total: tier.monthly == null ? null : leadSpend + tier.monthly, tier }
+  const fee = Math.round(leadSpend * LEAD_FEE)
+  const x = extraClients(clients?.added ?? 0, INCLUDED_ADDED)
+  return { leadSpend, fee, membership: tier.monthly, extra: x.extra, over: x.over, total: tier.monthly == null ? null : leadSpend + fee + tier.monthly + x.extra, tier }
 }
 
-// Paid plans: lead spend can't go under the daily minimum.
-export const spendOk = (plan, spend) => plan === 'pilot' || dailyTotal(spend) >= PAID_MIN_DAILY
+// Add clients (P909): what adding n more does to the bill. Pilot agents pay no plan, so nothing changes for them.
+export function addedQuote(b, n) {
+  if (!b || b.plan === 'pilot') return null
+  const svc = b.products === 'servicing'
+  const included = svc ? PRICES.servicingBase : INCLUDED_ADDED
+  const now = svc ? b.clients?.total ?? 0 : b.clients?.added ?? 0
+  const after = now + (Number(n) || 0)
+  const change = extraClients(after, included).extra - extraClients(now, included).extra
+  return { servicingOnly: svc, included, now, after, change, step: PRICES.servicingStep, stepPrice: PRICES.servicingStepPrice }
+}
+
+// Tonight's charge for tomorrow at a daily spend (pilot: no 12%).
+export const nightlyFor = (plan, daily, credit = 0) => nightlyCharge({ daily, credit, rate: plan === 'pilot' ? 0 : LEAD_FEE })
+
+// Paid plans: lead spend can't go under the daily minimum. Nobody goes over the max (an admin can raise one agent).
+export const spendOk = (plan, spend, max = MAX_DAILY) => dailyTotal(spend) <= max && (plan === 'pilot' || dailyTotal(spend) >= PAID_MIN_DAILY)
 
 // A spend change starts at midnight on the agent's clock; a tier change starts with the next bill.
 export const startsText = nextDay => `Starts ${nextDay} at 12:00 AM your time`
@@ -108,13 +134,12 @@ export function bought(rows) {
 // The optional pilot VA cost line (admin turns it on per agent): team hours on this agent × the hourly rate, at cost.
 export const vaCost = va => (va?.on ? Math.round(va.hours * va.rate * 100) / 100 : 0)
 
-// The prepaid weekly balance: loaded = this week's top-up + what rolled over; left = loaded - spent.
-export function wallet(w, spend) {
-  const loaded = w.topUp + w.rolled
-  const left = Math.max(0, loaded - w.spent)
-  const perDay = dailyTotal(spend)
-  const daysLeft = perDay ? Math.floor(left / perDay) : Infinity
-  return { ...w, loaded, left, daysLeft, low: perDay > 0 && daysLeft < 2, out: perDay > 0 && left < perDay }
+// P909: lead spend is charged night by night. nights = [{ day, spend, delivered, status }] the last few days; credit =
+// what was charged and not spent (comes off tonight's charge, with its 12%); tonight = tonight's charge for tomorrow.
+export function nightly(n, spend, plan) {
+  const credit = Math.max(0, (n?.nights || []).reduce((t, x) => t + (x.status === 'paid' ? x.spend - (x.delivered ?? x.spend) : 0), 0))
+  const tonight = nightlyFor(plan, dailyTotal(spend), credit)
+  return { ...n, credit, tonight, failed: (n?.nights || []).some(x => x.status === 'failed') }
 }
 
 // The agent's week against their usual week, in plain words (no talk of how leads are found).

@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { useSampleBugs, setSampleBugStatus } from '../template/bugReport.js'
 import { SETUP_STEPS, setupOf, stepsFor } from './setup.js'
-import { PRICES, bandText } from '../lib/priceBook.js'
+import { PRICES, SETTINGS, bandText } from '../lib/priceBook.js'
 import { tierOf } from '../template/spendPlan.js'
 import { TIMESHEET, HOURLY, sheetTotals } from './p879.js'
 
@@ -21,8 +21,9 @@ export const NEXT_WEEK = [9, 10, 11, 12, 13, 14, 15]
 
 export const ME = { name: 'Sam Ellis', email: 'sam@ohvara.com', phone: '(512) 555-0100', role: 'Admin' }
 
-// P901: the packages and their monthly prices, from the one price source (price book version 2). An agent's package
+// P909: the plans and their monthly prices, from the one price source (price book version 3). An agent's plan
 // follows their daily lead spend (weekly budget / 7); servicing only has its own price. price = dollars a month.
+// Lead plans also pay 12% of their lead spend (PRICES.leadFee), shown apart from the plan fee in Revenue.
 export const PLANS = {
   ...Object.fromEntries(PRICES.tiers.map(t => [t.key, { label: t.label, price: t.monthly, sub: bandText(t) }])),
   servicing: { label: 'Servicing only', price: PRICES.servicingOnly, sub: 'No leads' },
@@ -281,6 +282,9 @@ const seedSettings = {
   tz: 'America/Chicago',
   switches: { sms_live: false, voice_live: false, ai_caller_live: false, recording_live: false, invite_sms_live: false, payouts_live: false, billing_enforced: false, submit_live: true, carrier_lookup_live: false, signup_open: false },
   payRules: { hourly: 8 },
+  // P909: lead billing (billing_settings): the max daily spend, the nightly charge and morning retry hours (Central),
+  // the founding lock. maxOverride = agents an admin raised by hand.
+  billing: { ...SETTINGS, maxOverride: { 'ag-priya': 750 } },
   payoutsPaused: false,
   split: { brayden: 50, changed: null },
   liveRoom: 'https://meet.example.com/ohvara-room',
@@ -466,6 +470,7 @@ export function useAdmMoney() {
   const rate = s.settings.payRules.hourly
   const plans = weekShare(s.agents.filter(a => !a.comped && a.billing.status !== 'past_due').reduce((t, a) => t + PLANS[a.plan].price, 0))
   const leadsCharged = s.leads.filter(l => l.agent_id).reduce((t, l) => t + LEAD_PRICE[l.kind], 0)
+  const leadFee = Math.round(leadsCharged * PRICES.leadFee)
   const weeks = [...s.revenue, { wk: 'Nov 2', plans, leads: leadsCharged, now: true }]
   const failed = s.agents.filter(a => a.billing.failed).map(a => ({ ...a.billing.failed, agent: a.name, agent_id: a.id, status: a.billing.status }))
   // P890: Monday's run pays each VA's hours from clock in and out x their hourly rate (overtime past 40 at 1.5x).
@@ -476,7 +481,7 @@ export function useAdmMoney() {
   })
   const runTotal = run.filter(r => r.bank === 'ready').reduce((t, r) => t + r.amount, 0)
   return ok({
-    plans, leadsCharged, total: plans + leadsCharged, lastWeek: s.revenue[s.revenue.length - 1].plans + s.revenue[s.revenue.length - 1].leads, weeks,
+    plans, leadsCharged, leadFee, total: plans + leadsCharged + leadFee, lastWeek: s.revenue[s.revenue.length - 1].plans + s.revenue[s.revenue.length - 1].leads, weeks,
     failed, run, runTotal, runs: s.runs, payday: 'Mon, Nov 9',
     stripeBalance: 2140, rate, paused: s.settings.payoutsPaused, live: s.settings.switches.payouts_live,
     adSpend: s.connect.ads.reduce((t, a) => t + a.spent, 0), adBudget: s.connect.ads.reduce((t, a) => t + a.budget, 0),
@@ -494,7 +499,9 @@ export function moneyFor(s, period) {
   const setup = s.setupFees.filter(f => (f.period === 'last') === (cur === 'last')).reduce(t => t + SETUP_FEE, 0)
   const budgets = cur === 'last' ? oct.reduce((t, w) => t + w.leads, 0) : weekLeads
   const servicing = cur === 'last' ? oct.reduce((t, w) => t + w.plans, 0) : period === 'month' ? monthPlans : weekPlans
-  const inTotal = budgets + servicing + setup
+  // P909: 12% of lead spend on every lead plan, kept apart from the plan fee.
+  const leadFee = Math.round(budgets * PRICES.leadFee)
+  const inTotal = budgets + leadFee + servicing + setup
   const weekAds = s.connect.ads.reduce((t, a) => t + a.spent, 0)
   const pc = PERIOD_COSTS[period]
   const ads = period === 'last' ? pc.ads : weekAds + pc.adsExtra
@@ -514,7 +521,7 @@ export function moneyFor(s, period) {
     return { ...o, pct, amount, paid, owed: Math.max(0, amount - paid) }
   })
   return {
-    period, budgets, servicing, setup, setupCount: setup / SETUP_FEE, inTotal,
+    period, budgets, leadFee, servicing, setup, setupCount: setup / SETUP_FEE, inTotal,
     ads, vaPay, runs, fees, tools, costTotal, profit, split, splitChanged: s.settings.split.changed,
   }
 }
@@ -646,6 +653,13 @@ export function useAdmActions() {
     // Settings
     setSwitch: (key, on) => set(s => ({ settings: { ...s.settings, switches: { ...s.settings.switches, [key]: on } }, ...audit(s, `${on ? 'Turned on' : 'Turned off'} ${SWITCHES.find(x => x.key === key).label}`, 'Sample only') })),
     savePayRules: payRules => set(s => ({ settings: { ...s.settings, payRules }, ...audit(s, 'Changed pay rules', `$${payRules.hourly} an hour`) })),
+    saveBilling: billing => set(s => ({ settings: { ...s.settings, billing: { ...s.settings.billing, ...billing } },
+      ...audit(s, 'Changed lead billing', `Max $${billing.maxDaily} a day · charge ${billing.chargeHour}:00 · founding ${billing.foundingCount} for ${billing.foundingMonths} months`) })),
+    setMaxDaily: (id, dollars) => set(s => {
+      const o = { ...s.settings.billing.maxOverride }
+      if (dollars == null) delete o[id]; else o[id] = dollars
+      return { settings: { ...s.settings, billing: { ...s.settings.billing, maxOverride: o } }, ...audit(s, dollars == null ? 'Reset a max daily spend' : 'Raised a max daily spend', `${nameOf(s, id)}${dollars == null ? '' : `: $${dollars} a day`}`) }
+    }),
     saveSettings: patch => set(s => ({ settings: { ...s.settings, ...patch } })),
     setTz: tz => set(s => ({ settings: { ...s.settings, tz } })),
     // P876: new → seen → fixed. Reports sent this visit live in the sample store (template/bugReport), the rest here.

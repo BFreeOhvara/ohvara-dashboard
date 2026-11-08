@@ -9,7 +9,7 @@ import { normalizeSettings } from '../lib/agentSettings'
 import { outcomeArgs } from '../lib/leadOutcomes'
 import { invokeBilling } from '../lib/billing'
 import { zoneOf } from '../lib/callSlots'
-import { wallet as walletOf, expected } from '../template/spendPlan'
+import { nightly as nightlyOf, expected } from '../template/spendPlan'
 import { DEFAULT_LIVE_HOURS } from '../lib/leadSplit'
 import { useNote } from '../template/kit'
 
@@ -261,8 +261,7 @@ export function useActivityReal() {
   return { data, isLoading: q.isLoading, error: q.error || null }
 }
 
-// ── Billing (interim, until P884's my_billing is on the database): spend per type, prepaid balance, card state ───
-const mondayText = now => { const d = new Date(`${now.slice(0, 10)}T12:00:00Z`); const add = ((8 - d.getUTCDay()) % 7) || 7; const n = new Date(d.getTime() + add * 86400000); return `${DOW[n.getUTCDay()]}, ${MON[n.getUTCMonth()]} ${n.getUTCDate()}` }
+// ── Billing (interim, until P884's my_billing is on the database): spend per type, nightly charge (P909), card state ───
 export function useBillingReal() {
   const { profile } = useAuth()
   const now = useWallNow()
@@ -291,12 +290,14 @@ export function useBillingReal() {
       // P889: one daily spend (the old per-type rows add up until p889's lead_product_set is live).
       spend: { daily: daily('booked_appointment') + daily('live_call') }, pending: null, booked: 0, usual: 0,
       take: { mode: daily('live_call') > 0 ? 'both' : 'appts', hours: DEFAULT_LIVE_HOURS, tz: profile?.timezone || DEFAULT_TZ },
-      wallet: { week: 'This week', topUp: Math.max(0, (balance?.balance_cents || 0) / 100), rolled: 0, spent: 0, next: mondayText(now) },
+      // P909: lead spend is charged nightly; until the P909 reads are live, the balance stands in as credit.
+      nightly: { at: 'Tonight, 8 PM', forDay: 'tomorrow', nights: [], credit: Math.max(0, (balance?.balance_cents || 0) / 100) },
+      card: { label: null, onFile: true },
       va: { on: false, hours: 0, rate: 0 }, bought: { week: boughtOf(leads.data, weekFrom), month: boughtOf(leads.data, monthFrom) }, saved: [], paused: pausedOf(q.data?.pause), cancel: null,
       payment: { card: null, failed: profile?.billing_status === 'past_due' || profile?.billing_status === 'unpaid' },
-      next_charge: mondayText(now), nextBill: null, servicing: { status: 'active', next: null }, cancellations: null, history: [], real: true,
+      next_charge: 'Tonight, 8 PM', nextBill: null, servicing: { status: 'active', next: null }, cancellations: null, history: [], real: true,
     }
-    return { ...b, submitted: clients.data.length, walletNow: walletOf(b.wallet, b.spend), expected: expected(b.spend, b.take.mode), servicing: { ...b.servicing, status: b.products === 'leads' ? 'off' : 'active' } }
+    return { ...b, submitted: clients.data.length, nightNow: nightlyOf(b.nightly, b.spend, b.plan), expected: expected(b.spend, b.take.mode), servicing: { ...b.servicing, status: b.products === 'leads' ? 'off' : 'active' } }
   }, [q.data, profile, now, clients.data.length, leads.data])
   return { data, isLoading: q.isLoading, error: q.error || null }
 }
