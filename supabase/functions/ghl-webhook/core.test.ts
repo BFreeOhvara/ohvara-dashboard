@@ -192,3 +192,71 @@ test('oversized requests are refused before anything else', async () => {
   const big = JSON.stringify({ type: 'InboundMessage', body: 'x'.repeat(70 * 1024) })
   assert.equal((await handle(viaSig(big), db.d)).status, 413)
 })
+
+// ── P858: lead_created (the Deedstone page / Meta form lead) ─────────────────
+test('lead_created: the lead goes to ghl_intake_lead with the agent ID, type and Meta option', async () => {
+  const raw = fx('workflow-lead.json')
+  const db = fakeDb()
+  db.d.rpc = async (fn, args) => { db.calls.push({ fn, args }); return { data: { lead_id: LEAD, routing: 'matched', duplicate: false }, error: null } }
+  const res = await handle(viaSecret(raw), db.d)
+  assert.equal(res.status, 200)
+  assert.deepEqual(await res.json(), { ok: 'lead_saved', routing: 'matched' })
+  assert.equal(db.calls.length, 1)
+  assert.equal(db.calls[0].fn, 'ghl_intake_lead')
+  const p = db.calls[0].args.p as Record<string, unknown>
+  assert.equal(p.agent_id, AGENT)
+  assert.equal(p.lead_type, 'booked_appointment')
+  assert.equal(p.meta_option, 'form_page')
+  assert.equal(p.phone, '+15125558201')
+  assert.equal(p.campaign_id, 'cmp-dana-mp')
+  assert.equal(p.contact_id, 'cL3adC0nt4ct00000001')
+  assert.match(String(p.intake_key), /^wf-[0-9a-f]{32}$/)
+})
+
+test('lead_created: no agent ID still saves (admin Unassigned); short words map to the two types', async () => {
+  const a = await classify(JSON.parse(fx('workflow-lead-no-agent.json')), fx('workflow-lead-no-agent.json'))
+  assert.equal(a.kind, 'lead')
+  if (a.kind !== 'lead') return
+  assert.equal(a.lead.agent_id, null)
+  assert.equal(a.lead.lead_type, 'live_call')
+  assert.equal(a.lead.meta_option, 'page_only')
+})
+
+test('lead_created: the same delivery twice has the same intake key (saved once by the database)', async () => {
+  const raw = fx('workflow-lead.json')
+  const [a, b] = await Promise.all([classify(JSON.parse(raw), raw), classify(JSON.parse(raw), raw)])
+  assert.ok(a.kind === 'lead' && b.kind === 'lead' && a.lead.intake_key === b.lead.intake_key)
+  const withId = { ...JSON.parse(raw), customData: { ...JSON.parse(raw).customData, intake_id: 'evt-123456' } }
+  const c = await classify(withId, JSON.stringify(withId))
+  assert.ok(c.kind === 'lead' && c.lead.intake_key === 'evt-123456')
+})
+
+test('lead_created: bad payloads are dropped, not retried; switch off saves nothing; db down retries', async () => {
+  const raw = fx('workflow-lead.json')
+  const noPhone = JSON.stringify({ ...JSON.parse(raw), phone: undefined })
+  assert.deepEqual(await classify(JSON.parse(noPhone), noPhone), { kind: 'ignore', why: 'no phone' })
+  const badType = JSON.stringify({ ...JSON.parse(raw), customData: { ohvara_event: 'lead_created', lead_type: 'cold' } })
+  assert.deepEqual(await classify(JSON.parse(badType), badType), { kind: 'ignore', why: 'unknown lead type' })
+
+  const off = fakeDb({ settings: { enabled: false, location_id: LOC } })
+  assert.deepEqual(await (await handle(viaSecret(raw), off.d)).json(), { skipped: 'off' })
+  assert.equal(off.calls.length, 0)
+
+  const refused = fakeDb()
+  refused.d.rpc = async () => ({ data: null, error: { message: 'bad phone', code: '22023' } })
+  const r1 = await handle(viaSecret(raw), refused.d)
+  assert.equal(r1.status, 200)
+  assert.deepEqual(await r1.json(), { ignored: 'bad lead' })
+
+  const down = fakeDb({ rpcError: 'connection reset' })
+  assert.equal((await handle(viaSecret(raw), down.d)).status, 500)
+  assert.ok(down.logs.every(l => !l.includes('5558201') && !l.includes('Angela')), 'logs carry no phone or name')
+
+  const other = JSON.stringify({ ...JSON.parse(raw), location: { id: 'zzOtherLocation01' } })
+  const o = fakeDb()
+  assert.deepEqual(await (await handle(viaSecret(other), o.d)).json(), { ignored: 'other location' })
+
+  const dup = fakeDb()
+  dup.d.rpc = async () => ({ data: { lead_id: LEAD, routing: 'duplicate', duplicate: true }, error: null })
+  assert.deepEqual(await (await handle(viaSecret(raw), dup.d)).json(), { ok: 'duplicate', routing: 'duplicate' })
+})

@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, Check, Shuffle, PhoneMissed, Hand, CalendarOff, CreditCard, PhoneCall, Radio, Megaphone } from 'lucide-react'
-import { useAdmDay, useAdmMoney, useAdmAgents, useAdmDesk, dateText } from '../data'
+import { useAdmDay, useAdmMoney, useAdmAgents, useAdmDesk, useAdmCosts, dateText } from '../data'
 import { Avatar } from '../../template/kit'
 import { CountUp, usd } from '../../template/motion'
-import { Tile } from '../kit'
+import { Tile, EngineSlot } from '../kit'
+import { useGhlRow } from '../useGhlRow'
 import { ap } from '../paths'
 import { adAlerts } from '../p879'
 
@@ -12,6 +13,20 @@ import { adAlerts } from '../p879'
 // transferred, sold) with a bar per day; under it, who is on shift today (butter) and revenue this week (sage); the
 // right column = what needs an admin, as stage-coloured cards; along the bottom, the agents. Sample info only.
 const money = usd()
+const cents = usd(true)
+
+// P858: what the ads cost per lead, per booked and per sale this week, from real spend and real outcomes. Until
+// GoHighLevel's ad spend is connected, the engine slot.
+function CostLine({ costs, row }) {
+  if (!costs) return <p className="adm-note adm-costs">Cost per lead, booked and sale <EngineSlot settings={row} /></p>
+  const t = costs.total
+  const f = v => (v == null ? '–' : cents(v))
+  return (
+    <dl className="fx-facts adm-costs" aria-label="Ad cost this week">
+      {[['Ad spend', money(t.spend)], ['Per lead', f(t.perLead)], ['Per booked', f(t.perBooked)], ['Per sale', f(t.perSale)]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd className="tp-money">{v}</dd></div>)}
+    </dl>
+  )
+}
 
 function Need({ to, tone, icon: Icon, kicker, title, sub, i }) {
   return (
@@ -51,6 +66,8 @@ export default function Overview() {
   const { data: m } = useAdmMoney()
   const { data: agents } = useAdmAgents()
   const { data: desk } = useAdmDesk()
+  const { data: costs } = useAdmCosts()
+  const row = useGhlRow()
   const w = day.week
   const steps = [['in', 'Came in', w.in], ['booked', 'Booked', w.booked], ['transferred', 'Transferred', w.transferred], ['sold', 'Sold', w.sold]]
   const top = Math.max(4, ...day.byDay.map(d => d.in))
@@ -62,7 +79,7 @@ export default function Overview() {
     ...day.requests.map(r => ({ id: r.id, to: `${ap('team')}?tab=requests`, tone: 'teal', icon: CalendarOff, kicker: 'Day off asked', title: r.va || 'A VA', sub: dateText(r.date) })),
     ...day.failed.map(a => ({ id: a.id, to: `${ap('billing')}?tab=agents`, tone: 'blue', icon: CreditCard, kicker: 'Payment failed', title: a.name, sub: `${a.billing.failed.what} · ${money(a.billing.failed.amount)}` })),
     // P879 (N-A-04): an ad rejected, or in review over 24 h, from the engine (sample until 858 + GoHighLevel).
-    ...adAlerts().map(x => ({ id: `ad-${x.agent}`, to: ap('agents', x.agent), tone: 'warn', icon: Megaphone, kicker: x.kind === 'rejected' ? 'Ad rejected' : 'Ad in review', title: agents.find(a => a.id === x.agent)?.name || 'An agent', sub: x.text })),
+    ...(day.real ? [] : adAlerts()).map(x => ({ id: `ad-${x.agent}`, to: ap('agents', x.agent), tone: 'warn', icon: Megaphone, kicker: x.kind === 'rejected' ? 'Ad rejected' : 'Ad in review', title: agents.find(a => a.id === x.agent)?.name || 'An agent', sub: x.text })),
   ]
   const onShift = day.onShift.map(v => ({ ...v, calls: desk.filter(c => c.va_id === v.id) }))
   const todayCalls = desk.length
@@ -73,7 +90,7 @@ export default function Overview() {
   return (
     <div className="tp-page fx-page adm-ov">
       <div className="adm-ov-top" data-fold>
-        <Tile className="adm-ov-hero" i={0} title="Leads this week" sub={`Mon, Nov 2 to today · ${money(w.premium)} a month in new premium`} to={ap('leads')} label="Open Leads">
+        <Tile className="adm-ov-hero" i={0} title="Leads this week" sub={`${day.range} · ${money(w.premium)} a month in new premium`} to={ap('leads')} label="Open Leads">
           <ol className="adm-funnel" aria-label="This week's leads">
             {steps.map(([k, label, n], i) => (
               <li key={k} className={`is-${k}`} style={{ '--i': i }}>
@@ -84,6 +101,7 @@ export default function Overview() {
             ))}
           </ol>
           <DayBars day={day} top={top} />
+          <CostLine costs={costs} row={row} />
         </Tile>
 
         <div className="fx-ovl-side">
@@ -124,7 +142,7 @@ export default function Overview() {
                 </span>
               ))}
             </div>
-            <small className="adm-note">{money(m.lastWeek)} last week · sample prices</small>
+            <small className="adm-note">{money(m.lastWeek)} last week · {day.real ? 'from billing' : 'sample prices'}</small>
           </Tile>
       </div>
 

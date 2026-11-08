@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { useSyncExternalStore, createContext, useContext, createElement } from 'react'
 import { useSampleBugs, setSampleBugStatus } from '../template/bugReport.js'
 import { SETUP_STEPS, setupOf, stepsFor } from './setup.js'
 import { PRICES, SETTINGS, bandText } from '../lib/priceBook.js'
@@ -367,6 +367,17 @@ const set = fn => { state = { ...state, ...fn(state) }; listeners.forEach(l => l
 const subscribe = fn => { listeners.add(fn); return () => listeners.delete(fn) }
 const useStore = () => useSyncExternalStore(subscribe, () => state)
 const ok = data => ({ data, isLoading: false, error: null })
+// P858 — sample or real. Screens keep calling the hooks below. Inside the signed-in admin portal, when the viewer's
+// data mode is real (lib/dataMode.js), AdminShell wraps the pages in AdmDataProvider with the real store
+// (hooks/admRealData.js: same keys, built from the tables) and the real actions; everything derived here (funnel,
+// Money, Setup) then reads the real store unchanged. Outside a provider (/preview/admin, tests) it stays sample.
+const SourceCtx = createContext(null)
+export function AdmDataProvider({ value, children }) { return createElement(SourceCtx.Provider, { value }, children) }
+const useS = () => { const real = useContext(SourceCtx); const sample = useStore(); return real?.state || sample }
+const okS = (s, data) => (s.meta ? { data, isLoading: s.meta.isLoading, error: s.meta.error } : ok(data))
+// 'sample' | 'real' (screens use it for empty-state words); meta = { isLoading, error, failed, retry } on real data.
+export const useAdmSource = () => (useContext(SourceCtx) ? 'real' : 'sample')
+export const useAdmMeta = () => useContext(SourceCtx)?.state?.meta || null
 // The sample store as it is now (tests read Money's numbers from it without React).
 export const admSnapshot = () => state
 
@@ -397,21 +408,21 @@ export function funnel(leads) {
 }
 
 export function useAdmAgents() {
-  const s = useStore()
-  return ok(s.agents.map(a => {
+  const s = useS()
+  return okS(s, s.agents.map(a => {
     const mine = s.leads.filter(l => l.agent_id === a.id)
     return { ...a, week: funnel(mine), clients: s.clients.filter(c => c.agent_id === a.id).length, planInfo: PLANS[a.plan] }
   }))
 }
 export function useAdmVas() {
-  const s = useStore()
+  const s = useS()
   const rate = s.settings.payRules.hourly
-  return ok(s.vas.map(v => {
+  return okS(s, s.vas.map(v => {
     const sheet = TIMESHEET.find(t => t.va === v.id)
     const pay = sheet ? sheetTotals(sheet, HOURLY[v.id] || rate) : { hours: 0, pay: 0 }
     const calls = s.calls.filter(c => c.va_id === v.id)
     return {
-      ...v, onShift: (s.rota[TODAY] || []).includes(v.id), onCall: calls.some(c => c.status === 'live'),
+      ...v, onShift: (s.rota[s.clock?.today ?? TODAY] || []).includes(v.id), onCall: calls.some(c => c.status === 'live'),
       today: { total: calls.length, done: calls.filter(c => ['cancelled', 'no_answer'].includes(c.status)).length, late: calls.filter(c => c.status === 'late').length },
       week: { hours: pay.hours, pay: pay.pay },
       days: WEEK.filter(d => (s.rota[d] || []).includes(v.id)).length,
@@ -419,30 +430,32 @@ export function useAdmVas() {
     }
   }))
 }
-export function useAdmInvites() { const s = useStore(); return ok(s.invites) }
+export function useAdmInvites() { const s = useS(); return okS(s, s.invites) }
 export function useAdmLeads() {
-  const s = useStore()
-  return ok(s.leads.map(l => ({ ...l, agent: l.agent_id ? nameOf(s, l.agent_id) : null })))
+  const s = useS()
+  return okS(s, s.leads.map(l => ({ ...l, agent: l.agent_id ? nameOf(s, l.agent_id) : null })))
 }
 export function useAdmClients() {
-  const s = useStore()
-  return ok(s.clients.map(c => ({ ...c, agent: nameOf(s, c.agent_id), va: nameOf(s, c.va_id), steps: s.steps.filter(x => x.client_id === c.id) })))
+  const s = useS()
+  return okS(s, s.clients.map(c => ({ ...c, agent: nameOf(s, c.agent_id), va: nameOf(s, c.va_id), steps: s.steps.filter(x => x.client_id === c.id) })))
 }
 export function useAdmSteps() {
-  const s = useStore()
-  return ok(s.steps.map(x => { const c = s.clients.find(k => k.id === x.client_id); return { ...x, client: c.name, agent: nameOf(s, c.agent_id), va: nameOf(s, x.va_id) } }))
+  const s = useS()
+  return okS(s, s.steps.map(x => { const c = s.clients.find(k => k.id === x.client_id); return { ...x, client: c.name, agent: nameOf(s, c.agent_id), va: nameOf(s, x.va_id) } }))
 }
 export function useAdmDesk() {
-  const s = useStore()
-  return ok(s.calls.map(c => ({ ...c, va: nameOf(s, c.va_id), agent: nameOf(s, c.agent_id) })))
+  const s = useS()
+  return okS(s, s.calls.map(c => ({ ...c, va: nameOf(s, c.va_id), agent: nameOf(s, c.agent_id) })))
 }
-export function useAdmRota() { const s = useStore(); return ok({ rota: s.rota, dayOff: s.dayOff.map(d => ({ ...d, va: nameOf(s, d.va_id) })) }) }
+export function useAdmRota() { const s = useS(); return okS(s, { rota: s.rota, dayOff: s.dayOff.map(d => ({ ...d, va: nameOf(s, d.va_id) })) }) }
 export function useAdmThreads() {
-  const s = useStore()
-  return ok(s.threads.map(t => {
+  const s = useS()
+  return okS(s, s.threads.map(t => {
     const agent = s.agents.find(a => a.id === t.who)
-    const role = agent ? 'Agent' : 'Fulfillment'
-    return { ...t, name: nameOf(s, t.who), role }
+    // P858: a real thread whose person isn't on the agent or VA list (inactive, or not loaded) keeps the name it came with.
+    const va = s.vas.find(v => v.id === t.who)
+    const role = agent || !va ? 'Agent' : 'Fulfillment'
+    return { ...t, name: nameOf(s, t.who) || t.agentName || 'Someone', role }
   }))
 }
 // P876: a bug report sent from Help & Support lands in Bug reports and in the bell as an app notification (the
@@ -452,21 +465,21 @@ const fromSample = r => ({ id: r.id, who: r.ctx.who, role: r.ctx.role, text: r.t
 export const bugsWithSent = (bugs, sent) => [...sent.map(fromSample), ...bugs]
 export const feedWithSent = (feed, sent) => [...sent.map(r => ({ id: `fb-${r.id}`, who: r.ctx.who, text: `Reported a bug: ${r.text}`, at: bugWhen(r.ctx.at), kind: 'bug' })), ...feed]
 export const openBugCount = (bugs, sent) => [...bugs, ...sent].filter(b => b.status !== 'fixed').length
-export function useAdmFeed() { const s = useStore(); const sent = useSampleBugs(); return ok(feedWithSent(s.feed, sent)) }
-export function useAdmSettings() { const s = useStore(); return ok(s.settings) }
-export function useAdmBugs() { const s = useStore(); const sent = useSampleBugs(); return ok(bugsWithSent(s.bugs, sent)) }
-export function useAdmAudit() { const s = useStore(); return ok(s.audit) }
-export function useAdmConnect() { const s = useStore(); return ok(s.connect) }
+export function useAdmFeed() { const s = useS(); const sent = useSampleBugs(); return okS(s, feedWithSent(s.feed, sent)) }
+export function useAdmSettings() { const s = useS(); return okS(s, s.settings) }
+export function useAdmBugs() { const s = useS(); const sent = useSampleBugs(); return okS(s, bugsWithSent(s.bugs, sent)) }
+export function useAdmAudit() { const s = useS(); return okS(s, s.audit) }
+export function useAdmConnect() { const s = useS(); return okS(s, s.connect) }
 // P866 — the Setup pipeline: agent invites (Invited) and every agent not live yet, each with setupOf() worked out.
 export function pipelineOf(s) {
   const invited = s.invites.filter(i => i.role === 'agent').map(i => ({ id: i.id, name: i.name, invite: i, city: '', state: '', states: [], plan: null, lead: null, spend: 0, done: [], since: i.sent }))
   return [...invited, ...s.onboard].map(c => ({ ...c, ...setupOf(c), log: s.setupLog[c.id] || [] }))
 }
-export function useAdmSetup() { const s = useStore(); return ok(pipelineOf(s)) }
+export function useAdmSetup() { const s = useS(); return okS(s, pipelineOf(s)) }
 
 // Money: this week's revenue (plans + leads charged), the weeks before, agent bills, failed payments, the VA pay run.
 export function useAdmMoney() {
-  const s = useStore()
+  const s = useS()
   const rate = s.settings.payRules.hourly
   const plans = weekShare(s.agents.filter(a => !a.comped && a.billing.status !== 'past_due').reduce((t, a) => t + PLANS[a.plan].price, 0))
   const leadsCharged = s.leads.filter(l => l.agent_id).reduce((t, l) => t + LEAD_PRICE[l.kind], 0)
@@ -480,10 +493,10 @@ export function useAdmMoney() {
     return { va_id: v.id, name: v.name, hours: t.hours, amount: t.pay, bank: v.bank }
   })
   const runTotal = run.filter(r => r.bank === 'ready').reduce((t, r) => t + r.amount, 0)
-  return ok({
-    plans, leadsCharged, leadFee, total: plans + leadsCharged + leadFee, lastWeek: s.revenue[s.revenue.length - 1].plans + s.revenue[s.revenue.length - 1].leads, weeks,
+  return okS(s, {
+    plans, leadsCharged, leadFee, total: plans + leadsCharged + leadFee, lastWeek: s.revenue.length ? s.revenue[s.revenue.length - 1].plans + s.revenue[s.revenue.length - 1].leads : 0, weeks,
     failed, run, runTotal, runs: s.runs, payday: 'Mon, Nov 9',
-    stripeBalance: 2140, rate, paused: s.settings.payoutsPaused, live: s.settings.switches.payouts_live,
+    stripeBalance: s.real ? s.stripeBalance : 2140, rate, paused: s.settings.payoutsPaused, live: s.settings.switches.payouts_live,
     adSpend: s.connect.ads.reduce((t, a) => t + a.spent, 0), adBudget: s.connect.ads.reduce((t, a) => t + a.budget, 0),
   })
 }
@@ -503,8 +516,10 @@ export function moneyFor(s, period) {
   const leadFee = Math.round(budgets * PRICES.leadFee)
   const inTotal = budgets + leadFee + servicing + setup
   const weekAds = s.connect.ads.reduce((t, a) => t + a.spent, 0)
-  const pc = PERIOD_COSTS[period]
-  const ads = period === 'last' ? pc.ads : weekAds + pc.adsExtra
+  const pc = (s.periodCosts || PERIOD_COSTS)[period]
+  // Real: ad spend from ad_spend_daily for the period (admin_ad_costs), never Connect's sample accounts.
+  const spendOf = c => Math.round(Object.values(c || {}).reduce((t, x) => t + x.spend, 0))
+  const ads = s.real ? spendOf(period === 'week' ? s.costs : period === 'month' ? s.costsMonth : s.costsLast) : period === 'last' ? pc.ads : weekAds + pc.adsExtra
   // Pay runs paid inside the period: Mon, Nov 2 for this week and month; Oct 12, 19 and 26 for October.
   const runs = s.runs.filter(r => (cur === 'last' ? r.paid.includes('Oct') : r.paid.includes('Nov')))
   const vaPay = runs.reduce((t, r) => t + r.amount, 0)
@@ -525,32 +540,46 @@ export function moneyFor(s, period) {
     ads, vaPay, runs, fees, tools, costTotal, profit, split, splitChanged: s.settings.split.changed,
   }
 }
-export function useAdmPeriod(period = 'week') { const s = useStore(); return ok(moneyFor(s, period)) }
+export function useAdmPeriod(period = 'week') { const s = useS(); return okS(s, moneyFor(s, period)) }
 export function useAdmDraws() {
-  const s = useStore()
-  return ok(OWNERS.map(o => ({ ...o, draws: s.draws.filter(d => d.owner === o.id), total: s.draws.filter(d => d.owner === o.id).reduce((t, d) => t + d.amount, 0) })))
+  const s = useS()
+  return okS(s, OWNERS.map(o => ({ ...o, draws: s.draws.filter(d => d.owner === o.id), total: s.draws.filter(d => d.owner === o.id).reduce((t, d) => t + d.amount, 0) })))
 }
 
 // The page heads and the Overview read this: the business today in one place.
 export function useAdmDay() {
-  const s = useStore()
+  const s = useS()
   const sentBugs = useSampleBugs()
   const week = funnel(s.leads)
-  const byDay = WEEK.map(d => ({ day: d, name: dayName(d), ...funnel(s.leads.filter(l => l.day === d)), later: d > TODAY }))
+  const today = s.clock?.today ?? TODAY
+  const byDay = (s.clock?.week || WEEK).map((d, i) => ({ day: d, name: (s.clock?.dayName || dayName)(d), ...funnel(s.leads.filter(l => l.day === d)), later: s.clock ? i > (s.clock.week.indexOf(today)) : d > TODAY }))
   const unassigned = s.leads.filter(l => l.stage === 'unassigned')
   const missed = s.leads.filter(l => l.stage === 'missed')
   const late = s.calls.filter(c => c.status === 'late')
   const requests = s.dayOff.filter(d => d.status === 'pending').map(d => ({ ...d, va: nameOf(s, d.va_id) }))
   const failed = s.agents.filter(a => a.billing.failed)
-  return ok({
-    week, byDay, unassigned, missed, late, requests, failed,
+  return okS(s, {
+    week, byDay, unassigned, missed, late, requests, failed, real: !!s.real,
+    range: s.clock ? `${s.clock.dateText(s.clock.week[0])} to today` : 'Mon, Nov 2 to today',
     payingAgents: s.agents.filter(a => !a.comped && a.billing.status === 'current' && a.access).length,
-    onShift: (s.rota[TODAY] || []).map(id => s.vas.find(v => v.id === id)).filter(Boolean),
+    onShift: (s.rota[today] || []).map(id => s.vas.find(v => v.id === id)).filter(Boolean),
     onDuty: s.agents.filter(a => a.onDuty && a.active),
     needs: unassigned.length + missed.length + late.length + requests.length + failed.length,
     unread: s.threads.reduce((n, t) => n + t.unread, 0),
-    openBugs: openBugCount(s.bugs, sentBugs),
+    openBugs: openBugCount(s.bugs, s.real ? [] : sentBugs),
   })
+}
+
+// P858: ad cost per lead / booked / sale per agent, from real spend (ad_spend_daily) and real outcomes (admin_ad_costs).
+// null = no spend data yet (sample mode, or GoHighLevel not connected): screens show the engine slot instead.
+export function useAdmCosts() {
+  const s = useS()
+  const c = s.real && s.costs && Object.keys(s.costs).length ? s.costs : null
+  if (!c) return okS(s, null)
+  const sum = k => Object.values(c).reduce((t, x) => t + (x[k] || 0), 0)
+  const spend = sum('spend')
+  const per = n => (n > 0 ? spend / n : null)
+  return okS(s, { byAgent: c, total: { spend, leads: sum('leads'), booked: sum('booked'), sold: sum('sold'), perLead: per(sum('leads')), perBooked: per(sum('booked')), perSale: per(sum('sold')) } })
 }
 
 // P866: one audit line on a client's setup history, newest first.
@@ -558,8 +587,7 @@ const setupLogAdd = (s, id, what) => ({ setupLog: { ...s.setupLog, [id]: [{ at: 
 const feedAdd = (s, who, text, kind) => ({ feed: [{ id: `f${Date.now()}`, who, text, at: stamp(), kind }, ...s.feed] })
 const patchById = (list, id, patch) => list.map(x => (x.id === id ? { ...x, ...(typeof patch === 'function' ? patch(x) : patch) } : x))
 
-export function useAdmActions() {
-  return {
+const SAMPLE_ACTIONS = {
     // Leads: route to an agent, or move one along.
     assignLead: (id, agentId) => set(s => {
       const l = s.leads.find(x => x.id === id)
@@ -676,5 +704,6 @@ export function useAdmActions() {
       const next = Array.isArray(s.connect[part]) ? patch : { ...s.connect[part], ...patch }
       return { connect: { ...s.connect, [part]: next }, ...audit(s, what || 'Saved a Connect setting', 'Waits for the bridge (P850)'), ...feedAdd(s, ME.name, what || 'Saved a Connect setting', 'connect') }
     }),
-  }
 }
+// The sample actions, or the real ones inside AdmDataProvider (same names; see hooks/admRealData.js).
+export function useAdmActions() { const real = useContext(SourceCtx); return real?.actions || SAMPLE_ACTIONS }

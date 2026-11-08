@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { CircleCheck, Landmark, ArrowUpRight, CreditCard, MessageSquare, RotateCw, Wallet, Megaphone, Headset, Receipt, Wrench, BadgeDollarSign, PiggyBank, Pencil, History } from 'lucide-react'
-import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, useAdmSettings, PLANS, PERIODS, SETUP_FEE, CARD_FEE } from '../data'
+import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, useAdmSettings, useAdmSource, PLANS, PERIODS, SETUP_FEE, CARD_FEE } from '../data'
 import { PRICES } from '../../lib/priceBook.js'
 import { Avatar, Chip, PillTabs, SampleTag, Seg, Switch, useNote } from '../../template/kit'
 import { CountUp, usd } from '../../template/motion'
@@ -19,6 +19,7 @@ import { PilotResults } from './Pilot879'
 const money = usd()
 
 function Revenue() {
+  const src = useAdmSource()
   const { data: m } = useAdmMoney()
   const { data: agents } = useAdmAgents()
   const top = Math.max(...m.weeks.map(w => w.plans + w.leads))
@@ -26,7 +27,7 @@ function Revenue() {
   return (
     <div className="fx-ovl">
       <div className="fx-ovl-main">
-        <Tile className="adm-rev-hero" i={0} title="Revenue by week" sub="Plans plus lead spend and its 12% · sample">
+        <Tile className="adm-rev-hero" i={0} title="Revenue by week" sub={`Plans plus lead spend and its 12% · ${src === 'real' ? 'from billing' : 'sample'}`}>
           <div className="fx-chart-head fx-bk-head">
             <b className="tp-money fx-bk-num"><CountUp value={m.total} format={money} /></b>
             <span className="fx-bk-side"><b>this week so far</b><small>{money(m.lastWeek)} last week</small><i className={`fx-delta is-${m.total >= m.lastWeek ? 'up' : 'warn'}`}>{m.total >= m.lastWeek ? 'Up' : 'Behind'} {Math.abs(Math.round(((m.total - m.lastWeek) / m.lastWeek) * 100))}%</i></span>
@@ -75,7 +76,7 @@ function Waterfall({ p }) {
     <div className="adm-fall" role="img" aria-label={`Brought in ${money(p.inTotal)}, costs ${money(p.costTotal)}, profit ${money(p.profit)}`}>
       {cols.map((c, i) => (
         <span key={c.k} className={`adm-fall-${c.k}`} style={{ '--i': i }}>
-          <i style={{ '--b': c.b, '--h': Math.max(c.h, 0.004) }}><b className="tp-money">{c.neg ? '−' : ''}{money(c.n)}</b></i>
+          <i style={{ '--b': c.b, '--h': Math.max(c.h, 0.004) }}><b className="tp-money">{c.neg && c.n > 0 ? '−' : ''}{money(c.n)}</b></i>
           <small>{c.label}</small>
         </span>
       ))}
@@ -118,6 +119,7 @@ function Split({ p }) {
 
 function MoneyTop({ period, setPeriod }) {
   const { data: p } = useAdmPeriod(period)
+  const src = useAdmSource()
   const span = PERIODS.find(x => x[0] === period)
   const margin = p.inTotal ? Math.round((p.profit / p.inTotal) * 100) : 0
   return (
@@ -126,7 +128,7 @@ function MoneyTop({ period, setPeriod }) {
     <section className="adm-money" aria-label="Revenue for the period" data-fold data-fold-next=".adm-tabpane .fx-tile">
       <div className="adm-money-bar">
         <Seg label="Period" value={period} onChange={setPeriod} options={PERIODS.map(([k, label]) => ({ key: k, label }))} />
-        <small className="tp-sub">{span[2]} · sample numbers</small>
+        <small className="tp-sub">{span[2]} · {src === 'real' ? 'from billing' : 'sample numbers'}</small>
       </div>
       <div className="adm-money-grid has-split">
         <Tile className="adm-total is-in" i={0} title="Brought in" sub="Everything agents paid">

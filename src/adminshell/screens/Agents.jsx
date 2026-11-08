@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Search, MapPin, MessageSquare, PhoneIncoming, BookUser, Radio, ShieldOff, ShieldCheck, Send, X, Mail, Smartphone } from 'lucide-react'
-import { useAdmAgents, useAdmLeads, useAdmInvites, useAdmActions, PLANS } from '../data'
+import { useAdmAgents, useAdmLeads, useAdmInvites, useAdmActions, useAdmCosts, PLANS } from '../data'
 import { Avatar, Chip, Drawer, Empty, Seg, Switch, useNote } from '../../template/kit'
 import { RecordDrawer, Block } from '../../template/Record'
 import { usd } from '../../template/motion'
-import { Dropdown, DField } from '../kit'
+import { Dropdown, DField, EngineSlot } from '../kit'
 import { ap } from '../paths'
 import { BILL_WORD, STAGE_WORD, stageTone } from '../words'
 import { PilotBlock, CampaignBlock } from './Pilot879'
@@ -24,6 +24,16 @@ function Funnel({ w }) {
       {[['In', w.in], ['Booked', w.booked], ['Transf.', w.transferred], ['Sold', w.sold]].map(([k, n]) => <li key={k}><b className="tp-num">{n}</b><small>{k}</small></li>)}
     </ul>
   )
+}
+
+// P858: this agent's ad cost per lead / booked / sale (their one Meta campaign's real spend ÷ their real outcomes).
+function AgentCosts({ id }) {
+  const { data: costs } = useAdmCosts()
+  const c = costs?.byAgent?.[id]
+  if (!costs) return <p className="adm-note">Cost per lead, booked and sale <EngineSlot /></p>
+  if (!c) return <p className="adm-note">No ad spend mapped to this agent this week.</p>
+  const f = v => (v == null ? '–' : usd(true)(v))
+  return <dl className="fx-facts">{[['Ad spend', money(c.spend)], ['Per lead', f(c.perLead)], ['Per booked', f(c.perBooked)], ['Per sale', f(c.perSale)]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd className="tp-money">{v}</dd></div>)}</dl>
 }
 
 function AgentDrawer({ id, onClose }) {
@@ -67,7 +77,7 @@ function AgentDrawer({ id, onClose }) {
       <PilotBlock key={`p-${a.id}`} agent={a} />
       <SplitBlock key={`s-${a.id}`} agent={a} />
       <CampaignBlock agent={a} />
-      <Block title="This week"><Funnel w={a.week} /></Block>
+      <Block title="This week"><Funnel w={a.week} /><AgentCosts id={a.id} /></Block>
       <Block title="Access">
         <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Servicing</b><p className="tp-sub">{a.servicing ? 'Leads and Servicing' : 'Leads only'}</p></div><Switch on={a.servicing} label="Servicing" onChange={v => { setServicing(a.id, v); note(v ? 'Servicing on' : 'Servicing off: leads only') }} /></div>
         <DField label="Role"><Dropdown label="Role" value="agent" options={[{ value: 'agent', label: 'Agent' }, { value: 'fulfillment', label: 'Fulfillment' }]} onChange={v => v !== 'agent' && setAsk('role')} /></DField>

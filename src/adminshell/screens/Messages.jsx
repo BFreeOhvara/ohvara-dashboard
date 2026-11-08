@@ -35,7 +35,7 @@ export default function Messages() {
         <div className="tp-threads-b">
           {list.map(x => (
             <button key={x.id} type="button" className={`tp-thread${x.id === t.id ? ' on' : ''}`} onClick={() => pick(x.id)}>
-              <Avatar name={x.name} /><span className="tp-grow"><b>{x.name}</b><small>{x.role} · {x.messages[x.messages.length - 1].text}</small></span>
+              <Avatar name={x.name} /><span className="tp-grow"><b>{x.name}</b><small>{x.role} · {x.messages.at(-1)?.text || 'No messages yet'}</small></span>
               {x.unread > 0 && <span className="tp-tb is-msg">{x.unread}</span>}
             </button>
           ))}

@@ -18,7 +18,7 @@ import { isSearchKey } from '../lib/searchKey'
 import { SUPPORT_EMAIL } from '../components/auth/authUtils'
 import {
   useAdmDay, useAdmAgents, useAdmVas, useAdmLeads, useAdmClients, useAdmFeed, useAdmSettings, useAdmMoney, useAdmActions,
-  useAdmInvites, useAdmConnect, useAdmPeriod, useAdmSetup, plugged,
+  useAdmInvites, useAdmConnect, useAdmPeriod, useAdmSetup, useAdmSource, plugged,
 } from './data'
 import { useGhlRow } from './useGhlRow'
 import { syncFailed } from './engine'
@@ -162,7 +162,7 @@ function AccountMenu({ open, onClose, theme, setTheme, preview }) {
         <i className="fx-mline" />
         {links.map(([k, label, Icon]) => <Link key={k} to={ap(k)} className="fx-mrow" onClick={onClose}><Icon size={17} aria-hidden="true" /><b className="tp-grow">{label}</b><ChevronRight size={15} aria-hidden="true" /></Link>)}
         {!preview && (
-          <a href="/admin?classic=1" className="fx-mrow"><Undo2 size={17} aria-hidden="true" /><span className="tp-grow"><b>Open the old admin pages</b><small>Real switches, payouts and people, until the backend step</small></span><ChevronRight size={15} aria-hidden="true" /></a>
+          <a href="/admin?classic=1" className="fx-mrow"><Undo2 size={17} aria-hidden="true" /><span className="tp-grow"><b>Open the old admin pages</b><small>The classic pages, kept as a fallback</small></span><ChevronRight size={15} aria-hidden="true" /></a>
         )}
         <i className="fx-mline" />
         <button type="button" className="fx-mrow is-danger" onClick={() => (account.live ? account.signOut() : note('Sign out works once you sign in for real'))}><LogOut size={17} aria-hidden="true" /><b className="tp-grow">Sign out</b></button>
@@ -202,6 +202,7 @@ function useHeadStats(page) {
 export default function AdminFrame({ preview = false }) {
   const { pathname } = useLocation()
   const outlet = useOutlet()
+  const source = useAdmSource()
   const [theme, setTheme] = useTheme()
   const [panel, setPanel] = useState(null)
   const account = useAccount()
@@ -321,7 +322,7 @@ export default function AdminFrame({ preview = false }) {
 
         <main className={`tp-main fx-main adm-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>
           {page.el}
-          <p className="tp-foot">Sample info. Changes reset when you reload.</p>
+          {source === 'sample' && <p className="tp-foot">Sample info. Changes reset when you reload.</p>}
         </main>
       </div>
 

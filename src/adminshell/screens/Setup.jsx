@@ -4,11 +4,11 @@ import {
   Unplug, ArrowRight, UserPlus, Send, Rocket, BadgeCheck, Check, CircleDashed, MapPin, Megaphone, MessageSquareText, ShieldCheck,
   PhoneForwarded, Globe, Link2, Copy, Workflow, Plug, History, Hourglass,
 } from 'lucide-react'
-import { useAdmSetup, useAdmActions, useAdmConnect, useAdmAgents, PLANS, PLAYBOOK, TRACKING } from '../data'
+import { useAdmSetup, useAdmActions, useAdmConnect, useAdmAgents, useAdmSource, PLANS, PLAYBOOK, TRACKING } from '../data'
 import { Chip, Empty, SampleTag, Switch, useNote } from '../../template/kit'
 import { RecordDrawer, Block } from '../../template/Record'
 import { usd } from '../../template/motion'
-import { Tile, EngineSlot } from '../kit'
+import { Tile, EngineSlot, Dropdown } from '../kit'
 import { AddSomeone } from '../AdminFrame'
 import { engineState } from '../engine'
 import { useGhlRow } from '../useGhlRow'
@@ -127,11 +127,32 @@ function SetupDrawer({ id, onClose, row }) {
   )
 }
 
+// P858: the real campaign → agent map (ghl_campaign_agents, migration 232). Campaigns arrive with the daily ad spend
+// pull; each one is mapped to the agent it buys leads for (one per agent), with the agent named in it suggested.
+function CampaignMap({ campaigns, agents, spent }) {
+  const { mapCampaign } = useAdmActions()
+  const note = useNote()
+  const pick = (k, agentId) => { if (!mapCampaign) return; mapCampaign(k.id, agentId || null, k.lead_type); note(agentId ? `${k.name} → ${agents.find(a => a.id === agentId)?.name}. Logged.` : `${k.name} unmapped. Logged.`) }
+  return (
+    <Tile i={1} title="Campaigns and their agents" sub={`One campaign per agent · ${money(spent)} spent this week`}>
+      {campaigns.length === 0 && <Empty title="No campaigns yet" sub="They show here after the first ad spend pull from GoHighLevel." />}
+      <ul className="tp-list adm-rows">{campaigns.map(k => (
+        <li key={k.id} className="fx-mrow"><Megaphone size={16} aria-hidden="true" />
+          <span className="tp-grow"><b>{k.name}</b><small>{k.agent_id ? 'Mapped' : k.suggested ? `Suggested: ${agents.find(a => a.id === k.suggested)?.name}` : 'Not mapped yet'}{k.seen ? ` · seen ${k.seen}` : ''}</small></span>
+          <Dropdown label={`Agent for ${k.name}`} value={k.agent_id || ''} placeholder={k.suggested ? 'Pick (see suggestion)' : 'No agent'} onChange={v => pick(k, v)}
+            options={[{ value: '', label: 'No agent' }, ...agents.map(a => ({ value: a.id, label: a.name, sub: a.id === k.suggested ? 'Suggested' : undefined }))]} />
+        </li>
+      ))}</ul>
+    </Tile>
+  )
+}
+
 // What GoHighLevel set up (P864's Connect > Setup view), shown under the pipeline once it is connected or sampled.
 function GhlDetails({ row, sample }) {
   const { data: c } = useAdmConnect()
   const { data: agents } = useAdmAgents()
   const note = useNote()
+  const real = useAdmSource() === 'real'
   const [wfOn, setWfOn] = useState(() => Object.fromEntries(PLAYBOOK.map(w => [w.code, w.on])))
   const spent = c.ads.reduce((t, a) => t + a.spent, 0)
   // One campaign per agent (Playbook Q3), so spend per agent = spend per campaign; this week's spend shared by budget.
@@ -157,11 +178,12 @@ function GhlDetails({ row, sample }) {
                 <Switch on={wfOn[w.code]} label={`${w.code} ${w.name}`} onChange={v => { setWfOn({ ...wfOn, [w.code]: v }); note(`${w.code} ${v ? 'on' : 'off'} (sample: switches it in GoHighLevel once wired)`) }} /></li>
             ))}</ul>
           </Tile>
+          {real ? <CampaignMap campaigns={c.campaigns || []} agents={agents} spent={spent} /> : (
           <Tile i={1} title="Campaigns and their agents" sub={`One campaign per agent · ${money(spent)} spent this week`} aside={sample && <SampleTag>Sample</SampleTag>}>
             <ul className="tp-list adm-rows">{campaigns.map(k => (
               <li key={k.id} className="fx-mrow"><Megaphone size={16} aria-hidden="true" /><span className="tp-grow"><b>{k.name}</b><small>Leads go to {k.agent}</small></span><b className="tp-money">{money(k.spend)}</b></li>
             ))}</ul>
-          </Tile>
+          </Tile>)}
         </div>
         <div className="fx-ovl-side adm-side">
           <Tile className="is-deep" i={2} title="Connection" sub={st.on ? st.line : 'Sample'} aside={<Chip tone={st.on ? 'green' : 'mute'}>{st.on ? 'Connected' : 'Sample'}</Chip>}>

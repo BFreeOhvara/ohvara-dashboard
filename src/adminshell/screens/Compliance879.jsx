@@ -113,8 +113,8 @@ export function ConsentProof({ lead }) {
 export function UnassignedBlock({ lead, agents, onAssign }) {
   const fits = assignable(agents, lead)
   return (
-    <Block title="Unassigned" sub="The ad link had no agent ID. Admins were pushed the moment it came in." aside={<EngineSlot />}>
-      <dl className="fx-facts">{[['Campaign', SOURCE_AD.campaign], ['Ad set', SOURCE_AD.adset], ['Ad', SOURCE_AD.ad], ['Agent ID', 'Missing']].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+    <Block title="Unassigned" sub={lead.real ? (lead.why || 'No agent yet.') : 'The ad link had no agent ID. Admins were pushed the moment it came in.'} aside={<EngineSlot />}>
+      <dl className="fx-facts">{(lead.real ? [['Campaign', lead.campaign || '–'], ['Agent ID', lead.agentRef || 'Missing']] : [['Campaign', SOURCE_AD.campaign], ['Ad set', SOURCE_AD.adset], ['Ad', SOURCE_AD.ad], ['Agent ID', 'Missing']]).map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       {fits.length ? (
         <ul className="tp-list">{fits.map(a => (
           <li key={a.id}><button type="button" className="fx-mrow" onClick={() => onAssign(a)}><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>Licensed in {a.states.join(', ')} · {lead.kind === 'live' ? 'takes live calls' : 'takes appointments'}</small></span><Chip tone="blue">Assign</Chip></button></li>

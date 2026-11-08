@@ -25,6 +25,11 @@
 //                          text does (consent is never restored silently).
 //   Workflow webhook       { ohvara_event: 'reply' | 'opt_out', ... } in the
 //                          action's custom data (see the README for the fields).
+//                          'lead_created' (P858): the Deedstone page / Meta form
+//                          lead with the hidden agent_id, lead_type and
+//                          meta_option -> ghl_intake_lead (migration 232), saved
+//                          once per delivery and routed to that agent, or to
+//                          admin's Unassigned when the ID is unknown or missing.
 // The switch: while ghl_settings.enabled is off, only opt-outs are recorded
 // (a STOP is always honoured); everything else is answered 200 and dropped.
 // A webhook for another location is ignored. Database errors answer 500 so
@@ -94,7 +99,21 @@ export type Action =
   | { kind: 'opt'; phone: string; optedOut: boolean; locationId: string | null }
   | { kind: 'reply'; messageId: string; phone: string; contactId: string | null; body: string; locationId: string | null }
   | { kind: 'sent'; messageId: string; phone: string | null; contactId: string | null; body: string; status: string | null; at: string | null; locationId: string | null }
+  | { kind: 'lead'; lead: IntakeLead; locationId: string | null }
   | { kind: 'ignore'; why: string }
+
+// P858: the lead the Deedstone page / Meta form posted, as ghl_intake_lead (migration 232) takes it.
+export type IntakeLead = {
+  intake_key: string; agent_id: string | null; lead_type: 'booked_appointment' | 'live_call'; meta_option: 'form_page' | 'page_only' | null
+  first_name: string | null; last_name: string | null; phone: string; email: string | null; state: string | null; postal_code: string | null
+  campaign_id: string | null; adset_id: string | null; ad_id: string | null; contact_id: string | null; page_url: string | null
+  consent_at: string | null; consent_text_version: string | null
+}
+const LEAD_TYPES: Record<string, IntakeLead['lead_type']> = {
+  booked_appointment: 'booked_appointment', appointment: 'booked_appointment', booked: 'booked_appointment',
+  live_call: 'live_call', live: 'live_call', call: 'live_call',
+}
+const META_OPTIONS: Record<string, IntakeLead['meta_option']> = { form_page: 'form_page', form: 'form_page', page_only: 'page_only', page: 'page_only' }
 
 const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null)
 const isSms = (p: any) => {
@@ -147,6 +166,27 @@ export async function classify(p: any, raw: string): Promise<Action> {
   const event = str(cd.ohvara_event) ?? str(p.ohvara_event)
   const phone = str(p.phone) ?? str(p.contact?.phone)
   const contactId = str(p.contact_id) ?? str(p.contactId) ?? str(p.contact?.id)
+  if (event === 'lead_created') {
+    if (!phone) return { kind: 'ignore', why: 'no phone' }
+    // The hidden agent ID rides in the ad link (utm or a form field); custom data wins over the contact's fields.
+    const pick = (...keys: string[]) => { for (const k of keys) { const v = str(cd[k]) ?? str(p[k]); if (v) return v } return null }
+    const typeWord = (pick('lead_type') ?? '').toLowerCase()
+    const lead_type = LEAD_TYPES[typeWord]
+    if (typeWord && !lead_type) return { kind: 'ignore', why: 'unknown lead type' }
+    const metaWord = (pick('meta_option') ?? '').toLowerCase()
+    // The intake key: the engine's own delivery ID, else the raw body's hash, so a retry of the same delivery saves once.
+    const intake_key = pick('intake_id', 'event_id') ?? `wf-${(await sha256Hex(raw)).slice(0, 32)}`
+    return {
+      kind: 'lead', locationId,
+      lead: {
+        intake_key, agent_id: pick('agent_id', 'ohvara_agent_id', 'utm_agent'), lead_type: lead_type ?? 'booked_appointment',
+        meta_option: META_OPTIONS[metaWord] ?? null, first_name: pick('first_name'), last_name: pick('last_name'), phone,
+        email: pick('email'), state: pick('state'), postal_code: pick('postal_code', 'zip'), campaign_id: pick('campaign_id', 'utm_campaign_id'),
+        adset_id: pick('adset_id'), ad_id: pick('ad_id', 'utm_content'), contact_id: contactId, page_url: pick('page_url'),
+        consent_at: pick('consent_at'), consent_text_version: pick('consent_text_version'),
+      },
+    }
+  }
   if (event === 'opt_out') {
     if (!phone) return { kind: 'ignore', why: 'no phone' }
     return { kind: 'opt', phone, optedOut: true, locationId }
@@ -201,6 +241,19 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   }
 
   if (!s?.enabled) return json({ skipped: 'off' })
+
+  if (action.kind === 'lead') {
+    // P858: one Ohvara lead per delivery, routed by the agent ID in the ad link (migration 232).
+    const r = await deps.rpc('ghl_intake_lead', { p: action.lead })
+    if (r.error) {
+      // A refused payload (bad phone, bad type: 22xxx) will never save, so don't make GHL retry it 12 times.
+      if (r.error.code?.startsWith('22')) return json({ ignored: 'bad lead' })
+      deps.log(`[ghl-webhook] ghl_intake_lead ${r.error.message}`)
+      return retry()
+    }
+    const out = (r.data ?? {}) as { routing?: string; duplicate?: boolean }
+    return json({ ok: out.duplicate ? 'duplicate' : 'lead_saved', routing: out.routing ?? null })
+  }
 
   const match = await deps.rpc('ghl_lead_for_contact', { p_contact_id: action.contactId, p_phone: action.phone })
   if (match.error) {

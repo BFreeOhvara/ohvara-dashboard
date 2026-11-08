@@ -4,7 +4,7 @@ import {
   User, Users, ToggleRight, Wallet, History, Bug, SlidersHorizontal, LogOut, Mail, UserPlus, ArrowUpRight, Search, ShieldCheck,
   ShieldOff, Image as ImageIcon, Check, Lock, GraduationCap, Scale, ArrowRightLeft, Bot,
 } from 'lucide-react'
-import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmAudit, useAdmBugs, useAdmDay, SWITCHES, ME } from '../data'
+import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmAudit, useAdmBugs, useAdmDay, useAdmSource, SWITCHES, ME } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
 import { Field, Seg, Switch, Chip, PillTabs, Avatar, Empty, useNote, useAccount, initials } from '../../template/kit'
 import { CountUp } from '../../template/motion'
@@ -106,13 +106,16 @@ function People() {
 function Switches({ live }) {
   const { data: s } = useAdmSettings()
   const { setSwitch } = useAdmActions()
+  const src = useAdmSource()
   const note = useNote()
   const groups = [...new Set(SWITCHES.map(x => x.group))]
   return (
     <>
       <Head title="Switches" sub="Company-wide on and off. Each says what it does." />
       <SampleSwitch live={live} />
-      <p className="adm-warn">Sample only: flipping these changes nothing real.{live && <> The real switches are on the <a href="/settings" className="tp-link">current Settings page</a> until the backend step.</>}</p>
+      {src === 'real'
+        ? <p className="adm-warn">These are the real company switches: each flip is saved right away.</p>
+        : <p className="adm-warn">Sample only: flipping these changes nothing real.{live && <> The real switches are on the <a href="/settings" className="tp-link">current Settings page</a> until the backend step.</>}</p>}
       {groups.map(g => (
         <div key={g} className="adm-swgroup">
           <h3 className="fx-h3">{g}</h3>
