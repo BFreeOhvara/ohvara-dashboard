@@ -542,7 +542,7 @@ export const LESSONS = [
     },
     dos: ['Confirm identity first', 'Make the change with the carrier on the line', 'Record the exact result'],
     donts: ['Don\'t advise who to name as beneficiary', 'Don\'t change cover amounts'],
-    portal: { shot: 'task', clicks: [{ spot: 'schedule', text: 'Schedule the call inside carrier hours' }, { spot: 'sendagent', text: 'Send to agent: anything about cover or advice' }] },
+    portal: { shot: 'task', clicks: [{ spot: 'move', text: 'Move the call to a time inside carrier hours' }, { spot: 'sendagent', text: 'Send to agent: anything about cover or advice' }] },
     check: [
       ok('A client asks who they should name as beneficiary. You:', ['Suggest their spouse', 'Send to agent', 'Pick their children', 'Skip it'], 1, 'That is advice. It goes to the agent.'),
       ok('What do you do first on a change call?', ['Confirm who they are', 'Read the policy number aloud', 'Quote a new price', 'Call the agent'], 0, 'Identity first.'),

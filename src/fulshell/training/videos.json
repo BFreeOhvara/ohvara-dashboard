@@ -4,7 +4,7 @@
   "booking": {
    "kind": "walkthrough",
    "title": "Booking an appointment",
-   "duration": 171,
+   "duration": 147,
    "src": "booking.mp4",
    "poster": "booking-poster.jpg",
    "captions": "booking.captions.json",
@@ -16,95 +16,71 @@
     },
     {
      "t": 9.8,
-     "label": "Open the lead"
+     "label": "Booking starts on a call"
     },
     {
-     "t": 17.8,
-     "label": "Take it"
-    },
-    {
-     "t": 24.2,
-     "label": "Four answers first"
+     "t": 20,
+     "label": "Try the agent live"
     },
     {
      "t": 31.5,
-     "label": "Question type"
+     "label": "It comes back to you"
     },
     {
-     "t": 35.9,
-     "label": "Her carrier"
-    },
-    {
-     "t": 42.7,
-     "label": "State and how soon"
-    },
-    {
-     "t": 50.3,
-     "label": "Book an agent"
-    },
-    {
-     "t": 54.9,
+     "t": 41.8,
      "label": "Pick the agent"
     },
     {
-     "t": 72.2,
+     "t": 58.2,
      "label": "Pick the day"
     },
     {
-     "t": 76.6,
+     "t": 65.7,
      "label": "Her time zone"
     },
     {
-     "t": 84.1,
+     "t": 73.6,
      "label": "30 minutes apart"
     },
     {
-     "t": 93.5,
+     "t": 80.8,
      "label": "Offer two times"
     },
     {
-     "t": 103.6,
+     "t": 90,
      "label": "Pick the time"
     },
     {
-     "t": 106.7,
+     "t": 93.3,
      "label": "Never guess"
     },
     {
-     "t": 121.3,
+     "t": 107.8,
      "label": "Book it"
     },
     {
-     "t": 123.9,
+     "t": 110.5,
      "label": "Read it back"
     },
     {
-     "t": 134.8,
-     "label": "Close the lead"
-    },
-    {
-     "t": 143.3,
-     "label": "On your Schedule"
-    },
-    {
-     "t": 150.9,
+     "t": 126.9,
      "label": "Recap"
     },
     {
-     "t": 163.8,
+     "t": 139.8,
      "label": "Now take the check"
     }
    ],
    "helpAt": {
-    "booking": 54.9
+    "booking": 41.8
    },
-   "sizeBytes": 6690030,
-   "builtAt": "2026-11-08T06:20:00.561Z"
+   "sizeBytes": 5687357,
+   "builtAt": "2026-11-08T21:30:02.004Z"
   },
   "callbacks": {
    "kind": "walkthrough",
    "title": "Callbacks",
-   "duration": 122.5,
+   "duration": 142.2,
    "src": "callbacks.mp4",
    "poster": "callbacks-poster.jpg",
    "captions": "callbacks.captions.json",
@@ -115,55 +91,51 @@
      "label": "Callbacks"
     },
     {
-     "t": 9.4,
-     "label": "Open the lead"
+     "t": 11.5,
+     "label": "They book themselves"
     },
     {
-     "t": 18.1,
-     "label": "Call back"
+     "t": 23.7,
+     "label": "Read the Booked line"
     },
     {
-     "t": 20.8,
-     "label": "His clock"
+     "t": 37.3,
+     "label": "Where to find it"
     },
     {
-     "t": 31.3,
+     "t": 48.5,
+     "label": "Another time? Move"
+    },
+    {
+     "t": 62.6,
      "label": "The 30-minute gap"
     },
     {
-     "t": 48.1,
-     "label": "Set callback"
+     "t": 79.2,
+     "label": "Move it"
     },
     {
-     "t": 57.4,
-     "label": "Callback due"
-    },
-    {
-     "t": 66.3,
-     "label": "On your phone too"
-    },
-    {
-     "t": 72.8,
+     "t": 89.6,
      "label": "Calling back"
     },
     {
-     "t": 84,
-     "label": "Not reached?"
+     "t": 100,
+     "label": "Reached or not"
     },
     {
-     "t": 96.8,
+     "t": 112.9,
      "label": "Recap"
     },
     {
-     "t": 112.5,
+     "t": 130.8,
      "label": "Now try it"
     }
    ],
    "helpAt": {
-    "callback": 18.1
+    "callback": 23.7
    },
-   "sizeBytes": 5275859,
-   "builtAt": "2026-11-08T05:31:17.806Z"
+   "sizeBytes": 5763064,
+   "builtAt": "2026-11-08T21:03:07.857Z"
   },
   "carrier": {
    "kind": "walkthrough",
@@ -267,13 +239,13 @@
     "schedule": 11.7,
     "carrier_call": 118
    },
-   "sizeBytes": 8134338,
-   "builtAt": "2026-11-08T06:34:32.531Z"
+   "sizeBytes": 8152365,
+   "builtAt": "2026-11-08T21:49:18.275Z"
   },
   "changes": {
    "kind": "walkthrough",
    "title": "Servicing: policy changes",
-   "duration": 183.2,
+   "duration": 189.6,
    "src": "changes.mp4",
    "poster": "changes-poster.jpg",
    "captions": "changes.captions.json",
@@ -288,91 +260,91 @@
      "label": "Change steps"
     },
     {
-     "t": 25.3,
+     "t": 24.9,
      "label": "Open the change"
     },
     {
-     "t": 34.4,
-     "label": "Schedule the call"
+     "t": 33.9,
+     "label": "The call is booked"
     },
     {
-     "t": 39.6,
+     "t": 43.7,
      "label": "Inside carrier hours"
     },
     {
-     "t": 49,
+     "t": 55.7,
      "label": "Start"
     },
     {
-     "t": 54.9,
+     "t": 60.9,
      "label": "Open his record"
     },
     {
-     "t": 62.9,
+     "t": 68.8,
      "label": "Call Tom"
     },
     {
-     "t": 71.8,
+     "t": 77.8,
      "label": "Is now a good time?"
     },
     {
-     "t": 82.4,
+     "t": 88.4,
      "label": "Confirm it's him"
     },
     {
-     "t": 91.2,
+     "t": 97.2,
      "label": "Carrier on the line"
     },
     {
-     "t": 98.5,
+     "t": 104.4,
      "label": "Make the change"
     },
     {
-     "t": 106.5,
+     "t": 112.4,
      "label": "End the call"
     },
     {
-     "t": 109.1,
+     "t": 115.1,
      "label": "Note the call"
     },
     {
-     "t": 114.6,
+     "t": 120.5,
      "label": "Back to the step"
     },
     {
-     "t": 122.8,
+     "t": 128.8,
      "label": "Record the result"
     },
     {
-     "t": 132,
+     "t": 138,
      "label": "Advice? Send to agent"
     },
     {
-     "t": 150.3,
+     "t": 156.7,
      "label": "Annual reviews"
     },
     {
-     "t": 160.5,
+     "t": 166.9,
      "label": "Recap"
     },
     {
-     "t": 174.4,
+     "t": 180.9,
      "label": "Now try it"
     }
    ],
    "helpAt": {
     "draft_date_change": 12.8,
-    "address_change": 25.3,
-    "beneficiary_change": 132,
-    "annual_review": 150.3
+    "address_change": 24.9,
+    "beneficiary_change": 138,
+    "annual_review": 156.7
    },
-   "sizeBytes": 7760571,
-   "builtAt": "2026-11-08T05:40:26.361Z"
+   "sizeBytes": 7895956,
+   "builtAt": "2026-11-08T22:05:28.513Z"
   },
   "checkins": {
    "kind": "explainer",
    "title": "Check-in texts at day 30, 60 and 90",
-   "duration": 154.8,
+   "duration": 162.1,
    "src": "checkins.mp4",
    "poster": "checkins-poster.jpg",
    "captions": "checkins.captions.json",
@@ -395,45 +367,45 @@
      "label": "When they reply"
     },
     {
-     "t": 45.4,
-     "label": "On your Queue"
+     "t": 46.6,
+     "label": "On your Schedule"
     },
     {
-     "t": 55.4,
+     "t": 59,
      "label": "A lead replies to the day-60 check-in"
     },
     {
-     "t": 70.3,
-     "label": "Treat it like a new lead"
+     "t": 73.8,
+     "label": "Call at the booked time"
     },
     {
-     "t": 79.6,
-     "label": "Why right away"
+     "t": 83.5,
+     "label": "Why a booked time"
     },
     {
-     "t": 91,
+     "t": 97.9,
      "label": "If they reply STOP"
     },
     {
-     "t": 100,
+     "t": 106.9,
      "label": "No reply after day 90"
     },
     {
-     "t": 108.5,
+     "t": 115.4,
      "label": "Do’s and don’ts"
     },
     {
-     "t": 121.6,
+     "t": 128.5,
      "label": "Recap"
     },
     {
-     "t": 145.1,
+     "t": 153,
      "label": "Now try it"
     }
    ],
    "helpAt": {},
-   "sizeBytes": 7049155,
-   "builtAt": "2026-11-08T05:43:39.133Z"
+   "sizeBytes": 7435936,
+   "builtAt": "2026-11-08T21:11:59.003Z"
   },
   "desk": {
    "kind": "explainer",
@@ -645,13 +617,13 @@
    "helpAt": {
     "answer": 23.8
    },
-   "sizeBytes": 6601435,
-   "builtAt": "2026-11-08T05:51:37.898Z"
+   "sizeBytes": 6699775,
+   "builtAt": "2026-11-08T21:43:49.618Z"
   },
   "logging": {
    "kind": "walkthrough",
    "title": "Logging every call",
-   "duration": 155.3,
+   "duration": 156.7,
    "src": "logging.mp4",
    "poster": "logging-poster.jpg",
    "captions": "logging.captions.json",
@@ -666,60 +638,60 @@
      "label": "The phone"
     },
     {
-     "t": 21.1,
+     "t": 20.9,
      "label": "Start the call"
     },
     {
-     "t": 36.6,
+     "t": 36.5,
      "label": "Notes as you go"
     },
     {
-     "t": 42.4,
+     "t": 42.2,
      "label": "How did it go?"
     },
     {
-     "t": 49.6,
+     "t": 49.4,
      "label": "Cancelled needs a number"
     },
     {
-     "t": 66.1,
+     "t": 65.9,
      "label": "Notes an agent can act on"
     },
     {
-     "t": 79.2,
+     "t": 79,
      "label": "Save · Available"
     },
     {
-     "t": 91.6,
-     "label": "A lead: the outcome"
+     "t": 91.4,
+     "label": "A booked call: the result"
     },
     {
-     "t": 98.4,
+     "t": 99.6,
      "label": "Pick what happened"
     },
     {
-     "t": 112.4,
+     "t": 113.8,
      "label": "Missed one? Log a call"
     },
     {
-     "t": 120,
+     "t": 121.4,
      "label": "Pick the call"
     },
     {
-     "t": 130.2,
+     "t": 131.6,
      "label": "Recap"
     },
     {
-     "t": 146.2,
+     "t": 147.6,
      "label": "Now try it"
     }
    ],
    "helpAt": {
     "dialer": 12.3,
-    "logging": 42.4
+    "logging": 42.2
    },
-   "sizeBytes": 6645185,
-   "builtAt": "2026-11-08T05:56:50.883Z"
+   "sizeBytes": 6607557,
+   "builtAt": "2026-11-08T21:34:41.729Z"
   },
   "never": {
    "kind": "explainer",
@@ -802,7 +774,7 @@
   "optout": {
    "kind": "explainer",
    "title": "Opt-outs and do-not-call",
-   "duration": 162.6,
+   "duration": 162.5,
    "src": "optout.mp4",
    "poster": "optout-poster.jpg",
    "captions": "optout.captions.json",
@@ -853,7 +825,7 @@
      "label": "Quiet hours"
     },
     {
-     "t": 134.4,
+     "t": 134.3,
      "label": "Recap"
     },
     {
@@ -862,8 +834,8 @@
     }
    ],
    "helpAt": {},
-   "sizeBytes": 7492664,
-   "builtAt": "2026-11-08T06:03:25.437Z"
+   "sizeBytes": 7476826,
+   "builtAt": "2026-11-08T21:22:59.196Z"
   },
   "packets": {
    "kind": "walkthrough",
@@ -948,13 +920,13 @@
     "packet_check": 31.6,
     "review_call": 134.1
    },
-   "sizeBytes": 8157612,
-   "builtAt": "2026-11-08T06:04:50.081Z"
+   "sizeBytes": 8057467,
+   "builtAt": "2026-11-08T21:53:53.030Z"
   },
   "payments": {
    "kind": "walkthrough",
    "title": "Servicing: failed payments",
-   "duration": 162.7,
+   "duration": 161.9,
    "src": "payments.mp4",
    "poster": "payments-poster.jpg",
    "captions": "payments.captions.json",
@@ -970,76 +942,76 @@
     },
     {
      "t": 18.1,
-     "label": "Needs attention"
+     "label": "His client card"
     },
     {
-     "t": 27.2,
+     "t": 26.4,
      "label": "Open the step"
     },
     {
-     "t": 31.8,
+     "t": 31,
      "label": "One business day"
     },
     {
-     "t": 40,
+     "t": 39.3,
      "label": "Start and call"
     },
     {
-     "t": 48.8,
+     "t": 48,
      "label": "Stay calm"
     },
     {
-     "t": 67.4,
+     "t": 66.6,
      "label": "His choices"
     },
     {
-     "t": 75.1,
+     "t": 74.3,
      "label": "Carrier on the line"
     },
     {
-     "t": 86.4,
+     "t": 85.6,
      "label": "Never the numbers"
     },
     {
-     "t": 97,
+     "t": 96.2,
      "label": "End the call"
     },
     {
-     "t": 99.7,
+     "t": 98.9,
      "label": "Note what changed"
     },
     {
-     "t": 106.1,
+     "t": 105.3,
      "label": "Wants to stop?"
     },
     {
-     "t": 120.4,
+     "t": 119.6,
      "label": "Record the result"
     },
     {
-     "t": 126,
+     "t": 125.2,
      "label": "Chargeback watch"
     },
     {
-     "t": 139.9,
+     "t": 139.1,
      "label": "Recap"
     },
     {
-     "t": 154.3,
+     "t": 153.5,
      "label": "Now try it"
     }
    ],
    "helpAt": {
     "payment_change": 10.8,
-    "chargeback_watch": 126
+    "chargeback_watch": 125.2
    },
-   "sizeBytes": 8011866,
-   "builtAt": "2026-11-08T06:09:48.167Z"
+   "sizeBytes": 7940660,
+   "builtAt": "2026-11-08T21:58:45.407Z"
   },
   "reminders": {
    "kind": "explainer",
    "title": "Reminders, no-shows and rebooks",
-   "duration": 150.5,
+   "duration": 152.7,
    "src": "reminders.mp4",
    "poster": "reminders-poster.jpg",
    "captions": "reminders.captions.json",
@@ -1079,24 +1051,24 @@
     },
     {
      "t": 101.9,
-     "label": "Our missed cancellation calls"
+     "label": "Our own missed calls"
     },
     {
-     "t": 112.4,
+     "t": 114.2,
      "label": "Your week on the Schedule"
     },
     {
-     "t": 119.4,
+     "t": 122.1,
      "label": "Recap"
     },
     {
-     "t": 138.1,
+     "t": 142,
      "label": "Now try it"
     }
    ],
    "helpAt": {},
-   "sizeBytes": 6836153,
-   "builtAt": "2026-11-08T06:12:03.927Z"
+   "sizeBytes": 6943535,
+   "builtAt": "2026-11-08T21:17:47.488Z"
   },
   "saves": {
    "kind": "explainer",
@@ -1164,8 +1136,8 @@
   },
   "speed": {
    "kind": "walkthrough",
-   "title": "Speed to lead",
-   "duration": 161.6,
+   "title": "Working in bookings",
+   "duration": 144.9,
    "src": "speed.mp4",
    "poster": "speed-poster.jpg",
    "captions": "speed.captions.json",
@@ -1173,80 +1145,64 @@
    "chapters": [
     {
      "t": 0.4,
-     "label": "Speed to lead"
+     "label": "Working in bookings"
     },
     {
-     "t": 6.4,
-     "label": "Callbacks due first"
+     "t": 8.3,
+     "label": "New leads are the AI's"
     },
     {
-     "t": 15.2,
-     "label": "Right away"
+     "t": 22,
+     "label": "Everything is a booking"
     },
     {
-     "t": 35.7,
-     "label": "Open the lead"
+     "t": 40,
+     "label": "The system picks the time"
     },
     {
-     "t": 41.9,
-     "label": "Take it"
+     "t": 52.4,
+     "label": "Your Overview"
     },
     {
-     "t": 51.3,
-     "label": "Call her"
+     "t": 61.3,
+     "label": "Open a booked call"
     },
     {
-     "t": 62.9,
-     "label": "Say who you are"
+     "t": 70,
+     "label": "Booked at its time"
     },
     {
-     "t": 76,
-     "label": "Four answers"
+     "t": 83.2,
+     "label": "Another time? Move"
     },
     {
-     "t": 83.8,
-     "label": "Question type"
+     "t": 92,
+     "label": "Move it"
     },
     {
-     "t": 88.2,
-     "label": "Carrier, state, how soon"
+     "t": 104,
+     "label": "No answer"
     },
     {
-     "t": 99.9,
-     "label": "Book or transfer"
-    },
-    {
-     "t": 109.4,
-     "label": "No answer: Not reached"
-    },
-    {
-     "t": 119.4,
-     "label": "End the call"
-    },
-    {
-     "t": 127.2,
-     "label": "Can't finish? Put back"
-    },
-    {
-     "t": 135.1,
+     "t": 116,
      "label": "Recap"
     },
     {
-     "t": 150.8,
+     "t": 135.1,
      "label": "Now try it"
     }
    ],
    "helpAt": {
-    "bookings": 6.4,
-    "handoff_call": 41.9
+    "bookings": 52.4,
+    "handoff_call": 70
    },
-   "sizeBytes": 6665244,
-   "builtAt": "2026-11-08T06:15:59.749Z"
+   "sizeBytes": 6125195,
+   "builtAt": "2026-11-08T20:48:50.392Z"
   },
   "transfer": {
    "kind": "walkthrough",
    "title": "Live transfers to the agent",
-   "duration": 149.1,
+   "duration": 154.5,
    "src": "transfer.mp4",
    "poster": "transfer-poster.jpg",
    "captions": "transfer.captions.json",
@@ -1258,67 +1214,63 @@
     },
     {
      "t": 8.9,
-     "label": "Open and take it"
+     "label": "Start the call"
     },
     {
-     "t": 15.3,
+     "t": 24.3,
      "label": "Checklist first"
     },
     {
-     "t": 25.1,
-     "label": "Call her"
-    },
-    {
-     "t": 35.1,
+     "t": 37.9,
      "label": "Tell her first"
     },
     {
-     "t": 47.4,
+     "t": 50.2,
      "label": "Transfer"
     },
     {
-     "t": 58.4,
+     "t": 61.2,
      "label": "Pick her agent"
     },
     {
-     "t": 69.8,
+     "t": 72.6,
      "label": "Check agent"
     },
     {
-     "t": 76.1,
+     "t": 78.9,
      "label": "Transfer now"
     },
     {
-     "t": 86,
+     "t": 88.8,
      "label": "Log it"
     },
     {
-     "t": 94,
+     "t": 96.8,
      "label": "No agent? Book within the hour"
     },
     {
-     "t": 112.5,
+     "t": 117.9,
      "label": "Never"
     },
     {
-     "t": 123.4,
+     "t": 128.8,
      "label": "Recap"
     },
     {
-     "t": 141.5,
+     "t": 146.9,
      "label": "Now take the check"
     }
    ],
    "helpAt": {
-    "transfer": 58.4
+    "transfer": 61.2
    },
-   "sizeBytes": 6176042,
-   "builtAt": "2026-11-08T06:28:06.948Z"
+   "sizeBytes": 5924899,
+   "builtAt": "2026-11-08T21:40:12.372Z"
   },
   "fromai": {
    "kind": "walkthrough",
    "title": "Taking a lead from the AI",
-   "duration": 135.9,
+   "duration": 161.8,
    "src": "fromai.mp4",
    "poster": "fromai-poster.jpg",
    "captions": "fromai.captions.json",
@@ -1330,54 +1282,50 @@
     },
     {
      "t": 12.7,
-     "label": "From the AI cards"
+     "label": "Handed over live"
     },
     {
-     "t": 26.1,
-     "label": "Open it"
+     "t": 34.4,
+     "label": "Read why it was booked"
     },
     {
-     "t": 28.7,
-     "label": "Read the box first"
+     "t": 53.9,
+     "label": "Who has it"
     },
     {
-     "t": 40.2,
+     "t": 66.4,
      "label": "Don't start over"
     },
     {
-     "t": 58.2,
-     "label": "Take it"
-    },
-    {
-     "t": 61.5,
+     "t": 84,
      "label": "The answers it didn't get"
     },
     {
-     "t": 71.5,
+     "t": 92.7,
      "label": "Transfer or book"
     },
     {
-     "t": 82.5,
+     "t": 108.1,
      "label": "Price? Not yours"
     },
     {
-     "t": 93.6,
-     "label": "No VA free? A callback"
+     "t": 120.5,
+     "label": "Another time? Move"
     },
     {
-     "t": 106.4,
+     "t": 133,
      "label": "Recap"
     },
     {
-     "t": 125.4,
+     "t": 151.5,
      "label": "Now try it"
     }
    ],
    "helpAt": {
-    "ai_handoff": 28.7
+    "ai_handoff": 34.4
    },
-   "sizeBytes": 6233804,
-   "builtAt": "2026-11-08T05:52:46.552Z"
+   "sizeBytes": 6043046,
+   "builtAt": "2026-11-08T20:55:37.745Z"
   },
   "welcome": {
    "kind": "walkthrough",
@@ -1456,8 +1404,8 @@
    "helpAt": {
     "welcome_call": 62.9
    },
-   "sizeBytes": 7495338,
-   "builtAt": "2026-11-08T06:20:41.326Z"
+   "sizeBytes": 7323532,
+   "builtAt": "2026-11-08T22:09:32.479Z"
   }
  }
 }

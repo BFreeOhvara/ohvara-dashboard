@@ -14,8 +14,8 @@ const SHOTS = {
   task: { label: 'servicing step', go: F('/servicing/st-1'), spots: { start: '.fx-rec button:has-text("Start")', move: '.fx-rec button:has-text("Move")', sendagent: '.fx-rec button:has-text("Send to agent")' } },
   'task-on': { label: 'servicing step, started', go: F('/servicing/st-1'), prep: async p => { await p.click('.fx-rec button:has-text("Start")'); await p.waitForTimeout(600) }, spots: { record: '.fx-rec button:has-text("Record the result"), .fx-rec button:has-text("Save result")', sendagent: '.fx-rec button:has-text("Send to agent")' } },
   call: { label: 'cancellation call', go: F('/schedule/cl-8'), spots: { start: '.fx-rec button:has-text("Start call")', cancelled: '.fx-rec button:has-text("Cancelled")' } },
-  phone: { label: 'phone', go: F(''), prep: async p => { await p.click('.fs-dock-btn'); await p.waitForTimeout(500) }, spots: { phone: '.fs-phone', plus: '.fx-rplus' } },
-  'phone-ring': { label: 'phone, ringing', go: F(''), prep: async p => { await plus(p); await p.click('[role=menuitem]:has-text("Live call")'); await p.waitForTimeout(600) }, spots: { answer: '.fs-phone button:has-text("Answer")', opencall: '.fs-phone button:has-text("Open the call")' } },
+  phone: { label: 'phone', go: F(''), prep: async p => { await p.click('.fx-rail .fs-ri-phone'); await p.waitForTimeout(500) }, spots: { phone: '.fs-call', plus: '.fx-rplus' } },
+  'phone-ring': { label: 'phone, ringing', go: F(''), prep: async p => { await plus(p); await p.click('[role=menuitem]:has-text("Live call")'); await p.waitForTimeout(600) }, spots: { answer: '.fs-call [aria-label^="Answer"]', opencall: '.fs-call .fs-cs-rec' } },
   messages: { label: 'Messages', go: F('/messages'), spots: { thread: '.tp-threads-b > * >> nth=0', conv: '.tp-conv' } },
 }
 
