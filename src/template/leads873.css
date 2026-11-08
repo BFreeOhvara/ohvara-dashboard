@@ -80,3 +80,16 @@
 /* The grid sizes its rows to the cards (minmax(…, auto) rows here kept the floor height and let the action spill). */
 .fx .fx-ovl-needs .fx-ncards { grid-auto-rows: max-content; }
 .fx .fx-ovl-needs .lc-ncard { min-height: 140px; }
+
+/* P898: agents call from their own phone. Phones get Call (tap to call); desktop and tablet get the number + Copy. */
+.lc-num { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 6px 0 12px; border-radius: 999px; color: var(--ov-hi); background: var(--bg-surface); border: 1px solid var(--ov-line); }
+.lc-num > svg { flex: none; color: var(--ov-mid); }
+.lc-num b { font-size: 14px; font-weight: 650; white-space: nowrap; }
+.lc-num .lc-copy { min-height: 30px; padding: 0 10px; }
+.lc-tel { display: none !important; text-decoration: none; }
+.lc-nudge.is-static { cursor: default; }
+.lc-nudge .lc-num { min-height: 0; padding: 0; border: 0; background: none; }
+@media (max-width: 767.98px) {
+  .lc-tel { display: inline-flex !important; }
+  .lc-num { display: none !important; }
+}

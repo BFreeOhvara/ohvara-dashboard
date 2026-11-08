@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { AGENT_STATUSES, AGENT_RESULTS, agentStatusOf, canMove, agentMove, needsResult, countByStatus, teamLine, soldLeadClients, withSoldLeads } from './template/agentView.js'
+import { AGENT_STATUSES, AGENT_RESULTS, agentStatusOf, canMove, agentMove, needsResult, countByStatus, soldLeadClients, withSoldLeads } from './template/agentView.js'
 import { seedEvents, applyMove, rebookLead, SAMPLE_NOW, addMin } from './template/leadLifecycle.js'
 import { stageOfInbound, noShowOpen } from './lib/agentReal.js'
 import { agentSlots, agentFree, agentGap, slotOptions, instantOf } from './lib/callSlots.js'
@@ -12,21 +12,23 @@ const mk = (id, stage, o = {}) => {
   return { ...l, events: seedEvents(l) }
 }
 const BY_STATUS = {
-  live: mk('l', 'showed', { kind: 'live_call' }),
   booked: mk('b', 'booked', { apptAt: '2026-11-02T13:00' }),
   no_show: mk('n', 'no_show', { apptAt: '2026-11-02T11:00' }),
   follow: mk('f', 'follow_up', { follow: 'Mon, Nov 9', apptAt: '2026-10-30T15:00' }),
   sold: mk('s', 'sold', { apptAt: '2026-10-27T11:00', submitted: true }),
-  closed: mk('c', 'not_interested', { reason: 'Already covered', apptAt: '2026-10-29T10:00' }),
+  not_interested: mk('c', 'not_interested', { reason: 'Already covered', apptAt: '2026-10-29T10:00' }),
+  closed: mk('u', 'unreachable', { tries: 3 }),
   team: mk('t', 'calling'),
 }
 const ALL_RESULTS = ['sold', 'no_show', 'follow_up', 'not_interested', 'booked']
 
 test('the five statuses, left to right, and where every stage lands', () => {
-  assert.deepEqual(AGENT_STATUSES.map(s => s.key), ['live', 'booked', 'no_show', 'follow', 'sold'])
+  // P898: no Live transfer column; Not interested is on the board.
+  assert.deepEqual(AGENT_STATUSES.map(s => s.key), ['booked', 'no_show', 'follow', 'not_interested', 'sold'])
   for (const [key, l] of Object.entries(BY_STATUS)) assert.equal(agentStatusOf(l), key, key)
-  assert.equal(agentStatusOf(mk('r', 'ringing', { kind: 'live_call' })), 'live')
-  assert.equal(agentStatusOf(mk('u', 'unreachable', { tries: 3 })), 'closed')
+  assert.equal(agentStatusOf(mk('r', 'ringing', { kind: 'live_call' })), 'booked')
+  assert.equal(agentStatusOf(mk('l', 'showed', { kind: 'live_call' })), 'booked')
+  assert.equal(agentStatusOf(mk('w', 'not_interested', { reason: 'Wrong number' })), 'closed')
   for (const st of ['new', 'calling', 'missed', 'rebooking']) assert.equal(agentStatusOf(mk(st, st)), 'team', st)
   // "Needs you" and "Our team is on it" are gone as statuses.
   assert.equal(AGENT_STATUSES.some(s => /needs you|on it/i.test(s.label)), false)
@@ -34,13 +36,15 @@ test('the five statuses, left to right, and where every stage lands', () => {
 
 test('every allowed result moves, every other one is refused', () => {
   const allowed = {
-    live: ['sold', 'follow_up', 'not_interested'],
     booked: ['sold', 'no_show', 'follow_up', 'not_interested'],
+    live: ['sold', 'follow_up', 'not_interested'],
     no_show: ['not_interested'],
     follow: ['sold', 'booked', 'not_interested'],
+    not_interested: ['follow_up'],
     sold: [], closed: [], team: [],
   }
   assert.deepEqual(AGENT_RESULTS, allowed)
+  delete allowed.live
   for (const [key, l] of Object.entries(BY_STATUS)) {
     for (const r of ALL_RESULTS) {
       const ok = allowed[key].includes(r)
@@ -49,24 +53,21 @@ test('every allowed result moves, every other one is refused', () => {
       else assert.throws(() => agentMove(l, r, {}, SAMPLE_NOW), /can’t be moved/, `${key} -> ${r}`)
     }
   }
-  // Answering a ringing live transfer is taking the call (it stays on Live transfer, asking for the result).
+  // Answering a ringing live transfer is taking the call (P898: it waits on Booked, asking for the result).
   const ringing = mk('r', 'ringing', { kind: 'live_call' })
   assert.equal(canMove(ringing, 'showed'), true)
   assert.equal(canMove(BY_STATUS.booked, 'showed'), false)
   const took = agentMove(ringing, 'showed', {}, SAMPLE_NOW)
-  assert.equal(agentStatusOf(took), 'live')
+  assert.equal(agentStatusOf(took), 'booked')
   assert.equal(needsResult(took), true)
   assert.deepEqual(['sold', 'follow_up', 'not_interested'].map(r => canMove(took, r)), [true, true, true])
 })
 
-test('Booked shows Mark result once the time has passed; the team line counts leads still being called', () => {
+test('Booked shows Mark result once the time has passed; leads still being called are the team’s', () => {
   assert.equal(needsResult(mk('a', 'booked', { apptAt: addMin(SAMPLE_NOW, 60) })), false)
   assert.equal(needsResult(mk('a', 'booked', { apptAt: addMin(SAMPLE_NOW, -30) })), true)
   const leads = [mk('a', 'new'), mk('b', 'calling'), mk('c', 'missed', { kind: 'live_call' }), mk('d', 'rebooking'), mk('e', 'new'), mk('f', 'calling'), BY_STATUS.booked]
   assert.equal(countByStatus(leads).team, 6)
-  assert.equal(teamLine(6), 'Our team is calling 6 new leads')
-  assert.equal(teamLine(1), 'Our team is calling 1 new lead')
-  assert.equal(teamLine(0), null)
 })
 
 test('a no-show that rebooks goes back to Booked, with the new time; anything else is refused', () => {

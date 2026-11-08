@@ -17,7 +17,7 @@ const mk = (id, stage, o = {}) => {
 }
 
 test('agents see five statuses, with Closed only under a filter (P894: live transfer and booked first)', () => {
-  assert.deepEqual(AGENT_STATUSES.map(s => s.label), ['Live transfer', 'Booked', 'No show', 'Follow up', 'Sold'])
+  assert.deepEqual(AGENT_STATUSES.map(s => s.label), ['Booked', 'No show', 'Follow up', 'Not interested', 'Sold'])
   const leads = [
     mk('a', 'new'), mk('b', 'calling'), mk('c', 'missed'), mk('d', 'no_show'), mk('e', 'rebooking'),
     mk('f', 'booked', { apptAt: '2026-11-05T15:00' }),
@@ -26,11 +26,11 @@ test('agents see five statuses, with Closed only under a filter (P894: live tran
     mk('j', 'follow_up', { follow: 'Mon, Nov 9' }),
     mk('k', 'opted_out'), mk('l', 'not_interested', { reason: 'Already covered' }),
   ]
-  assert.deepEqual(countByStatus(leads), { live: 0, booked: 2, no_show: 1, follow: 1, sold: 2, closed: 2, team: 4 })
+  assert.deepEqual(countByStatus(leads), { booked: 2, no_show: 1, follow: 1, not_interested: 1, sold: 2, closed: 1, team: 4 })
   assert.equal(agentStatusOf(leads[7]), 'sold')
   assert.deepEqual(agentChip(leads[6]), ['blue', 'Booked · mark result'])
   assert.deepEqual(agentChip(leads[7]), ['green', 'Sold · add the policy details'])
-  assert.deepEqual(agentChip(leads[11]), ['mute', 'Closed: already covered'])
+  assert.deepEqual(agentChip(leads[11]), ['mute', 'Not interested · already covered'])
 })
 
 test("the agent's timeline hides call attempts, chase texts and where the lead came from", () => {

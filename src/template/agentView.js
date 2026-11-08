@@ -4,32 +4,35 @@ import { STAGES, needsOutcome, confirmedByText, applyMove, clockNow, dayLabel } 
 // filter with its reason. Never call attempts, the text sequence or where a lead came from. The VA and admin portals
 // keep every stage (leadLifecycle.js STAGES); this file only decides the agent's view of them. Pure, no React.
 
-// P894 — the agent's five statuses, left to right, built around the two ways a lead reaches them: a live transfer or a
-// booked appointment. Leads the team is still calling aren't a column: they're one line above the board ("Our team is
-// calling 6 new leads"), read-only. "Needs you" is gone as a status: a lead that needs the agent says so on its own
-// card ("Mark result" on Booked once the time has passed, the result prompt on Live transfer).
+// P898 — the agent's five statuses, left to right: Booked · No show · Follow up · Not interested · Sold. A live transfer
+// isn't a status (nothing sits "in a live transfer"): it goes straight to a result. Until the agent picks one, it waits
+// on Booked tagged "Live call · Mark result"; the All / Appointments / Live calls filter still tells them apart. Closed
+// (Couldn't reach, opted out, wrong number) sits under "Show closed". Leads the team is still calling aren't shown on
+// the board at all. A lead that needs the agent says so on its own card ("Mark result").
 export const AGENT_STATUSES = [
-  { key: 'live', label: 'Live transfer', tone: 'warn', empty: 'No live calls right now.', explain: 'You took a live call. Pick how it went.' },
-  { key: 'booked', label: 'Booked', tone: 'blue', empty: 'No appointments booked yet.', explain: 'On your calendar. Be there at the time; once it has passed, mark the result.' },
-  { key: 'no_show', label: 'No show', tone: 'mute', empty: 'No missed appointments.', explain: 'They didn’t pick up at the booked time. We send them a one-tap link to rebook; when they do, they go back to Booked.' },
-  { key: 'follow', label: 'Follow up', tone: 'teal', empty: 'No follow-ups set.', explain: 'You picked a day to try again. We remind you that day.' },
+  { key: 'booked', label: 'Booked', tone: 'blue', empty: 'No appointments booked yet.', explain: 'On your calendar, plus live calls waiting for a result. Once the time has passed, mark the result.' },
+  { key: 'no_show', label: 'No show', tone: 'warn', empty: 'No missed appointments.', explain: 'They didn’t pick up at the booked time. We send them a one-tap link to rebook; when they do, they go back to Booked.' },
+  { key: 'follow', label: 'Follow up', tone: 'teal', empty: 'No follow-ups set.', explain: 'Not sold yet. You call them again on the day you picked; we remind you that day.' },
+  { key: 'not_interested', label: 'Not interested', tone: 'mute', empty: 'No one said no.', explain: 'They said no. Calls and texts stop. If they change their mind, move them to Follow up.' },
   { key: 'sold', label: 'Sold', tone: 'green', empty: 'Sales you mark show here.', explain: 'Sold. Each one is on Clients as Setting up.' },
 ]
-export const CLOSED_STATUS = { key: 'closed', label: 'Closed', tone: 'mute', empty: 'Nothing closed out.', explain: 'Not interested, or our team couldn’t reach them after the day 30, 60 and 90 check-ins. No more calls or texts.' }
-// Not a column: the leads our team is still calling (new, being called, a missed transfer, a rebook after you moved a time).
-export const TEAM_STATUS = { key: 'team', label: 'Our team is calling', tone: 'violet', empty: 'No one being called.', explain: 'New leads our team is calling. Nothing for you to do: they land on Live transfer or Booked.' }
+export const CLOSED_STATUS = { key: 'closed', label: 'Closed', tone: 'mute', empty: 'Nothing closed out.', explain: 'Our team couldn’t reach them after the day 30, 60 and 90 check-ins, they opted out, or the number was wrong. No more calls or texts.' }
+// Not on the board: the leads our team is still calling (new, being called, a missed transfer, a rebook after you moved a time).
+export const TEAM_STATUS = { key: 'team', label: 'Our team is calling', tone: 'violet', empty: 'No one being called.', explain: 'New leads our team is calling. Nothing for you to do: they land on Booked.' }
 export const ALL_AGENT_STATUSES = [...AGENT_STATUSES, CLOSED_STATUS, TEAM_STATUS]
 export const agentStatus = key => ALL_AGENT_STATUSES.find(s => s.key === key) || TEAM_STATUS
 
-const CLOSED_STAGES = ['not_interested', 'unreachable', 'opted_out']
+const CLOSED_STAGES = ['unreachable', 'opted_out']
+// A live transfer the agent took ('showed' with no appointment): on Booked until they pick how it went.
+export const isLiveCall = l => l.stage === 'showed' && !l.apptAt
 
-// Which of the five (or Closed, or the team's line) a lead is in for its agent. A live call the agent answered
-// ('showed' with no appointment) stays on Live transfer until they pick a result; an appointment whose time has passed
-// stays on Booked with "Mark result". A sale is Sold whether or not its policy details are in yet.
+// Which of the five (or Closed, or the team's) a lead is in for its agent. A ringing transfer and a live call the agent
+// took sit on Booked; an appointment whose time has passed stays on Booked with "Mark result". A sale is Sold whether
+// or not its policy details are in yet. A wrong number is Closed, not Not interested.
 export function agentStatusOf(l) {
   if (CLOSED_STAGES.includes(l.stage) || l.reason === 'Wrong number') return 'closed'
-  if (l.stage === 'ringing' || (l.stage === 'showed' && !l.apptAt)) return 'live'
-  if (l.stage === 'booked' || l.stage === 'showed') return 'booked'
+  if (l.stage === 'not_interested') return 'not_interested'
+  if (l.stage === 'ringing' || l.stage === 'booked' || l.stage === 'showed') return 'booked'
   if (l.stage === 'no_show') return 'no_show'
   if (l.stage === 'follow_up') return 'follow'
   if (l.stage === 'sold') return 'sold'
@@ -37,18 +40,30 @@ export function agentStatusOf(l) {
 }
 
 // ── Results ────────────────────────────────────────────────────────────────────────────────────────────────────
-// The results an agent can pick, by status (P894). A no-show goes back to Booked on its own when they rebook
-// (leadLifecycle.js rebookLead), never by the agent. Sold and Closed are the end. Answering a ringing live call
-// ('showed') is taking the call, not a result.
+// The results an agent can pick (P898). By status, plus `live` for a live call they took (not a status: it sits on
+// Booked, but "No show" makes no sense for a call that happened). A no-show goes back to Booked on its own when they
+// rebook (leadLifecycle.js rebookLead), never by the agent. Not interested can come back to Follow up if they change
+// their mind. Sold and Closed are the end. Answering a ringing transfer ('showed') is taking the call, not a result.
 export const AGENT_RESULTS = {
-  live: ['sold', 'follow_up', 'not_interested'],
   booked: ['sold', 'no_show', 'follow_up', 'not_interested'],
+  live: ['sold', 'follow_up', 'not_interested'],
   no_show: ['not_interested'],
   follow: ['sold', 'booked', 'not_interested'],
+  not_interested: ['follow_up'],
   sold: [], closed: [], team: [],
 }
 export const RESULT_LABEL = { sold: 'Sold', no_show: 'No show', follow_up: 'Follow up', not_interested: 'Not interested', booked: 'Booked' }
-export const resultsFor = l => AGENT_RESULTS[agentStatusOf(l)] || []
+// The one-line meaning under each choice in the status picker.
+export const RESULT_MEANING = {
+  sold: 'They bought a policy.',
+  no_show: 'They didn’t pick up at the booked time. We text them a link to rebook.',
+  follow_up: 'Not sold yet. You call them again to sell.',
+  not_interested: 'They don’t want it. Calls and texts stop.',
+  booked: 'Back on your calendar for a set time.',
+}
+// The status each result lands on (its colour in the picker).
+export const RESULT_STATUS = { sold: 'sold', no_show: 'no_show', follow_up: 'follow', not_interested: 'not_interested', booked: 'booked' }
+export const resultsFor = l => (l.stage === 'ringing' ? [] : isLiveCall(l) ? AGENT_RESULTS.live : AGENT_RESULTS[agentStatusOf(l)] || [])
 export const canMove = (l, stage) => (stage === 'showed' ? l.stage === 'ringing' : resultsFor(l).includes(stage))
 // The one way the agent's screens move a lead: refused (throws) unless the move is allowed from its status.
 export function agentMove(l, stage, extra = {}, now = clockNow()) {
@@ -56,16 +71,32 @@ export function agentMove(l, stage, extra = {}, now = clockNow()) {
   return applyMove(l, stage, extra, now)
 }
 // The lead needs a result from the agent now: a live call they took, or a booked time that has passed.
-export const needsResult = (l, now = clockNow()) => (l.stage === 'showed' && !l.apptAt) || needsOutcome(l, now)
+export const needsResult = (l, now = clockNow()) => isLiveCall(l) || needsOutcome(l, now)
+
+// P898: the follow-up day, picked inline: the next ten weekdays from today on the agent's clock. The reminder lands
+// that morning (leadLifecycle.js needsYouNow "Follow-up due today" matches on the day label).
+export function followDays(now = clockNow(), n = 10) {
+  const out = []
+  let d = new Date(`${now.slice(0, 10)}T12:00:00Z`)
+  while (out.length < n) {
+    d = new Date(d.getTime() + 86400000)
+    if (d.getUTCDay() === 0 || d.getUTCDay() === 6) continue
+    const at = `${d.toISOString().slice(0, 10)}T09:00`
+    out.push({ at, label: dayLabel(at) })
+  }
+  return out
+}
 
 // The one chip on a lead card and drawer: the status, plus a short plain reason where it helps.
 export function agentChip(l, opts) {
   const key = agentStatusOf(l)
   const s = agentStatus(key)
   if (key === 'closed') return [s.tone, closedReason(l)]
-  if (key === 'live') return [s.tone, l.stage === 'ringing' ? 'Live transfer · ringing now' : 'Live transfer · pick the result']
+  if (l.stage === 'ringing') return [s.tone, 'Live call · ringing now']
+  if (isLiveCall(l)) return [s.tone, 'Live call · mark result']
   if (key === 'booked' && needsResult(l, opts?.now || clockNow())) return [s.tone, 'Booked · mark result']
   if (key === 'booked' && confirmedByText(l)) return [s.tone, 'Booked · confirmed']
+  if (key === 'not_interested') return [s.tone, l.reason && !/^not interested/i.test(l.reason) ? `Not interested · ${l.reason.toLowerCase()}` : s.label]
   if (key === 'sold' && !l.submitted) return [s.tone, 'Sold · add the policy details']
   return [s.tone, s.label]
 }
@@ -77,14 +108,12 @@ export function closedReason(l) {
   return `Closed: ${(l.reason || 'not interested').toLowerCase()}`
 }
 
-// Counts per status for a set of leads (the board, the Overview mix, the team line).
+// Counts per status for a set of leads (the board, the Overview mix).
 export function countByStatus(leads) {
   const out = Object.fromEntries(ALL_AGENT_STATUSES.map(s => [s.key, 0]))
   leads.forEach(l => { out[agentStatusOf(l)] += 1 })
   return out
 }
-// The line above the board: "Our team is calling 6 new leads" (null when there are none).
-export const teamLine = n => (n ? `Our team is calling ${n} new lead${n === 1 ? '' : 's'}` : null)
 
 // P894: every sold lead is on Clients as Setting up. A sale with no client row yet (its policy details aren't in, or
 // the row hasn't synced) shows as a Setting up client made from the lead, its next step "Add the policy details".

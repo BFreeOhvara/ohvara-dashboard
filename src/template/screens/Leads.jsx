@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { PhoneIncoming, CalendarDays, Phone, Search, Wallet, Clock, MapPin, Check, X, ClipboardCheck, Users, Link2, MessageSquareWarning, Archive, PhoneForwarded, Inbox } from 'lucide-react'
+import { PhoneIncoming, CalendarDays, Phone, Search, Wallet, Clock, MapPin, Check, X, ClipboardCheck, Users, Link2, MessageSquareWarning, Archive, PhoneForwarded, Inbox, Copy } from 'lucide-react'
 import { useDataSource, useSampleLeads, useSampleLead, useSampleBilling, useSampleActions, useSampleSettings } from '../data'
 import { Avatar, Chip, Seg, Drawer, Empty, Pending, Switch, useNote } from '../kit'
 import { stageChip, OutcomeDrawer, OutcomePrompt, NoShowUndo } from '../LeadOutcome'
@@ -9,7 +9,7 @@ import { SpendSliders, TakeLeads } from '../PlanBuilder'
 import { takeOk } from '../../lib/leadSplit'
 import { LANES, CLOSED_LANE, laneOf } from '../stages'
 import { agentCallTask, confirmedByText, atLabel, clockNow } from '../leadLifecycle'
-import { agentStatusOf, agentEvents, closedReason, needsResult, resultsFor, canMove, RESULT_LABEL, teamLine } from '../agentView'
+import { agentStatusOf, agentEvents, closedReason, needsResult, resultsFor, canMove, isLiveCall, RESULT_LABEL } from '../agentView'
 import { dailyTotal, openSlotsPerWeek, spendOk } from '../spendPlan'
 import { usd } from '../motion'
 import { FeedbackDrawer } from '../Talk'
@@ -19,17 +19,19 @@ import '../leads873.css'
 import '../p878.css'
 import { FilterPills } from '../FilterPills'
 
-/// P894: Leads as a board of the agent's five statuses (agentView.js), left to right: Live transfer, Booked, No show,
-// Follow up, Sold. Closed (Not interested, Couldn't reach) sits under "Show closed", with its reason on each lead. Leads
-// the team is still calling aren't a column: one line above the board opens them, read-only. A lead that needs the
-// agent says so on its card: "Mark result" on Booked once its time has passed, the result prompt on Live transfer.
-// Never call attempts, the text sequence or where a lead came from. A card opens the lead in a drawer at its own URL
-// (paths.lead); the board stays put behind it. On a desktop each lane scrolls inside itself.
+// P898: Leads as a board of the agent's five statuses (agentView.js), left to right: Booked, No show, Follow up, Not
+// interested, Sold. Closed (Couldn't reach, opted out, wrong number) sits under "Show closed", with its reason on each
+// lead. A live transfer isn't a column: it waits on Booked tagged "Live call · Mark result" until the agent picks how it
+// went. Leads the team is still calling aren't on the board. A lead that needs the agent says so on its card ("Mark
+// result"). Never call attempts, the text sequence or where a lead came from. A card opens the lead in a drawer at its
+// own URL (paths.lead); the board stays put behind it. On a desktop each lane scrolls inside itself.
 const shortWhen = l => {
   const st = agentStatusOf(l)
   if (st === 'closed') return 'Closed'
-  if (st === 'live') return l.stage === 'ringing' ? 'Now' : 'On the call'
+  if (l.stage === 'ringing') return 'Now'
+  if (isLiveCall(l)) return 'Live call'
   if (st === 'no_show') return 'Rebook link sent'
+  if (st === 'not_interested') return l.reason && !/^not interested/i.test(l.reason) ? l.reason : 'Said no'
   if (l.stage === 'sold') return l.submitted ? 'Submitted' : 'Add details'
   if (l.stage === 'follow_up' && l.follow) return `Call ${l.follow.split(',')[0]}`
   return l.appt ? l.appt.replace(/, Nov \d+,/, '') : 'No time'
@@ -37,6 +39,7 @@ const shortWhen = l => {
 const whenOf = l => (l.stage === 'ringing' ? 'Ringing now' : l.stage === 'showed' && !l.apptAt ? 'Live call' : l.stage === 'follow_up' && l.follow ? `Call back ${l.follow}` : l.appt || `Came in ${l.assigned_at}`)
 const tagOf = l => {
   if (l.stage === 'ringing') return ['warn', 'Ringing']
+  if (isLiveCall(l)) return ['violet', 'Live call · Mark result']
   if (needsResult(l, clockNow())) return ['violet', 'Mark result']
   if (agentCallTask(l)) return ['warn', 'Call them back']
   if (l.stage === 'sold' && !l.submitted) return ['warn', 'Finish details']
@@ -67,20 +70,18 @@ function LeadCard({ l, i, onAnswer, onResult }) {
   )
 }
 
-// The leads our team is still calling: one line above the board, and the read-only list it opens.
-const TEAM_WHAT = { new: 'New. Our team is calling now', calling: 'Our team is calling', missed: 'Missed transfer. Our team is booking a time', rebooking: 'Picking a new time from your link' }
-function TeamLine({ leads }) {
-  const [open, setOpen] = useState(false)
-  const line = teamLine(leads.length)
-  if (!line) return null
+// P898: agents call from their own phone. On a phone, Call is a tap-to-call link; on desktop and tablet there's no Call
+// button, just the number with a copy button (leads873.css .lc-tel / .lc-num swap at 768 px).
+const telOf = l => `tel:+1${String(l.rawPhone || l.phone || '').replace(/\D/g, '').slice(-10)}`
+function CallOrCopy({ lead, closed, onCall }) {
+  const note = useNote()
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(lead.phone); note(`${lead.phone} copied`) } catch { note(`Couldn’t copy. The number is ${lead.phone}`) }
+  }
   return (
     <>
-      <button type="button" className="lc-team" onClick={() => setOpen(true)} aria-haspopup="dialog"><Users size={16} aria-hidden="true" /><span className="tp-grow"><b>{line}</b><small>Nothing for you to do. They land on Live transfer or Booked.</small></span><span className="lc-nudge-go">See them</span></button>
-      <Drawer open={open} onClose={() => setOpen(false)} title={line} sub="Read only. Our team works each one until it’s booked or on the line with you.">
-        <ul className="tp-list lc-teamlist">{leads.map(l => (
-          <li key={l.id} className="tp-li"><Avatar name={`${l.first_name} ${l.last_name}`} tone="violet" /><span className="tp-grow"><b>{l.first_name} {l.last_name}</b><small>{l.city}, {l.state} · {TEAM_WHAT[l.stage] || 'Our team is calling'}</small></span><small>{l.kind === 'live_call' ? 'Live call' : 'Appointment'}</small></li>
-        ))}</ul>
-      </Drawer>
+      {!closed && <a href={telOf(lead)} className="tp-primary fx-accent lc-tel" onClick={onCall}><Phone size={16} aria-hidden="true" />Call</a>}
+      <span className="lc-num"><Phone size={15} aria-hidden="true" /><b className="tp-num">{lead.phone}</b><button type="button" className="tp-btn ov-ghost sm lc-copy" aria-label={`Copy ${lead.phone}`} onClick={copy}><Copy size={14} aria-hidden="true" />Copy</button></span>
     </>
   )
 }
@@ -129,7 +130,7 @@ function LeadDrawer({ id, onClose }) {
   const lastDone = events.reduce((n, e, i) => (e.state === 'done' ? i : n), -1)
   const closed = lane.key === 'closed'
   const task = agentCallTask(lead)
-  const call = () => { if (task) callBack(lead.id); note(`Calling ${lead.phone}. Calls connect when your leads go live`) }
+  const called = () => { if (task) callBack(lead.id) }
   return (
     <RecordDrawer label={name} kicker={`Lead · came in ${lead.created}`} tone={lane.tone} onClose={onClose}
       hero={<>
@@ -140,7 +141,7 @@ function LeadDrawer({ id, onClose }) {
       </>}
       stepper={steps.length ? <Stepper label="Pick the result" steps={steps} current={null} onPick={pick} /> : null}
       actions={<>
-        <button type="button" className="tp-primary fx-accent" disabled={closed} onClick={call}><Phone size={16} />Call</button>
+        <CallOrCopy lead={lead} closed={closed} onCall={called} />
         <button type="button" className="tp-btn ov-ghost" disabled={closed} onClick={() => setPanel('team')}><Users size={14} />Ask our team to call</button>
         {lead.stage === 'follow_up' && <button type="button" className="tp-btn ov-ghost" disabled={lead.linkSent} onClick={() => { sendBookingLink(lead.id); note(`Booking link sent. ${lead.first_name} picks a time on your calendar`) }}><Link2 size={14} />{lead.linkSent ? 'Link sent' : 'Send booking link'}</button>}
         <span className="tp-grow" />
@@ -148,11 +149,11 @@ function LeadDrawer({ id, onClose }) {
         {canMove(lead, 'not_interested') && <button type="button" className="tp-btn ov-ghost" onClick={() => setOutcome('not_interested')}><X size={14} />Not interested</button>}
       </>}>
       <NoShowUndo lead={lead} />
-      {task && <button type="button" className="lc-nudge" onClick={call}><PhoneForwarded size={16} aria-hidden="true" /><span className="tp-grow"><b>{lead.first_name} asked you to call</b><small>{'“'}{lead.reply.text}{'”'} We told them someone calls shortly.</small></span><span className="lc-nudge-go">Call</span></button>}
-      {needsResult(lead, clockNow()) && <button type="button" className="lc-nudge" onClick={() => setPrompt(true)}><ClipboardCheck size={16} aria-hidden="true" /><span className="tp-grow"><b>How did it go?</b><small>{status === 'live' ? 'You took the live call. Pick the result' : `The appointment at ${lead.appt} has passed`}</small></span><span className="lc-nudge-go">Mark result</span></button>}
+      {task && <div className="lc-nudge is-static"><PhoneForwarded size={16} aria-hidden="true" /><span className="tp-grow"><b>{lead.first_name} asked you to call</b><small>{'“'}{lead.reply.text}{'”'} We told them someone calls shortly.</small></span><a href={telOf(lead)} className="lc-nudge-go lc-tel" onClick={called}>Call</a><span className="lc-nudge-go lc-num tp-num">{lead.phone}</span></div>}
+      {needsResult(lead, clockNow()) && <button type="button" className="lc-nudge" onClick={() => setPrompt(true)}><ClipboardCheck size={16} aria-hidden="true" /><span className="tp-grow"><b>How did it go?</b><small>{isLiveCall(lead) ? 'You took the live call. Pick the result' : `The appointment at ${lead.appt} has passed`}</small></span><span className="lc-nudge-go">Mark result</span></button>}
       {lead.stage === 'sold' && !lead.submitted && <Link to={paths.submit(lead.id)} className="fx-nudge">Finish the servicing details. The team takes it from there.</Link>}
       {closed && <p className="lc-closed"><b>{closedReason(lead)}.</b> {lead.stage === 'opted_out' ? 'All calls and texts stopped.' : 'No more calls or texts.'} A reply from them brings them back as a new lead.</p>}
-      {status === 'team' && <p className="lc-closed">Our team is calling {lead.first_name}. Nothing for you to do yet: they land on Live transfer or Booked.</p>}
+      {status === 'team' && <p className="lc-closed">Our team is calling {lead.first_name}. Nothing for you to do yet: they land on Booked.</p>}
       {status === 'no_show' && !lead.undo && <p className="lc-closed"><b>No show{lead.appt ? ` at ${lead.appt}` : ''}.</b> We sent {lead.first_name} a one-tap link to rebook. When they pick a time, they go back to Booked.</p>}
       <Block title="What they told us">
         <dl className="fx-facts">{asks.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
@@ -199,7 +200,6 @@ export default function Leads() {
   const shown = leads.filter(l => (kind === 'all' || (kind === 'live' ? l.kind === 'live_call' : l.kind === 'appointment'))
     && (!n || `${l.first_name} ${l.last_name} ${l.city} ${l.phone}`.toLowerCase().includes(n)))
   const inLane = (lane, l) => agentStatusOf(l) === lane.key
-  const team = shown.filter(l => agentStatusOf(l) === 'team')
   const answer = l => { moveLead(l.id, 'showed'); note(`You took the call with ${l.first_name}. The team dropped off. Pick the result when you hang up`); navigate(paths.lead(l.id)) }
   const result = l => navigate(`${paths.lead(l.id)}?outcome=1`)
   const lanes = laneKey === 'all' ? ALL : ALL.filter(l => l.key === laneKey)
@@ -216,9 +216,8 @@ export default function Leads() {
       </div>
 
       {/* P893: each status pill in its own colour with its count, like the Clients page; the picked one goes darker */}
-      <FilterPills label="Status" value={laneKey} onChange={setLane} items={[{ key: 'all', label: showClosed ? 'All' : 'All open', count: shown.filter(x => ALL.some(l => inLane(l, x))).length }, ...ALL.map(l => ({ key: l.key, label: l.label, tone: l.tone, count: shown.filter(x => inLane(l, x)).length }))]} />
-      <p className="lc-explain">{(ALL.find(l => l.key === laneKey) || { explain: 'Five statuses, left to right. Our team works every new lead until it’s booked or on the line with you.' }).explain}</p>
-      <TeamLine leads={team} />
+      <FilterPills label="Status" value={laneKey} onChange={setLane} items={[{ key: 'all', label: 'All', count: shown.filter(x => ALL.some(l => inLane(l, x))).length }, ...ALL.map(l => ({ key: l.key, label: l.label, tone: l.tone, count: shown.filter(x => inLane(l, x)).length }))]} />
+      {laneKey !== 'all' && <p className="lc-explain">{ALL.find(l => l.key === laneKey).explain}</p>}
 
       {leads.length === 0 && <FirstRun icon={Inbox} title="Your leads show here" sub="Each lead lands here the moment it comes in. Our team calls it right away, books it on your calendar or rings you live, and you see every step." />}
       <div className={`fx-board lc-board${lanes.length === 1 ? ' is-one' : ''}`} style={{ '--lanes': lanes.length }} role="region" aria-label="Leads by stage">

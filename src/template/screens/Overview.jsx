@@ -126,11 +126,11 @@ function WeekStrip({ appts, today }) {
   )
 }
 
-// Every open lead in one bar, split by the agent's five statuses (P894: Live transfer, Booked, No show, Follow up, Sold),
+// Every open lead in one bar, split by the agent's five statuses (P898: Booked, No show, Follow up, Not interested, Sold),
 // with a count per status. Leads our team is still calling aren't a status; the tile's sub line counts them.
 const mixSub = by => {
   const open = LANES.reduce((t, l) => t + by[l.key], 0)
-  return `${open} open lead${open === 1 ? '' : 's'} by status${by.team ? ` · ${by.team} with our team` : ''}`
+  return `${open} lead${open === 1 ? '' : 's'} on your board${by.team ? ` · ${by.team} with our team` : ''}`
 }
 function LeadMix({ leads }) {
   const by = countByStatus(leads)
