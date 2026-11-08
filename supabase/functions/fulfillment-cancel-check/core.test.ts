@@ -150,7 +150,8 @@ async function twilioPost(query: string, form: Record<string, string>, sig?: str
     method: 'POST', headers: { 'X-Twilio-Signature': s, 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(form),
   })
 }
-const ENV = { authToken: TOKEN, publicUrl: URL_ }
+const ENV = { authToken: TOKEN, publicUrl: URL_, checksOn: true }
+const ENV_OFF = { authToken: TOKEN, publicUrl: URL_ }
 
 test('Twilio callback: signature checked; completed recording saved and its cancels checked', async () => {
   const w = world()
@@ -188,4 +189,18 @@ test('helpers: verdict parsing, quote matching, transcript lines', () => {
   assert.ok(quoteInTranscript('policy gl-4410 is CANCELLED, effective today', CLEAR))
   assert.ok(!quoteInTranscript('ok', CLEAR))
   assert.equal(transcriptLines({ text: 'plain words', utterances: [] }), 'plain words')
+})
+
+test('P890: checks off by default — the callback still saves the recording, nothing is checked, cron is a no-op', async () => {
+  const w = world()
+  const jobs: Promise<unknown>[] = []
+  const q = `?event=rec&policy=${POL}&call=CArep`
+  const ok = await handle(await twilioPost(q, { RecordingStatus: 'completed', RecordingSid: 'RE1', ConferenceSid: 'CF1', RecordingDuration: '612' }), w.store, w.deps, ENV_OFF, readTwilioRequest, p => jobs.push(p))
+  assert.equal(ok.status, 204)
+  await Promise.all(jobs)
+  assert.equal(w.saved[0][1].status, 'ready')
+  assert.equal(w.cancel.status, 'checking')
+  const cron = await handle(new Request('http://x', { method: 'POST', headers: { 'x-ohvara-cron': 'cron' } }), w.store, w.deps, ENV_OFF, readTwilioRequest, p => jobs.push(p))
+  assert.equal(cron.status, 200)
+  assert.equal(w.cancel.status, 'checking')
 })

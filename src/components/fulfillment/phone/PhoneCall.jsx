@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, PhoneMissed, MessageSquareText, CalendarDays, Mic, ChevronUp } from 'lucide-react'
+import { Check, PhoneMissed, MessageSquareText, CalendarDays, ChevronUp } from 'lucide-react'
 import { useMarkCancelled, useEndCall } from '../../../hooks/usePolicies'
 import { useOneAtATime } from '../../../hooks/useOneAtATime'
-import { usePaySettings } from '../../../hooks/useFulfillmentPayouts'
 import { useAuth } from '../../../hooks/useAuth'
 import { zonedDateStr, DEFAULT_TIMEZONE } from '../../../lib/timezones'
 import { phoneView, clock } from '../../../lib/portalPhone'
-import { fmtCents } from '../../../lib/payPeriod'
 import { Svg, Key } from '../PortalPhone'
 import { I, PAD } from '../phoneIcons'
 import { PhoneSheet } from '../../agent/phone/PhoneSheet'
@@ -22,7 +20,6 @@ import { PhoneSheet } from '../../agent/phone/PhoneSheet'
 // ends. Same props and the same Twilio logic as PortalPhone (the provider
 // picks one or the other).
 
-const whole = cents => (cents % 100 ? fmtCents(cents) : fmtCents(cents).replace(/\.00$/, ''))
 const first = name => (name || '').trim().split(/\s+/)[0] || 'The client'
 
 function Result({ p, s, names, conf: saidConf, onClose, onDismiss, error: callError, recording, smsLive }) {
@@ -32,7 +29,6 @@ function Result({ p, s, names, conf: saidConf, onClose, onDismiss, error: callEr
   const endCall = useEndCall()
   const cancelOnce = useOneAtATime(update)
   const endOnce = useOneAtATime(endCall)
-  const { data: pay } = usePaySettings()
   const [pick, setPick] = useState('cancelled')
   const [conf, setConf] = useState(saidConf || '')
   const [effective, setEffective] = useState(() => zonedDateStr(Date.now(), tz))
@@ -43,7 +39,6 @@ function Result({ p, s, names, conf: saidConf, onClose, onDismiss, error: callEr
   const ready = pick === 'no_answer' || (effective && drafts && (recording || conf.trim()))
   const saving = update.isPending || endCall.isPending
   const error = update.error || endCall.error
-  const amount = pay?.pay_per_cancel_cents != null ? whole(pay.pay_per_cancel_cents) : null
   const name = first(names.client)
 
   function save() {
@@ -98,14 +93,7 @@ function Result({ p, s, names, conf: saidConf, onClose, onDismiss, error: callEr
             <button type="button" className="pc-check" data-on={drafts} role="checkbox" aria-checked={drafts} onClick={() => setDrafts(v => !v)}>
               <i>{drafts && <Check size={13} strokeWidth={3.2} aria-hidden="true" />}</i>No more payments will be drafted
             </button>
-            <div className="pc-ai">
-              <Mic size={20} strokeWidth={2} aria-hidden="true" />
-              <span>
-                {recording ? `After you save, AI listens to the recording to check ${names.carrier} confirmed the cancel. ` : ''}
-                {amount ? <>You get <b>{amount}</b> once it's verified.</> : "You're paid once it's verified."}
-              </span>
-            </div>
-            {checking && <p className="pc-checking" role="status"><span aria-hidden="true" />Saved. AI is listening to the recording now.</p>}
+            {checking && <p className="pc-checking" role="status"><span aria-hidden="true" />Saved.</p>}
           </div>
         ) : (
           <div className="pc-res-fields">

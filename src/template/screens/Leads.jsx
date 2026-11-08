@@ -5,7 +5,8 @@ import { useDataSource, useSampleLeads, useSampleLead, useSampleBilling, useSamp
 import { Avatar, Chip, Seg, Drawer, Empty, Pending, Switch, useNote } from '../kit'
 import { stageChip, OutcomeDrawer, OutcomePrompt, NoShowUndo } from '../LeadOutcome'
 import { RecordDrawer, Stepper, Block } from '../Record'
-import { SpendSliders } from '../PlanBuilder'
+import { SpendSliders, TakeLeads } from '../PlanBuilder'
+import { takeOk } from '../../lib/leadSplit'
 import { LANES, CLOSED_LANE, LEAD_STEPS, laneOf } from '../stages'
 import { needsOutcome, agentCallTask, confirmedByText, atLabel, clockNow } from '../leadLifecycle'
 import { agentStatusOf, agentEvents, closedReason } from '../agentView'
@@ -215,13 +216,15 @@ export default function Leads() {
 function SpendDrawer({ open, onClose }) {
   const { data: billing } = useSampleBilling()
   const { data: settings } = useSampleSettings()
-  const { setSpend } = useSampleActions()
+  const { setSpend, setTake } = useSampleActions()
   const note = useNote()
-  const [spend, setDraft] = useState(billing.spend)
+  const [spend, setDraft] = useState({ daily: dailyTotal(billing.spend) })
+  const [take, setTakeDraft] = useState(billing.take)
   return (
     <Drawer open={open} onClose={onClose} title="Daily lead spend" sub="Draft prices · a change starts tomorrow at 12:00 AM your time"
-      footer={<button type="button" className="tp-primary fx-accent" disabled={!spendOk(billing.plan, spend)} onClick={() => { setSpend(spend); note('Lead spend saved. Starts tomorrow. Sample only, nothing was charged'); onClose() }}>Save lead spend</button>}>
-      <SpendSliders spend={spend} onSpend={setDraft} plan={billing.plan} id="leads-spend" openSlots={openSlotsPerWeek(settings.week)} />
+      footer={<button type="button" className="tp-primary fx-accent" disabled={!spendOk(billing.plan, spend) || !takeOk(take)} onClick={() => { setSpend(spend); setTake(take); note('Lead spend saved. Starts tomorrow. Sample only, nothing was charged'); onClose() }}>Save lead spend</button>}>
+      <SpendSliders spend={spend} onSpend={setDraft} plan={billing.plan} mode={take.mode} id="leads-spend" openSlots={openSlotsPerWeek(settings.week)} />
+      <TakeLeads take={take} onTake={setTakeDraft} id="leads-take" />
     </Drawer>
   )
 }

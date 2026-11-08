@@ -1,5 +1,6 @@
 import { LEAD_TEXTS, SENDER, leadText } from './leadTexts.js'
 import { phoneDigits, formatPhone } from './phoneMask.js'
+import { agentLine } from '../lib/aiCallerRules.js'
 
 // P873 — a lead, start to finish (brain/ohvara/Lead Lifecycle.md is the written version). Pure functions only, so
 // the sample store, the screens and the tests share one set of rules, and P848 swaps the sample rows for
@@ -90,12 +91,19 @@ export function seedEvents(l, now = clockNow()) {
     const steps = ['not_reached_d0', 'not_reached_d1', 'not_reached_d3']
     for (let i = 0; i < n; i++) { team(at[i], `Called, try ${i + 1} of ${MAX_TRIES}. No answer`); text(steps[i], addMin(at[i], 1)) }
   }
+  // P892: a lead the team reached seconds after it came in shows the speed ("Called in 9 seconds"), never who or what called.
   const book = () => {
-    tries(1, addMin(c, 3))
-    add('text_received', addMin(c, 28), 'Replied', { text: l.firstReply || 'Tomorrow after 5 works', by: l.first_name, role: 'lead' })
-    team(addMin(c, 35), 'Called. Reached them')
-    add('booked', addMin(c, 36), `Booked for ${whenLabel(l.apptAt)}`, { by: TEAM, role: 'team' })
-    text('confirm', addMin(c, 37))
+    if (l.speed != null) {
+      team(c, agentLine({ secs: l.speed, outcome: 'booked' }))
+      add('booked', addMin(c, 4), `Booked for ${whenLabel(l.apptAt)}`, { by: TEAM, role: 'team' })
+      text('confirm', addMin(c, 5))
+    } else {
+      tries(1, addMin(c, 3))
+      add('text_received', addMin(c, 28), 'Replied', { text: l.firstReply || 'Tomorrow after 5 works', by: l.first_name, role: 'lead' })
+      team(addMin(c, 35), 'Called. Reached them')
+      add('booked', addMin(c, 36), `Booked for ${whenLabel(l.apptAt)}`, { by: TEAM, role: 'team' })
+      text('confirm', addMin(c, 37))
+    }
     text('reminder_day_before', addMin(l.apptAt, -24 * 60))
     text('reminder_1h', addMin(l.apptAt, -60))
   }
@@ -110,7 +118,7 @@ export function seedEvents(l, now = clockNow()) {
       break
     }
     case 'ringing':
-      team(addMin(c, 2), 'Called. Reached them')
+      team(l.speed != null ? c : addMin(c, 2), l.speed != null ? agentLine({ secs: l.speed, outcome: 'transferred' }) : 'Called. Reached them')
       add('transferred', addMin(c, 3), 'Live transfer. Ringing you now', { by: TEAM, role: 'team' })
       break
     case 'missed':

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, Check, Shuffle, PhoneMissed, Hand, CalendarOff, CreditCard, Headphones, PhoneCall, Radio, Megaphone } from 'lucide-react'
+import { ArrowUpRight, Check, Shuffle, PhoneMissed, Hand, CalendarOff, CreditCard, PhoneCall, Radio, Megaphone } from 'lucide-react'
 import { useAdmDay, useAdmMoney, useAdmAgents, useAdmDesk, dateText } from '../data'
 import { Avatar } from '../../template/kit'
 import { CountUp, usd } from '../../template/motion'
@@ -63,7 +63,6 @@ export default function Overview() {
     ...day.failed.map(a => ({ id: a.id, to: `${ap('billing')}?tab=agents`, tone: 'blue', icon: CreditCard, kicker: 'Payment failed', title: a.name, sub: `${a.billing.failed.what} · ${money(a.billing.failed.amount)}` })),
     // P879 (N-A-04): an ad rejected, or in review over 24 h, from the engine (sample until 858 + GoHighLevel).
     ...adAlerts().map(x => ({ id: `ad-${x.agent}`, to: ap('agents', x.agent), tone: 'warn', icon: Megaphone, kicker: x.kind === 'rejected' ? 'Ad rejected' : 'Ad in review', title: agents.find(a => a.id === x.agent)?.name || 'An agent', sub: x.text })),
-    ...day.listen.map(c => ({ id: c.id, to: `${ap('billing')}?tab=payouts`, tone: 'blue', icon: Headphones, kicker: 'Needs a listen', title: c.client, sub: `${c.carrier} · before Monday's run` })),
   ]
   const onShift = day.onShift.map(v => ({ ...v, calls: desk.filter(c => c.va_id === v.id) }))
   const todayCalls = desk.length

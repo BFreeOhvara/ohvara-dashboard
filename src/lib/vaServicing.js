@@ -10,6 +10,7 @@ export const KIND_LABEL = {
   beneficiary_change: 'Beneficiary change', address_change: 'Address change', payment_change: 'Payment change',
   draft_date_change: 'Draft date change', lapse_save: 'Lapse save', conversion: 'Conversion',
   annual_review: 'Annual review', claim_help: 'Claim help', carrier_call: 'Carrier call', other: 'Other request',
+  welcome_call: 'Welcome call',
 }
 export const kindLabel = k => KIND_LABEL[k] || 'Servicing step'
 
@@ -22,6 +23,8 @@ export const OUTCOMES = {
   // P888: the four things a VA hears on a save call (p888 va_servicing_outcome). 'lapsed' is history only.
   lapse_save: [['saved', 'Saved'], ['fixing', 'Fixing it'], ['client_cancelled', 'Wants to cancel'], ['no_answer', 'No answer']],
   packet_check: [['delivered', 'Delivered'], ['not_delivered', 'Not delivered']],
+  // P891: the welcome call for a client the agent added. No answer retries next business day, 3 tries in all.
+  welcome_call: [['welcomed', 'Welcomed'], ['details_fixed', 'Details fixed'], ['problem', 'Problem → agent'], ['no_answer', 'No answer']],
   review_call: CALL, annual_review: CALL, conversion: CALL,
   chargeback_watch: [['on_time', 'Paid on time'], ['missed', 'Missed a payment']],
   beneficiary_change: CHANGE, address_change: CHANGE, payment_change: CHANGE, draft_date_change: CHANGE,

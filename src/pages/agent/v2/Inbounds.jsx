@@ -1,12 +1,9 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Inbox, Info, ChevronRight, ChevronDown, Check, Clock, Phone, PenLine, Zap, CalendarDays, ArrowRight } from 'lucide-react'
-import { Switch } from '../../../components/ui/Switch'
 import { useAuth } from '../../../hooks/useAuth'
 import { useInbounds, useInboundEvents } from '../../../hooks/useInbounds'
-import { useAgentDuty } from '../../../hooks/useAgentDuty'
 import { useStretchPill } from '../../../hooks/useStretchPill'
-import { dutySince } from '../../../lib/duty'
 import { isFollowUpDue } from '../../../lib/leadOutcomes'
 import { PortalV2Layout, Ico, Pill, Skel, ErrorCard } from '../../../components/agent/PortalV2Nav'
 import GetInboundsSlot from '../../../components/agent/GetInboundsSlot'
@@ -272,23 +269,12 @@ function InbTab({ to, on, live, icon, name, n, line }) {
   )
 }
 
-// The agent's Active switch for live transfers (agent_duty, migration 174), the same hook as Today and Settings, so all
-// agree. Compact, with its own loading, failed, coming-soon and save-failed words.
-function DutySwitch({ tz }) {
-  const { on, since, soon, loading, failed, saveFailed, saving, toggle } = useAgentDuty()
-  const live = !loading && !soon && !failed
-  const sub = loading ? 'Checking…' : soon ? 'Coming soon. Until then, live calls are booked for you.'
-    : failed ? 'Couldn’t check right now. Refresh to try again.'
-      : on ? (since ? `Active since ${dutySince(since, new Date(), tz)}. Calls can come to you.` : 'You’re active. Calls can come to you.')
-        : 'Not active. Calls are booked on your calendar.'
+// Read-only note: live transfers ring the agent inside their live-call hours (set on Billing).
+function DutySwitch() {
   return (
-    <section className="ov-card inb-duty" aria-label="Live call transfers" aria-busy={loading}>
+    <section className="ov-card inb-duty" aria-label="Live call transfers">
       <span className="pv-tile"><Ico icon={Zap} size={20} /></span>
-      <div className="pv-grow"><h3>Active for live calls</h3><p className="pv-sub">{sub}</p></div>
-      {loading ? <Skel w={44} h={24} style={{ borderRadius: 12 }} /> : (
-        <Switch checked={on} disabled={!live || saving} onChange={next => toggle(next)} label={soon ? 'Active for live call transfers (coming soon)' : 'Active for live call transfers'} />
-      )}
-      {saveFailed && <p className="pv-inline-err inb-duty-err" role="alert"><span>Couldn’t save that. Try again.</span></p>}
+      <div className="pv-grow"><h3>Live call transfers</h3><p className="pv-sub">Live transfers ring you inside your live-call hours. Outside them, we book callers on your calendar. <Link to="/agent/billing">Set your hours</Link></p></div>
     </section>
   )
 }
@@ -371,7 +357,7 @@ export default function Inbounds() {
             <InbTab to={tabTo('booked', params)} on={tab === 'booked'} icon={CalendarDays} name="Booked appointments" n={nA} line={lineA} />
             <InbTab to={tabTo('live', params)} on={tab === 'live'} live icon={Phone} name="Live calls" n={nB} line={lineB} />
           </nav>
-          <DutySwitch tz={tz} />
+          <DutySwitch />
         </div>
 
         {tab === 'booked' ? (

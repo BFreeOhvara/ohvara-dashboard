@@ -5,7 +5,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { act, handle, clientCallerId, toE164, type Leg, type Store, type Twilio } from './core.ts'
+import { act, handle, toE164, type Leg, type Store, type Twilio } from './core.ts'
 import { handle as voice, twilioSignature, legStatus, type Store as VoiceStore } from '../fulfillment-voice/core.ts'
 
 const REP = '11111111-1111-4111-8111-111111111111'
@@ -55,9 +55,6 @@ test('E.164 and the client caller ID rule', () => {
   assert.equal(toE164('(555) 222-3333'), '+15552223333')
   assert.equal(toE164('1-800-555-0100'), '+18005550100')
   assert.equal(toE164('12'), null)
-  assert.equal(clientCallerId({ caller_id_number: '+1555', caller_id_enabled: true }, '+1000'), '+1555')
-  assert.equal(clientCallerId({ caller_id_number: '+1555', caller_id_enabled: false }, '+1000'), '+1000')
-  assert.equal(clientCallerId(null, '+1000'), '+1000')
 })
 
 test('permission checks: role, assignment, admin, done, voice off', async () => {
@@ -92,14 +89,14 @@ test('handle: no JWT is 401, a refusal is its status + code', async () => {
   assert.equal((await res.json()).code, 'no_leg')
 })
 
-test('ring client: conference participant from the agent number when on, else Ohvara', async () => {
+test('ring client: conference participant from Ohvara\'s number (P890: no agent caller ID)', async () => {
   const w = world({ callerId: true })
   await act(w.store, w.twilio, ENV, REP, { policy_id: POL, action: 'ring_client' })
   const [get, add] = w.calls
   assert.match(get.path, /FriendlyName=policy-44444444/)
   assert.match(get.path, /Status=in-progress/)
   assert.equal(add.path, '/Conferences/CF1/Participants.json')
-  assert.equal(add.params.From, '+15559998888')
+  assert.equal(add.params.From, '+15550001111')
   assert.equal(add.params.To, '+15552223333')
   assert.equal(add.params.EndConferenceOnExit, 'false')
   assert.deepEqual(add.params.StatusCallbackEvent, ['initiated', 'ringing', 'answered', 'completed'])

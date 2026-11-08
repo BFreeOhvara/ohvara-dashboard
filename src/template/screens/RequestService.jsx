@@ -10,7 +10,8 @@ import { EMPTY_CALL_TIME, callTimeReady, callTimeText } from '../callTimeModel'
 import { BOOK_DAYS } from '../carriers'
 import { agentBooksCall } from '../ful/data'
 
-const KINDS = ['Change address', 'Update phone', 'Change beneficiary', 'Change billing date', 'Reinstate policy', 'Cancel policy', 'Policy question', 'Other']
+// P890: Payment problem (a missed or failed payment the agent heard about) joins the list.
+const KINDS = ['Change address', 'Update phone', 'Change beneficiary', 'Change billing date', 'Payment problem', 'Reinstate policy', 'Cancel policy', 'Policy question', 'Other']
 
 export default function RequestService() {
   const { data: clients } = useSampleClients()

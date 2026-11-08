@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Headphones, Clock, Mail, TriangleAlert, Wallet, ChevronRight } from 'lucide-react'
+import { Clock, Mail, TriangleAlert, Wallet, ChevronRight } from 'lucide-react'
 import { useAuth } from '../../../hooks/useAuth'
 import { useFulfillmentQueue } from '../../../hooks/usePolicies'
 import { useCallOutcomes } from '../../../hooks/useRepCallEvents'
@@ -18,14 +18,12 @@ import { phoneText } from '../../../lib/policyFormat'
 import { NotificationBell } from '../../notifications/NotificationBell'
 import { Avatar } from '../../ui/Avatar'
 import { LoadError } from '../../agent/AgentUI'
-import { ListenSheet } from './ListenSheet'
 import { PhoneToast } from './PhoneToast'
 import { useAdminPay } from './useAdminPay'
 
 // Prompt 774 — the admin's Home on a phone (mockup AdmHome.dc.html): date
 // chip, bell (full screen), avatar → More; the greeting and how many things
-// need you (amber ones only); Needs you, from the desktop Overview's sources
-// plus cancels that need a listen (straight to the Listen sheet); the desk
+// need you (amber ones only); Needs you, from the desktop Overview's sources; the desk
 // right now (who's live, to call / done / past time, from the desk's rules);
 // and this week (booked, cancelled, cancel rate, a 7-day paired bar chart,
 // the Overview's own numbers).
@@ -65,7 +63,6 @@ export function AdminPhoneHome() {
   const navigate = useNavigate()
   const now = useNow(30e3)
   const tz = profile?.timezone || DEFAULT_TIMEZONE
-  const [listenId, setListenId] = useState(null)
   const [toast, setToast] = useState(null)
 
   const queueQ = useFulfillmentQueue()
@@ -88,8 +85,8 @@ export function AdminPhoneHome() {
   // P780 — a failed load says so instead of "Nothing needs you" and zeros.
   const broken = q => q.isError && !q.data
   const chartFailed = broken(queueQ) || broken(eventsQ)
-  const needsFailed = chartFailed || [payQ, invitesQ, configQ].some(broken) || !!pay.error || !!pay.listenError
-  const retry = () => { [queueQ, eventsQ, payQ, invitesQ, configQ].forEach(q => broken(q) && q.refetch()); if (pay.error || pay.listenError) pay.refetch() }
+  const needsFailed = chartFailed || [payQ, invitesQ, configQ].some(broken) || !!pay.error
+  const retry = () => { [queueQ, eventsQ, payQ, invitesQ, configQ].forEach(q => broken(q) && q.refetch()); if (pay.error) pay.refetch() }
 
   const repById = useMemo(() => new Map(profiles.filter(r => r.role === 'fulfillment').map(r => [r.id, r])), [profiles])
   const week = useMemo(() => adminWeek(
@@ -99,18 +96,8 @@ export function AdminPhoneHome() {
   const chartLoading = queueLoading || eventsLoading || !profile || chartFailed
   const needsLoading = queueLoading || payLoading || invitesLoading || configLoading || pay.loading || !profile || needsFailed
 
-  const listen = pay.model.listen
   const needs = useMemo(() => {
     const out = []
-    if (listen.length) {
-      const c = listen[0]
-      out.push({
-        key: 'listen', tone: 'warn', icon: Headphones, hot: true, go: () => setListenId(c.id),
-        title: `${plural(listen.length, 'cancel')} ${listen.length === 1 ? 'needs' : 'need'} a listen`,
-        sub: listen.length === 1 ? <>{[c.client_name || 'Client', c.carrier_name].filter(Boolean).join(' · ')} · <span className="ph-mono">{money(c.amount_cents)}</span></>
-          : `Oldest: ${[c.client_name || 'Client', c.carrier_name].filter(Boolean).join(' · ')}`,
-      })
-    }
     const owed = payouts.filter(p => p.status === 'failed' && p.amount_cents > 0)
     if (owed.length) {
       out.push({
@@ -148,7 +135,7 @@ export function AdminPhoneHome() {
       out.push({ key: 'sms', tone: 'mute', icon: TriangleAlert, go: () => navigate('/settings#contact'), title: 'Texting isn’t live yet', sub: 'Switch it on in Settings' })
     }
     return out
-  }, [listen, payouts, queue, invites, config, now, repById, navigate, tz, todayStr])
+  }, [payouts, queue, invites, config, now, repById, navigate, tz, todayStr])
   // P784: every row counts, the same as desktop Home (it said 1 above 2 rows).
   const hot = needs.length
 
@@ -171,7 +158,6 @@ export function AdminPhoneHome() {
     ['Cancel rate', week.rate == null ? '—' : `${week.rate}%`, 'var(--ov-mid)'],
   ]
   const range = week.days.length ? `${fmtDay(week.days[0].date, { month: 'short', day: 'numeric' })} – ${fmtDay(week.days[6].date, { day: 'numeric' })}` : ''
-  const listenCard = listenId ? listen.find(c => c.id === listenId) || null : null
 
   return (
     <div className="ph-stack">
@@ -245,10 +231,6 @@ export function AdminPhoneHome() {
         <WeekChart days={week.days} todayIdx={frame.todayIdx} />
       </section>
 
-      {listenCard && (
-        <ListenSheet c={listenCard} rep={profiles.find(p => p.id === listenCard.rep_id)} tz={tz} onClose={() => setListenId(null)}
-          onDecided={paid => { setListenId(null); setToast(paid ? `Marked paid · ${money(listenCard.amount_cents)}` : 'Marked not paid') }} />
-      )}
       <PhoneToast text={toast} onDone={() => setToast(null)} />
     </div>
   )

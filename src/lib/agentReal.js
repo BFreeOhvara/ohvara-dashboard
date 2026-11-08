@@ -105,7 +105,7 @@ export function toLead(r, events = [], tz = DEFAULT_TZ) {
 }
 
 // ── Clients ──────────────────────────────────────────────────────────────────────────────────────────────────────
-const TASK_LABEL = { packet_check: 'Packet check', review_call: 'Review call', chargeback_watch: 'Payment watch', cancel_old: 'Old policy cancelled', cancellation: 'Old policy cancelled', lapse_save: 'Save call', change: 'Policy change', check_in: 'Check-in call' }
+const TASK_LABEL = { packet_check: 'Packet check', review_call: 'Review call', chargeback_watch: 'Payment watch', cancel_old: 'Old policy cancelled', cancellation: 'Old policy cancelled', lapse_save: 'Save call', change: 'Policy change', check_in: 'Check-in call', welcome_call: 'Welcome call' }
 const shortDay = w => (w ? whenLabel(w).replace(/, \d+:\d+ [AP]M$/, '') : 'To be set')
 // policy_servicing_status.stage to the Clients board stage (template/stages.js stageLabel).
 export function clientStageOf(st) {
@@ -160,14 +160,15 @@ export const toActivity = (r, label) => ({ id: String(r.id), at: label, kind: ac
 const REACHED = ['booked', 'showed', 'no_show', 'sold', 'follow_up', 'not_interested']
 const SHOWED = ['showed', 'sold', 'follow_up', 'not_interested']
 export function boughtOf(leads, since) {
-  const inRange = (leads || []).filter(l => (l.came || '') >= since)
-  const appts = inRange.filter(l => l.kind !== 'live_call')
-  const live = inRange.filter(l => l.kind === 'live_call')
-  const n = (rows, list) => rows.filter(l => list.includes(l.stage)).length
-  const sold = rows => rows.filter(l => l.stage === 'sold')
-  const prem = rows => sold(rows).reduce((t, l) => t + (Number(l.submitted?.premium) || 0), 0)
-  return [
-    { type: 'appts', spent: 0, leads: appts.length, reached: n(appts, REACHED), booked: n(appts, ['booked', ...REACHED.slice(1)]), showed: n(appts, SHOWED), sold: sold(appts).length, premium: prem(appts) },
-    { type: 'live', spent: 0, calls: live.length, reached: n(live, ['showed', 'sold', 'follow_up', 'not_interested', 'ringing']), offered: live.filter(l => l.stage !== 'new').length, delivered: n(live, SHOWED), sold: sold(live).length, premium: prem(live) },
-  ]
+  // P889: one lead product, one line. Booked and transferred apart, then shows and sales.
+  const rows = (leads || []).filter(l => (l.came || '') >= since)
+  const live = rows.filter(l => l.kind === 'live_call')
+  const appts = rows.filter(l => l.kind !== 'live_call')
+  const n = (list, stages) => list.filter(l => stages.includes(l.stage)).length
+  const sold = rows.filter(l => l.stage === 'sold')
+  return {
+    spent: 0, leads: rows.length, reached: n(appts, REACHED) + n(live, ['showed', 'sold', 'follow_up', 'not_interested', 'ringing']),
+    booked: n(appts, ['booked', ...REACHED.slice(1)]), offered: live.filter(l => l.stage !== 'new').length, transferred: n(live, SHOWED),
+    showed: n(appts, SHOWED), sold: sold.length, premium: sold.reduce((t, l) => t + (Number(l.submitted?.premium) || 0), 0),
+  }
 }

@@ -352,7 +352,7 @@ function VaDrawer({ id, onClose }) {
         <Link to={`${ap('team')}?tab=rota`} className="tp-btn ov-ghost">Rota</Link>
       </>}>
       <Block title="This week">
-        <dl className="fx-facts">{[['On shift', `${v.days} of 7 days`], ['Cancellations', String(v.week.cancels)], ['Missed calls', String(v.missed)], ['Servicing steps', String(v.steps)]].map(([k, x]) => <div key={k}><dt>{k}</dt><dd>{x}</dd></div>)}</dl>
+        <dl className="fx-facts">{[['On shift', `${v.days} of 7 days`], ['Hours this week', String(v.week.hours)], ['Missed calls', String(v.missed)], ['Servicing steps', String(v.steps)]].map(([k, x]) => <div key={k}><dt>{k}</dt><dd>{x}</dd></div>)}</dl>
         <div className="adm-weekdots" aria-label="Days on shift">{WEEK.map(d => <span key={d} className={(data.rota[d] || []).includes(v.id) ? 'is-on' : ''}><small>{dayName(d)}</small></span>)}</div>
       </Block>
       <Block title="Today's calls">

@@ -9,6 +9,7 @@ import { outcomeArgs } from '../lib/leadOutcomes'
 import { invokeBilling } from '../lib/billing'
 import { zoneOf } from '../lib/callSlots'
 import { wallet as walletOf, expected } from '../template/spendPlan'
+import { DEFAULT_LIVE_HOURS } from '../lib/leadSplit'
 import { useNote } from '../template/kit'
 
 // P848 — the agent portal on real data. The same names and record shapes as the sample door (src/template/data/index.js), read through
@@ -23,6 +24,10 @@ export async function soft(q, fallback = []) {
   if (error) { if (isMissing(error)) return fallback; throw error }
   return data ?? fallback
 }
+
+// P890: an agent_lead_pause row as Billing's paused: { from, until } (until null = until they resume).
+const dayWord = d => new Date(`${d}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+export const pausedOf = row => (row?.active ? { from: dayWord(String(row.paused_at).slice(0, 10)), until: row.resume_on ? dayWord(row.resume_on) : null } : null)
 
 export function useTz() {
   const { profile } = useAuth()
@@ -83,22 +88,35 @@ function useClientRows() {
   return useQuery({
     queryKey: ['p848', 'clients', profile?.id], enabled: !!profile?.id, ...LIVE,
     queryFn: async () => {
-      const [policies, status, tasks] = await Promise.all([
+      // P891: agent_added_clients is the Added → Welcomed → Serviced status of clients the agent brought in; until
+      // migration p891 is applied it is missing and reads as none.
+      const [policies, status, tasks, added] = await Promise.all([
         soft(supabase.from('policies').select(POLICY_COLS).eq('agent_id', profile.id).is('archived_at', null).order('created_at', { ascending: false })),
         soft(supabase.from('policy_servicing_status').select('policy_id, stage, next_step, next_date, open_requests, is_sample').eq('agent_id', profile.id)),
         soft(supabase.rpc('agent_servicing_items')),
+        soft(supabase.rpc('agent_added_clients')),
       ])
-      return { policies, status, tasks }
+      return { policies, status, tasks, added }
     },
   })
 }
+// P891: a client the agent added gets "Added by you" and its book status; the welcome call shows as its next step.
+function withBook(c, b, tz) {
+  if (!b) return c
+  const book = ['added', 'welcomed', 'serviced', 'problem'].includes(b.book_status) ? b.book_status : 'added'
+  const due = b.welcome_due_at ? whenLabel(wallOf(b.welcome_due_at, tz)) : null
+  return { ...c, added: true, book, next_step: book === 'added' ? `Welcome call ${due || 'soon'}` : book === 'problem' ? (b.problem || 'The welcome call found a problem') : c.next_step,
+    note: book === 'problem' ? (b.problem || 'The welcome call found a problem') : c.note, face_amount: b.face_amount, draft_day: b.draft_day, effective: b.effective_date }
+}
+
 export function useClientsReal() {
   const tz = useTz()
   const q = useClientRows()
   const data = useMemo(() => {
-    const { policies = [], status = [], tasks = [] } = q.data || {}
+    const { policies = [], status = [], tasks = [], added = [] } = q.data || {}
     const st = Object.fromEntries(status.filter(r => !r.is_sample).map(r => [r.policy_id, r]))
-    return policies.map(p => toClient(p, st[p.id], tasks, tz))
+    const book = Object.fromEntries((added || []).map(r => [r.policy_id, r]))
+    return policies.map(p => withBook(toClient(p, st[p.id], tasks, tz), book[p.id], tz))
   }, [q.data, tz])
   return { data, isLoading: q.isLoading, error: q.error || null, refetch: q.refetch }
 }
@@ -139,7 +157,7 @@ export function useThreadsReal() {
   return { data, isLoading: q.isLoading, error: q.error || null, refetch: q.refetch }
 }
 
-// ── Settings: profile, hours (my_agent_settings), duty (agent_duty), notifications, caller ID, licence (interim) ──
+// ── Settings: profile, hours (my_agent_settings), notifications, caller ID, licence (interim) ──
 const NOTE_ROWS = [
   ['lead', 'New lead', 'new_lead'], ['appt', 'Appointment reminders', 'appointment_1h'], ['msg', 'Messages from the team', null],
   ['client', 'Client needs you', 'needs_attention'], ['payment_missed', 'A client missed a payment (chargeback risk)', null],
@@ -151,13 +169,12 @@ function useSettingsRows() {
   return useQuery({
     queryKey: ['p848', 'settings', profile?.id], enabled: !!profile?.id,
     queryFn: async () => {
-      const [raw, duty, states, licences] = await Promise.all([
+      const [raw, states, licences] = await Promise.all([
         soft(supabase.rpc('my_agent_settings'), null),
-        soft(supabase.from('agent_duty').select('on_duty, since').eq('agent_id', profile.id).maybeSingle(), null),
         soft(supabase.from('agent_lead_settings').select('states').eq('agent_id', profile.id).maybeSingle(), null),
         soft(supabase.from('agent_licenses').select('state, license_number, expires_on').eq('profile_id', profile.id), []),
       ])
-      return { raw, duty, states, licences }
+      return { raw, states, licences }
     },
   })
 }
@@ -165,20 +182,19 @@ export function useSettingsReal() {
   const { profile } = useAuth()
   const q = useSettingsRows()
   const data = useMemo(() => {
-    const { raw, duty, states, licences = [] } = q.data || {}
+    const { raw, states, licences = [] } = q.data || {}
     const n = normalizeSettings(raw)
     const week = weekToPortal(n.week)
     const server = Array.isArray(raw?.notifications) ? raw.notifications : []
-    const cid = profile?.caller_id_number && profile?.caller_id_verified_at ? { status: 'confirmed', number: profile.caller_id_number } : profile?.caller_id_pending_number ? { status: 'pending', number: profile.caller_id_pending_number } : { status: 'not_set', number: '' }
     return {
       profile: { name: profile?.full_name || '', email: profile?.email || '', phone: profile?.phone || '', plan: 'Your plan shows here once billing is set up' },
       hours: { start: week.Mon.start, end: week.Mon.end, days: Object.keys(week).filter(d => week[d].on) },
       week, zoneConfirmed: !!profile?.timezone_confirmed_at, calendarSync: { provider: null, status: 'not_connected' },
       licence: { states: (states?.states || licences.map(l => l.state)).filter(x => x !== 'NY'), licensed: null }, // the tick's log is a door: ticked again after a reload
-      timeZone: n.timezone || profile?.timezone || DEFAULT_TZ, callerId: cid,
+      timeZone: n.timezone || profile?.timezone || DEFAULT_TZ,
       paymentIntake: { address: 'Starts when payment tracking goes live', recent: [], soon: true },
       notifications: NOTE_ROWS.map(([key, label, type]) => { const r = type && server.find(x => x.type === type); return { key, label, push: !!r?.push_on, email: !!r?.email_on, soon: !type } }),
-      duty: duty?.on_duty === true, dutySince: duty?.on_duty ? duty.since : null, liveTransferPhone: n.phone,
+      liveTransferPhone: n.phone,
     }
   }, [q.data, profile])
   return { data, isLoading: q.isLoading, error: q.error || null, refetch: q.refetch }
@@ -241,11 +257,13 @@ export function useBillingReal() {
   const q = useQuery({
     queryKey: ['p848', 'billing', profile?.id], enabled: !!profile?.id,
     queryFn: async () => {
-      const [spend, balance] = await Promise.all([
+      const [spend, balance, pause] = await Promise.all([
         soft(supabase.from('agent_inbound_spend').select(['inbound_type', 'weekly_cents', 'paused'].join(',')).eq('agent_id', profile.id)),
         soft(supabase.from('agent_lead_balance').select('balance_cents').eq('agent_id', profile.id).maybeSingle(), null),
+        // P890: Pause leads (p890_cleanup.sql). Missing until it's applied: never paused.
+        soft(supabase.from('agent_lead_pause').select('active, paused_at, resume_on').eq('agent_id', profile.id).maybeSingle(), null),
       ])
-      return { spend, balance }
+      return { spend, balance, pause }
     },
   })
   const clients = useClientsReal()
@@ -258,13 +276,15 @@ export function useBillingReal() {
     const daily = t => Math.round(((spend.find(r => r.inbound_type === t && !r.paused)?.weekly_cents || 0) / 7) / 100)
     const b = {
       plan: 'pilot', products: profile?.has_servicing === false ? 'leads' : 'both',
-      spend: { appts: daily('booked_appointment'), live: daily('live_call') }, pending: null, booked: 0, usual: 0,
+      // P889: one daily spend (the old per-type rows add up until p889's lead_product_set is live).
+      spend: { daily: daily('booked_appointment') + daily('live_call') }, pending: null, booked: 0, usual: 0,
+      take: { mode: daily('live_call') > 0 ? 'both' : 'appts', hours: DEFAULT_LIVE_HOURS, tz: profile?.timezone || DEFAULT_TZ },
       wallet: { week: 'This week', topUp: Math.max(0, (balance?.balance_cents || 0) / 100), rolled: 0, spent: 0, next: mondayText(now) },
-      va: { on: false, hours: 0, rate: 0 }, bought: { week: boughtOf(leads.data, weekFrom), month: boughtOf(leads.data, monthFrom) }, saved: [], paused: null, cancel: null,
+      va: { on: false, hours: 0, rate: 0 }, bought: { week: boughtOf(leads.data, weekFrom), month: boughtOf(leads.data, monthFrom) }, saved: [], paused: pausedOf(q.data?.pause), cancel: null,
       payment: { card: null, failed: profile?.billing_status === 'past_due' || profile?.billing_status === 'unpaid' },
       next_charge: mondayText(now), nextBill: null, servicing: { status: 'active', next: null }, cancellations: null, history: [], real: true,
     }
-    return { ...b, submitted: clients.data.length, walletNow: walletOf(b.wallet, b.spend), expected: expected(b.spend), servicing: { ...b.servicing, status: b.products === 'leads' ? 'off' : 'active' } }
+    return { ...b, submitted: clients.data.length, walletNow: walletOf(b.wallet, b.spend), expected: expected(b.spend, b.take.mode), servicing: { ...b.servicing, status: b.products === 'leads' ? 'off' : 'active' } }
   }, [q.data, profile, now, clients.data.length, leads.data])
   return { data, isLoading: q.isLoading, error: q.error || null }
 }
@@ -335,7 +355,7 @@ export function useOverviewReal() {
     return {
       name: (profile?.full_name || '').split(' ')[0] || 'there',
       book: { protected: by('protected'), settingUp: by('setting_up'), needsAttention: by('needs_attention'), requestsOpen: by('requests') },
-      duty: settings.data.duty, stepsOpen: open.length, attention: clients.data.filter(c => c.stage === 'needs_attention'),
+      stepsOpen: open.length, attention: clients.data.filter(c => c.stage === 'needs_attention'),
       dueSoon: soon.map(t => { const w = wallOf(t.due_at, tz); const p = clockParts(w); return { id: t.task_id, label: TASK_WORD[t.kind] || 'Servicing step', clientName: nameOf(t.policy_id) || t.client_name || 'Client', clientId: t.policy_id, dueAt: whenLabel(w), day: p.day, date: p.date, done: false } }),
       doneByDay, bookedChart,
       upNext: appts.data.filter(a => a.wall >= now).slice(0, 3), leadsToday: leads.data.length,
@@ -377,6 +397,11 @@ export function useActionsReal() {
       try { const { error } = await p; if (error) throw error; again() } catch (e) { later(e?.message && !/fetch|network/i.test(e.message) ? `${fail}: ${e.message}` : fail) }
     }
     const rpc = (fn, args, fail) => run(supabase.rpc(fn, args), fail)
+    const rpcOrSoon = async (fn, args, what) => {
+      const { error } = await supabase.rpc(fn, args)
+      if (error) return later(isMissing(error) ? `${what} starts soon. Nothing changed yet` : `Could not save. Nothing changed: ${error.message}`)
+      again()
+    }
     const saveSettings = (p, fail) => rpc('save_my_agent_settings', { p }, fail)
     const outcome = (id, stage, extra = {}) => {
       if (stage === 'no_show') return rpc('lead_mark_no_show', { p_lead: id })
@@ -417,10 +442,12 @@ export function useActionsReal() {
       talk: soon('Talk to someone'),
       sendFeedback: soon('Feedback on the team'),
       setSpend: soon('Changing your lead spend here'),
+      setTake: soon('Changing how you take leads here'),
       topUp: soon('Topping up here'),
       setProducts: soon('Switching products here'),
-      pause: soon('Pausing here'),
-      resume: soon('Resuming here'),
+      // P890: lead_pause_set / lead_pause_resume (p890_cleanup.sql). Until applied they say "starts soon".
+      pause: p => rpcOrSoon('lead_pause_set', { p_resume_on: p?.untilIso || null }, 'Pausing here'),
+      resume: () => rpcOrSoon('lead_pause_resume', {}, 'Resuming here'),
       cancelPlan: soon('Cancelling here'),
       keepPlan: soon('Keeping your plan'),
       // Gap 1: the real card form (Stripe's own page) for a failed or late payment.
@@ -428,7 +455,6 @@ export function useActionsReal() {
         try { const r = await invokeBilling('portal'); if (r?.url) window.location.assign(r.url); else later('Could not open the card form') } catch (e) { later(e.message || 'Could not open the card form') }
       },
       saveSetup: soon('Saving setup'),
-      setDuty: on => run(supabase.from('agent_duty').upsert({ agent_id: me, on_duty: !!on, since: on ? new Date().toISOString() : null }, { onConflict: 'agent_id' }), 'Could not change live calls'),
       doneTask: () => {},
       clientAction: (id, action) => {
         if (action === 'confirm') { const c = clients.find(x => x.id === id); return rpc('agent_confirm_recovery_number', { p_policy: id, p_phone: c?.client_phone ? c.client_phone.replace(/\D/g, '').replace(/^(\d{10})$/, '+1$1') : null }) }
@@ -445,6 +471,8 @@ export function useActionsReal() {
         }, 'Sale not submitted')
         if (form.linked?.kind === 'lead') await rpc('set_inbound_outcome', outcomeArgs(form.linked.id, { outcome: 'sold' }))
       },
+      // P891: rows = lib/bookImport checked rows (ok ones only); the server checks them again and skips duplicates.
+      addClients: (rows, { ack } = {}) => rpc('agent_add_clients', { p_rows: rows, p_ack: !!ack }, 'Clients not added'),
       submitRequest: form => {
         const c = clients.find(x => `${x.client_first_name} ${x.client_last_name}`.trim() === String(form.name || '').trim())
         if (!c) return later('Pick the client again. Nothing was sent')

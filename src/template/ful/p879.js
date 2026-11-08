@@ -2,6 +2,8 @@
 // node --test runs them). Used by Clock879 (clock in/out, status, breaks), LeadDesk879 (the lead drawer), and the
 // Pay, Schedule, Queue, Clients and Overview screens. Sample only: 852 wires the real calls, clocks and texts.
 
+import { freshLeadRoute, DAYS, DEFAULT_LIVE_HOURS } from '../../lib/leadSplit.js'
+
 // ---------- Clock in/out, statuses, breaks (N-F-02, N-F-04, N-F-05) ----------
 export const CLOCK_WINDOW_MIN = 15 // clock in only within 15 minutes of the shift start (else an admin approves)
 export function clockInCheck(nowMin, shiftStartMin) {
@@ -80,22 +82,32 @@ export const flagsOf = l => ({ optedOut: !!l.opted_out, closed: !!l.closed, call
 export const CONSENT_LINE = 'Is it OK if Deedstone texts you about your request and your appointment? You can reply STOP at any time.'
 
 // N-C-01, N-C-22: Check agent is on only when every rule passes; the first failing rule is shown.
+// P889: "takes live transfers" and "inside their live-call hours" come from the agent's How you take leads setting
+// (mode + live-call hours in their time zone), worked out at the moment of the call (liveRulesOf).
 export const AGENT_RULES = [
-  ['liveCalls', 'Not taking live calls'], ['app', "Can't be reached in the app"], ['hours', 'Outside their hours'],
+  ['liveCalls', 'Appointments only: book them'], ['app', "Can't be reached in the app"], ['hours', 'Outside their live-call hours: book them'],
   ['free', 'On another call'], ['notChecking', 'Already being checked'], ['licensed', 'Not licensed in this state'], ['notPaused', 'Paused'],
 ]
-export function agentCheck(agent, state) {
-  const a = { ...agent, licensed: licensedIn(agent, state) }
+export const liveRulesOf = (agent, nowMs = Date.now()) => {
+  const r = freshLeadRoute(agent, nowMs)
+  return { liveCalls: agent.mode === 'both', hours: r.key !== 'out_of_hours', route: r }
+}
+export function agentCheck(agent, state, nowMs = Date.now()) {
+  const live = agent.mode ? liveRulesOf(agent, nowMs) : {}
+  const a = { ...agent, liveCalls: live.liveCalls ?? agent.liveCalls, hours: live.hours ?? agent.hours, licensed: licensedIn(agent, state) }
   const fail = AGENT_RULES.find(([k]) => !a[k])
   const why = fail ? (fail[0] === 'licensed' && !state ? "Confirm the lead's state first" : fail[1]) : null
-  return { ok: !fail, why, bookOk: a.licensed }
+  return { ok: !fail, why, bookOk: a.licensed, ...(live.route ? { route: live.route } : {}) }
 }
 // P881 (N-C-22, Q61): the server gate is licence_allows(); this is the same rule on sample data. No state = no.
 export const licensedIn = (agent, state) => !!state && state !== 'NY' && (agent?.states || []).includes(state)
+// P889: mode + live-call hours (their own zone). Dana takes transfers every day 7 AM-9 PM her time, Priya weekdays
+// 9-5, Marcus is Appointments only.
+const EVERY_DAY = Object.fromEntries(DAYS.map(d => [d, { on: true, start: '7:00 AM', end: '9:00 PM' }]))
 export const SAMPLE_AGENTS = [
-  { id: 'ag-dana', name: 'Dana Walker', states: ['TX', 'OK'], liveCalls: true, app: true, hours: true, free: true, notChecking: true, notPaused: true },
-  { id: 'ag-priya', name: 'Priya Shah', states: ['FL', 'GA'], liveCalls: true, app: true, hours: true, free: false, notChecking: true, notPaused: true },
-  { id: 'ag-marcus', name: 'Marcus Reed', states: ['AZ', 'NV'], liveCalls: false, app: true, hours: true, free: true, notChecking: true, notPaused: true },
+  { id: 'ag-dana', name: 'Dana Walker', states: ['TX', 'OK'], mode: 'both', hours: EVERY_DAY, tz: 'America/Chicago', app: true, free: true, notChecking: true, notPaused: true },
+  { id: 'ag-priya', name: 'Priya Shah', states: ['FL', 'GA'], mode: 'both', hours: DEFAULT_LIVE_HOURS, tz: 'America/New_York', app: true, free: false, notChecking: true, notPaused: true },
+  { id: 'ag-marcus', name: 'Marcus Reed', states: ['AZ', 'NV'], mode: 'appts', hours: DEFAULT_LIVE_HOURS, tz: 'America/Phoenix', app: true, free: true, notChecking: true, notPaused: true },
 ]
 export const agentForState = state => SAMPLE_AGENTS.find(a => a.states.includes(state)) || SAMPLE_AGENTS[0]
 // N-C-03: Sent → Seen → Yes / No / No answer, on a 30 s timer the server keeps (sample: this browser).

@@ -20,7 +20,7 @@ import { AccountRows } from '../../components/shared/AccountRows'
 // Prompt 774 — More, the admin phone's fifth tab (mockup AdmMore.dc.html):
 // the profile ("Admin · owner"), then People (Users as a phone list),
 // Pipeline (view only), Messages, Payout settings (a sheet with desktop
-// Payouts' settings: your bank, the Stripe balance, pay per cancel, automatic
+// Payouts' settings: your bank, the Stripe balance, VA pay (hourly, P890), automatic
 // payouts), then Calling & texting (Not live until voice_live and sms_live),
 // Notifications, Theme (one tap), Settings, and Sign out. Desktop has no More
 // page (the sidebar holds all of this): it goes to the Overview.
@@ -57,7 +57,6 @@ function PayoutSettings({ onClose }) {
   const bank = bankText(mine)
   const live = !!settings.data?.payouts_live
   const autoOn = !settings.data?.payouts_paused
-  const rate = settings.data?.pay_per_cancel_cents
   return (
     <PhoneSheet label="Payout settings" onClose={onClose} head={<b className="ph-h2" style={{ fontSize: 20 }}>Payout settings</b>}>
       <div className="ph-info">
@@ -74,8 +73,8 @@ function PayoutSettings({ onClose }) {
         </div>
         <div className="ph-info-row">
           <span style={{ flex: 1, minWidth: 0 }}>
-            <span className="ph-info-k">Pay per cancel · applies to new cancels</span>
-            <span className="ph-info-v ph-mono">{rate == null ? '—' : money(rate)}</span>
+            <span className="ph-info-k">VA pay</span>
+            <span className="ph-info-v">Hourly, from clock in and out</span>
           </span>
           <Link to="/settings#pay" className="aph-givebtn" style={{ textDecoration: 'none' }}>Change</Link>
         </div>

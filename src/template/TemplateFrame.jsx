@@ -29,6 +29,7 @@ import { agentBooksCall } from './ful/data'
 import { SlotPick } from './SlotPick'
 import { useClientZone } from './useClientZone'
 import { AGENT_TZ } from './data'
+import { inLiveHours } from '../lib/leadSplit'
 import { agentSlots, clocksBetween, timeLines } from '../lib/callSlots'
 import { LiveClock } from './Clock'
 import { OhvaraMark } from '../components/ui/OhvaraMark'
@@ -296,7 +297,7 @@ function CreateMenu({ open, onClose, at, pick }) {
 }
 
 // The avatar menu: account pages, the Active switch, theme, sign out.
-function AccountMenu({ open, onClose, theme, setTheme, duty, setDuty }) {
+function AccountMenu({ open, onClose, theme, setTheme }) {
   const account = useAccount()
   const note = useNote()
   useEffect(() => {
@@ -315,9 +316,6 @@ function AccountMenu({ open, onClose, theme, setTheme, duty, setDuty }) {
       <button type="button" className="fx-scrim is-clear tp-bare" aria-label="Close menu" tabIndex={-1} onClick={onClose} />
       <section className="fx-menu" role="dialog" aria-label="Your account">
         <header className="fx-menu-h"><span className="fx-av">{initials(account.name).toUpperCase()}</span><span className="tp-grow"><b>{account.name}</b><small>Agent</small></span></header>
-        <button type="button" className="fx-mrow" role="switch" aria-checked={duty} onClick={() => setDuty(!duty)}>
-          <Radio size={17} aria-hidden="true" /><span className="tp-grow"><b>Active for live calls</b><small>{duty ? 'Calls ring your phone' : 'Off. We book callers instead'}</small></span><i className={`fx-sw${duty ? ' on' : ''}`} aria-hidden="true" />
-        </button>
         <button type="button" className="fx-mrow" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}<b className="tp-grow">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</b></button>
         <ViewToggle />
         <i className="fx-mline" />
@@ -368,7 +366,6 @@ export default function TemplateFrame() {
   const [theme, setTheme] = useTheme()
   const [panel, setPanel] = useState(null)
   const account = useAccount()
-  const note = useNote()
   const active = tabOf(pathname)
   const page = usePageSwap(layoutOf(pathname), outlet)
   // The head and the page class follow the page on screen, so they change once the old page has left.
@@ -376,7 +373,7 @@ export default function TemplateFrame() {
   const title = titleOfLayout(layout)
   const { data: threads } = useSampleThreads()
   const { data: settings } = useSampleSettings()
-  const { setDuty } = useSampleActions()
+  const { data: billing } = useSampleBilling()
   const stats = useHeadStats(layout)
   const status = useDataStatus()
   const source = useDataSource()
@@ -387,8 +384,9 @@ export default function TemplateFrame() {
   const close = useCallback(() => setPanel(null), [])
   const open = which => e => { wig.onClick(e); setPanel(which) }
   const flipTheme = e => { wig.onClick(e); setTheme(theme === 'dark' ? 'light' : 'dark') }
-  const duty = settings.duty
-  const flipDuty = e => { wig.onClick(e); setDuty(!duty); note(duty ? 'Off for live calls. We book callers on your calendar' : 'Active. Live calls ring your phone') }
+  // P890: no Active switch. Live transfers ring the agent inside their live-call hours (How you take leads, P889).
+  const take = billing.take
+  const duty = take?.mode === 'both' && inLiveHours(take.hours, take.tz)
   // The + menu opens beside the rail button on a desktop (a bottom sheet on a phone).
   const [menuAt, setMenuAt] = useState(null)
   const openCreate = e => {
@@ -456,7 +454,7 @@ export default function TemplateFrame() {
         <NavLink to={paths.messages()} className="fx-ri tp-wig" aria-label="Messages" data-tip="Messages" {...wig}><MessageSquare size={18} />{unread > 0 && <span className="fx-badge">{unread}</span>}</NavLink>
         <NavLink to={paths.calendar()} className="fx-ri tp-wig" aria-label="Calendar" data-tip="Calendar" {...wig}><CalendarDays size={18} /></NavLink>
         <i className="fx-hair" />
-        <button type="button" role="switch" aria-checked={duty} className={`fx-ri fx-duty tp-wig${duty ? ' on' : ''}`} aria-label="Active for live calls" data-tip={duty ? 'Active: calls ring you' : 'Off: we book callers'} {...wig} onClick={flipDuty}><Radio size={18} /><i aria-hidden="true" /></button>
+        <NavLink to={paths.billing()} className={`fx-ri fx-duty tp-wig${duty ? ' on' : ''}`} aria-label={duty ? 'Live transfers ring you now' : 'Live transfers off now: we book callers'} data-tip={duty ? 'Live transfers: on now' : 'Live transfers: off now'} {...wig}><Radio size={18} /><i aria-hidden="true" /></NavLink>
         <i className="fx-hair" />
         <button type="button" className="fx-ri tp-wig" aria-label="Get the phone app" aria-expanded={panel === 'app'} data-tip="Get the phone app" {...wig} onClick={open('app')}><Smartphone size={18} /></button>
         <button type="button" className="fx-ri tp-wig" aria-label="Help and support" aria-expanded={panel === 'help'} data-tip="Help and support" {...wig} onClick={open('help')}><CircleHelp size={18} /></button>
@@ -510,7 +508,7 @@ export default function TemplateFrame() {
       <Help open={panel === 'help'} onClose={close} onBug={() => setPanel('bug')} onTalk={() => setPanel('talk')} />
       <TalkDrawer open={panel === 'talk'} onClose={close} />
       <ReportBug open={panel === 'bug'} onClose={close} role="Agent" />
-      <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} duty={duty} setDuty={setDuty} />
+      <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} />
       <MoreBelow page={layout} />
     </div>
   )

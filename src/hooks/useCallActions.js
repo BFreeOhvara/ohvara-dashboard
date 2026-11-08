@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useMarkCancelled, useSaveCancelNotes, useStartCall, useEndCall, useSetRescheduleReason, usePassOnCancellation } from './usePolicies'
-import { invokeCallerId, FALLBACK_CODES } from '../lib/callerId'
 import { isLive, useNow } from '../lib/agentBookings'
 import { canStartCall, timeText, tooEarlyText, unlockAt } from '../lib/fulfillmentDay'
 import { usePortalPhone } from '../contexts/portalPhone'
@@ -18,29 +17,19 @@ export function useCallLock(p) {
 }
 
 // ── calling the client (Prompt 666) ─────────────────────────────────────────
-// "Call client" rings the rep's own phone first (Twilio), then connects them to
-// the client showing the agent's number. If Twilio can't place it, it says why
-// and offers the direct dial instead. Without the agent's caller ID it's a
-// plain tel: link. `onCall` fires once the call is under way (either path),
+// P890: agent caller ID is gone (agents call from their own phone), so there is
+// no bridged call showing the agent's number: "Call client" is a plain tel: link,
+// or the pop-up phone when calling in the portal is on. `onCall` fires once the call is under way (either path),
 // which is what puts the item on a live call.
 // Prompt 751: once calling in the portal is on (recovery_config.voice_live),
 // the button opens the pop-up phone instead (`portal`), for the rep who can
 // work the call.
-export function useClientCall(p, { canBridge, onCall }) {
+export function useClientCall(p, { onCall }) {
   const [state, setState] = useState({ phase: 'idle' })
   const phone = usePortalPhone()
   const portal = phone.voiceLive && !!onCall
-  async function bridge() {
-    setState({ phase: 'calling' })
-    try {
-      await invokeCallerId('start-agent-caller-id-call', { policy_id: p.id })
-      setState({ phase: 'ringing' })
-      onCall?.()
-    } catch (e) {
-      setState({ phase: FALLBACK_CODES.has(e.code) ? 'fallback' : 'error', message: e.message })
-    }
-  }
-  return { state, canBridge, bridge, onCall, portal, openPhone: () => phone.open(p) }
+  const bridge = () => setState({ phase: 'fallback' })
+  return { state, canBridge: false, bridge, onCall, portal, openPhone: () => phone.open(p) }
 }
 
 // The three ways out of a call, shared by the drawer and the page's focus card.

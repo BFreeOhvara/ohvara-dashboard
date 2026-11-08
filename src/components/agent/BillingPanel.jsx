@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
 import { Crown, CreditCard, Lock, Info, ArrowRight, Check, Loader2, CircleCheck } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { DISPLAY } from '../../lib/exportStyles'
@@ -10,7 +9,6 @@ import {
   isComped, shownStatus, renewsAt,
 } from '../../lib/billing'
 import { RenewalRing, BookingMeter, PlanCard, BillingFacts } from './AgentUI'
-import { PrepaidBalanceCard } from './PrepaidBalanceCard'
 import { ManageBilling, SubscribeView, PlanSwitchDialog } from './ManageBilling'
 
 // ── Billing (Prompt 673) ────────────────────────────────────────────────────
@@ -35,10 +33,8 @@ import { ManageBilling, SubscribeView, PlanSwitchDialog } from './ManageBilling'
 // Subscribe shows Stripe's Embedded Checkout in a third (?subscribe=<tier>),
 // and plan switches confirm in a dialog here. Stripe comes back to
 // ?session_id=… after checkout; the mount sync below picks the new plan up.
-// Roadmap Goal 3 — the prepaid lead balance (balance, top-up, price per lead,
-// history) sits in a 380px column beside the plan blocks on wide screens and
-// under them on a phone. Stripe sends a top-up back to ?topup=success or
-// ?topup=cancelled; the notice and a balance refetch happen here.
+// P890: the old prepaid balance top-up is gone (one way to prepay: P884's weekly
+// lead spend). Its column stays empty, so the grid collapses it (index.css :empty).
 // Prompt 741 — a comped account opens Manage billing read-only (no Stripe call);
 // Subscribe and plan switches still answer "Your account isn't billed."
 
@@ -68,9 +64,6 @@ export function BillingPanel({ profile }) {
   const [notice, setNotice] = useState('')
   const [switchTo, setSwitchTo] = useState(null) // tier for the plan-switch dialog
   const [params, setParams] = useSearchParams()
-  // 'success' | 'cancelled' when Stripe sent the agent back from a top-up.
-  const [topupNote] = useState(() => (['success', 'cancelled'].includes(params.get('topup')) ? params.get('topup') : ''))
-  const qc = useQueryClient()
   const location = useLocation()
   const navigate = useNavigate()
   const manage = params.get('manage') === '1'
@@ -110,19 +103,6 @@ export function BillingPanel({ profile }) {
           setParams({}, { replace: true })
         }
       })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Back from a Stripe top-up Checkout: say so, refetch the balance (the
-  // webhook may take a moment, so once more shortly after), clear the param.
-  useEffect(() => {
-    if (!topupNote) return
-    setParams(p => { const n = new URLSearchParams(p); n.delete('topup'); return n }, { replace: true })
-    if (topupNote !== 'success') return
-    const refetch = () => qc.invalidateQueries({ queryKey: ['prepaid-balance', profile.id] }) // PrepaidBalanceCard's key
-    refetch()
-    const t = setTimeout(refetch, 4000)
-    return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -188,18 +168,6 @@ export function BillingPanel({ profile }) {
               <div style={{ flex: 1 }}>{notice}</div>
             </div>
           )}
-          {topupNote === 'success' && (
-            <div role="status" className="ov-mb-notice is-ok">
-              <CircleCheck size={18} strokeWidth={2} aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }} />
-              <div style={{ flex: 1 }}>Payment received. Your balance updates in a moment.</div>
-            </div>
-          )}
-          {topupNote === 'cancelled' && (
-            <div role="status" className="ov-mb-notice is-info">
-              <Info size={18} strokeWidth={2} aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }} />
-              <div style={{ flex: 1 }}>Top-up cancelled. Nothing was charged.</div>
-            </div>
-          )}
         </div>
 
         <div className="ov-bill-col is-plan">
@@ -221,10 +189,7 @@ export function BillingPanel({ profile }) {
           )}
         </div>
 
-        {/* The prepaid top-up isn't the approved way to buy Leads, so a self-signup never sees it. */}
-        <div className="ov-bill-col is-pre">
-          {profile.signup_source !== 'self' && <PrepaidBalanceCard agentId={profile.id} />}
-        </div>
+        <div className="ov-bill-col is-pre" />
         <div className="ov-bill-facts"><BillingFacts /></div>
       </div>
       {switchTo && (

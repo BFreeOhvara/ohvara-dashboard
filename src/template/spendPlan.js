@@ -2,16 +2,14 @@
 // P875 decisions). Pure functions, no imports, so Billing, Setup, Results and the tests share one set of numbers.
 // Every price and rate here is a DRAFT (Brayden + Jordan set them after the pilot); nothing is charged.
 //
-// The model: the agent sets a daily spend on each lead type (booked appointments, live calls). 100% of it goes to
-// finding their leads. Pilot agents pay only that spend, prepaid weekly (unspent money rolls into next week; leads
-// stop when it runs out). Paid agents also pay a monthly membership tiered by total daily spend.
+// The model (P889, one lead product): the agent sets ONE daily spend and How you take leads (Appointments only, or
+// Appointments + live transfers with live-call hours). 100% of it goes to finding their leads. Pilot agents pay only
+// that spend, prepaid weekly (unspent money rolls into next week; leads stop when it runs out). Paid agents also pay
+// a monthly membership tiered by daily spend. The form/call split behind it is admin only (src/lib/leadSplit.js).
+// spend = { daily } dollars a day. The old per-type shape { appts, live } still reads (dailyTotal adds them up).
 
 import { DRAFT } from '../lib/priceBook.js'
-
-export const LEAD_TYPES = [
-  { key: 'appts', label: 'Booked appointments', short: 'Appointments', unit: 'appointments' },
-  { key: 'live', label: 'Live calls', short: 'Live calls', unit: 'live calls' },
-]
+import { effectiveSplit } from '../lib/leadSplit.js'
 
 // Planning estimates (drafts, replaced by pilot data).
 export const EST = {
@@ -27,7 +25,7 @@ export const PAID_MIN_DAILY = DRAFT.paidMinDaily
 export const SLIDER = { min: 0, max: 300, step: 5 }
 export const RECOMMENDED = 'Most full-time agents spend $100 to $150 a day. Starting out or part-time: $50 to $75.'
 
-export const dailyTotal = spend => (spend?.appts || 0) + (spend?.live || 0)
+export const dailyTotal = spend => (spend?.daily != null ? Number(spend.daily) || 0 : (spend?.appts || 0) + (spend?.live || 0))
 export const weeklyTotal = spend => dailyTotal(spend) * 7
 
 export function tierOf(daily) {
@@ -39,10 +37,12 @@ export function tierOf(daily) {
 export const bandShare = v => Math.max(0, Math.min(1, v / SLIDER.max))
 
 // What a daily spend buys in a week, on the planning estimates. Low/high is ±25% around the estimate, whole numbers.
+// mode = how the agent takes leads; transfer agents are estimated on the starting split (agents never see it).
 const band = x => ({ low: Math.max(0, Math.floor(x * 0.75)), high: Math.ceil(x * 1.25), mid: x })
-export function expected(spend) {
-  const a = (spend?.appts || 0) * 7
-  const l = (spend?.live || 0) * 7
+export function expected(spend, mode) {
+  const split = spend?.daily != null ? effectiveSplit({ daily: spend.daily, mode: mode || 'both' }) : { form: spend?.appts || 0, call: spend?.live || 0 }
+  const a = split.form * 7
+  const l = split.call * 7
   const leads = a / EST.appts.perLead
   const booked = leads * EST.appts.booked
   const calls = l / EST.live.perCall
@@ -56,13 +56,13 @@ export function expected(spend) {
 export const rangeWords = r => (r.high === 0 ? 'none' : r.low === r.high ? `about ${r.high}` : `${r.low} to ${r.high}`)
 
 // The appointment calendar has to have room: about 1.5 open 30-minute slots a week for each expected booking.
-export const slotsNeeded = spend => Math.ceil(expected(spend).appts.booked.high * 1.5)
+export const slotsNeeded = (spend, mode) => Math.ceil(expected(spend, mode).appts.booked.high * 1.5)
 export function openSlotsPerWeek(week) {
   // week: { Mon: { on, start, end } ... } with 'H:MM AM' clocks.
   const min = c => { const m = /(\d+):(\d+)\s*(AM|PM)/.exec(c || ''); return m ? ((Number(m[1]) % 12) + (m[3] === 'PM' ? 12 : 0)) * 60 + Number(m[2]) : 0 }
   return Object.values(week || {}).reduce((n, d) => n + (d.on ? Math.max(0, Math.floor((min(d.end) - min(d.start)) / 30)) : 0), 0)
 }
-export const roomFor = (spend, week, booked = 0) => openSlotsPerWeek(week) - booked >= slotsNeeded(spend)
+export const roomFor = (spend, week, booked = 0, mode) => openSlotsPerWeek(week) - booked >= slotsNeeded(spend, mode)
 
 // The monthly bill. Pilot: lead spend only. Paid: membership + lead spend. Servicing only: its own price.
 export function monthlyBill({ plan, spend, products = 'both' }) {
@@ -73,19 +73,28 @@ export function monthlyBill({ plan, spend, products = 'both' }) {
   return { leadSpend, membership: tier.monthly, total: tier.monthly == null ? null : leadSpend + tier.monthly, tier }
 }
 
-// Paid plans: lead spend can't go under the daily minimum (a type can be off at $0).
+// Paid plans: lead spend can't go under the daily minimum.
 export const spendOk = (plan, spend) => plan === 'pilot' || dailyTotal(spend) >= PAID_MIN_DAILY
 
 // A spend change starts at midnight on the agent's clock; a tier change starts with the next bill.
 export const startsText = nextDay => `Starts ${nextDay} at 12:00 AM your time`
 
-// What each lead type bought (pilot billing and Results). Costs are spend divided by what it bought; null when none.
+// What the spend bought (Billing and Results), one line for the agent: booked and transferred are separate numbers,
+// then shows and sales. Costs are spend divided by what it bought; null when none. Old per-type rows add up.
 const per = (spent, n) => (n ? spent / n : null)
-export function bought(row) {
-  if (row.type === 'appts') {
-    return { ...row, perBooked: per(row.spent, row.booked), perSale: per(row.spent, row.sold), showRate: row.booked ? row.showed / row.booked : null, closeRate: row.showed ? row.sold / row.showed : null }
+const KEYS = ['spent', 'leads', 'reached', 'booked', 'offered', 'transferred', 'showed', 'sold', 'premium']
+export function boughtTotal(rows) {
+  const list = Array.isArray(rows) ? rows : [rows]
+  return KEYS.reduce((o, k) => ({ ...o, [k]: list.reduce((t, r) => t + (Number(r?.[k] ?? (k === 'transferred' ? r?.delivered : k === 'leads' ? r?.calls : 0)) || 0), 0) }), {})
+}
+export function bought(rows) {
+  const r = boughtTotal(rows)
+  const talked = r.showed + r.transferred
+  return {
+    ...r, talked,
+    perLead: per(r.spent, r.leads), perHandled: per(r.spent, r.booked + r.transferred), perSale: per(r.spent, r.sold),
+    showRate: r.booked ? r.showed / r.booked : null, pickup: r.offered ? r.transferred / r.offered : null, closeRate: talked ? r.sold / talked : null,
   }
-  return { ...row, perDelivered: per(row.spent, row.delivered), perSale: per(row.spent, row.sold), pickup: row.offered ? row.delivered / row.offered : null, closeRate: row.delivered ? row.sold / row.delivered : null }
 }
 
 // The optional pilot VA cost line (admin turns it on per agent): team hours on this agent × the hourly rate, at cost.

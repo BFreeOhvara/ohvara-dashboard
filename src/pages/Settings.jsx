@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import {
   User, ShieldCheck, SlidersHorizontal, PhoneForwarded, Wrench, Building2, Mail, KeyRound, Smartphone, LogOut, Moon, Sun,
-  Check, Globe, Video, ToggleRight, PhoneCall, ArrowLeft, ArrowRight, X, Copy, Loader2, Trash2, Bell,
+  Check, Globe, Video, ToggleRight, ArrowLeft, ArrowRight, X, Copy, Loader2, Trash2, Bell,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -21,7 +21,6 @@ import { shownStatus } from '../lib/billing'
 import { SELECTABLE_TIMEZONES, DEFAULT_TIMEZONE } from '../lib/timezones'
 import { roleLabel } from '../lib/roleLabels'
 import { verifyPassword } from '../lib/verifyPassword'
-import { invokeCallerId, formatUsPhone } from '../lib/callerId'
 import { MONO, DISPLAY } from '../lib/exportStyles'
 import { Switch } from '../components/ui/Switch'
 import { Avatar } from '../components/ui/Avatar'
@@ -30,7 +29,6 @@ import {
 } from '../components/agent/AgentUI'
 import { ProfilePanel } from './Profile'
 import { TextFollowUpPanel } from '../components/settings/TextFollowUpPanel'
-import { DutyCard } from '../components/settings/DutyCard'
 import { AgentAvailabilityCards } from '../components/settings/AgentAvailabilityCards'
 import { FulfillmentPayAdminPanel } from '../components/fulfillment/GettingPaid'
 import Carriers from './admin/Carriers'
@@ -58,7 +56,7 @@ const SECTIONS = [
   { key: 'preferences', label: 'Preferences',        sub: 'Theme and time zone',          icon: SlidersHorizontal, lede: 'How the portal looks and keeps time for you.' },
   // Prompt 767 — the bell panel's "Notification settings".
   { key: 'notifications', label: 'Notifications',    sub: 'Email and phone alerts',       icon: Bell,              lede: 'Everything shows in the bell. Choose what also comes by email or to your phone.' },
-  { key: 'contact',     label: 'Client contact',     sub: 'Hours, live-transfer phone, caller ID, texts', icon: PhoneForwarded,    lede: 'How Fulfillment reaches your clients for you.', roles: ['agent', 'admin'] },
+  { key: 'contact',     label: 'Client contact',     sub: 'Hours, live-transfer phone, texts', icon: PhoneForwarded,    lede: 'How Fulfillment reaches your clients for you.', roles: ['agent', 'admin'] },
   { key: 'team',        label: 'Team tools',         sub: 'Live Room, pay, App Review', icon: Wrench,           lede: 'Company-wide settings only admins can change.', roles: ['admin'] },
   // Prompt 758 — Carrier hours left the admin sidebar and lives here.
   { key: 'carriers',    label: 'Carrier hours',      sub: 'When each carrier takes calls', icon: Building2,        lede: 'Service hours set the bookable times in Submit.', roles: ['admin'] },
@@ -165,7 +163,7 @@ export default function Settings() {
         {open === 'security'    && <SecuritySection profile={profile} />}
         {open === 'preferences' && <PreferencesSection profile={profile} />}
         {open === 'notifications' && <NotificationsSection profile={profile} />}
-        {open === 'contact'     && <>{profile.role === 'agent' && <><DutyCard /><AgentAvailabilityCards /></>}<CallerIdPanel profile={profile} /><TextFollowUpPanel profile={profile} /></>}
+        {open === 'contact'     && <>{profile.role === 'agent' && <AgentAvailabilityCards />}<TextFollowUpPanel profile={profile} /></>}
         {open === 'team'        && <><LiveRoomCard /><SubmitLiveCard /><FulfillmentPayAdminPanel /><AppReviewLoginsCard /></>}
         {open === 'carriers'    && <Carriers />}
       </div>
@@ -869,191 +867,6 @@ function TimeZoneCard({ profile }) {
           <Switch checked={!!profile.weekend_leads_enabled} onChange={toggleWeekendLeads} disabled={weekendPending} />
         </div>
       )}
-    </SettingsCard>
-  )
-}
-
-// ── Client contact: Caller ID (Prompt 666, migration 108) ───────────────────
-// The agent verifies their own cell with Twilio once; after that, when
-// Fulfillment calls one of their clients about a cancellation, the client sees
-// the agent's number (one they already know) and Fulfillment says they're
-// calling on the agent's behalf. Verification is Twilio's own: it calls the
-// number and the agent keys in the code shown here, so nobody can borrow a
-// number they don't hold. The switch is the agent's to flip any time.
-// P720 restyle only: same RPCs, polling and state.
-const POLL_MS = 4000
-const POLL_LIMIT_MS = 3 * 60e3
-
-function CallerIdPanel({ profile }) {
-  const { refreshProfile } = useAuth()
-  const update = useUpdateOwnProfile()
-  const [configured, setConfigured] = useState(null)
-  const [phone, setPhone] = useState(formatUsPhone(profile.phone) || '')
-  const [changing, setChanging] = useState(false)
-  const [pending, setPending] = useState(null)        // { code, phone, startedAt }
-  const [timedOut, setTimedOut] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const [confirmRemove, setConfirmRemove] = useState(false)
-  const pollRef = useRef(null)
-  // refreshProfile isn't memoized in useAuth; read it through a ref so the
-  // polling interval isn't torn down and rebuilt on every render.
-  const refreshRef = useRef(refreshProfile)
-  useEffect(() => { refreshRef.current = refreshProfile })
-
-  const verified = !!(profile.caller_id_verified_at && profile.caller_id_number)
-  const digits = phone.replace(/\D/g, '')
-
-  useEffect(() => {
-    invokeCallerId('agent-caller-id', { action: 'status' })
-      .then(d => setConfigured(!!d.configured))
-      .catch(() => setConfigured(false))
-  }, [])
-
-  useEffect(() => {
-    if (!pending) return
-    pollRef.current = setInterval(async () => {
-      if (Date.now() - pending.startedAt > POLL_LIMIT_MS) {
-        clearInterval(pollRef.current)
-        setTimedOut(true)
-        return
-      }
-      try {
-        const d = await invokeCallerId('agent-caller-id', { action: 'check' })
-        if (d.verified) {
-          clearInterval(pollRef.current)
-          await refreshRef.current()
-          setPending(null)
-          setChanging(false)
-        }
-      } catch { /* keep polling; one blip shouldn't end the flow */ }
-    }, POLL_MS)
-    return () => clearInterval(pollRef.current)
-  }, [pending])
-
-  async function start() {
-    setError(''); setTimedOut(false); setBusy(true)
-    try {
-      const d = await invokeCallerId('agent-caller-id', { action: 'start', phone })
-      setPending({ code: d.validation_code, phone: d.phone, startedAt: Date.now() })
-    } catch (e) {
-      setError(e.message)
-    }
-    setBusy(false)
-  }
-
-  function cancelPending() {
-    clearInterval(pollRef.current)
-    setPending(null); setTimedOut(false)
-  }
-
-  async function toggle(next) {
-    await update.mutateAsync({ profileId: profile.id, updates: { caller_id_enabled: next } })
-    await refreshProfile()
-  }
-
-  async function remove() {
-    setError(''); setBusy(true)
-    try {
-      await invokeCallerId('agent-caller-id', { action: 'remove' })
-      await refreshProfile()
-      setConfirmRemove(false)
-    } catch (e) {
-      setError(e.message)
-    }
-    setBusy(false)
-  }
-
-  const on = verified && !!profile.caller_id_enabled
-  return (
-    <SettingsCard icon={PhoneCall} title="Caller ID"
-      sub="When Fulfillment calls your clients, they see your number, one they already know. Fulfillment always says they're calling on your behalf."
-      right={configured !== null && <SettingsChip tone={on ? 'on' : 'off'}>{on ? 'On' : 'Off'}</SettingsChip>}>
-
-      {configured === false && !verified && (
-        <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ov-mute)' }}>
-          Calling isn't connected yet, so there's nothing to verify. This switches on once the phone account is set up.
-        </p>
-      )}
-
-      {/* Verified: the number + the agent's kill switch */}
-      {verified && !changing && !pending && (
-        <>
-          <div className="ov-box" style={{ ...box, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ov-hi)', fontFamily: MONO }}>{formatUsPhone(profile.caller_id_number)}</span>
-            <SettingsChip tone="on">Verified</SettingsChip>
-            <span style={{ flex: 1 }} />
-            <button type="button" className="ov-set-link" onClick={() => { setChanging(true); setPhone('') }}>Change number</button>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>Show my number on Fulfillment's calls</p>
-              <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--ov-mute)' }}>
-                {profile.caller_id_enabled
-                  ? "On: Fulfillment's calls to your clients show this number"
-                  : 'Off: Fulfillment calls from their own number'}
-              </p>
-            </div>
-            <Switch checked={!!profile.caller_id_enabled} onChange={toggle} disabled={update.isPending} label="Show my number on Fulfillment's calls" />
-          </div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-            {confirmRemove ? (
-              <>
-                <span style={{ fontSize: 13.5, color: 'var(--ov-soft)' }}>Remove this number?</span>
-                <button type="button" onClick={remove} disabled={busy} className="ov-set-off" style={{ color: 'var(--danger)' }}>Remove</button>
-                <button type="button" onClick={() => setConfirmRemove(false)} className="ov-set-link">Keep</button>
-              </>
-            ) : (
-              <button type="button" onClick={() => setConfirmRemove(true)} className="ov-set-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <Trash2 size={13} /> Remove number
-              </button>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* Not verified yet, or changing: enter a number */}
-      {configured && (!verified || changing) && !pending && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div className="ov-set-2">
-            <OvField label="Your cell number" value={phone} onChange={e => setPhone(e.target.value)} placeholder="(602) 555-0143" inputMode="tel" />
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" className="ov-buy ov-set-btn" onClick={start} disabled={busy || digits.length < 10}>
-                <Spin on={busy}>Verify number</Spin>
-              </button>
-              {changing && <button type="button" className="ov-ghost ov-set-btn" onClick={() => setChanging(false)}>Cancel</button>}
-            </div>
-          </div>
-          <p style={{ margin: 0, fontSize: 13, color: 'var(--ov-mute)' }}>We'll call this number once. Keep your phone handy.</p>
-        </div>
-      )}
-
-      {/* Mid-verification: the code Twilio's call will ask for */}
-      {pending && (
-        <div style={{ padding: '16px 18px', borderRadius: 14, background: 'var(--ov-st-booked-tint)', boxShadow: 'inset 0 0 0 1px var(--ov-st-booked-edge)' }}>
-          <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ov-soft)' }}>
-            Calling <span style={{ fontFamily: MONO }}>{formatUsPhone(pending.phone)}</span> now. Answer, and when asked, key in:
-          </p>
-          <p style={{ margin: '10px 0', fontSize: 30, fontWeight: 600, letterSpacing: 6, color: 'var(--ov-hi)', fontFamily: MONO }}>
-            {pending.code}
-          </p>
-          {timedOut ? (
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 13.5, color: 'var(--ov-st-needs)' }}>Didn't hear back from that call.</span>
-              <button type="button" onClick={start} disabled={busy} className="ov-ghost ov-set-btn" style={{ height: 40 }}>Call me again</button>
-              <button type="button" onClick={cancelPending} className="ov-set-link">Cancel</button>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <Loader2 size={14} className="animate-spin" style={{ color: 'var(--ov-st-booked)', flexShrink: 0 }} />
-              <span style={{ fontSize: 13.5, color: 'var(--ov-soft)', flex: 1 }}>Waiting for you to enter the code…</span>
-              <button type="button" onClick={cancelPending} className="ov-set-link">Cancel</button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {error && <p style={errText}>{error}</p>}
     </SettingsCard>
   )
 }

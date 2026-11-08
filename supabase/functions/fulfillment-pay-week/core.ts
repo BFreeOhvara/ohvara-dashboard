@@ -1,6 +1,10 @@
 // fulfillment-pay-week — Prompt 764, the automatic Monday pay run. Logic
 // only; index.ts wires Deno (secrets, the service-role store, Stripe, Resend).
 //
+// P890: OFF. VA pay is hourly ($8/hr) from timesheets, not per cancel. handle()
+// answers every request with { off: true } and pays nothing; the cron job is
+// unscheduled in p890_cleanup.sql. runPayday stays below (tested) for history.
+//
 // Fulfillment reps are paid per verified cancel (migration 145). Every Monday
 // at 8 AM Central pg_cron calls this; it pays each rep the sum of their newly
 // verified cancels through Stripe Connect. Nobody approves (Brayden, Oct 14):
@@ -200,9 +204,12 @@ export async function runPayday(store: Store, stripe: Stripe, env: Env, now = ne
   return end('done', { ...t, needed_cents: needed })
 }
 
+export const PAY_PER_CANCEL_ON = false
+
 export async function handle(req: Request, store: Store, stripe: Stripe, env: Env, now?: Date): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
+  if (!PAY_PER_CANCEL_ON) return json({ ok: true, off: true, note: 'VA pay is hourly from timesheets. The per-cancel pay run is off.' })
   const secret = req.headers.get('x-ohvara-cron')
   if (!secret || !(await store.cronOk(secret))) {
     return json({ error: 'Payouts run by themselves every Monday at 8 AM Central. There is nothing to approve.', code: 'automatic' }, 403)

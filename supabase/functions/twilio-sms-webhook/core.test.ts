@@ -114,7 +114,12 @@ test('sms_set_opt failing still returns 500 so Twilio retries (unchanged)', asyn
 test('a normal reply is saved with the matched lead_id', async () => {
   const db = fakeDb({ leads: { [PHONE]: LEAD } })
   await assertEmptyTwiml(await handle(await signed(inbound()), db.deps))
-  assert.deepEqual(db.calls, [{ fn: 'lead_sms_match', args: { p_phone: PHONE } }])
+  assert.equal(db.calls[0].fn, 'lead_sms_match')
+  // P890: a reply we can't read becomes a call task (VA callback), no reply inbox.
+  assert.equal(db.calls[1].fn, 'route_enqueue')
+  assert.equal(db.calls[1].args.p_kind, 'callback')
+  assert.equal(db.calls[1].args.p_lead, LEAD)
+  assert.equal(db.calls.length, 2)
   assert.deepEqual(db.rows, [{
     twilio_sid: 'SM00000000000000000000000000000001', from_phone: PHONE, body: 'Yes call me after 5', lead_id: LEAD,
   }])
@@ -132,6 +137,7 @@ test('HELP is saved as a reply (Twilio answers it), with no opt change', async (
   const db = fakeDb({ leads: { [PHONE]: LEAD } })
   await assertEmptyTwiml(await handle(await signed(inbound({ Body: 'HELP' })), db.deps))
   assert.ok(!db.calls.some(c => c.fn === 'sms_set_opt'))
+  assert.ok(!db.calls.some(c => c.fn === 'route_enqueue'))
   assert.equal(db.rows.length, 1)
   assert.equal(db.rows[0].body, 'HELP')
 })
@@ -141,6 +147,7 @@ test('a duplicate MessageSid (Twilio retry) is saved once and still answered wit
   await assertEmptyTwiml(await handle(await signed(inbound()), db.deps))
   await assertEmptyTwiml(await handle(await signed(inbound()), db.deps))
   assert.equal(db.rows.length, 1)
+  assert.equal(db.calls.filter(c => c.fn === 'route_enqueue').length, 1)
   assert.deepEqual(db.logs, [])
 })
 

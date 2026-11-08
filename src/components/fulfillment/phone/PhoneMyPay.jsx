@@ -1,21 +1,12 @@
-import { useState } from 'react'
 import { Landmark, CreditCard, TriangleAlert, Plus } from 'lucide-react'
 import { fmtCents, fmtPeriod } from '../../../lib/payPeriod'
-import { cancelTotals, cancelView, dayLabel, destination, initials, paidThisMonth, payDayOf, payoutRow, timeLabel } from '../../../lib/myPay'
+import { destination, paidThisMonth, payDayOf, payoutRow } from '../../../lib/myPay'
 
-// Prompt 773 — My pay on a rep's phone (mockup FulPay.dc.html): the week's
-// earnings (verified + being checked, "N cancels × $rate"), when and where
-// it's paid (or "Add a bank to get paid" with Connect a bank), the
-// three-part filter card (Verified / Checking / Needs a listen; tap again
-// clears) over Your cancels, then Payouts. Fed by pages/fulfillment/MyPay.jsx
-// with the same data as the desktop view; a rep sees statuses only.
+// My pay on a rep's phone. P890: pay is hourly, from clock in and out, paid
+// every Monday; no per-cancel amounts or statuses. Shows the pay line (and the
+// rep's hourly rate when known), when and where it's paid (or "Add a bank to
+// get paid" with Connect a bank), then Payouts. Fed by pages/fulfillment/MyPay.jsx.
 
-const FILTERS = [
-  { kind: 'verified', label: 'Verified', color: 'var(--ph-pay-verified)' },
-  { kind: 'checking', label: 'Checking', color: 'var(--ph-pay-checking)' },
-  { kind: 'listen', label: 'Needs a listen', color: 'var(--ph-pay-listen)' },
-]
-const COLOR = { ...Object.fromEntries(FILTERS.map(f => [f.kind, f.color])), off: 'var(--ov-mute)' }
 const whole = cents => (cents % 100 ? fmtCents(cents) : fmtCents(cents).replace(/\.00$/, ''))
 const payDay = d => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 const STATUS_WORD = { 'On hold': 'Held' }
@@ -41,7 +32,7 @@ function BankLine({ status, account, loading, period, onConnect, onSettings }) {
         <span className="ph-pay-bank-ic is-warn"><TriangleAlert size={19} strokeWidth={2} aria-hidden="true" /></span>
         <span style={{ flex: 1, minWidth: 0 }}>
           <b>{fix ? 'Stripe needs something from you' : 'Add a bank to get paid'}</b>
-          <span>Your verified cancels wait here until you do</span>
+          <span>Your pay waits here until you do</span>
         </span>
       </div>
       <button type="button" className="ph-pay-connect" onClick={fix ? onSettings : onConnect}>
@@ -52,16 +43,7 @@ function BankLine({ status, account, loading, period, onConnect, onSettings }) {
   )
 }
 
-export function PhoneMyPay({ period, now, weekCancels = [], rate = 1000, payouts = [], account = null, status = 'none', accountLoading = false, onConnect, onSettings }) {
-  const [filter, setFilter] = useState(null)
-  const t = cancelTotals(weekCancels)
-  const counted = t.verified + t.checking
-  const [dollars, cents] = fmtCents(t.earnedCents).split('.')
-  const rows = weekCancels
-    .map(c => ({ c, v: cancelView(c) }))
-    .sort((a, b) => b.c.logged_at.localeCompare(a.c.logged_at))
-  const shown = filter ? rows.filter(r => r.v.kind === filter) : rows
-  const count = { verified: t.verified, checking: t.checking, listen: t.listen }
+export function PhoneMyPay({ period, now, hourlyCents = null, payouts = [], account = null, status = 'none', accountLoading = false, onConnect, onSettings }) {
   const month = paidThisMonth(payouts, now)
 
   return (
@@ -71,54 +53,11 @@ export function PhoneMyPay({ period, now, weekCancels = [], rate = 1000, payouts
         <span style={{ fontSize: 14, color: 'var(--ov-mute)' }}>This week · {fmtPeriod(period)}</span>
       </div>
 
-      <section className="ov-hero ph-pay-hero" aria-label="This week's pay">
-        <div className="ph-pay-k">You've earned this week</div>
-        <div className="ph-pay-amt" data-testid="ph-pay-amount"><span>{dollars}</span><small>.{cents}</small></div>
-        <div className="ph-pay-calc">{counted} cancel{counted === 1 ? '' : 's'} × {whole(rate)}</div>
+      <section className="ov-hero ph-pay-hero" aria-label="How you're paid">
+        <div className="ph-pay-k">You're paid by the hour, from clock in and out. Pay goes out every Monday.</div>
+        {hourlyCents != null && <div className="ph-pay-calc" data-testid="ph-pay-amount"><span className="ph-mono">{whole(hourlyCents)}</span> an hour</div>}
         <div className="ph-pay-rule" />
         <BankLine status={status} account={account} loading={accountLoading} period={period} onConnect={onConnect} onSettings={onSettings} />
-      </section>
-
-      <div className="ov-card ph-seg ph-seg-3" role="group" aria-label="Filter cancels">
-        {FILTERS.map(f => {
-          const on = filter === f.kind
-          return (
-            <button key={f.kind} type="button" className={`ph-seg-btn${on ? ' is-on' : ''}`} aria-pressed={on} onClick={() => setFilter(on ? null : f.kind)}>
-              <span className="ph-seg-label" style={{ color: f.color }}>{f.label}</span>
-              <span className="ph-seg-num">{count[f.kind]}</span>
-              <span className="ph-seg-bar" style={{ background: f.color }} aria-hidden="true" />
-            </button>
-          )
-        })}
-      </div>
-
-      <section aria-labelledby="ph-cancels">
-        <div className="ph-sechead">
-          <h2 id="ph-cancels" className="ph-h2">Your cancels</h2>
-          <span style={{ flex: 1 }} />
-          <span className="ph-mute">{whole(rate)} each</span>
-        </div>
-        <div className="ov-card ph-card">
-          {shown.length === 0 ? (
-            <div className="ph-empty">{rows.length ? 'Nothing here this week.' : 'No cancels this week yet. Each one you log shows here.'}</div>
-          ) : shown.map(({ c, v }) => {
-            const at = new Date(c.logged_at)
-            const listen = v.kind === 'listen'
-            return (
-              <div key={c.id} className={`ph-row ph-pay-row${listen ? ' is-listen' : ''}`} style={{ cursor: 'default', minHeight: 68 }}>
-                <span className="ph-ini" style={{ background: 'var(--ov-data-a-tint)', color: 'var(--ov-data-a)' }} aria-hidden="true">{initials(c.client_name)}</span>
-                <span className="ph-row-main">
-                  <span className="ph-row-title" style={{ fontSize: 15 }}>{c.client_name || 'Client'}</span>
-                  <span className="ph-row-sub">{c.carrier_name || 'Carrier'} · {dayLabel(at, now)} {timeLabel(at)}</span>
-                </span>
-                <span className="ph-row-end">
-                  <b style={{ color: COLOR[v.kind] }}>{v.label}</b>
-                  <span className={`ph-pay-amt-sm${v.kind === 'verified' ? ' is-on' : ''}`}>{listen ? 'On hold' : v.kind === 'off' ? 'Not paid' : fmtCents(c.amount_cents)}</span>
-                </span>
-              </div>
-            )
-          })}
-        </div>
       </section>
 
       <section aria-labelledby="ph-payouts">
@@ -128,7 +67,7 @@ export function PhoneMyPay({ period, now, weekCancels = [], rate = 1000, payouts
           <span className="ph-mute"><span className="ph-mono">{whole(month)}</span> this month</span>
         </div>
         <div className="ov-card ph-card">
-          {payouts.length === 0 ? <div className="ph-empty">Your first payout shows here after your first verified cancel.</div> : payouts.slice(0, 6).map(p => {
+          {payouts.length === 0 ? <div className="ph-empty">Your first payout shows here after your first pay day.</div> : payouts.slice(0, 6).map(p => {
             const r = payoutRow(p, now, account)
             return (
               <div key={r.id} className="ph-row" style={{ cursor: 'default', minHeight: 64 }}>

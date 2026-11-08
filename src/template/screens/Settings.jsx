@@ -5,12 +5,12 @@ import { useSampleSettings, useSampleActions, useSampleBilling, useSampleClients
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
 import { Drawer, Field, Seg, Switch, Chip, PillTabs, useNote, useAccount, initials } from '../kit'
 import { TimeZoneSelect } from '../Clock'
-import { CallerIdCard } from '../CallerId'
 import { PhoneInput } from '../PhoneInput'
 import { CountUp, usd } from '../motion'
 import { paths } from '../paths'
 import { dailyTotal, rangeWords, tierOf } from '../spendPlan'
-import { BookedMeter } from '../PlanBuilder'
+import { BookedMeter, TakeLeads } from '../PlanBuilder'
+import { inLiveHours, takeOk } from '../../lib/leadSplit'
 import { HoursEditor } from '../Hours'
 import { LicenceCard } from '../Licence'
 import { PaymentIntakeCard } from '../PaymentIntake'
@@ -34,8 +34,9 @@ function Head({ title, sub }) {
 }
 
 // Left: who you are, this week's budget and how many it has booked, three numbers, what's next.
-function ProfileCard({ profile, duty }) {
+function ProfileCard({ profile }) {
   const { data: billing } = useSampleBilling()
+  const duty = billing.take?.mode === 'both' && inLiveHours(billing.take.hours, billing.take.tz)
   const { data: clients } = useSampleClients()
   const { data: leads } = useSampleLeads()
   const { data: ov } = useSampleOverview()
@@ -47,7 +48,7 @@ function ProfileCard({ profile, duty }) {
     <aside className="fx-tile fx-prof" aria-label="Your profile">
       <div className="fx-prof-av" aria-hidden="true">{initials(profile.name).toUpperCase()}<i className={duty ? 'on' : ''} /></div>
       <h2>{profile.name}</h2>
-      <p>Agent · {duty ? 'Active for live calls' : 'Off for live calls'}</p>
+      <p>Agent · {billing.take?.mode !== 'both' ? 'Appointments only' : duty ? 'Live transfers on now' : 'Live transfers off now'}</p>
       <span className="fx-prof-mail"><Mail size={13} aria-hidden="true" />{profile.email}</span>
       <div className="fx-usage is-teal">
         <div className="tp-row tp-between"><b>Lead spend {money(dailyTotal(billing.spend))} a day</b><b className="fx-usage-n"><CountUp value={billing.booked} /></b></div>
@@ -71,7 +72,7 @@ function ProfileCard({ profile, duty }) {
 export default function Settings() {
   const { data: s } = useSampleSettings()
   const { data: billing } = useSampleBilling()
-  const { setNotification, setDuty, saveSettings, saveWeek } = useSampleActions()
+  const { setNotification, setTake, saveSettings, saveWeek } = useSampleActions()
   const [saved, saveTheme] = useThemePref()
   const note = useNote()
   const account = useAccount()
@@ -83,7 +84,7 @@ export default function Settings() {
   const [pDraft, setPDraft] = useState(s.profile)
   const [tz, setTz] = useState(s.timeZone)
   const [alerts, setAlerts] = useState(s.notifications)
-  const [cDraft, setCDraft] = useState({ duty: s.duty, week: s.week })
+  const [cDraft, setCDraft] = useState({ take: billing.take, week: s.week })
   const [bill, setBill] = useState({ email: s.profile.email, receipts: true })
   const [bDraft, setBDraft] = useState(bill)
   const [look, setLook] = useState(saved)
@@ -97,7 +98,7 @@ export default function Settings() {
 
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
   const alertsDirty = !same(alerts, s.notifications)
-  const callsSaved = { duty: s.duty, week: s.week }
+  const callsSaved = { take: billing.take, week: s.week }
   const signOut = () => (account.live ? account.signOut() : note('Sign out works once you sign in for real'))
   const DeleteDialog = account.DeleteDialog
   const flip = (key, field, v) => setAlerts(alerts.map(n => (n.key === key ? { ...n, [field]: v } : n)))
@@ -107,7 +108,7 @@ export default function Settings() {
     <div className="tp-page fx-set">
       {/* P843: Sign out is its own small box under the profile card (same real sign-out as before) */}
       <div className="fx-set-side">
-        <ProfileCard profile={profile} duty={s.duty} />
+        <ProfileCard profile={profile} />
         <button type="button" className="fx-tile fx-signout" onClick={signOut}><LogOut size={16} aria-hidden="true" />Sign out</button>
       </div>
 
@@ -154,13 +155,12 @@ export default function Settings() {
 
           {tab === 'calls' && <>
             <Head title="Hours and calls" sub="When you're active, live calls ring your phone. When you're off, we book callers on your calendar inside these hours." />
-            <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Active for live calls</b><p className="tp-sub">{cDraft.duty ? 'Calls ring your phone' : 'Off. We book callers instead'}</p></div><Switch on={cDraft.duty} label="Active for live calls" onChange={v => setCDraft({ ...cDraft, duty: v })} /></div>
+            {/* P890: live-call hours replace the Active switch. Inside them live transfers ring you; outside, we book. */}
+            <TakeLeads take={cDraft.take} onTake={take => setCDraft({ ...cDraft, take })} id="set-take" />
             <HoursEditor week={cDraft.week} onChange={week => setCDraft({ ...cDraft, week })} tz={s.timeZone} />
-            {/* P847: optional caller ID (saves on its own: each step is its own action) */}
-            <CallerIdCard value={s.callerId} defaultPhone={profile.phone} onSave={callerId => saveSettings({ callerId })} />
             <div className="fx-form-row"><div className="tp-grow"><b>A number of your own for texts</b><p className="tp-sub">Coming later</p></div><Chip tone="mute">Not available yet</Chip></div>
             <FormFoot dirty={!same(cDraft, callsSaved)} onDiscard={() => setCDraft(callsSaved)} onSave={() => {
-              if (cDraft.duty !== s.duty) setDuty(cDraft.duty)
+              if (!same(cDraft.take, billing.take) && takeOk(cDraft.take)) setTake(cDraft.take)
               saveWeek(cDraft.week)
               note('Hours and calls saved. Clashes with booked appointments show on Calendar')
             }} />

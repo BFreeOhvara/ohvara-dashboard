@@ -1,0 +1,32 @@
+/* P892 — AI speed to lead: admin Settings › AI caller, Leads › AI calls, and the VA's "From the AI" card. */
+.ai-stops { align-items: flex-start; }
+.ai-stops > svg { flex: none; margin-top: 2px; }
+.ai-stops ul { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.ai-stops li { line-height: 1.4; overflow-wrap: anywhere; }
+.ai-agents { margin-bottom: 8px; }
+.ai-prov dd, .ai-from dd { overflow-wrap: anywhere; }
+.ai-words li { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; border-bottom: 1px solid var(--ov-line); min-width: 0; }
+.ai-words li:last-child { border-bottom: 0; }
+.ai-words p { margin: 0; overflow-wrap: anywhere; }
+
+.ai-view { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.ai-view-h h2 { display: inline-flex; align-items: center; gap: 8px; margin: 0; }
+.ai-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 10px; }
+.ai-tiles > div { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--ov-line); min-width: 0; }
+.ai-tiles small { font-size: 12.5px; color: var(--ov-mid); }
+.ai-tiles b { font-family: var(--font-display); font-size: 24px; font-weight: 600; color: var(--ov-hi); }
+.ai-tiles span { font-size: 12px; color: var(--ov-mute); }
+.ai-rows li { align-items: flex-start; }
+.ai-rows li > svg { flex: none; margin-top: 3px; color: var(--ov-mid); }
+.ai-rows small { display: block; overflow-wrap: anywhere; }
+
+.ai-title { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.ai-from { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ai-from > p { margin: 0; }
+.ai-from > .tp-chip { width: fit-content; }
+.ai-from .tp-sub { display: flex; align-items: flex-start; gap: 6px; margin: 0; }
+.ai-from .tp-sub svg { flex: none; margin-top: 2px; }
+@media (max-width: 560px) {
+  .ai-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ai-tiles b { font-size: 20px; }
+}

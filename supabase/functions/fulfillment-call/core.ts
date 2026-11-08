@@ -4,8 +4,8 @@
 // One Twilio Conference per call, named for the policy (policy-<id>). The
 // rep's browser is already in it (fulfillment-voice answered the TwiML App);
 // this adds and steers the two outside parties:
-//   ring_client   add the client. Caller ID = the agent's verified number when
-//                 it's on (start-agent-caller-id-call's rule), else Ohvara's.
+//   ring_client   add the client from Ohvara's (Deedstone's) number. P890: agent
+//                 caller ID is gone; agents call from their own phone.
 //   ring_carrier  add the carrier's service_phone from Ohvara's number.
 //                 Either way, the party already talking is put on hold.
 //   hold / resume one party (participant hold, Twilio's hold music)
@@ -45,7 +45,6 @@ export interface Store {
   userFromJwt(jwt: string): Promise<string | null>
   role(userId: string): Promise<string | null>
   policy(id: string): Promise<Policy | null>
-  agentCallerId(agentId: string): Promise<{ caller_id_number: string | null; caller_id_enabled: boolean | null } | null>
   carrierPhone(carrierId: string | null): Promise<string | null>
   voiceLive(): Promise<boolean>
   openLegs(policyId: string): Promise<Leg[]>
@@ -81,12 +80,6 @@ export function toE164(raw: unknown): string | null {
   if (d.length === 10) return `+1${d}`
   if (d.length === 11 && d.startsWith('1')) return `+${d}`
   return null
-}
-
-// The caller ID the client sees: the agent's verified number when it's on,
-// otherwise Ohvara's Twilio number (same rule as start-agent-caller-id-call).
-export function clientCallerId(agent: { caller_id_number: string | null; caller_id_enabled: boolean | null } | null, from: string | null) {
-  return agent?.caller_id_enabled && agent.caller_id_number ? agent.caller_id_number : from
 }
 
 const party = (v: unknown) => (v === 'client' || v === 'carrier' ? v : refuse('party must be client or carrier', 400))
@@ -155,7 +148,7 @@ export async function act(store: Store, twilio: Twilio, env: Env, userId: string
     if (who === 'client') {
       to = toE164(p!.client_phone)
       if (!to) refuse('No valid client phone on file.', 400, 'no_client_phone')
-      callerId = clientCallerId(await store.agentCallerId(p!.agent_id), env.from)
+      callerId = env.from
     } else {
       to = toE164(await store.carrierPhone(p!.carrier_id))
       if (!to) refuse('No phone number on file for this carrier.', 400, 'no_carrier_phone')

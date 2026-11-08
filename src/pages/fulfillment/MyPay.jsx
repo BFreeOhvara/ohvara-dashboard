@@ -2,63 +2,38 @@ import { useCallback, useMemo, useState } from 'react'
 import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import {
-  usePayouts, usePayoutAccounts, useConnectOverview, useRefreshPayouts, useSavePayoutEmails, useCancels, usePaySettings,
+  usePayouts, usePayoutAccounts, useConnectOverview, useRefreshPayouts, useSavePayoutEmails,
 } from '../../hooks/useFulfillmentPayouts'
 import { MyPayView } from '../../components/fulfillment/MyPay'
 import { PhoneMyPay } from '../../components/fulfillment/phone/PhoneMyPay'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { PayoutSettingsView } from '../../components/fulfillment/PayoutSettings'
-import { LoadError } from '../../components/agent/AgentUI'
+import { useFulfillmentPay } from '../../hooks/useFulfillmentPay'
 import { payPeriod } from '../../lib/payPeriod'
-import { accountStatus, cancelTotals, isoDay } from '../../lib/myPay'
+import { accountStatus } from '../../lib/myPay'
 import { useNow } from '../../lib/agentBookings'
 
 // Prompt 753 — /fulfillment/pay, "My pay" (Getting Paid before; the old
 // /fulfillment/getting-paid redirects here). Two views, like Manage billing:
 // the page, and Payout settings at ?settings=1 (?setup=1 also opens Stripe's
-// onboarding). Prompt 764: pay per verified cancel. The week comes from the
-// rep's fulfillment_cancels (status + amount, nothing else); paid weeks from
-// fulfillment_payouts (written by the Monday pay run); the account card from
-// fulfillment_payout_accounts, refreshed live from Stripe through
-// fulfillment-connect-session once the rep has started setup.
-
-// The payouts list: real payout rows, plus this week's (and, before Monday's
-// run, last week's) upcoming amount. A held / failed row is dropped once a
-// later payout went out (its cancels were paid in that one).
-function payoutList(rows, cancels, now) {
-  const list = rows.filter((p, i) => !(['held', 'failed'].includes(p.status) && rows.slice(0, i).some(q => q.status === 'paid')))
-  const add = []
-  for (const back of [0, 7]) {
-    const per = payPeriod(now - back * 864e5)
-    const start = isoDay(per.start)
-    if (list.some(p => p.period_start === start)) continue
-    const t = cancelTotals(cancels.filter(c => c.week_start === start && !c.paid_at))
-    if (back && !t.verifiedCents) continue
-    const end = new Date(per.end.getTime() - 864e5)
-    add.push({
-      // This week: what's earned so far (verified + being checked), as in the hero.
-      id: `upcoming-${start}`, period_start: start, period_end: isoDay(end), amount_cents: back ? t.verifiedCents : t.earnedCents,
-      cancels: back ? t.verified : t.verified + t.checking, status: 'upcoming', sub: back ? 'Last week · paid Monday' : 'This week · verified by Sunday',
-    })
-  }
-  return [...add, ...list]
-}
+// onboarding). P890: pay is hourly, from clock in and out; paid weeks come
+// from fulfillment_payouts (written by the Monday pay run); the account card
+// from fulfillment_payout_accounts, refreshed live from Stripe through
+// fulfillment-connect-session once the rep has started setup. The hourly
+// rate is the rep's own fulfillment_pay row.
 
 export default function MyPay() {
   const { profile, refreshProfile } = useAuth()
   const phone = usePhoneLayout()
   const now = useNow(30e3)
-  const [which, setWhich] = useState('this')
   const [params, setParams] = useSearchParams()
   const location = useLocation()
   const navigate = useNavigate()
   const settings = params.get('settings') === '1'
-  const period = useMemo(() => payPeriod(which === 'last' ? now - 7 * 864e5 : now), [which, now])
+  const period = useMemo(() => payPeriod(now), [now])
 
-  const since = useMemo(() => isoDay(payPeriod(now - 7 * 864e5).start), [now])
-  const cancelsQ = useCancels(profile?.id, since, !!profile)
-  const { data: cancels = [] } = cancelsQ
-  const { data: paySettings } = usePaySettings()
+  const { data: payRows = [] } = useFulfillmentPay(profile?.id, !!profile)
+  const hourlyCents = payRows[0]?.hourly_rate_cents ?? null
   const { data: payouts = [] } = usePayouts(profile?.id, !!profile)
   const { data: accounts = [], isLoading: accountsLoading } = usePayoutAccounts(profile?.id, !!profile)
   const started = !!accounts[0]
@@ -105,22 +80,11 @@ export default function MyPay() {
     )
   }
 
-  // P779 — without the cancels the hero would say $0.00 earned; say it didn't load.
-  if (cancelsQ.isError && !cancelsQ.data) {
-    const error = <LoadError what="your pay" onRetry={() => cancelsQ.refetch()} />
-    return phone
-      ? <div className="ph-stack" style={{ gap: 14 }}><h1 className="ph-h1">My pay</h1>{error}</div>
-      : error
-  }
-
   if (phone) {
-    const week = payPeriod(now)
     return (
       <PhoneMyPay
-        period={week} now={now}
-        weekCancels={cancels.filter(c => c.week_start === isoDay(week.start))}
-        rate={paySettings?.pay_per_cancel_cents ?? 1000}
-        payouts={payoutList(payouts, cancels, now)} account={account} status={status}
+        period={period} now={now} hourlyCents={hourlyCents}
+        payouts={payouts} account={account} status={status}
         accountLoading={accountsLoading || (started && overview.isLoading && !stored)}
         onConnect={() => open({ settings: '1', setup: '1' })}
         onSettings={() => open({ settings: '1' })}
@@ -130,11 +94,8 @@ export default function MyPay() {
 
   return (
     <MyPayView
-      which={which} onWhich={setWhich} period={period} now={now}
-      weekCancels={cancels.filter(c => c.week_start === isoDay(period.start))}
-      rate={paySettings?.pay_per_cancel_cents ?? 1000} minCents={paySettings?.weekly_min_cents ?? null}
-      recording={paySettings?.recording_live ?? true}
-      payouts={payoutList(payouts, cancels, now)} account={account} status={status}
+      period={period} now={now} hourlyCents={hourlyCents}
+      payouts={payouts} account={account} status={status}
       accountLoading={accountsLoading || (started && overview.isLoading && !stored)}
       onConnect={() => open({ settings: '1', setup: '1' })}
       onSettings={() => open({ settings: '1' })}

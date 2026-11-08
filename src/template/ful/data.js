@@ -95,6 +95,9 @@ const seedClients = [
   mkClient('fc-nadia', 'Nadia', 'Khan', 'ag-marcus', { client_phone: '(480) 555-0177', city: 'Tempe', state: 'AZ', stage: 'protected', carrier_name: 'Transamerica', policy_number: 'TA-5531102', monthly_premium: 82.9 }),
   mkClient('fc-paul', 'Paul', 'Rivera', 'ag-priya', { client_phone: '(813) 555-0165', city: 'Brandon', state: 'FL', stage: 'setting_up', next_step: 'Cancellation call Fri 10:00 AM', carrier_name: 'Mutual of Omaha', policy_number: 'MO-4471399', monthly_premium: 55.5 }),
   // P885: a year-one client whose Nov 3 draft was returned (found from Dana's forwarded carrier email).
+  // P891: clients Dana brought in from her own book (Add clients / Import), waiting for their welcome call.
+  mkClient('fc-maria', 'Maria', 'Lopez', 'ag-dana', { added: true, client_phone: '(512) 555-0199', city: 'Austin', state: 'TX', stage: 'setting_up', next_step: 'Welcome call today', carrier_name: 'Americo', product_name: 'Mortgage Protection 25', policy_number: 'AM-1234567', monthly_premium: 84.2, face_amount: 250000, draft_day: 3, effective: 'Jun 1, 2025', email: 'maria@example.com', submitted: 'Nov 3', note: 'Prefers evenings.' }),
+  mkClient('fc-gene', 'Gene', 'Wallace', 'ag-dana', { added: true, client_phone: '(512) 555-0131', city: 'Cedar Park', state: 'TX', stage: 'setting_up', next_step: 'Welcome call Fri', carrier_name: 'Foresters', product_name: 'Strong Foundation', policy_number: 'FF-5520881', monthly_premium: 47.6, face_amount: 120000, draft_day: 20, effective: 'Jan 1, 2024', submitted: 'Nov 3' }),
   mkClient('fc-ann', 'Ann', 'Lee', 'ag-dana', { client_phone: '(512) 555-0164', city: 'Round Rock', state: 'TX', stage: 'needs_attention', attention: 'Payment missed Nov 3', next_step: 'Save call today', carrier_name: 'Harborline Life', policy_number: 'HL-4410917', monthly_premium: 64.1, submitted: 'Jul 6' }),
 ]
 
@@ -134,6 +137,15 @@ const seedQueue = [
   mkLead('vq-7', 'Brenda Cole', { bucket: 'not_reached', tries: 2, came: 'Wed, 4:05 PM', phone: '(817) 555-0174', city: 'Fort Worth' }),
   mkLead('vq-8', 'Frank Ellis', { bucket: 'not_reached', tries: 1, came: 'Wed, 2:30 PM', phone: '(480) 555-0105', city: 'Chandler', state: 'AZ' }),
   mkLead('vq-9', 'Joyce Turner', { bucket: 'not_reached', tries: 3, came: 'Tue, 6:12 PM', phone: '(352) 555-0191', city: 'Ocala', state: 'FL' }),
+  // P892: two leads the AI handed over. Gloria asked about price mid-call (warm, on the line); Owen asked for a person
+  // and no VA was free in 60 s, so he became a callback task.
+  mkLead('vq-10', 'Gloria Price', { came: 'Today, 1:20 PM', phone: '(214) 555-0172', city: 'Dallas', type: 'Mortgage protection', tries: 1,
+    checklist: { question_type: '', carrier: '', state: 'TX', urgency: 'Today' },
+    fromAi: { reason: 'coverage_or_price', secs: 8, talked: '1:36', agent: 'Dana Walker (takes live transfers now)', asked: ['Age and state (61, TX)', 'What to protect (the mortgage, $240k left)'],
+      summary: 'Gloria, 61, in Dallas wants to protect her mortgage ($240k left). She asked what it would cost each month, so the AI handed her to a person before checking Dana.' } }),
+  mkLead('vq-11', 'Owen Price', { bucket: 'callback_due', callback: 'Today, now', came: 'Today, 8:31 AM', phone: '(702) 555-0119', city: 'Henderson', state: 'NV', type: 'Mortgage protection', tries: 1,
+    fromAi: { reason: 'asked_person', secs: 7, talked: '2:12', agent: 'Marcus Reed (Appointments only)', asked: ['Age and state (47, NV)'], callbackTask: true,
+      summary: 'Owen asked to talk to a real person after the first question. No VA was free within 60 seconds; he was told someone would call back shortly.' } }),
 ]
 
 // Servicing steps the agents asked for. kind = lib/vaServicing KIND_LABEL keys; due = overdue | today | later | none.
@@ -152,6 +164,9 @@ const seedTasks = [
   // P885: opened by a Payment missed event, due by the end of the next business day.
   mkTask('st-11', 'lapse_save', 'fc-ann', { due: 'today', due_text: 'Today by 5:00 PM', note: 'Ann’s Nov 3 payment didn’t go through. Call her and get it fixed.',
     missed: { notice: 'missed', what: 'The Nov 3 draft was returned', due: 'Nov 3', how: 'Dana’s forwarded carrier email', grace: 'about Dec 4', chargeback: true, month: 4, of: 12, repeat: false } }),
+  // P891: welcome calls for clients an agent added. Dana imported 2 on Tue; 25 a day go out, so both land this week.
+  mkTask('st-13', 'welcome_call', 'fc-maria', { due: 'today', due_text: 'Today by 5:00 PM', note: 'Added by Dana from her own book. Introduce her client care team, check the details, ask about texts.' }),
+  mkTask('st-14', 'welcome_call', 'fc-gene', { due: 'later', due_text: 'Fri by 5:00 PM', note: 'Added by Dana from her own book (import of 2 on Tue).' }),
   // P888: a lapse notice the agent passed on with Request service → payment problem; a call task like any other.
   mkTask('st-12', 'lapse_save', 'fc-nadia', { due: 'later', due_text: 'Mon by 5:00 PM', note: 'Transamerica sent a lapse notice. Call Nadia and get the payment back on.',
     missed: { notice: 'lapse_notice', what: 'Lapse notice: the Oct 28 payment is in its grace period', due: 'Oct 28', how: 'Marcus asked (Request service)', grace: 'about Nov 27', chargeback: false, repeat: false } }),
@@ -426,7 +441,8 @@ export function useFulActions() {
     finishTask: (id, outcome) => set(s => {
       const t = s.tasks.find(x => x.id === id)
       const tries = (t.tries || 1) + 1
-      if (t.kind === 'lapse_save' && outcome === 'no_answer' && tries <= 3) {
+      // P891: a welcome call's No answer comes back the next business day too, 3 tries in all (p891 welcome_outcome).
+      if ((t.kind === 'lapse_save' || t.kind === 'welcome_call') && outcome === 'no_answer' && tries <= 3) {
         return { tasks: s.tasks.map(x => (x.id === id ? { ...x, held: false, status: 'scheduled', due: 'later', due_text: 'Tomorrow · try again', tries } : x)) }
       }
       const done = s.tasks.map(x => (x.id === id ? { ...x, held: false, status: 'done', due: 'done', due_text: `Done ${stamp()}`, outcome } : x))
@@ -434,7 +450,17 @@ export function useFulActions() {
         return { tasks: [...done, mkTask(`st-${Date.now()}`, 'lapse_save', t.client_id, { due: 'later', due_text: 'In 3 business days', missed: t.missed && { ...t.missed, check: true },
           note: 'Check the fixed payment cleared. Call the client if it didn’t.' })] }
       }
+      // P891: Problem → agent closes the welcome call and tells the agent (the VA's note says what).
+      if (t.kind === 'welcome_call' && outcome === 'problem') {
+        const c = clientOf(s, t.client_id)
+        return { tasks: done, ...feedAdd(s, agentName(c.agent_id), `Welcome call found a problem for ${fullName(c)}`, 'servicing') }
+      }
       return { tasks: done }
+    }),
+    // P891: the text-updates question on a welcome call. Only a yes is logged as consent (p891 va_welcome_text_consent).
+    textConsent: (id, yes) => set(s => {
+      const t = s.tasks.find(x => x.id === id)
+      return { tasks: s.tasks.map(x => (x.id === id ? { ...x, texts: yes ? 'yes' : 'no' } : x)), clients: s.clients.map(c => (c.id === t.client_id ? { ...c, sms_consent: !!yes } : c)), log: yes ? [...s.log, { at: stamp(), what: 'text_consent', task: id, client: t.client_id }] : s.log }
     }),
     scheduleTask: (id, when) => set(s => ({ tasks: s.tasks.map(t => (t.id === id ? { ...t, status: 'scheduled', due: 'later', due_text: when } : t)) })),
     sendToAgent: (id, reason) => set(s => {

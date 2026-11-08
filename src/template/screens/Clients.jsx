@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Search, Plus, Phone, MessageSquare, TriangleAlert, CalendarClock, MapPin, Users } from 'lucide-react'
+import { Search, Plus, Phone, MessageSquare, TriangleAlert, CalendarClock, MapPin, Users, UserPlus } from 'lucide-react'
 import { useDataSource, useSampleClients, useSampleClient, useSampleThreads, useSampleActions } from '../data'
 import { Avatar, Chip, Drawer, Money, SampleTag, Empty, PillTabs, useNote } from '../kit'
 import { RecordDrawer, Stepper, Block } from '../Record'
@@ -9,6 +9,8 @@ import { paths } from '../paths'
 import { MissedPaymentBlock } from '../PaymentIntake'
 import { AgentDocsBlock } from '../docs886/Docs886'
 import { FirstRun } from '../DataState'
+import { AddClients } from '../AddClients891'
+import { BOOK_STATUS, BOOK_STEPS, ordinal } from '../../lib/bookImport.js'
 
 // How far along servicing is, for the meter on each card.
 const doneShare = c => c.steps.filter(s => s.done).length / c.steps.length
@@ -23,7 +25,7 @@ function ClientCard({ c, i }) {
   return (
     <article className={`fx-card fx-ccard is-${tone}`} style={{ '--i': i }}>
       <Link to={paths.client(c.id)} className="fx-cover" aria-label={`Open ${name}`} />
-      <div className="fx-ccard-top"><Avatar name={name} tone={tone} /><span className="fx-tag">{label}</span></div>
+      <div className="fx-ccard-top"><Avatar name={name} tone={tone} />{c.added && <span className="tp-tag bi-by">Added by you</span>}<span className="fx-tag">{c.added ? BOOK_STATUS[c.book][1] : label}</span></div>
       <h3>{name}</h3>
       <p>{c.carrier_name} · {c.city}, {c.state}</p>
       <div className="fx-ccard-mid">
@@ -38,6 +40,19 @@ function ClientCard({ c, i }) {
         <Link to={paths.messages()} className="fx-mini fx-over" aria-label={`Message the team about ${name}`}><MessageSquare size={14} /></Link>
       </div>
     </article>
+  )
+}
+
+// P891: a client the agent brought in. Added (welcome call coming) → Welcomed → Serviced, like any client after that.
+function BookBlock({ c }) {
+  const [tone, word, sub] = BOOK_STATUS[c.book]
+  const at = BOOK_STEPS.findIndex(s => s.key === c.book)
+  return (
+    <Block title="Added by you" sub={c.book === 'added' ? `${sub}: ${c.next_step?.replace(/^Welcome call /, '') || 'soon'}. They introduce your client care team and check these details.` : sub} aside={<Chip tone={tone}>{word}</Chip>}>
+      <div className="bi-steps" role="list" aria-label="Where this client is">
+        {BOOK_STEPS.map((s, i) => <span key={s.key} role="listitem" className={`${i < at ? 'is-done' : ''}${s.key === c.book ? ` is-on is-${tone}` : ''}`}>{s.label}</span>)}
+      </div>
+    </Block>
   )
 }
 
@@ -78,8 +93,10 @@ function ClientDrawer({ id, onClose }) {
           </div>
         </section>
       )}
+      {c.added && <BookBlock c={c} />}
       <Block title="Policy">
-        <dl className="fx-facts">{[['Carrier', c.carrier_name], ['Product', c.product_name], ['Policy', c.policy_number], ['Phone', c.client_phone]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+        <dl className="fx-facts">{[['Carrier', c.carrier_name], ['Product', c.product_name], ['Policy', c.policy_number], ['Phone', c.client_phone],
+          ...(c.added ? [['Face amount', c.face_amount ? `$${Number(c.face_amount).toLocaleString('en-US')}` : 'Not given'], ['Draft day', c.draft_day ? `The ${ordinal(c.draft_day)}` : 'Not given'], ['Effective', c.effective || 'Not given']] : [])].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
         <p className="tp-sub">{c.note}</p>
       </Block>
       <Block title="Steps">
@@ -115,6 +132,7 @@ export default function Clients() {
   const source = useDataSource()
   const [params, setParams] = useSearchParams()
   const [q, setQ] = useState('')
+  const [adding, setAdding] = useState(params.get('add') === '1')
   const stage = params.get('stage') || 'all'
   const counts = useMemo(() => Object.fromEntries(Object.keys(stageLabel).map(s => [s, clients.filter(c => c.stage === s).length])), [clients])
   const rows = clients.filter(c => (stage === 'all' || c.stage === stage) && `${c.client_first_name} ${c.client_last_name} ${c.policy_number} ${c.client_phone}`.toLowerCase().includes(q.trim().toLowerCase()))
@@ -128,15 +146,17 @@ export default function Clients() {
         <PillTabs label="Status" className="fx-filters" itemClass="fx-filter" value={stage} onChange={k => setParams(k === 'all' ? {} : { stage: k })}
           items={options.map(o => ({ ...o, className: toneOf(o.key).trim() }))} />
         <span className="tp-grow" />
+        <button type="button" className="tp-btn ov-ghost" onClick={() => setAdding(true)}><UserPlus size={16} />Add clients</button>
         <Link to={paths.submit()} className="tp-primary fx-accent"><Plus size={16} />Submit a policy</Link>
       </div>
 
       <div className="fx-cgrid" aria-label="Clients">
         {rows.map((c, i) => <ClientCard key={c.id} c={c} i={i} />)}
         {rows.length === 0 && clients.length > 0 && <section className="fx-tile"><Empty title="No clients match" sub="Check the spelling, or show every status." /></section>}
-        {clients.length === 0 && <FirstRun icon={Users} title="Your clients show here" sub="Submit a sale and it shows here with every servicing step: packet check, review call, and the old policy cancelled. The team keeps each one on the books."><Link to={paths.submit()} className="tp-primary fx-accent"><Plus size={16} />Submit your first policy</Link></FirstRun>}
+        {clients.length === 0 && <FirstRun icon={Users} title="Your clients show here" sub="Submit a sale and it shows here with every servicing step: packet check, review call, and the old policy cancelled. The team keeps each one on the books."><Link to={paths.submit()} className="tp-primary fx-accent"><Plus size={16} />Submit your first policy</Link><button type="button" className="tp-btn ov-ghost" onClick={() => setAdding(true)}><UserPlus size={16} />Add clients you already have</button></FirstRun>}
       </div>
 
+      <AddClients open={adding} onClose={() => setAdding(false)} />
       {id && (source === 'sample' || clients.some(c => c.id === id)) && <ClientDrawer id={id} onClose={() => navigate(paths.clients(stage === 'all' ? undefined : stage))} />}
     </div>
   )

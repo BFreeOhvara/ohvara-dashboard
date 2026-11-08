@@ -3,6 +3,8 @@ import { instantOf, clockOf, dateOf, zoneOf } from '../../lib/callSlots.js'
 import { seedEvents, applyMove, closeCallTask, whenLabel, needsYouNow, forYourInfo, addMin, STAGES, SAMPLE_NOW } from '../leadLifecycle.js'
 import { leadText, SENDER } from '../leadTexts.js'
 import { wallet as walletOf, expected, startsText } from '../spendPlan.js'
+import { DEFAULT_LIVE_HOURS } from '../../lib/leadSplit.js'
+import { formatPhone } from '../phoneMask.js'
 
 // The one door to sample info for the clickable template. Screens read only through the named functions below.
 // Every read returns { data, isLoading: false, error: null }, the shape react-query hooks give, and record fields
@@ -56,7 +58,8 @@ const seedLeads = [
   mkLead('sample-lead-4', people.renee, { stage: 'no_show', came: '2026-10-29T17:40', apptAt: '2026-11-02T11:00' }),
   mkLead('sample-lead-5', people.denise, { stage: 'sold', status: 'closed', outcome: 'sold', submitted: true, came: '2026-10-24T16:05', apptAt: '2026-10-27T11:00' }),
   mkLead('sample-lead-6', people.robert, { stage: 'follow_up', status: 'contacted', outcome: 'follow_up', came: '2026-10-27T18:12', apptAt: '2026-10-30T15:00', follow: 'Mon, Nov 2', followAt: '2026-11-02T16:00' }),
-  mkLead('sample-lead-7', people.owen, { stage: 'booked', came: '2026-10-30T12:20', apptAt: '2026-11-02T14:00', age_band: '35 to 44' }),
+  // P892: Owen was called seconds after his form came in (the agent sees the speed only).
+  mkLead('sample-lead-7', people.owen, { stage: 'booked', came: '2026-10-30T12:20', apptAt: '2026-11-02T14:00', age_band: '35 to 44', speed: 9 }),
   mkLead('sample-lead-8', people.ellen, { stage: 'booked', came: '2026-10-31T09:15', apptAt: '2026-11-02T13:00', firstReply: 'Monday at 1 is good' }),
   mkLead('sample-lead-9', people.tanya, { stage: 'calling', tries: 2, came: '2026-11-01T10:30', reply: { text: 'Can you call after 6? I am at work until then.', at: '2026-11-02T13:52', seen: false } }),
   mkLead('sample-lead-10', people.paul, { stage: 'new', came: '2026-11-02T14:10', mortgage_balance_band: '$300,000 to $400,000' }),
@@ -84,6 +87,22 @@ const mkClient = (id, p, o) => ({
   ...o,
 })
 
+// P891: a client the agent brought in (Add client / Import), not sold through Ohvara. book = added | welcomed |
+// serviced | problem (lib/bookImport BOOK_STATUS). After the welcome call they're looked after like any client.
+const ADDED_STAGE = { added: 'setting_up', welcomed: 'protected', serviced: 'protected', problem: 'needs_attention' }
+export const welcomeSteps = (book, o = {}) => [
+  { label: 'Added by you', at: o.addedAt || 'Tue, Nov 3', done: true },
+  { label: 'Welcome call', at: book === 'added' ? (o.welcomeAt || 'Thu, Nov 5') : 'Wed, Nov 4', done: book !== 'added' },
+  { label: 'Serviced like any client', at: book === 'serviced' ? 'Annual review set' : 'After the welcome', done: book === 'serviced' },
+]
+const mkAdded = (id, p, book, o) => mkClient(id, p, {
+  added: true, book, stage: ADDED_STAGE[book], status: book === 'added' ? 'booked' : 'effective', submitted: 'Tue, Nov 3', annual_premium: Math.round((o.monthly_premium || 0) * 1200) / 100,
+  note: book === 'added' ? 'Added by you. The team calls to welcome them and check the details.' : book === 'welcomed' ? `Welcomed Wed, Nov 4. ${o.texts ? 'Said yes to text updates.' : 'No text updates.'}` : 'Welcomed Wed, Nov 4. Serviced like any client since.',
+  next_step: book === 'added' ? 'Welcome call Thu, Nov 5' : book === 'serviced' ? 'Annual review Sep 2027' : null,
+  steps: welcomeSteps(book), calls: book === 'added' ? [] : [{ at: 'Wed, Nov 4, 10:40 AM', result: 'Welcomed', by: 'Fulfillment' }],
+  ...o,
+})
+
 const seedClients = [
   mkClient('sample-client-1', people.gloria, { policy_number: 'SAMPLE-1001', carrier_name: 'Harborline Life', stage: 'needs_attention', status: 'needs_attention', note: 'We could not reach Gloria after two tries.', attention: 'Confirm the number', next_step: 'Confirm the number', calls: [{ at: 'Thu, Oct 29, 10:02 AM', result: 'No answer', by: 'Fulfillment' }, { at: 'Fri, Oct 30, 5:40 PM', result: 'No answer', by: 'Fulfillment' }] }),
   mkClient('sample-client-2', people.luis, { policy_number: 'SAMPLE-1002', carrier_name: 'Pinecrest Assurance', stage: 'protected', status: 'effective', monthly_premium: 112, annual_premium: 1344, next_step: null }),
@@ -105,6 +124,11 @@ const seedClients = [
     ],
     calls: [{ at: 'Thu, Jul 16, 11:20 AM', result: 'Answered', by: 'Fulfillment' }],
   }),
+  // P891: the sample import. Dana brought three of her own clients from a file on Tue, Nov 3: one waiting for the
+  // welcome call, one welcomed (said yes to texts), one already serviced since.
+  mkAdded('sample-client-8', { first: 'Maria', last: 'Lopez', phone: '(512) 555-0199', city: 'Austin', state: 'TX' }, 'added', { carrier_name: 'Americo', product_name: 'Mortgage Protection 25', policy_number: 'AM-1234567', monthly_premium: 84.2, face_amount: 250000, draft_day: 3, effective: 'Jun 1, 2025' }),
+  mkAdded('sample-client-9', { first: 'Tom', last: 'Reyes', phone: '(512) 555-0122', city: 'Pflugerville', state: 'TX' }, 'welcomed', { carrier_name: 'Foresters', product_name: 'Strong Foundation', policy_number: 'FF-5521904', monthly_premium: 58.75, face_amount: 150000, draft_day: 15, effective: 'Mar 1, 2024', texts: true }),
+  mkAdded('sample-client-10', { first: 'Lena', last: 'Brooks', phone: '(737) 555-0181', city: 'Georgetown', state: 'TX' }, 'serviced', { carrier_name: 'Mutual of Omaha', product_name: 'Term Life Express', policy_number: 'MO-3390217', monthly_premium: 41.3, face_amount: 100000, draft_day: 1, effective: 'Sep 1, 2023', texts: false }),
 ]
 
 const seedThreads = [
@@ -170,7 +194,7 @@ const WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 export const DEFAULT_WEEK = Object.fromEntries(WEEK.map(d => [d, { on: !['Sat', 'Sun'].includes(d), start: '9:00 AM', end: d === 'Fri' ? '5:00 PM' : '6:00 PM' }]))
 const seed = {
   leads: seedLeads, clients: seedClients, threads: seedThreads, activity: seedActivity, appointments: seedAppointments,
-  duty: true, tasks: { t1: false, t2: false, t3: false },
+  tasks: { t1: false, t2: false, t3: false },
   // P878: Talk to someone requests (N-I-01), feedback on the team (N-F-43), blocked days (N-C-38), setup progress (N-H-05).
   talks: [], feedback: [], blocks: [], setup: null,
   settings: {
@@ -181,13 +205,13 @@ const seed = {
     calendarSync: { provider: null, status: 'not_connected' },
     // P848: the states the agent picked (3 to 10, never NY) and the one tick, logged with its time and the states.
     licence: { states: ['AZ', 'FL', 'GA', 'TX'], licensed: { at: 'Oct 12, 9:14 AM', states: ['AZ', 'FL', 'GA', 'TX'] } },
-    // P847: the Overview clock's zone (profiles.timezone values) and the optional caller ID: when fulfillment calls a
-    // client, the call shows the agent's number. status: not_set | pending | confirmed. Sample only: no call or text goes out.
+    // P847: the Overview clock's zone (profiles.timezone values). P890: no agent caller ID (agents call from their own phone).
     timeZone: 'America/Chicago',
-    callerId: { status: 'not_set', number: '' },
     // P885: the forwarding address for carrier missed-payment emails, and what happened to the last few.
     paymentIntake: {
       address: 'pay+k7m2q9xd4a@in.ohvara.com',
+      // P890: the one-minute forwarding step. mail = gmail | outlook | other; tested = a test email arrived.
+      forward: { mail: 'gmail', tested: false },
       recent: [
         { id: 'pe-1', subject: 'Fwd: Lapse pending notice', at: 'Today, 9:38 AM', client: 'Ann Lee', status: 'matched' },
         { id: 'pe-2', subject: 'Fwd: Returned EFT', at: 'Wed, Nov 4', client: null, status: 'unmatched' },
@@ -206,22 +230,18 @@ const seed = {
   },
   // cancellations: the old cancellation plan, shown only for an agent already on one (this sample agent is not).
   // P878: the pilot (lead spend only, prepaid weekly) or a paid plan (membership by daily spend + lead spend). Every
-  // price is a draft (spendPlan.js). bought = what each lead type bought this week and this month.
+  // price is a draft (spendPlan.js). P889: one daily spend + how they take leads (take); bought = what the spend
+  // bought this week and this month, booked and transferred apart. ?take=appts previews Appointments only.
   billing: {
     plan: param('plan') === 'paid' ? 'paid' : 'pilot', products: 'both',
-    spend: { appts: 60, live: 40 }, pending: null,
+    spend: { daily: 100 }, pending: null,
+    take: { mode: param('take') === 'appts' ? 'appts' : 'both', hours: DEFAULT_LIVE_HOURS, tz: 'America/Chicago' },
     booked: sampleAgent().none ? 0 : 4, usual: 5,
     wallet: { week: 'Mon, Nov 2 to Sun, Nov 8', topUp: 700, rolled: 35, spent: param('billing') === 'low' ? 668 : 412, next: 'Mon, Nov 9' },
     va: { on: true, hours: 6.5, rate: 8 },
     bought: {
-      week: [
-        { type: 'appts', spent: 300, leads: 12, reached: 9, booked: 4, showed: 2, sold: 1, premium: 1036.8 },
-        { type: 'live', spent: 200, calls: 4, reached: 4, offered: 3, delivered: 2, sold: 1, premium: 891 },
-      ],
-      month: [
-        { type: 'appts', spent: 1320, leads: 51, reached: 38, booked: 18, showed: 11, sold: 4, premium: 4410 },
-        { type: 'live', spent: 880, calls: 16, reached: 15, offered: 12, delivered: 9, sold: 3, premium: 2985 },
-      ],
+      week: { spent: 500, leads: 16, reached: 13, booked: 4, offered: 3, transferred: 2, showed: 2, sold: 2, premium: 1927.8 },
+      month: { spent: 2200, leads: 67, reached: 53, booked: 18, offered: 12, transferred: 9, showed: 11, sold: 7, premium: 7395 },
     },
     saved: [{ id: 's1', who: 'Luis Ortega', what: 'Card declined. The team updated the payment with the carrier', at: 'Oct 21', premium: 112 }, { id: 's2', who: 'Carla Jones', what: 'Asked to cancel. The team kept the policy', at: 'Oct 9', premium: 74.25 }],
     paused: null, cancel: null,
@@ -254,7 +274,7 @@ function useBillingSample() { const s = useStore(); return ok(useMemo(() => bill
 // P878: the billing record plus what's worked out from it (the prepaid balance, the week's expected range).
 function billingView(b, submitted) {
   const w = walletOf(b.wallet, b.spend)
-  return { ...b, submitted, walletNow: w, expected: expected(b.spend), servicing: { ...b.servicing, status: b.products === 'leads' ? 'off' : 'active' } }
+  return { ...b, submitted, walletNow: w, expected: expected(b.spend, b.take?.mode), servicing: { ...b.servicing, status: b.products === 'leads' ? 'off' : 'active' } }
 }
 // Billing items that need the agent (N-K-01): a failed card, prepaid lead spend about to run out.
 function billingNeeds(b) {
@@ -268,7 +288,7 @@ function useTalksSample() { const s = useStore(); return ok(s.talks) }
 function useFeedbackSample() { const s = useStore(); return ok(s.feedback) }
 function useBlocksSample() { const s = useStore(); return ok(s.blocks) }
 function useSetupSample() { const s = useStore(); return ok(s.setup) }
-function useSettingsSample() { const s = useStore(); return ok({ ...s.settings, duty: s.duty }) }
+function useSettingsSample() { const s = useStore(); return ok(s.settings) }
 // P873: Needs you now (the six triggers, most urgent first) and the quiet FYI list, for the Overview and the bell.
 function useNeedsSample() { const s = useStore(); return ok(useMemo(() => ({ now: needsYouNow({ ...s, billingNeeds: billingNeeds(s.billing), servicing: s.billing.products !== 'leads' }, SAMPLE_NOW), fyi: forYourInfo(s) }), [s])) }
 function useSignupSample() {
@@ -303,7 +323,7 @@ function useOverviewSample() {
   const by = st => s.clients.filter(c => c.stage === st).length
   return ok({
     name: 'Dana', book: { protected: by('protected'), settingUp: by('setting_up'), needsAttention: by('needs_attention'), requestsOpen: by('requests') },
-    duty: s.duty, stepsOpen: open,
+    stepsOpen: open,
     attention: s.clients.filter(c => c.stage === 'needs_attention'),
     dueSoon: [
       { id: 't1', label: 'Review call', clientName: 'Robert Chen', clientId: 'sample-client-3', dueAt: 'Thu, Nov 5, 3:00 PM', day: 'Thu', date: 5, done: s.tasks.t1 },
@@ -406,6 +426,8 @@ function useActionsSample() {
     })),
     // Lead spend (N-A-23): a change starts at midnight; a tier change starts with the next bill.
     setSpend: spend => set(s => ({ ...s, billing: { ...s.billing, pending: { spend, starts: startsText('Tue, Nov 3') }, spend } })),
+    // P889: how they take leads (mode + live-call hours). Starts at midnight like a spend change.
+    setTake: take => set(s => ({ ...s, billing: { ...s.billing, take } })),
     topUp: amount => set(s => ({ ...s, billing: { ...s.billing, wallet: { ...s.billing.wallet, topUp: s.billing.wallet.topUp + amount } } })),
     setProducts: products => set(s => ({ ...s, billing: { ...s.billing, products } })),
     pause: p => set(s => ({ ...s, billing: { ...s.billing, paused: p } })),
@@ -415,7 +437,6 @@ function useActionsSample() {
     fixCard: () => set(s => ({ ...s, billing: { ...s.billing, payment: { ...s.billing.payment, failed: false } } })),
     saveSetup: patch => set(s => ({ ...s, setup: { ...(s.setup || {}), ...patch } })),
     addLeadNote: (id, text) => set(s => ({ ...s, leads: s.leads.map(l => (l.id === id ? { ...l, note: l.note ? `${l.note}\n${text}` : text } : l)) })),
-    setDuty: on => set(s => ({ ...s, duty: on })),
     doneTask: id => set(s => ({ ...s, tasks: { ...s.tasks, [id]: true } })),
     clientAction: (id, action) => set(s => {
       const c = s.clients.find(x => x.id === id)
@@ -427,6 +448,21 @@ function useActionsSample() {
     // P868: form is lib submitModel buildSubmission (phone in E.164; booking = the call booked with it, or null).
     // P873: a sale picked from one of the agent's leads (form.linked) moves that lead to Sold and makes it a client.
     submitSale: form => set(s => ({ ...s, submitted: s.submitted + 1, sales: [...(s.sales || []), form], leads: form.linked?.kind === 'lead' ? s.leads.map(l => (l.id === form.linked.id ? soldToClient(l) : l)) : s.leads, activity: log(s, form.name || 'New client', form.booking ? `Sale submitted for servicing. Call booked for ${form.booking.time} (their time)${form.booking.va ? ` with ${form.booking.va}` : ''}.` : 'Sale submitted for servicing.', 'client') })),
+    // P891: clients the agent brought in (rows = lib/bookImport checkRow(...).row, only the ok ones). Each is Added
+    // with a welcome call on the team's list; big imports spread over days (sample: 25 a day).
+    addClients: rows => set(s => {
+      const days = ['Thu, Nov 5', 'Fri, Nov 6', 'Mon, Nov 9', 'Tue, Nov 10', 'Wed, Nov 11']
+      const made = rows.map((r, i) => {
+        const welcomeAt = days[Math.min(days.length - 1, Math.floor(i / 25))]
+        return mkAdded(`added-${Date.now()}-${i}`, { first: r.first_name, last: r.last_name, phone: formatPhone(r.phone), city: '', state: r.state }, 'added', {
+          carrier_name: r.carrier, product_name: r.product || 'Life insurance', policy_number: r.policy_number, monthly_premium: r.monthly_premium || 0,
+          face_amount: r.face_amount, draft_day: r.draft_day, effective: r.effective_date, email: r.email, notes: r.notes,
+          submitted: 'Today', next_step: `Welcome call ${welcomeAt}`, steps: welcomeSteps('added', { addedAt: 'Today', welcomeAt }),
+        })
+      })
+      const who = rows.length === 1 ? `${rows[0].first_name} ${rows[0].last_name}` : `${rows.length} clients`
+      return { ...s, clients: [...made, ...s.clients], activity: log(s, who, `${rows.length === 1 ? 'Added' : `${rows.length} clients added`} by you. The team calls to welcome ${rows.length === 1 ? 'them' : 'each one'}${rows.length > 25 ? ', 25 a day' : ''}.`, 'client') }
+    }),
     submitRequest: form => set(s => ({ ...s, activity: log(s, form.name || 'Client', `Service request sent: ${form.kind}.`, 'client') })),
     // P885 (sample): a new forwarding address; the old one stops (rotate_my_payment_intake_address).
     rotateIntake: () => set(s => ({ ...s, settings: { ...s.settings, paymentIntake: { ...s.settings.paymentIntake, address: `pay+${Math.random().toString(36).slice(2, 12).padEnd(10, '0')}@in.ohvara.com` } } })),

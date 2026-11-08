@@ -3,8 +3,12 @@
 //
 // Order: Twilio's signature first. STOP / START (and Twilio's other opt words)
 // only update sms_opt_outs, exactly as before. Any other text (HELP included)
-// is a reply for the VA queue: saved once per MessageSid in lead_sms_replies,
-// tied to the newest lead with that phone (or none). We never reply ourselves:
+// is a reply: saved once per MessageSid in lead_sms_replies, tied to the newest
+// lead with that phone (or none). P890: there is no VA reply inbox. Nobody
+// replies by hand, so a reply we can't read (anything but the opt and HELP
+// words) on a known lead becomes a call task: a VA callback, due now
+// (route_enqueue 'callback', P878's replier rule). A failed enqueue is logged,
+// not retried (the reply is already saved). We never reply ourselves:
 // the answer is always empty TwiML, and nothing here can send a text.
 // Logs carry error text only, never the phone or the message body.
 import { readTwilioRequest } from '../_shared/twilio.ts'
@@ -69,6 +73,14 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
     if (error && error.code !== '23505') {
       deps.log(`[twilio-sms-webhook] save reply ${error.message}`)
       return retry()
+    }
+    const leadId = typeof match.data === 'string' ? match.data : null
+    if (!error && leadId && intent === null) {
+      const task = await deps.rpc('route_enqueue', {
+        p_kind: 'callback', p_lead: leadId, p_phone: reply.from_phone, p_due: new Date().toISOString(),
+        p_detail: { why: 'text_reply', twilio_sid: reply.twilio_sid },
+      })
+      if (task.error) deps.log(`[twilio-sms-webhook] call task ${task.error.message}`)
     }
   }
   return twiml()

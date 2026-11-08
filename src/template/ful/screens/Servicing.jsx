@@ -8,6 +8,8 @@ import { fp } from '../paths'
 import { KIND, kindTone, outcomesOf, outcomeLabel, SEND_REASONS, TASK_GROUPS } from '../words'
 import { HelpDot } from '../../../fulshell/training/HelpDot'
 import { DocsBlock } from '../Docs886'
+import { WELCOME_TEXT_ASK, ordinal } from '../../../lib/bookImport.js'
+import '../../p891.css'
 
 // P845 — Servicing: the steps agents asked for (packet checks, payment and beneficiary changes, review calls, lapse
 // saves). A board like the Queue: overdue, due today, coming up, no date; each card takes its kind's colour (lib/
@@ -36,7 +38,40 @@ const WHEN = ['Today, 4:30 PM', 'Fri, 10:00 AM', 'Fri, 2:00 PM', 'Mon, 11:00 AM'
 const NOTICE = { missed: 'Missed payment', lapse_notice: 'Lapse notice', chargeback_warning: 'Chargeback warning' }
 const sayFor = (t, m) => `Hi ${t.client.client_first_name}, this is (your name) with Deedstone, calling for ${t.agent}. We noticed a payment on your ${t.carrier} policy didn’t go through${m.due ? ` on ${m.due}` : ''}. I want to make sure your coverage stays in place. Can we fix it together now?`
 
+// P891: the welcome call for a client the agent brought in. The VA introduces the agent's client care team, checks
+// the details the agent gave, asks about text updates (only a yes is logged as consent), and notes any problem.
+const sayWelcome = t => `Hi ${t.client.client_first_name}, this is (your name) with ${t.agent}'s client care team at Deedstone. ${t.agent.split(' ')[0]} asked us to look after your ${t.carrier} policy from now on: payments, changes, your yearly review. Do you have two minutes so I can check we have your details right?`
+const money = v => (v || v === 0 ? `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: v % 1 ? 2 : 0 })}` : 'Not given')
+
+function WelcomeSteps({ t }) {
+  const { textConsent } = useFulActions()
+  const note = useNote()
+  const done = t.status === 'done'
+  const c = t.client
+  const facts = [['Name', t.name], ['Phone', c.client_phone], ['Email', c.email || 'Not given'], ['State', c.state], ['Carrier', t.carrier], ['Policy', c.policy_number],
+    ['Product', c.product_name], ['Face amount', money(c.face_amount)], ['Premium', `${money(c.monthly_premium)} a month`], ['Draft day', c.draft_day ? `The ${ordinal(c.draft_day)}` : 'Not given'], ['Effective', c.effective || 'Not given']]
+  const say = yes => { textConsent(t.id, yes); note(yes ? 'Yes to texts. Logged' : 'No texts. Nothing logged') }
+  return (
+    <Block title="On this call">
+      <ol className="fs-steps">
+        <li className={done ? 'done' : t.held ? 'now' : ''}><i /><div><b>Confirm it’s them</b><span>Name and date of birth.</span></div></li>
+        <li className={done ? 'done' : ''}><i /><div><b>Say who you are</b><p className="fs-say">“{sayWelcome(t)}”</p></div></li>
+        <li className={done ? 'done' : ''}><i /><div><b>Check the details</b><span>Read each one back. Anything wrong: fix it in your notes and pick Details fixed.</span>
+          <dl className="wc-facts">{facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></div></li>
+        <li className={done || t.texts ? 'done' : ''}><i /><div><b>Ask about text updates</b><p className="fs-say">“{WELCOME_TEXT_ASK}” <span className="tp-tag">Draft wording</span></p>
+          {t.texts ? <span className="wc-said"><Check size={14} aria-hidden="true" />{t.texts === 'yes' ? 'Said yes. Logged as their text consent' : 'Said no. No texts, nothing logged'}</span>
+            : !done && <div className="wc-ask"><button type="button" className="tp-primary sm fx-accent" disabled={!t.held} onClick={() => say(true)}>Yes, texts are fine</button><button type="button" className="tp-btn ov-ghost" disabled={!t.held} onClick={() => say(false)}>No texts</button></div>}
+          {!t.held && !done && !t.texts && <span>Start the step to record their answer.</span>}</div></li>
+        <li className={done ? 'done' : ''}><i /><div><b>Note any problem</b><span>A wrong policy, a payment issue, or a question about coverage: pick Problem → agent and say what in the note. Coverage and advice are {t.agent.split(' ')[0]}’s.</span></div></li>
+        <li className={done ? 'done' : ''}><i /><div><b>Pick what happened</b><span>No answer puts the call back on the next business day, 3 tries in all. After that {t.agent.split(' ')[0]} is told.</span>
+          <ul className="fs-outs">{outcomesOf(t.kind).map(([k, label]) => <li key={k} className={t.outcome === k ? 'is-on' : ''}>{label}</li>)}</ul></div></li>
+      </ol>
+    </Block>
+  )
+}
+
 function TaskSteps({ t }) {
+  if (t.kind === 'welcome_call') return <WelcomeSteps t={t} />
   const m = t.missed
   const done = t.status === 'done'
   const agentFirst = t.agent.split(' ')[0]
@@ -61,6 +96,15 @@ function TaskSteps({ t }) {
 
 function WhatHappened({ t }) {
   const m = t.missed
+  if (t.kind === 'welcome_call') {
+    return (
+      <Block title={`Added by ${t.agent}`} sub="A client from their own book, new to the team">
+        <p className="tp-mid">{t.note}</p>
+        <dl className="fx-facts">{[['Agent', t.agent], ['Added', t.client.submitted], ['Try', `${t.tries || 1} of 3`], ['Call by', t.due_text]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+        {t.client.note && <p className="tp-sub">Agent’s note: {t.client.note}</p>}
+      </Block>
+    )
+  }
   if (!m) {
     return (
       <Block title="What the agent asked">

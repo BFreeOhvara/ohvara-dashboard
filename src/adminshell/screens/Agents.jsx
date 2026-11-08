@@ -9,6 +9,7 @@ import { Dropdown, DField } from '../kit'
 import { ap } from '../paths'
 import { BILL_WORD, STAGE_WORD, stageTone } from '../words'
 import { PilotBlock, CampaignBlock } from './Pilot879'
+import { SplitBlock } from './Split889'
 
 // P849 — Agents: every agent, their plan and weekly lead budget, whether they take live transfers, this week's results
 // and billing. A row opens the agent in a drawer at its own address (/admin/agents/:id) with every admin control the
@@ -40,8 +41,9 @@ function AgentDrawer({ id, onClose }) {
   return (
     <RecordDrawer label={a.name} kicker={`Agent · joined ${a.joined}`} tone={tone} onClose={onClose}
       hero={<>
-        <div className="fx-hero-top"><span className="fx-when"><Radio size={13} aria-hidden="true" />{a.active ? (a.onDuty ? 'On duty for live transfers' : 'Takes transfers, off duty now') : 'Booking only'}</span><Chip tone={billTone}>{billWord}</Chip></div>
+        <div className="fx-hero-top"><span className="fx-when"><Radio size={13} aria-hidden="true" />{a.active ? (a.onDuty ? 'On duty for live transfers' : 'Takes transfers, off duty now') : 'Booking only'}</span><Chip tone={billTone}>{billWord}</Chip>{a.paused && <Chip tone="warn">Leads paused</Chip>}</div>
         <h2>{a.name}</h2>
+        {a.paused && <p className="tp-sub">Paused lead spend {a.paused.since}, {a.paused.until ? `resumes ${a.paused.until}` : 'until they resume'}. Membership and servicing keep going.</p>}
         <p><MapPin size={13} aria-hidden="true" />{a.city}, {a.state} · licensed in {a.states.join(', ')}</p>
         <div className="fx-hero-bot"><b className="fx-hero-big tp-num">{a.phone}</b><Avatar name={a.name} tone={tone} /></div>
       </>}
@@ -63,6 +65,7 @@ function AgentDrawer({ id, onClose }) {
         <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Comped</b><p className="tp-sub">Comped agents use the portal without a plan charge.</p></div><Switch on={a.comped} label="Comped" onChange={v => { setComped(a.id, v); note(v ? 'Account comped' : 'Comp ended') }} /></div>
       </Block>
       <PilotBlock key={`p-${a.id}`} agent={a} />
+      <SplitBlock key={`s-${a.id}`} agent={a} />
       <CampaignBlock agent={a} />
       <Block title="This week"><Funnel w={a.week} /></Block>
       <Block title="Access">
@@ -103,7 +106,7 @@ export default function Agents() {
   const [show, setShow] = useState('all')
   const [sort, setSort] = useState('sold')
   const n = q.trim().toLowerCase()
-  const keep = a => (show === 'all' || (show === 'duty' && a.active) || (show === 'booking' && !a.active) || (show === 'due' && a.billing.status === 'past_due'))
+  const keep = a => (show === 'all' || (show === 'duty' && a.active) || (show === 'booking' && !a.active) || (show === 'due' && a.billing.status === 'past_due') || (show === 'paused' && a.paused))
   const list = agents.filter(a => keep(a) && (!n || `${a.name} ${a.email} ${a.phone} ${a.city}`.toLowerCase().includes(n)))
     .sort((x, y) => (sort === 'name' ? x.name.localeCompare(y.name) : sort === 'spend' ? y.spend - x.spend : (y.week[sort] - x.week[sort]) || x.name.localeCompare(y.name)))
   const out = invites.filter(i => i.role === 'agent')
@@ -114,6 +117,7 @@ export default function Agents() {
         <Seg label="Show" value={show} onChange={setShow} options={[
           { key: 'all', label: 'All', count: agents.length }, { key: 'duty', label: 'Take transfers', count: agents.filter(a => a.active).length },
           { key: 'booking', label: 'Booking only', count: agents.filter(a => !a.active).length }, { key: 'due', label: 'Past due', count: agents.filter(a => a.billing.status === 'past_due').length },
+          { key: 'paused', label: 'Leads paused', count: agents.filter(a => a.paused).length },
         ]} />
         <span className="tp-grow" />
         <Dropdown className="adm-dd-sm" label="Sort" value={sort} options={SORTS} onChange={setSort} />
@@ -125,7 +129,7 @@ export default function Agents() {
           const [word, tone] = BILL_WORD[a.billing.status]
           return (
             <div key={a.id} className="adm-tr" style={{ '--i': i }}>
-              <Link to={ap('agents', a.id)} className="adm-who"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>{a.city}, {a.state} · {a.access ? `on ${a.lastOn}` : 'access off'}</small></span></Link>
+              <Link to={ap('agents', a.id)} className="adm-who"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>{a.city}, {a.state} · {a.paused ? `leads paused${a.paused.until ? ` until ${a.paused.until}` : ''}` : a.access ? `on ${a.lastOn}` : 'access off'}</small></span></Link>
               <span className="adm-cell"><b>{PLANS[a.plan].label}</b><small>{money(a.spend)} a week on leads</small></span>
               <span className="adm-cell adm-sw"><Switch on={a.active} label={`${a.name} takes live transfers`} onChange={v => { setAgentActive(a.id, v); note(v ? `${a.name} takes live transfers` : `${a.name} is booking only`) }} /><small>{a.active ? (a.onDuty ? 'On duty' : 'Off duty') : 'Booking only'}</small></span>
               <span className="adm-cell"><Funnel w={a.week} /></span>

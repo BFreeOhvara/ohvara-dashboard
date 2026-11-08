@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   User, Users, ToggleRight, Wallet, History, Bug, SlidersHorizontal, LogOut, Mail, UserPlus, ArrowUpRight, Search, ShieldCheck,
-  ShieldOff, Image as ImageIcon, Check, Lock, GraduationCap, Scale,
+  ShieldOff, Image as ImageIcon, Check, Lock, GraduationCap, Scale, ArrowRightLeft, Bot,
 } from 'lucide-react'
 import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmAudit, useAdmBugs, useAdmDay, SWITCHES, ME } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
@@ -19,12 +19,14 @@ import { BUG_STATUS } from '../../template/bugReport'
 import '../../template/reportbug.css'
 import { Compliance } from './Compliance879'
 import SampleSwitch from '../SampleSwitch'
+import { SplitRules } from './Split889'
+import { AiCallerSettings } from './AiCalls892'
 
 // P849 — admin Settings on the agent page's shape: the profile card and Sign out on the left, one panel whose stretch
 // tabs switch sections. Sections: Profile, People & access (everyone with a login, as Users does today), Switches,
 // Pay rules, Audit log (append-only, every admin action), Bug reports, Preferences. Sample only: the
 // real switches stay on today's /settings page until the backend step, and this page says so.
-const TABS = [['profile', 'Profile', User], ['people', 'People & access', Users], ['switches', 'Switches', ToggleRight], ['pay', 'Pay rules', Wallet],
+const TABS = [['profile', 'Profile', User], ['people', 'People & access', Users], ['switches', 'Switches', ToggleRight], ['pay', 'Pay rules', Wallet], ['split', 'Lead split', ArrowRightLeft], ['ai', 'AI caller', Bot],
   ['training', 'Training', GraduationCap], ['audit', 'Audit log', History], ['bugs', 'Bug reports', Bug], ['compliance', 'Compliance', Scale], ['prefs', 'Preferences', SlidersHorizontal]]
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
 
@@ -132,11 +134,9 @@ function PayRules() {
   const num = k => e => setD({ ...d, [k]: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, '')) || 0) })
   return (
     <>
-      <Head title="Pay rules" sub="What a VA earns for each cancellation the carrier confirms, and the weekly limits." />
+      <Head title="Pay rules" sub="VAs are paid by the hour, from clock in and out. Paid every Monday." />
       <div className="fx-form-grid">
-        <Field label="Pay per cancellation ($)"><input className="tp-money" inputMode="decimal" value={d.perCancel} onChange={num('perCancel')} /></Field>
-        <Field label="Weekly minimum ($)" hint="Paid even in a slow week"><input className="tp-money" inputMode="decimal" value={d.weeklyMin} onChange={num('weeklyMin')} /></Field>
-        <Field label="Weekly hold cap" hint="Cancellations past this wait for a look"><input className="tp-num" inputMode="numeric" value={d.holdCap} onChange={num('holdCap')} /></Field>
+        <Field label="Hourly rate ($)" hint="Overtime past 40 hours a week at 1.5×"><input className="tp-money" inputMode="decimal" value={d.hourly} onChange={num('hourly')} /></Field>
       </div>
       <FormFoot dirty={!same(d, s.payRules)} onDiscard={() => setD(s.payRules)} onSave={() => { savePayRules(d); note('Pay rules saved (sample)') }} />
     </>
@@ -255,6 +255,8 @@ export default function Settings() {
           {tab === 'people' && <People />}
           {tab === 'switches' && <Switches live={account.live} />}
           {tab === 'pay' && <PayRules />}
+          {tab === 'split' && <SplitRules />}
+          {tab === 'ai' && <AiCallerSettings />}
           {tab === 'training' && <TrainingAdmin />}
           {tab === 'audit' && <Audit />}
           {tab === 'bugs' && <Bugs />}

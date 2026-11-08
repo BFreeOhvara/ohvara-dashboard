@@ -35,10 +35,6 @@ const store: Store = {
       .eq('id', id).maybeSingle()
     return data
   },
-  async agentCallerId(agentId) {
-    const { data } = await admin.from('profiles').select('caller_id_number, caller_id_enabled').eq('id', agentId).maybeSingle()
-    return data
-  },
   async carrierPhone(carrierId) {
     if (!carrierId) return null
     const { data } = await admin.from('carriers').select('service_phone').eq('id', carrierId).maybeSingle()
@@ -79,7 +75,6 @@ const rpc = async (fn: string, args: Record<string, unknown>) => {
 const lineStore: LineStore = {
   role: store.role,
   voiceLive: store.voiceLive,
-  agentCallerId: store.agentCallerId,
   carrierPhone: store.carrierPhone,
   async line(id) {
     const { data } = await admin.from('va_lines')

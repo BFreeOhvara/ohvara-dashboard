@@ -221,7 +221,7 @@ export default function AdminFrame({ preview = false }) {
   const open = which => e => { wig.onClick(e); setPanel(which) }
   const flipTheme = e => { wig.onClick(e); setTheme(theme === 'dark' ? 'light' : 'dark') }
   const tabs = ADM_TABS
-  const tabCount = { leads: day.unassigned.length + day.missed.length, team: day.requests.length, billing: day.failed.length + day.listen.length }
+  const tabCount = { leads: day.unassigned.length + day.missed.length, team: day.requests.length, billing: day.failed.length }
 
   const rows = useMemo(() => ({
     clients: [

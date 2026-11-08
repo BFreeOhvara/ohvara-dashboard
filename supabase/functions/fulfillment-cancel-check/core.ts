@@ -1,3 +1,7 @@
+// P890: the AI check is OFF (VA pay is hourly, not per cancel). The recording
+// callback still saves each recording's state (call grading and listening use
+// it); the cron sweep and the check after a recording are skipped.
+//
 // fulfillment-cancel-check — Prompt 764. Did the carrier confirm the cancel on
 // the call? Logic only; index.ts wires Deno (Twilio, Deepgram, Claude, the
 // service-role store). No JWT: Twilio's requests carry X-Twilio-Signature and
@@ -230,7 +234,7 @@ export async function checkAll(store: Store, deps: Deps, policyId?: string) {
   return out
 }
 
-export type Env = { authToken: string | null; publicUrl: string }
+export type Env = { authToken: string | null; publicUrl: string; checksOn?: boolean }
 
 // defer: keeps work running after the response (EdgeRuntime.waitUntil), so
 // Twilio and pg_net get an answer at once while a long call is transcribed.
@@ -245,6 +249,7 @@ export async function handle(
   const cron = req.headers.get('x-ohvara-cron')
   if (cron) {
     if (!(await store.cronOk(cron))) return json({ error: 'Not allowed' }, 403)
+    if (!env.checksOn) return json({ ok: true, off: true })
     defer(checkAll(store, deps).then(r => console.log('cancel sweep:', JSON.stringify(r))))
     return json({ ok: true, started: true }, 202)
   }
@@ -268,6 +273,6 @@ export async function handle(
     error: state === 'failed' ? (form.ErrorCode ? `Twilio ${form.ErrorCode}` : form.RecordingStatus) : null,
   })
   // A finished (or failed) recording: check the cancels waiting on it now.
-  if (state !== 'recording') defer(checkAll(store, deps, policyId))
+  if (env.checksOn && state !== 'recording') defer(checkAll(store, deps, policyId))
   return new Response(null, { status: 204 })
 }
