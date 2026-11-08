@@ -4,6 +4,7 @@ import { seedEvents, applyMove, closeCallTask, whenLabel, needsYouNow, forYourIn
 import { leadText, SENDER } from '../leadTexts.js'
 import { wallet as walletOf, expected, startsText } from '../spendPlan.js'
 import { DEFAULT_LIVE_HOURS } from '../../lib/leadSplit.js'
+import { formatPhone } from '../phoneMask.js'
 
 // The one door to sample info for the clickable template. Screens read only through the named functions below.
 // Every read returns { data, isLoading: false, error: null }, the shape react-query hooks give, and record fields
@@ -86,6 +87,22 @@ const mkClient = (id, p, o) => ({
   ...o,
 })
 
+// P891: a client the agent brought in (Add client / Import), not sold through Ohvara. book = added | welcomed |
+// serviced | problem (lib/bookImport BOOK_STATUS). After the welcome call they're looked after like any client.
+const ADDED_STAGE = { added: 'setting_up', welcomed: 'protected', serviced: 'protected', problem: 'needs_attention' }
+export const welcomeSteps = (book, o = {}) => [
+  { label: 'Added by you', at: o.addedAt || 'Tue, Nov 3', done: true },
+  { label: 'Welcome call', at: book === 'added' ? (o.welcomeAt || 'Thu, Nov 5') : 'Wed, Nov 4', done: book !== 'added' },
+  { label: 'Serviced like any client', at: book === 'serviced' ? 'Annual review set' : 'After the welcome', done: book === 'serviced' },
+]
+const mkAdded = (id, p, book, o) => mkClient(id, p, {
+  added: true, book, stage: ADDED_STAGE[book], status: book === 'added' ? 'booked' : 'effective', submitted: 'Tue, Nov 3', annual_premium: Math.round((o.monthly_premium || 0) * 1200) / 100,
+  note: book === 'added' ? 'Added by you. The team calls to welcome them and check the details.' : book === 'welcomed' ? `Welcomed Wed, Nov 4. ${o.texts ? 'Said yes to text updates.' : 'No text updates.'}` : 'Welcomed Wed, Nov 4. Serviced like any client since.',
+  next_step: book === 'added' ? 'Welcome call Thu, Nov 5' : book === 'serviced' ? 'Annual review Sep 2027' : null,
+  steps: welcomeSteps(book), calls: book === 'added' ? [] : [{ at: 'Wed, Nov 4, 10:40 AM', result: 'Welcomed', by: 'Fulfillment' }],
+  ...o,
+})
+
 const seedClients = [
   mkClient('sample-client-1', people.gloria, { policy_number: 'SAMPLE-1001', carrier_name: 'Harborline Life', stage: 'needs_attention', status: 'needs_attention', note: 'We could not reach Gloria after two tries.', attention: 'Confirm the number', next_step: 'Confirm the number', calls: [{ at: 'Thu, Oct 29, 10:02 AM', result: 'No answer', by: 'Fulfillment' }, { at: 'Fri, Oct 30, 5:40 PM', result: 'No answer', by: 'Fulfillment' }] }),
   mkClient('sample-client-2', people.luis, { policy_number: 'SAMPLE-1002', carrier_name: 'Pinecrest Assurance', stage: 'protected', status: 'effective', monthly_premium: 112, annual_premium: 1344, next_step: null }),
@@ -107,6 +124,11 @@ const seedClients = [
     ],
     calls: [{ at: 'Thu, Jul 16, 11:20 AM', result: 'Answered', by: 'Fulfillment' }],
   }),
+  // P891: the sample import. Dana brought three of her own clients from a file on Tue, Nov 3: one waiting for the
+  // welcome call, one welcomed (said yes to texts), one already serviced since.
+  mkAdded('sample-client-8', { first: 'Maria', last: 'Lopez', phone: '(512) 555-0199', city: 'Austin', state: 'TX' }, 'added', { carrier_name: 'Americo', product_name: 'Mortgage Protection 25', policy_number: 'AM-1234567', monthly_premium: 84.2, face_amount: 250000, draft_day: 3, effective: 'Jun 1, 2025' }),
+  mkAdded('sample-client-9', { first: 'Tom', last: 'Reyes', phone: '(512) 555-0122', city: 'Pflugerville', state: 'TX' }, 'welcomed', { carrier_name: 'Foresters', product_name: 'Strong Foundation', policy_number: 'FF-5521904', monthly_premium: 58.75, face_amount: 150000, draft_day: 15, effective: 'Mar 1, 2024', texts: true }),
+  mkAdded('sample-client-10', { first: 'Lena', last: 'Brooks', phone: '(737) 555-0181', city: 'Georgetown', state: 'TX' }, 'serviced', { carrier_name: 'Mutual of Omaha', product_name: 'Term Life Express', policy_number: 'MO-3390217', monthly_premium: 41.3, face_amount: 100000, draft_day: 1, effective: 'Sep 1, 2023', texts: false }),
 ]
 
 const seedThreads = [
@@ -427,6 +449,21 @@ function useActionsSample() {
     // P868: form is lib submitModel buildSubmission (phone in E.164; booking = the call booked with it, or null).
     // P873: a sale picked from one of the agent's leads (form.linked) moves that lead to Sold and makes it a client.
     submitSale: form => set(s => ({ ...s, submitted: s.submitted + 1, sales: [...(s.sales || []), form], leads: form.linked?.kind === 'lead' ? s.leads.map(l => (l.id === form.linked.id ? soldToClient(l) : l)) : s.leads, activity: log(s, form.name || 'New client', form.booking ? `Sale submitted for servicing. Call booked for ${form.booking.time} (their time)${form.booking.va ? ` with ${form.booking.va}` : ''}.` : 'Sale submitted for servicing.', 'client') })),
+    // P891: clients the agent brought in (rows = lib/bookImport checkRow(...).row, only the ok ones). Each is Added
+    // with a welcome call on the team's list; big imports spread over days (sample: 25 a day).
+    addClients: rows => set(s => {
+      const days = ['Thu, Nov 5', 'Fri, Nov 6', 'Mon, Nov 9', 'Tue, Nov 10', 'Wed, Nov 11']
+      const made = rows.map((r, i) => {
+        const welcomeAt = days[Math.min(days.length - 1, Math.floor(i / 25))]
+        return mkAdded(`added-${Date.now()}-${i}`, { first: r.first_name, last: r.last_name, phone: formatPhone(r.phone), city: '', state: r.state }, 'added', {
+          carrier_name: r.carrier, product_name: r.product || 'Life insurance', policy_number: r.policy_number, monthly_premium: r.monthly_premium || 0,
+          face_amount: r.face_amount, draft_day: r.draft_day, effective: r.effective_date, email: r.email, notes: r.notes,
+          submitted: 'Today', next_step: `Welcome call ${welcomeAt}`, steps: welcomeSteps('added', { addedAt: 'Today', welcomeAt }),
+        })
+      })
+      const who = rows.length === 1 ? `${rows[0].first_name} ${rows[0].last_name}` : `${rows.length} clients`
+      return { ...s, clients: [...made, ...s.clients], activity: log(s, who, `${rows.length === 1 ? 'Added' : `${rows.length} clients added`} by you. The team calls to welcome ${rows.length === 1 ? 'them' : 'each one'}${rows.length > 25 ? ', 25 a day' : ''}.`, 'client') }
+    }),
     submitRequest: form => set(s => ({ ...s, activity: log(s, form.name || 'Client', `Service request sent: ${form.kind}.`, 'client') })),
     // P885 (sample): a new forwarding address; the old one stops (rotate_my_payment_intake_address).
     rotateIntake: () => set(s => ({ ...s, settings: { ...s.settings, paymentIntake: { ...s.settings.paymentIntake, address: `pay+${Math.random().toString(36).slice(2, 12).padEnd(10, '0')}@in.ohvara.com` } } })),

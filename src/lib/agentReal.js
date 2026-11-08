@@ -105,7 +105,7 @@ export function toLead(r, events = [], tz = DEFAULT_TZ) {
 }
 
 // ── Clients ──────────────────────────────────────────────────────────────────────────────────────────────────────
-const TASK_LABEL = { packet_check: 'Packet check', review_call: 'Review call', chargeback_watch: 'Payment watch', cancel_old: 'Old policy cancelled', cancellation: 'Old policy cancelled', lapse_save: 'Save call', change: 'Policy change', check_in: 'Check-in call' }
+const TASK_LABEL = { packet_check: 'Packet check', review_call: 'Review call', chargeback_watch: 'Payment watch', cancel_old: 'Old policy cancelled', cancellation: 'Old policy cancelled', lapse_save: 'Save call', change: 'Policy change', check_in: 'Check-in call', welcome_call: 'Welcome call' }
 const shortDay = w => (w ? whenLabel(w).replace(/, \d+:\d+ [AP]M$/, '') : 'To be set')
 // policy_servicing_status.stage to the Clients board stage (template/stages.js stageLabel).
 export function clientStageOf(st) {

@@ -16,6 +16,7 @@ export const KIND = {
   packet_check: 'Policy packet check', review_call: 'Review call', chargeback_watch: 'Chargeback watch', beneficiary_change: 'Beneficiary change',
   address_change: 'Address change', payment_change: 'Payment change', draft_date_change: 'Draft date change', lapse_save: 'Lapse save',
   annual_review: 'Annual review', claim_help: 'Claim help', carrier_call: 'Carrier call', other: 'Other request',
+  welcome_call: 'Welcome call',
 }
 export function kindTone(kind) {
   if (kind === 'lapse_save' || kind === 'chargeback_watch') return 'warn'
@@ -29,6 +30,8 @@ const OUTCOMES = {
   // P888: the four things a VA hears on a save call (p888 va_servicing_outcome). 'lapsed' is history only.
   lapse_save: [['saved', 'Saved'], ['fixing', 'Fixing it'], ['client_cancelled', 'Wants to cancel'], ['no_answer', 'No answer']],
   packet_check: [['delivered', 'Delivered'], ['not_delivered', 'Not delivered']],
+  // P891: a client the agent added (p891 servicing_tasks_outcome_check).
+  welcome_call: [['welcomed', 'Welcomed'], ['details_fixed', 'Details fixed'], ['problem', 'Problem → agent'], ['no_answer', 'No answer']],
   review_call: CALL, annual_review: CALL, chargeback_watch: [['on_time', 'Paid on time'], ['missed', 'Missed a payment']],
 }
 export const outcomesOf = kind => OUTCOMES[kind] || CHANGE

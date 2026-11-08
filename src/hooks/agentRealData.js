@@ -84,22 +84,35 @@ function useClientRows() {
   return useQuery({
     queryKey: ['p848', 'clients', profile?.id], enabled: !!profile?.id, ...LIVE,
     queryFn: async () => {
-      const [policies, status, tasks] = await Promise.all([
+      // P891: agent_added_clients is the Added → Welcomed → Serviced status of clients the agent brought in; until
+      // migration p891 is applied it is missing and reads as none.
+      const [policies, status, tasks, added] = await Promise.all([
         soft(supabase.from('policies').select(POLICY_COLS).eq('agent_id', profile.id).is('archived_at', null).order('created_at', { ascending: false })),
         soft(supabase.from('policy_servicing_status').select('policy_id, stage, next_step, next_date, open_requests, is_sample').eq('agent_id', profile.id)),
         soft(supabase.rpc('agent_servicing_items')),
+        soft(supabase.rpc('agent_added_clients')),
       ])
-      return { policies, status, tasks }
+      return { policies, status, tasks, added }
     },
   })
 }
+// P891: a client the agent added gets "Added by you" and its book status; the welcome call shows as its next step.
+function withBook(c, b, tz) {
+  if (!b) return c
+  const book = ['added', 'welcomed', 'serviced', 'problem'].includes(b.book_status) ? b.book_status : 'added'
+  const due = b.welcome_due_at ? whenLabel(wallOf(b.welcome_due_at, tz)) : null
+  return { ...c, added: true, book, next_step: book === 'added' ? `Welcome call ${due || 'soon'}` : book === 'problem' ? (b.problem || 'The welcome call found a problem') : c.next_step,
+    note: book === 'problem' ? (b.problem || 'The welcome call found a problem') : c.note, face_amount: b.face_amount, draft_day: b.draft_day, effective: b.effective_date }
+}
+
 export function useClientsReal() {
   const tz = useTz()
   const q = useClientRows()
   const data = useMemo(() => {
-    const { policies = [], status = [], tasks = [] } = q.data || {}
+    const { policies = [], status = [], tasks = [], added = [] } = q.data || {}
     const st = Object.fromEntries(status.filter(r => !r.is_sample).map(r => [r.policy_id, r]))
-    return policies.map(p => toClient(p, st[p.id], tasks, tz))
+    const book = Object.fromEntries((added || []).map(r => [r.policy_id, r]))
+    return policies.map(p => withBook(toClient(p, st[p.id], tasks, tz), book[p.id], tz))
   }, [q.data, tz])
   return { data, isLoading: q.isLoading, error: q.error || null, refetch: q.refetch }
 }
@@ -449,6 +462,8 @@ export function useActionsReal() {
         }, 'Sale not submitted')
         if (form.linked?.kind === 'lead') await rpc('set_inbound_outcome', outcomeArgs(form.linked.id, { outcome: 'sold' }))
       },
+      // P891: rows = lib/bookImport checked rows (ok ones only); the server checks them again and skips duplicates.
+      addClients: (rows, { ack } = {}) => rpc('agent_add_clients', { p_rows: rows, p_ack: !!ack }, 'Clients not added'),
       submitRequest: form => {
         const c = clients.find(x => `${x.client_first_name} ${x.client_last_name}`.trim() === String(form.name || '').trim())
         if (!c) return later('Pick the client again. Nothing was sent')
