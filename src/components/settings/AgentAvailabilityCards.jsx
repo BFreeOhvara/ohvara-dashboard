@@ -12,8 +12,8 @@ import { SettingsCard, SettingsChip, OvField, OvSelect } from '../agent/AgentUI'
 // Settings → Client contact, agents only: working hours, live-transfer phone and on-duty default
 // (migration 197, my_agent_settings / save_my_agent_settings). Each card saves only its own setting.
 // None of them changes who is called, when, or what clients see yet: booking and live transfers
-// don't read these, and each card says so. Nothing here sends anything, and the Active switch
-// above (DutyCard) is untouched. While the functions aren't in the database the cards say
+// don't read these, and each card says so. Nothing here sends anything, and the live-call hours
+// on Billing are untouched. While the functions aren't in the database the cards say
 // Coming soon.
 
 const errText = { margin: 0, fontSize: 13.5, color: 'var(--danger)' }

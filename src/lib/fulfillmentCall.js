@@ -10,7 +10,8 @@ export const initialsOf = name => (name || '').trim().split(/\s+/).filter(Boolea
 export const telHref = phone => `tel:${phone.replace(/[^\d+]/g, '')}`
 
 // The agent verified their number and left it on: the client sees it.
-export const agentCallerIdOn = p => !!(p.agent?.caller_id_verified_at && p.agent?.caller_id_enabled)
+// P890: agent caller ID is gone (agents call from their own phone), so it is never on.
+export const agentCallerIdOn = () => false
 
 // The tone a call shows in: live / cancelled / noAnswer / late / booked.
 export function callTone(p, now) {

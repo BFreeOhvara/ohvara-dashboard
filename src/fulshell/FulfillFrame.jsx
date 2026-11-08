@@ -10,7 +10,7 @@ import { useStretchPill } from '../hooks/useStretchPill'
 import { useNotificationFeed, useMarkRead } from '../hooks/useNotifications'
 import { usePortalPhone } from '../contexts/portalPhone'
 import { Drawer, Avatar, useAccount, useNote, initials } from '../template/kit'
-import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit } from '../template/motion'
+import { wig, still, CountUp, RollTitle, usePageSwap, useExit } from '../template/motion'
 import { armEntrance } from '../adminshell/entrance'
 import Palette from '../template/Palette'
 import { OhvaraMark } from '../components/ui/OhvaraMark'
@@ -36,7 +36,6 @@ import '@fontsource/urbanist/700.css'
 // (marks it read, as the old bell did) and the theme. Calls and texts stay behind voice_live / sms_live.
 const ICONS = { today: Home, queue: PhoneIncoming, calls: PhoneCall, clients: Users, servicing: LifeBuoy, pay: Wallet }
 const PAGES = [...FUL_TABS.map(([k, label]) => ({ to: () => FUL[k], label })), { to: () => FUL.messages, label: 'Messages' }, { to: () => FUL.settings, label: 'Settings' }]
-const money = cents => usd(true)(cents / 100)
 
 function BellDrawer({ open, onClose, profileId }) {
   const { data: rows = [], isLoading, isError } = useNotificationFeed(profileId, 8)
@@ -174,14 +173,14 @@ function headStats(page, d) {
   const b = d.buckets
   const waiting = b.new + b.not_reached + b.callback_due + d.missed.length
   const open = d.servicing.length
-  const earned = S(Wallet, d.totals.earnedCents, 'earned this week', { fmt: money, chip: d.totals.checking ? [`${d.totals.checking} checking`, 'mute'] : null })
   return {
-    today: [S(PhoneCall, d.day.left, 'calls left today', { chip: d.live.length ? ['On a call', 'warn'] : null }), S(PhoneIncoming, waiting, 'waiting in the queue', { chip: b.callback_due ? [`${b.callback_due} callback due`, 'warn'] : null }), earned],
+    today: [S(PhoneCall, d.day.left, 'calls left today', { chip: d.live.length ? ['On a call', 'warn'] : null }), S(PhoneIncoming, waiting, 'waiting in the queue', { chip: b.callback_due ? [`${b.callback_due} callback due`, 'warn'] : null })],
     queue: [S(TriangleAlert, b.callback_due, 'callbacks due', { chip: b.callback_due ? ['Call first', 'warn'] : null }), S(PhoneIncoming, b.new, 'new'), S(PhoneOutgoing, b.not_reached + d.missed.length, 'to try again')],
     calls: [S(PhoneCall, d.day.total, 'calls today'), S(Check, d.day.done.length, 'done'), S(Clock3, d.day.left, 'to go', { chip: d.day.next ? [`next ${d.day.next.time} ${d.day.next.period}`, 'blue'] : null })],
     clients: [S(Users, d.mine.length, 'clients on your book'), S(CalendarCheck, d.mine.filter(p => p.scheduled_call_at && p.fulfillment_stage !== 'Complete').length, 'with a call booked'), S(ShieldCheck, d.mine.filter(p => p.fulfillment_stage === 'Complete').length, 'cancelled')],
     servicing: [S(LifeBuoy, open, 'open steps'), S(TriangleAlert, d.tasks.overdue.length, 'overdue', { chip: d.tasks.overdue.length ? ['Do first', 'warn'] : null }), S(Hand, d.tasks.mine.length, 'you are working')],
-    pay: [earned, S(Check, d.totals.verified, 'verified cancels'), S(Clock3, d.totals.checking, 'being checked')],
+    // P890: pay is hourly from clock in and out (the Pay screen shows hours); no per-cancel counts here.
+    pay: [],
     messages: [S(MessageSquare, d.unread, 'unread')],
   }[page] || []
 }

@@ -6,7 +6,7 @@
 -- RUN: `npm run test:sql` (local PGlite) or `supabase test db` on a LOCAL
 -- stack only. Everything runs in one transaction that is rolled back. Never run
 -- it against Ohvara's live database (jjextitmbptoaolacocs), and never apply
--- migrations to it from here. Needs 174 (agent_duty) and 179 (help_calls).
+-- migrations to it from here. Needs 179 (help_calls), p889 (agent_lead_product) and p890 (live-call hours gate).
 --
 -- Cast: agents A and B (active), VA V (Fulfillment, active).
 -- Calls (last two hex digits of the id):
@@ -50,9 +50,12 @@ values
   ('eeeeeeee-eeee-4eee-8eee-0000000000c4', 'p_mit_t4', '+15125559104', '+15125559100', 'eeeeeeee-eeee-4eee-8eee-00000000000f', 'live',
    'eeeeeeee-eeee-4eee-8eee-00000000000a', null, now() - interval '10 seconds');
 
--- A and B on duty (as the table owner: no signed-in user, so the guard skips the role check).
-insert into public.agent_duty (agent_id, on_duty)
-values ('eeeeeeee-eeee-4eee-8eee-00000000000a', true), ('eeeeeeee-eeee-4eee-8eee-00000000000b', true);
+-- P890: A and B take live transfers, inside live-call hours all day every day (agent_lead_product, p889), not agent_duty.
+insert into public.agent_lead_product (agent_id, mode, live_hours, tz)
+select a.id, 'both', (select jsonb_object_agg(d, jsonb_build_object('on', true, 'start', '12:00 AM', 'end', '11:59 PM'))
+                        from unnest(array['Mon','Tue','Wed','Thu','Fri','Sat','Sun']) d), 'UTC'
+  from (values ('eeeeeeee-eeee-4eee-8eee-00000000000a'::uuid), ('eeeeeeee-eeee-4eee-8eee-00000000000b'::uuid)) a(id)
+on conflict (agent_id) do update set mode = excluded.mode, live_hours = excluded.live_hours, tz = excluded.tz;
 
 -- ── a. Grants: signed-in users only ─────────────────────────────────────────
 select ok(not has_function_privilege('anon', 'public.my_incoming_transfer()', 'execute'),
@@ -80,8 +83,8 @@ select is((select right(help_call_id::text, 2) from public.my_incoming_transfer(
           'c2 B gets only their own call');
 reset role;
 
--- ── d. Off duty: nothing ────────────────────────────────────────────────────
-update public.agent_duty set on_duty = false where agent_id = 'eeeeeeee-eeee-4eee-8eee-00000000000a';
+-- ── d. Not taking live transfers (Appointments only): nothing ───────────────
+update public.agent_lead_product set mode = 'appts' where agent_id = 'eeeeeeee-eeee-4eee-8eee-00000000000a';
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"eeeeeeee-eeee-4eee-8eee-00000000000a","role":"authenticated"}', true);
 select is((select count(*) from public.my_incoming_transfer()), 0::bigint,

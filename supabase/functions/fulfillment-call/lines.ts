@@ -17,7 +17,7 @@
 //   coach         an admin on the call: listen (muted), whisper (only the VA hears) or join
 // The cron path (end_line) ends a dropped call nobody rescued in time. No recording at launch (Q51).
 
-import { toE164, clientCallerId, type Twilio } from './core.ts'
+import { toE164, type Twilio } from './core.ts'
 
 export type Party = 'client' | 'lead' | 'carrier' | 'agent'
 export type LineLeg = {
@@ -49,7 +49,6 @@ export interface LineStore {
   line(id: string): Promise<Line | null>
   lead(id: string): Promise<LeadRow | null>
   policyRow(id: string): Promise<PolicyRow | null>
-  agentCallerId(agentId: string): Promise<{ caller_id_number: string | null; caller_id_enabled: boolean | null } | null>
   agentPhone(agentId: string): Promise<string | null>
   carrierPhone(carrierId: string | null): Promise<string | null>
   voicemailText(): Promise<string | null>
@@ -190,8 +189,7 @@ export async function actLine(store: LineStore, twilio: Twilio, env: LineEnv, us
         refuse(`Can't call now: ${PREDIAL_WORDS[chk.reason || ''] || chk.reason}`, 409, 'predial',
           { reason: chk.reason, next_at: chk.next_at })
       }
-      // A client sees their agent's number when it's verified; a lead sees Deedstone's (Ohvara's) number.
-      if (pol) callerId = clientCallerId(await store.agentCallerId(pol.agent_id), env.from)
+      // P890: clients and leads both see Deedstone's (Ohvara's) number; agent caller ID is gone.
     } else if (action === 'ring_carrier') {
       who = 'carrier'
       to = toE164(await store.carrierPhone(body.carrier_id ?? pol?.carrier_id ?? null))

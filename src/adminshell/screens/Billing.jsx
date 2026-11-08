@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Play, Pause, CircleCheck, Landmark, ArrowUpRight, CreditCard, MessageSquare, RotateCw, Ban, Wallet, Megaphone, Headset, Receipt, Wrench, BadgeDollarSign, PiggyBank, Pencil, History } from 'lucide-react'
+import { CircleCheck, Landmark, ArrowUpRight, CreditCard, MessageSquare, RotateCw, Wallet, Megaphone, Headset, Receipt, Wrench, BadgeDollarSign, PiggyBank, Pencil, History } from 'lucide-react'
 import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, PLANS, PERIODS, SETUP_FEE, CARD_FEE } from '../data'
 import { Avatar, Chip, PillTabs, SampleTag, Seg, Switch, useNote } from '../../template/kit'
 import { CountUp, usd } from '../../template/motion'
@@ -13,52 +13,9 @@ import { PilotResults } from './Pilot879'
 // paid), what it cost (ad spend, VA payouts, card fees, tools), the profit, and the owners' split (Brayden and Jordan,
 // 50/50 by default, a setting with an audit line). Both admins see everything, each other's payouts too. Below it, kept:
 // P849 — Billing & revenue: money in (agents' plans and lead spend, by week, each agent's bill and the failed
-// payments) and money out (the Monday VA pay run, cancellations that need a listen with Pay it / Don't pay as
-// fulfillment_decide_cancel does today, past runs, the Stripe balance and the pause switch). Sample amounts and prices.
+// payments) and money out (the Monday VA pay run: hours from clock in and out x the hourly rate, P890: no per-cancel pay;
+// past runs, the Stripe balance and the pause switch). Sample amounts and prices.
 const money = usd()
-
-// A sample player: no audio leaves or loads; it shows where the AI heard the problem.
-function Player({ at }) {
-  const [on, setOn] = useState(false)
-  const [t, setT] = useState(0)
-  const len = 420
-  const mark = (() => { const [m, s] = at.split(':'); return (+m * 60 + +s) / len })()
-  useEffect(() => {
-    if (!on) return undefined
-    const id = setInterval(() => setT(x => { if (x >= len) { setOn(false); return len } return x + 4 }), 100)
-    return () => clearInterval(id)
-  }, [on])
-  const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
-  return (
-    <div className="adm-player">
-      <button type="button" className="fx-ib" aria-label={on ? 'Pause' : 'Play the call'} onClick={() => setOn(o => !o)}>{on ? <Pause size={16} /> : <Play size={16} />}</button>
-      <div className="adm-wave" role="slider" aria-label="Position" aria-valuemin={0} aria-valuemax={len} aria-valuenow={t} tabIndex={0}
-        onClick={e => { const r = e.currentTarget.getBoundingClientRect(); setT(Math.round(((e.clientX - r.left) / r.width) * len)) }}
-        onKeyDown={e => { if (e.key === 'ArrowRight') setT(x => Math.min(len, x + 15)); if (e.key === 'ArrowLeft') setT(x => Math.max(0, x - 15)) }}>
-        <i style={{ '--w': t / len }} /><em style={{ left: `${mark * 100}%` }} aria-hidden="true" />
-      </div>
-      <small className="tp-num">{fmt(t)}</small>
-      <button type="button" className="fx-pillbtn" onClick={() => setT(Math.round(mark * len))}>Jump to {at}</button>
-    </div>
-  )
-}
-
-function Listen({ c, i }) {
-  const { decideCancel } = useAdmActions()
-  const note = useNote()
-  const [text, setText] = useState('')
-  return (
-    <article className="fx-tile adm-listen" style={{ '--i': i }}>
-      <header className="fx-tile-h"><span className="tp-grow"><h2>{c.client} · {c.carrier}</h2><p>{c.va} · {c.why}</p></span><b className="tp-money">{money(c.amount)}</b></header>
-      <Player at={c.at} />
-      <label className="tp-field"><span>Note</span><input value={text} onChange={e => setText(e.target.value)} placeholder="What you heard (needed for Don't pay)" /></label>
-      <div className="tp-row tp-wrap">
-        <button type="button" className="tp-primary sm fx-accent" onClick={() => { decideCancel(c.id, true, text.trim()); note(`Marked paid: ${c.client}`) }}><CircleCheck size={14} />Pay it</button>
-        <button type="button" className="tp-btn sm ov-ghost" disabled={text.trim().length < 3} title={text.trim().length < 3 ? 'Add a note first' : undefined} onClick={() => { decideCancel(c.id, false, text.trim()); note(`Not paid: ${c.client}`) }}><Ban size={14} />Don't pay</button>
-      </div>
-    </article>
-  )
-}
 
 function Revenue() {
   const { data: m } = useAdmMoney()
@@ -253,11 +210,10 @@ function Payouts() {
   return (
     <div className="fx-ovl">
       <div className="fx-ovl-main">
-        {m.listen.length > 0 && <div className="adm-listens">{m.listen.map((c, i) => <Listen key={c.id} c={c} i={i} />)}</div>}
-        <Tile i={2} title="Who is in Monday's run" sub={`${m.payday} · ${money(m.rate)} a confirmed cancellation`}>
+        <Tile i={2} title="Who is in Monday's run" sub={`${m.payday} · hours from clock in and out · ${money(m.rate)} an hour`}>
           <ul className="tp-list adm-rows">{m.run.map(r => {
             const [bw, bt] = BANK_WORD[r.bank]
-            return <li key={r.va_id} className="fx-mrow"><Avatar name={r.name} /><span className="tp-grow"><b>{r.name}</b><small>{r.count} verified cancellations</small></span><Chip tone={bt}>{bw}</Chip><b className="tp-money">{r.bank === 'ready' ? money(r.amount) : '–'}</b></li>
+            return <li key={r.va_id} className="fx-mrow"><Avatar name={r.name} /><span className="tp-grow"><b>{r.name}</b><small>{r.hours} hours</small></span><Chip tone={bt}>{bw}</Chip><b className="tp-money">{r.bank === 'ready' ? money(r.amount) : '–'}</b></li>
           })}</ul>
         </Tile>
         <Tile i={3} title="Past pay runs" sub={`${money(m.runs.reduce((t, r) => t + r.amount, 0))} paid since the first run`}>
@@ -276,7 +232,7 @@ function Payouts() {
           <ul className="adm-sum">
             <li><Wallet size={14} aria-hidden="true" /><span className="tp-grow">Balance<small>{m.stripeBalance >= m.runTotal ? "Covers Monday's run" : "Short for Monday's run"}</small></span><b className="tp-money">{money(m.stripeBalance)}</b></li>
             <li><Landmark size={14} aria-hidden="true" /><span className="tp-grow">Your bank<small>Chase •••• 7781</small></span><button type="button" className="fx-pillbtn" onClick={() => note("Opens Stripe's form once you sign in for real")}>Change</button></li>
-            <li><CircleCheck size={14} aria-hidden="true" /><span className="tp-grow">Pay per cancellation<small>Weekly cap and minimum too</small></span><Link to={`${ap('settings')}?tab=pay`} className="fx-pillbtn">{money(m.rate)}<ArrowUpRight size={13} /></Link></li>
+            <li><CircleCheck size={14} aria-hidden="true" /><span className="tp-grow">Hourly rate<small>Overtime past 40 hours at 1.5×</small></span><Link to={`${ap('settings')}?tab=pay`} className="fx-pillbtn">{money(m.rate)}<ArrowUpRight size={13} /></Link></li>
           </ul>
         </Tile>
       </div>
@@ -297,7 +253,7 @@ export default function Billing() {
     <div className="tp-page fx-page adm-billing">
       <MoneyTop period={period} setPeriod={v => put('period', v, 'week')} />
       <PillTabs label="Revenue details" className="fx-ptabs adm-pagetabs" itemClass="fx-ptab" value={tab} onChange={t => put('tab', t, 'revenue')}
-        items={TABS.map(([k, label]) => ({ key: k, label, count: k === 'agents' && m.failed.length ? m.failed.length : k === 'payouts' && m.listen.length ? m.listen.length : undefined }))} />
+        items={TABS.map(([k, label]) => ({ key: k, label, count: k === 'agents' && m.failed.length ? m.failed.length : undefined }))} />
       <div className="adm-tabpane" key={tab} role="tabpanel">
         {tab === 'revenue' && <Revenue />}
         {tab === 'pilot' && <PilotResults />}

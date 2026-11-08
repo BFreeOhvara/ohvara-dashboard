@@ -1,8 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
-// Prompt 753 — My pay on Stripe Connect (migration 138); Prompt 764 pays per
-// verified cancel (migration 145). Paid weeks live in fulfillment_payouts
+// Prompt 753 — My pay on Stripe Connect (migration 138); P890: VAs are paid by the hour. Paid weeks live in fulfillment_payouts
 // (written only by the Monday pay run, fulfillment-pay-week; nobody
 // approves); fulfillment_payout_accounts is what Stripe says about the rep's
 // connected account (bank name + last 4 only). Payout settings talk to
@@ -79,8 +78,8 @@ export function useConnectOverview(enabled = true) {
 }
 
 // Prompt 764 — the pay settings on recovery_config (admin writes; anyone
-// signed in reads): payouts_live, payouts_paused, pay_per_cancel_cents,
-// weekly_min_cents (null = off), weekly_cancel_cap.
+// signed in reads): payouts_live, payouts_paused (P890: the per-cancel columns
+// are no longer used for pay).
 const PAY_COLS = 'payouts_live, payouts_paused, pay_per_cancel_cents, weekly_min_cents, weekly_cancel_cap, recording_live'
 export function usePaySettings() {
   return useQuery({
@@ -155,21 +154,6 @@ export function useSavePayoutEmails() {
 // Prompt 765 — Admin Payouts. Admin-only reads (RLS: is_admin) and the
 // decision RPC. Nothing here moves money; the Monday run does that.
 
-// Verified cancels not yet paid: what the next Monday run will pay.
-export function useUnpaidVerified(enabled = true) {
-  return useQuery({
-    queryKey: [...KEY, 'unpaid'],
-    enabled,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('fulfillment_cancels')
-        .select('id, rep_id, amount_cents, week_start, logged_at')
-        .in('status', ['verified', 'verified_by_admin']).is('paid_at', null).limit(1000)
-      if (error) throw error
-      return data || []
-    },
-  })
-}
-
 // Cancels waiting on Brayden, with where the AI thinks the carrier says it and
 // the recording's length (the audio itself only comes through
 // fulfillment-recording). P784: plus the carrier's confirmation number the rep
@@ -203,18 +187,6 @@ export function usePayRuns(enabled = true) {
   })
 }
 
-// Pay it / Don't pay (a reason is required for Don't pay).
-export function useDecideCancel() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ id, pay, note }) => {
-      const { error } = await supabase.rpc('fulfillment_decide_cancel', { p_cancel: id, p_pay: pay, p_note: note?.trim() || null })
-      if (error) throw error
-    },
-    onSettled: () => qc.invalidateQueries({ queryKey: KEY }),
-  })
-}
-
 // Ohvara's Stripe balance, live, through the admin-only
 // fulfillment-stripe-balance function. Not retried: if the function isn't
 // deployed or Stripe is down the page says "Balance unavailable".
@@ -226,19 +198,4 @@ export function useStripeBalance(enabled = true) {
     retry: false,
     queryFn: async () => (await invoke('fulfillment-stripe-balance', {})).available_cents,
   })
-}
-
-// The recording as a blob URL, fetched with the admin's session (an <audio
-// src> can't send the header). Not cached: it's never stored anywhere.
-export async function loadRecordingUrl(recordingId) {
-  const { data: s } = await supabase.auth.getSession()
-  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fulfillment-recording?id=${encodeURIComponent(recordingId)}`, {
-    headers: { Authorization: `Bearer ${s?.session?.access_token || ''}`, apikey: import.meta.env.VITE_SUPABASE_ANON_KEY },
-  })
-  if (!res.ok) {
-    let msg = 'Couldn’t load the recording'
-    try { msg = (await res.json())?.error || msg } catch { /* not JSON */ }
-    throw new Error(msg)
-  }
-  return URL.createObjectURL(await res.blob())
 }

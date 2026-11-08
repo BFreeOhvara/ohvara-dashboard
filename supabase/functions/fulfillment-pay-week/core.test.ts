@@ -232,14 +232,12 @@ test('weekly minimum: topped up when the rep has a verified cancel that week', a
   assert.equal(w.payouts[0].topup_cents, 4000)
 })
 
-test('handle: only pg_cron\'s secret runs it; a person gets "automatic"', async () => {
+test('P890: handle is off — nobody is paid, whoever calls (VA pay is hourly)', async () => {
   const w = world()
-  const asAdmin = await handle(new Request('http://x', { method: 'POST', headers: { Authorization: 'Bearer admin' }, body: '{"rep_id":"x"}' }), w.store, w.stripe, ENV, MON_805)
-  assert.equal(asAdmin.status, 403)
-  assert.equal((await asAdmin.json()).code, 'automatic')
-  const wrong = await handle(new Request('http://x', { method: 'POST', headers: { 'x-ohvara-cron': 'guess' } }), w.store, w.stripe, ENV, MON_805)
-  assert.equal(wrong.status, 403)
-  const ok = await handle(new Request('http://x', { method: 'POST', headers: { 'x-ohvara-cron': 'cron-secret' } }), w.store, w.stripe, ENV, MON_805)
-  assert.equal(ok.status, 200)
-  assert.equal((await ok.json()).status, 'done')
+  for (const headers of [{ Authorization: 'Bearer admin' }, { 'x-ohvara-cron': 'cron-secret' }]) {
+    const r = await handle(new Request('http://x', { method: 'POST', headers }), w.store, w.stripe, ENV, MON_805)
+    assert.equal(r.status, 200)
+    assert.equal((await r.json()).off, true)
+  }
+  assert.equal(w.transfers.length, 0)
 })

@@ -72,17 +72,15 @@ begin
   select count(*) into k from notifications where type = 'message' and link = '/messages?thread=' || pol and profile_id in (A, F);
   r := r || format(E'\n%s policy messages → the other side: %s', case when k = 2 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 2)::int;
 
-  -- 5. Cancelled → agent; the cancel row → needs a listen → admin.
+  -- 5. Cancelled → agent; no cancel pay row (P890).
   update policies set fulfillment_stage = 'Complete', fulfillment_completed_at = now() where id = pol;
   select count(*) into k from notifications where profile_id = A and type = 'policy_cancelled' and data->>'policy_id' = pol::text;
   r := r || format(E'\n%s cancelled → agent: %s', case when k = 1 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 1)::int;
-  update fulfillment_cancels set status = 'needs_listen', reason = 'unclear' where policy_id = pol;
-  -- (with no recording the cancel can be born needs_listen, reason no_recording)
-  select count(*) into k from notifications where profile_id = M and type = 'needs_listen'
-     and data->>'cancel_id' = (select id::text from fulfillment_cancels where policy_id = pol);
-  r := r || format(E'\n%s needs a listen → admin: %s (%s)', case when k = 1 then 'PASS' else 'FAIL' end, k,
-    (select detail from notifications where profile_id = M and type = 'needs_listen' order by created_at desc limit 1));
-  fails := fails + (k <> 1)::int;
+  -- P890: VA pay is hourly, so a cancel makes no pay row and nobody is asked to listen.
+  select count(*) into k from fulfillment_cancels where policy_id = pol;
+  r := r || format(E'
+%s no pay-per-cancel row (P890): %s', case when k = 0 then 'PASS' else 'FAIL' end, k);
+  fails := fails + (k <> 0)::int;
 
   -- 6. Pay run short → admin bell + email (email on by default).
   insert into fulfillment_pay_runs (pay_date, period_start, status, needed_cents, balance_cents)

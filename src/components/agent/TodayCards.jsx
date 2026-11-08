@@ -3,8 +3,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Phone, ChevronRight, ArrowRight, Zap, CalendarDays, CalendarClock, Info, Inbox, MessageSquare, Check } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useInbounds, useInboundEvents, useMembershipTier, useWaitingTexts } from '../../hooks/useInbounds'
-import { useAgentDuty } from '../../hooks/useAgentDuty'
-import { dutySince } from '../../lib/duty'
 import { AttentionCard, ComingUpCard, IconChip, LoadError } from './AgentUI'
 import {
   stageOf, leadName, phoneDisplay, telHref, appointmentAt, timeText, clockParts, untilWords, sameDay, dateText,
@@ -185,27 +183,14 @@ function NextAppointment({ appts, now, tz, evMap, loading, failed, onRetry }) {
   )
 }
 
-function DutyCard({ tz }) {
-  const { on, since, soon, loading, failed, saveFailed, toggle } = useAgentDuty()
-  const live = !loading && !soon && !failed
+function DutyCard() {
   return (
     <section className="ov-card tc-card tc-a-duty" aria-label="Live call transfers">
-      <Head
-        icon={Zap} title="Live call transfers"
-        sub={loading ? 'Checking…' : soon ? 'Coming soon' : failed ? "Couldn't check right now"
-          : on ? (since ? `Active since ${dutySince(since, new Date(), tz)}` : "You're active") : "You're not active"}
-        right={(
-          <button type="button" className={`tc-sw${on ? ' on' : ''}`} role="switch" aria-checked={on} disabled={!live}
-            aria-label={soon ? 'Active for live call transfers (coming soon)' : 'Active for live call transfers'}
-            onClick={() => toggle(!on)}><i /></button>
-        )}
-      />
+      <Head icon={Zap} title="Live call transfers" sub="Inside your live-call hours" />
       <p className="tc-body">
-        {soon
-          ? 'Soon you can turn this on to take callers live the moment our VA checks the fit. Until then, every live call is booked on your calendar.'
-          : "While you're active, our VA sends callers straight to you. When you're not, we book them on your calendar instead."}
+        Live transfers ring you inside your live-call hours. Outside them, we book callers on your calendar.{' '}
+        <Link to="/agent/billing">Set your hours</Link>
       </p>
-      {saveFailed && <p className="tc-err" role="alert">Couldn&rsquo;t save that. Try again.</p>}
     </section>
   )
 }
@@ -313,12 +298,11 @@ function usedThisMonth(list, now, tz) {
 }
 
 // The Overview on a 1280x700+ screen (fit mode) has no room for the five cards, so it shows this one slim row:
-// Next appointment, the Live call transfers switch and Appointments left, from the same hooks as the cards.
+// Next appointment, the Live call transfers line and Appointments left, from the same hooks as the cards.
 // Today's appointments lives on the Calendar and New inbounds in Activity (each row there opens its inbound);
 // the two links carry the counts. Under 1280x700 and on phones the five cards are shown as before.
 export function TodayStrip() {
   const { tz, inb, now, list, appts } = useToday()
-  const { on, since, soon, loading: dutyLoading, failed: dutyFailed, toggle } = useAgentDuty()
   const { data: tier, isLoading: tierLoading, isError: tierFailed } = useMembershipTier()
   const loading = inb.isLoading
   const failed = inb.isError
@@ -328,7 +312,6 @@ export function TodayStrip() {
   const total = tier?.monthly_appointments
   const has = Number.isInteger(total) && total > 0
   const left = has ? Math.max(0, total - usedThisMonth(list, now, tz)) : null
-  const dutyLive = !dutyLoading && !soon && !dutyFailed
 
   return (
     <section className="ov-card tcs" data-ov="today-strip" aria-label="Today">
@@ -345,12 +328,8 @@ export function TodayStrip() {
         <span className="tcs-tile"><Zap size={16} strokeWidth={2} aria-hidden="true" /></span>
         <div className="tcs-t">
           <b>Live call transfers</b>
-          <span>{dutyLoading ? 'Checking…' : soon ? 'Coming soon' : dutyFailed ? 'Couldn’t check right now'
-            : on ? (since ? `Active since ${dutySince(since, new Date(), tz)}` : 'You’re active') : 'You’re not active'}</span>
+          <span>Live transfers ring you inside your live-call hours. Outside them, we book callers on your calendar. <Link to="/agent/billing">Set your hours</Link></span>
         </div>
-        <button type="button" className={`tc-sw${on ? ' on' : ''}`} role="switch" aria-checked={on} disabled={!dutyLive}
-          aria-label={soon ? 'Active for live call transfers (coming soon)' : 'Active for live call transfers'}
-          onClick={() => toggle(!on)}><i /></button>
       </div>
 
       <div className="tcs-seg tcs-plan">
@@ -383,7 +362,7 @@ export function TodayCards({ showTexts = false, fitGrid = false }) {
     <section className={`tc-grid${showTexts || fitGrid ? ' tc-grid--texts' : ''}${fitGrid ? ' tc-grid--fit' : ''}`} data-ov="leads-grid" aria-label="Your leads today">
       <NextAppointment appts={appts} now={now} tz={tz} evMap={evMap} loading={loading} failed={failed} onRetry={retry} />
 
-      <DutyCard tz={tz} />
+      <DutyCard />
 
       <PlanCard used={used} tz={tz} now={now.getTime()} loading={loading} />
 

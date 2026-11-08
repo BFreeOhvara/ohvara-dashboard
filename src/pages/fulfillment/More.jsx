@@ -132,7 +132,7 @@ export default function FulfillmentMore() {
               {account?.last4 ? `${account.bank_name || 'Bank'} •••• ${account.last4}` : 'No bank yet'}
             </span>
             <span style={{ display: 'block', marginTop: 1, fontSize: 12.5, color: 'var(--ov-soft)' }}>
-              {ready ? 'Paid every Monday by Stripe' : 'Add one to get your verified cancels paid'}
+              {ready ? 'Paid every Monday by Stripe' : 'Add one to get paid for your hours'}
             </span>
           </span>
         </div>

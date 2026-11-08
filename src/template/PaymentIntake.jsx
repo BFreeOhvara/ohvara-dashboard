@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Copy, Mail, RefreshCw, ShieldAlert, CircleCheck, Clock3, TriangleAlert, Inbox } from 'lucide-react'
-import { Chip, Drawer, SampleTag, useNote } from './kit'
+import { Chip, Drawer, SampleTag, Seg, useNote } from './kit'
 import { useSampleSettings, useSampleActions } from './data'
 import './p885.css'
 
@@ -26,6 +26,8 @@ export function PaymentIntakeCard() {
   const note = useNote()
   const [ask, setAsk] = useState(false)
   const pi = s.paymentIntake
+  // P890: kept on this screen (the test check is what matters; P848 wires the real one).
+  const [fwd, setFwd] = useState(pi.forward)
   const copy = async () => {
     try { await navigator.clipboard.writeText(pi.address); note('Address copied') } catch { note(pi.address) }
   }
@@ -41,9 +43,9 @@ export function PaymentIntakeCard() {
         <code className="pi-code" aria-label="Your forwarding address">{pi.address}</code>
         <button type="button" className="tp-btn ov-ghost" onClick={copy}><Copy size={15} />Copy</button>
       </div>
+      <ForwardSetup value={fwd} address={pi.address} onChange={setFwd} />
       <ol className="pi-how">
-        <li><b>Best:</b> make a mail rule that forwards anything from your carriers with “lapse”, “past due”, “returned” or “NSF” in it to this address.</li>
-        <li>Or forward a notice by hand when it comes in. Forwarding it twice is fine; we only open one save call.</li>
+        <li>No rule yet? Forward a notice by hand when it comes in. Forwarding it twice is fine; we only open one save call.</li>
         <li>The team also checks your carrier portals every week. Anything that needs changing in a portal comes to you; the team only looks.</li>
       </ol>
       {pi.recent.length > 0 && (
@@ -64,6 +66,37 @@ export function PaymentIntakeCard() {
         <p className="tp-mid">Emails sent to <b>{pi.address}</b> will be ignored. Update any mail rule to the new address.</p>
       </Drawer>
     </section>
+  )
+}
+
+// P890 (from P888's list): the one-minute step that forwards carrier emails to the agent's address, with short Gmail
+// and Outlook guides and a "send a test" check. Used in setup (Welcome) and Settings. Sample: the test arrives after a
+// moment; for real it shows once payment_intake_emails gets a test from the agent's mailbox (P848 wires it).
+const GUIDES = {
+  gmail: ['In Gmail, open Settings (the gear), then See all settings, then Forwarding and POP/IMAP.', 'Add a forwarding address: paste your address below. Gmail sends it a code; we confirm it for you within a minute.', 'Then Filters: Create a new filter. In Has the words put lapse OR "past due" OR returned OR NSF, and tick Forward it to your address.'],
+  outlook: ['In Outlook, open Settings, then Mail, then Rules, then Add new rule.', 'Condition: Subject or body includes lapse, past due, returned or NSF.', 'Action: Forward to, and paste your address below. Save.'],
+  other: ['Make a mail rule: anything with lapse, past due, returned or NSF in it, forward to your address below.', 'Your email provider\'s help has a page called "forward email automatically".'],
+}
+export function ForwardSetup({ value, address, onChange }) {
+  const note = useNote()
+  const [sending, setSending] = useState(false)
+  const v = { mail: 'gmail', tested: false, ...value }
+  const test = () => {
+    setSending(true)
+    note(`Send any email to ${address}. We'll show it here when it arrives`)
+    setTimeout(() => { setSending(false); onChange({ ...v, tested: true }); note('Test received. Carrier emails will reach the team') }, 1600)
+  }
+  return (
+    <div className="pi-fwd" aria-label="Forward carrier emails">
+      <b className="pi-sub"><Clock3 size={14} aria-hidden="true" />Turn on forwarding (about a minute)</b>
+      <Seg label="Your email" value={v.mail} onChange={mail => onChange({ ...v, mail })} options={[{ key: 'gmail', label: 'Gmail' }, { key: 'outlook', label: 'Outlook' }, { key: 'other', label: 'Other' }]} />
+      <ol className="pi-how">{GUIDES[v.mail].map(t => <li key={t}>{t}</li>)}</ol>
+      <div className="fx-form-row">
+        <span className="tp-grow tp-sub">{v.tested ? 'Forwarding works: your test arrived.' : 'Then send a test so we know it works.'}</span>
+        {v.tested ? <Chip tone="green"><CircleCheck size={13} aria-hidden="true" />Test received</Chip>
+          : <button type="button" className="tp-btn ov-ghost" disabled={sending} onClick={test}><Mail size={15} />{sending ? 'Waiting for it…' : 'Send a test'}</button>}
+      </div>
+    </div>
   )
 }
 

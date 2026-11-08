@@ -4,7 +4,7 @@ import { useOnDutyAgents } from '../../hooks/useAgentDuty'
 import { SettingsCard, SettingsChip, LoadError } from '../agent/AgentUI'
 import { DISPLAY } from '../../lib/exportStyles'
 
-// Goal 7 — Admin Overview (desktop and phone): who is on duty for live
+// Goal 7 — Admin Overview (desktop and phone): who is inside their live-call hours for live
 // transfers right now, from on_duty_agents() (migration 174). View only.
 // Hidden until it answers (no flash while 174 isn't applied) and while the function isn't there.
 const note = { margin: 0, fontSize: 14, color: 'var(--ov-mute)' }
@@ -15,8 +15,8 @@ export function OnDutyNow() {
   const rows = data || []
 
   return (
-    <SettingsCard icon={PhoneIncoming} title="On duty now" gap={12}
-      sub="Agents who can take a live transfer right now."
+    <SettingsCard icon={PhoneIncoming} title="Taking live transfers now" gap={12}
+      sub="Agents inside their live-call hours right now."
       right={!error ? (
         <SettingsChip tone={rows.length ? 'on' : 'off'}>
           <span style={{ fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums' }}>{rows.length}</span> on duty

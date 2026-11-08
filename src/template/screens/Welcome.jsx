@@ -11,6 +11,8 @@ import { HoursEditor, CalendarConnect } from '../Hours'
 import { SpendSliders, SpendSummary, TakeLeads } from '../PlanBuilder'
 import { DEFAULT_LIVE_HOURS, PITCH, takeOk } from '../../lib/leadSplit'
 import { TalkDrawer } from '../Talk'
+import { ForwardSetup } from '../PaymentIntake'
+import '../p885.css'
 import { openSlotsPerWeek, slotsNeeded, spendOk, dailyTotal } from '../spendPlan'
 import { zoneAbbr, ZONE_CHOICES } from '../../lib/callSlots'
 import '../p878.css'
@@ -102,6 +104,8 @@ export default function Welcome() {
     { key: 'products', label: 'What you want', done: true },
     { key: 'calendar', label: 'Calendar and hours', done: s.tzOk && openSlots > 0 },
     ...(servicingOnly ? [] : [{ key: 'spend', label: 'Lead spend', done: spendOk(plan, spend) && spend.daily > 0 && roomy && takeOk(take) }]),
+    // P890: forward carrier emails (missed payments) to the agent's address. Servicing only; skippable.
+    ...(s.products === 'leads' ? [] : [{ key: 'forward', label: 'Carrier emails', done: !!(s.forward?.tested || s.forward?.later) }]),
     { key: 'app', label: 'Phone app', done: s.push === 'yes' },
     { key: 'terms', label: 'Terms', done: s.terms },
   ]
@@ -147,6 +151,12 @@ export default function Welcome() {
               <SpendSliders spend={spend} onSpend={v => stable(x => ({ ...x, spend: v }))} plan={plan} mode={take.mode} id="wz-sp" openSlots={openSlots} />
               <TakeLeads take={take} onTake={({ mode, hours }) => stable(x => ({ ...x, take: { mode, hours } }))} id="wz-take" />
               <SpendSummary spend={spend} plan={plan} products={s.products}><p className="pb-note">Leads start at 12:00 AM your time, the day after you finish setup.</p></SpendSummary>
+            </>}
+            {cur.key === 'forward' && <>
+              <header className="fx-form-h"><h2>Carrier emails</h2><p>When a carrier emails you about a missed or returned payment, forward it to us and the team calls the client the same day.</p></header>
+              <code className="pi-code" aria-label="Your forwarding address">{settings.paymentIntake?.address}</code>
+              <ForwardSetup value={s.forward} address={settings.paymentIntake?.address} onChange={f => stable(x => ({ ...x, forward: { ...f, later: false } }))} />
+              {!s.forward?.tested && <button type="button" className="tp-btn ov-ghost fx-self" onClick={() => stable(x => ({ ...x, forward: { ...x.forward, later: true } }))}>{s.forward?.later ? 'Skipped: set it up later in Settings' : 'I’ll do this later in Settings'}</button>}
             </>}
             {cur.key === 'app' && <PushStep s={s} up={stable} />}
             {cur.key === 'terms' && <>

@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { useSampleBugs, setSampleBugStatus } from '../template/bugReport.js'
 import { SETUP_STEPS, setupOf, stepsFor } from './setup.js'
 import { DRAFT } from '../lib/priceBook.js'
+import { TIMESHEET, HOURLY, sheetTotals } from './p879.js'
 
 // P849 — the one door to the Admin side's sample info, like src/template/ful/data.js for the VA side. Screens read only
 // through the hooks below; every read returns { data, isLoading: false, error: null }, the react-query shape, so the
@@ -35,7 +36,7 @@ const mkAgent = (id, name, o) => ({
 const seedAgents = [
   mkAgent('ag-dana', 'Dana Walker', { city: 'Austin', state: 'TX', phone: '(512) 555-0143', spend: 600, onDuty: true, states: ['TX', 'OK'], joined: 'Aug 30' }),
   mkAgent('ag-marcus', 'Marcus Reed', { city: 'Phoenix', state: 'AZ', phone: '(602) 555-0118', plan: 'servicing7', spend: 400, active: false, states: ['AZ', 'NV'], lastOn: 'Wed', billing: { status: 'current', next: 'Mon, Nov 9', method: 'Visa •••• 1881', failed: null } }),
-  mkAgent('ag-priya', 'Priya Shah', { city: 'Tampa', state: 'FL', phone: '(813) 555-0170', spend: 750, onDuty: true, states: ['FL', 'GA'], joined: 'Aug 30', billing: { status: 'current', next: 'Mon, Nov 9', method: 'Amex •••• 3005', failed: null } }),
+  mkAgent('ag-priya', 'Priya Shah', { city: 'Tampa', state: 'FL', phone: '(813) 555-0170', spend: 750, onDuty: false, paused: { since: 'Wed, Nov 4', until: 'Mon, Nov 16' }, states: ['FL', 'GA'], joined: 'Aug 30', billing: { status: 'current', next: 'Mon, Nov 9', method: 'Amex •••• 3005', failed: null } }),
   mkAgent('ag-elena', 'Elena Torres', { city: 'San Antonio', state: 'TX', phone: '(210) 555-0191', plan: 'leads', spend: 300, servicing: false, states: ['TX'], joined: 'Oct 12', billing: { status: 'current', next: 'Top-up at $50 left', method: 'Visa •••• 7310', failed: { what: 'Lead top-up', when: 'Thu, Nov 5', why: 'Card declined', amount: 150 } } }),
   mkAgent('ag-james', 'James Okafor', { city: 'Atlanta', state: 'GA', phone: '(404) 555-0126', plan: 'servicing7', spend: 500, onDuty: true, states: ['GA', 'SC'], joined: 'Sep 28', billing: { status: 'current', next: 'Mon, Nov 9', method: 'Mastercard •••• 6022', failed: null } }),
   mkAgent('ag-grace', 'Grace Kim', { city: 'Denver', state: 'CO', phone: '(303) 555-0164', spend: 450, active: false, comped: true, states: ['CO'], lastOn: 'Tue', billing: { status: 'comped', next: 'Comped to Dec 1', method: 'None needed', failed: null } }),
@@ -191,20 +192,8 @@ const seedDayOff = [
   { id: 'do-4', va_id: 'va-keisha', date: 3, reason: 'Moving day', asked: 'Fri, Oct 30', status: 'approved' },
 ]
 
-// VA pay: a flat amount per confirmed cancellation (sample amount). status = verified | checking | needs_listen.
-const seedCancels = [
-  { id: 'pc-1', va_id: 'va-keisha', client: 'Irene Baker', carrier: 'Colonial Penn', conf: 'CP-88231', day: 5, status: 'checking' },
-  { id: 'pc-2', va_id: 'va-keisha', client: 'Robert Chen', carrier: 'Gerber Life', conf: 'GB-44019', day: 5, status: 'checking' },
-  { id: 'pc-3', va_id: 'va-maya', client: 'Tom Fischer', carrier: 'Lincoln Heritage', conf: 'LH-90812', day: 5, status: 'checking' },
-  { id: 'pc-4', va_id: 'va-maya', client: 'Carla Jones', carrier: 'Globe Life', conf: 'GL-301977', day: 3, status: 'verified' },
-  { id: 'pc-5', va_id: 'va-maya', client: 'Nadia Khan', carrier: 'AARP / New York Life', conf: 'NYL-55120', day: 2, status: 'verified' },
-  { id: 'pc-6', va_id: 'va-andre', client: 'Ruth Simmons', carrier: 'Globe Life', conf: 'GL-302114', day: 2, status: 'verified' },
-  { id: 'pc-7', va_id: 'va-andre', client: 'Earl Watts', carrier: 'Colonial Penn', conf: '', day: 4, status: 'needs_listen', why: 'The rep never read back a confirmation number', at: '3:12' },
-  { id: 'pc-8', va_id: 'va-lily', client: 'June Porter', carrier: 'Gerber Life', conf: 'GB-44102', day: 4, status: 'needs_listen', why: 'Carrier said "pending", not "cancelled"', at: '5:47' },
-  { id: 'pc-9', va_id: 'va-lily', client: 'Ray Dunn', carrier: 'Globe Life', conf: 'GL-302190', day: 4, status: 'verified' },
-  { id: 'pc-10', va_id: 'va-omar', client: 'Mae Holt', carrier: 'Lincoln Heritage', conf: 'LH-90877', day: 3, status: 'verified' },
-  { id: 'pc-11', va_id: 'va-keisha', client: 'Ida Fuller', carrier: 'Globe Life', conf: 'GL-301990', day: 2, status: 'verified' },
-]
+// P890: VA pay is hourly ($8/hr) from clock in and out (p879 TIMESHEET). No per-cancel pay, so no cancel rows.
+const seedCancels = []
 const seedRuns = [
   { id: 'pr-1', week: 'Oct 26 to Nov 1', paid: 'Mon, Nov 2', amount: 486, people: 5, status: 'paid' },
   { id: 'pr-2', week: 'Oct 19 to 25', paid: 'Mon, Oct 26', amount: 522, people: 5, status: 'paid' },
@@ -286,7 +275,7 @@ const seedSettings = {
   profile: { name: ME.name, email: ME.email, phone: ME.phone },
   tz: 'America/Chicago',
   switches: { sms_live: false, voice_live: false, ai_caller_live: false, recording_live: false, invite_sms_live: false, payouts_live: false, billing_enforced: false, submit_live: true, carrier_lookup_live: false, signup_open: false },
-  payRules: { perCancel: 18, weeklyMin: 0, holdCap: 40 },
+  payRules: { hourly: 8 },
   payoutsPaused: false,
   split: { brayden: 50, changed: null },
   liveRoom: 'https://meet.example.com/ohvara-room',
@@ -295,7 +284,6 @@ const seedSettings = {
     { key: 'missed', label: 'A live transfer is missed', push: true, email: true },
     { key: 'dayoff', label: 'A VA asks for a day off', push: true, email: false },
     { key: 'payment', label: 'A payment fails', push: true, email: true },
-    { key: 'listen', label: 'A cancellation needs a listen', push: true, email: false },
     { key: 'bug', label: 'A bug report comes in', push: true, email: true }, // P876: an app notification, never a text
   ],
 }
@@ -374,7 +362,7 @@ const ok = data => ({ data, isLoading: false, error: null })
 export const admSnapshot = () => state
 
 const nameOf = (s, id) => s.agents.find(a => a.id === id)?.name || s.vas.find(v => v.id === id)?.name || ''
-export const RATE = () => state.settings.payRules.perCancel
+export const RATE = () => state.settings.payRules.hourly
 const stamp = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 // Every admin action is written to the audit log, newest first. Append-only: nothing edits or removes a row.
 const audit = (s, what, target) => ({ audit: [{ id: `au-${Date.now()}-${s.audit.length}`, at: `Today, ${stamp()}`, who: ME.name, what, target }, ...s.audit] })
@@ -408,14 +396,15 @@ export function useAdmAgents() {
 }
 export function useAdmVas() {
   const s = useStore()
-  const rate = s.settings.payRules.perCancel
+  const rate = s.settings.payRules.hourly
   return ok(s.vas.map(v => {
-    const mine = s.cancels.filter(c => c.va_id === v.id)
+    const sheet = TIMESHEET.find(t => t.va === v.id)
+    const pay = sheet ? sheetTotals(sheet, HOURLY[v.id] || rate) : { hours: 0, pay: 0 }
     const calls = s.calls.filter(c => c.va_id === v.id)
     return {
       ...v, onShift: (s.rota[TODAY] || []).includes(v.id), onCall: calls.some(c => c.status === 'live'),
       today: { total: calls.length, done: calls.filter(c => ['cancelled', 'no_answer'].includes(c.status)).length, late: calls.filter(c => c.status === 'late').length },
-      week: { cancels: mine.length, verified: mine.filter(c => c.status === 'verified').length * rate, checking: mine.filter(c => c.status === 'checking').length * rate, listen: mine.filter(c => c.status === 'needs_listen').length },
+      week: { hours: pay.hours, pay: pay.pay },
       days: WEEK.filter(d => (s.rota[d] || []).includes(v.id)).length,
       steps: s.steps.filter(x => x.va_id === v.id).length,
     }
@@ -469,20 +458,21 @@ export function useAdmSetup() { const s = useStore(); return ok(pipelineOf(s)) }
 // Money: this week's revenue (plans + leads charged), the weeks before, agent bills, failed payments, the VA pay run.
 export function useAdmMoney() {
   const s = useStore()
-  const rate = s.settings.payRules.perCancel
+  const rate = s.settings.payRules.hourly
   const plans = s.agents.filter(a => !a.comped && a.billing.status !== 'past_due').reduce((t, a) => t + PLANS[a.plan].price, 0)
   const leadsCharged = s.leads.filter(l => l.agent_id).reduce((t, l) => t + LEAD_PRICE[l.kind], 0)
   const weeks = [...s.revenue, { wk: 'Nov 2', plans, leads: leadsCharged, now: true }]
   const failed = s.agents.filter(a => a.billing.failed).map(a => ({ ...a.billing.failed, agent: a.name, agent_id: a.id, status: a.billing.status }))
-  const cancels = s.cancels.map(c => ({ ...c, va: nameOf(s, c.va_id), amount: rate }))
+  // P890: Monday's run pays each VA's hours from clock in and out x their hourly rate (overtime past 40 at 1.5x).
   const run = s.vas.map(v => {
-    const mine = cancels.filter(c => c.va_id === v.id && c.status === 'verified')
-    return { va_id: v.id, name: v.name, count: mine.length, amount: mine.length * rate, bank: v.bank }
+    const sheet = TIMESHEET.find(t => t.va === v.id)
+    const t = sheet ? sheetTotals(sheet, HOURLY[v.id] || rate) : { hours: 0, pay: 0 }
+    return { va_id: v.id, name: v.name, hours: t.hours, amount: t.pay, bank: v.bank }
   })
   const runTotal = run.filter(r => r.bank === 'ready').reduce((t, r) => t + r.amount, 0)
   return ok({
     plans, leadsCharged, total: plans + leadsCharged, lastWeek: s.revenue[s.revenue.length - 1].plans + s.revenue[s.revenue.length - 1].leads, weeks,
-    failed, cancels, listen: cancels.filter(c => c.status === 'needs_listen'), run, runTotal, runs: s.runs, payday: 'Mon, Nov 9',
+    failed, run, runTotal, runs: s.runs, payday: 'Mon, Nov 9',
     stripeBalance: 2140, rate, paused: s.settings.payoutsPaused, live: s.settings.switches.payouts_live,
     adSpend: s.connect.ads.reduce((t, a) => t + a.spent, 0), adBudget: s.connect.ads.reduce((t, a) => t + a.budget, 0),
   })
@@ -539,13 +529,12 @@ export function useAdmDay() {
   const late = s.calls.filter(c => c.status === 'late')
   const requests = s.dayOff.filter(d => d.status === 'pending').map(d => ({ ...d, va: nameOf(s, d.va_id) }))
   const failed = s.agents.filter(a => a.billing.failed)
-  const listen = s.cancels.filter(c => c.status === 'needs_listen')
   return ok({
-    week, byDay, unassigned, missed, late, requests, failed, listen,
+    week, byDay, unassigned, missed, late, requests, failed,
     payingAgents: s.agents.filter(a => !a.comped && a.billing.status === 'current' && a.access).length,
     onShift: (s.rota[TODAY] || []).map(id => s.vas.find(v => v.id === id)).filter(Boolean),
     onDuty: s.agents.filter(a => a.onDuty && a.active),
-    needs: unassigned.length + missed.length + late.length + requests.length + failed.length + listen.length,
+    needs: unassigned.length + missed.length + late.length + requests.length + failed.length,
     unread: s.threads.reduce((n, t) => n + t.unread, 0),
     openBugs: openBugCount(s.bugs, sentBugs),
   })
@@ -641,11 +630,7 @@ export function useAdmActions() {
       if (approve) out.rota = { ...s.rota, [d.date]: (s.rota[d.date] || []).filter(x => x !== d.va_id) }
       return out
     }),
-    // Pay: decide a cancellation the AI could not confirm (fulfillment_decide_cancel), pause the Monday run.
-    decideCancel: (id, pay, note) => set(s => {
-      const c = s.cancels.find(x => x.id === id)
-      return { cancels: pay ? patchById(s.cancels, id, { status: 'verified', note }) : s.cancels.filter(x => x.id !== id), ...audit(s, pay ? 'Marked a cancellation paid' : "Didn't pay a cancellation", `${c.client}, ${c.carrier}${note ? ` (${note})` : ''}`) }
-    }),
+    // P890: no per-cancel decisions (VA pay is hourly). The Monday run can still be paused.
     // P864: the owners' profit split (Brayden's share; Jordan gets the rest). Written to the audit log.
     setSplit: brayden => set(s => {
       const b = Math.max(0, Math.min(100, Math.round(brayden)))
@@ -654,7 +639,7 @@ export function useAdmActions() {
     setPaused: on => set(s => ({ settings: { ...s.settings, payoutsPaused: on }, ...audit(s, on ? 'Paused payouts' : 'Resumed payouts', 'Monday pay run') })),
     // Settings
     setSwitch: (key, on) => set(s => ({ settings: { ...s.settings, switches: { ...s.settings.switches, [key]: on } }, ...audit(s, `${on ? 'Turned on' : 'Turned off'} ${SWITCHES.find(x => x.key === key).label}`, 'Sample only') })),
-    savePayRules: payRules => set(s => ({ settings: { ...s.settings, payRules }, ...audit(s, 'Changed pay rules', `$${payRules.perCancel} a cancellation, cap ${payRules.holdCap}`) })),
+    savePayRules: payRules => set(s => ({ settings: { ...s.settings, payRules }, ...audit(s, 'Changed pay rules', `$${payRules.hourly} an hour`) })),
     saveSettings: patch => set(s => ({ settings: { ...s.settings, ...patch } })),
     setTz: tz => set(s => ({ settings: { ...s.settings, tz } })),
     // P876: new → seen → fixed. Reports sent this visit live in the sample store (template/bugReport), the rest here.

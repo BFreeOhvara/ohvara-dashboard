@@ -194,7 +194,7 @@ const WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 export const DEFAULT_WEEK = Object.fromEntries(WEEK.map(d => [d, { on: !['Sat', 'Sun'].includes(d), start: '9:00 AM', end: d === 'Fri' ? '5:00 PM' : '6:00 PM' }]))
 const seed = {
   leads: seedLeads, clients: seedClients, threads: seedThreads, activity: seedActivity, appointments: seedAppointments,
-  duty: true, tasks: { t1: false, t2: false, t3: false },
+  tasks: { t1: false, t2: false, t3: false },
   // P878: Talk to someone requests (N-I-01), feedback on the team (N-F-43), blocked days (N-C-38), setup progress (N-H-05).
   talks: [], feedback: [], blocks: [], setup: null,
   settings: {
@@ -205,13 +205,13 @@ const seed = {
     calendarSync: { provider: null, status: 'not_connected' },
     // P848: the states the agent picked (3 to 10, never NY) and the one tick, logged with its time and the states.
     licence: { states: ['AZ', 'FL', 'GA', 'TX'], licensed: { at: 'Oct 12, 9:14 AM', states: ['AZ', 'FL', 'GA', 'TX'] } },
-    // P847: the Overview clock's zone (profiles.timezone values) and the optional caller ID: when fulfillment calls a
-    // client, the call shows the agent's number. status: not_set | pending | confirmed. Sample only: no call or text goes out.
+    // P847: the Overview clock's zone (profiles.timezone values). P890: no agent caller ID (agents call from their own phone).
     timeZone: 'America/Chicago',
-    callerId: { status: 'not_set', number: '' },
     // P885: the forwarding address for carrier missed-payment emails, and what happened to the last few.
     paymentIntake: {
       address: 'pay+k7m2q9xd4a@in.ohvara.com',
+      // P890: the one-minute forwarding step. mail = gmail | outlook | other; tested = a test email arrived.
+      forward: { mail: 'gmail', tested: false },
       recent: [
         { id: 'pe-1', subject: 'Fwd: Lapse pending notice', at: 'Today, 9:38 AM', client: 'Ann Lee', status: 'matched' },
         { id: 'pe-2', subject: 'Fwd: Returned EFT', at: 'Wed, Nov 4', client: null, status: 'unmatched' },
@@ -288,7 +288,7 @@ function useTalksSample() { const s = useStore(); return ok(s.talks) }
 function useFeedbackSample() { const s = useStore(); return ok(s.feedback) }
 function useBlocksSample() { const s = useStore(); return ok(s.blocks) }
 function useSetupSample() { const s = useStore(); return ok(s.setup) }
-function useSettingsSample() { const s = useStore(); return ok({ ...s.settings, duty: s.duty }) }
+function useSettingsSample() { const s = useStore(); return ok(s.settings) }
 // P873: Needs you now (the six triggers, most urgent first) and the quiet FYI list, for the Overview and the bell.
 function useNeedsSample() { const s = useStore(); return ok(useMemo(() => ({ now: needsYouNow({ ...s, billingNeeds: billingNeeds(s.billing), servicing: s.billing.products !== 'leads' }, SAMPLE_NOW), fyi: forYourInfo(s) }), [s])) }
 function useSignupSample() {
@@ -323,7 +323,7 @@ function useOverviewSample() {
   const by = st => s.clients.filter(c => c.stage === st).length
   return ok({
     name: 'Dana', book: { protected: by('protected'), settingUp: by('setting_up'), needsAttention: by('needs_attention'), requestsOpen: by('requests') },
-    duty: s.duty, stepsOpen: open,
+    stepsOpen: open,
     attention: s.clients.filter(c => c.stage === 'needs_attention'),
     dueSoon: [
       { id: 't1', label: 'Review call', clientName: 'Robert Chen', clientId: 'sample-client-3', dueAt: 'Thu, Nov 5, 3:00 PM', day: 'Thu', date: 5, done: s.tasks.t1 },
@@ -437,7 +437,6 @@ function useActionsSample() {
     fixCard: () => set(s => ({ ...s, billing: { ...s.billing, payment: { ...s.billing.payment, failed: false } } })),
     saveSetup: patch => set(s => ({ ...s, setup: { ...(s.setup || {}), ...patch } })),
     addLeadNote: (id, text) => set(s => ({ ...s, leads: s.leads.map(l => (l.id === id ? { ...l, note: l.note ? `${l.note}\n${text}` : text } : l)) })),
-    setDuty: on => set(s => ({ ...s, duty: on })),
     doneTask: id => set(s => ({ ...s, tasks: { ...s.tasks, [id]: true } })),
     clientAction: (id, action) => set(s => {
       const c = s.clients.find(x => x.id === id)

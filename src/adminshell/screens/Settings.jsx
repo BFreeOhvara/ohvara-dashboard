@@ -134,11 +134,9 @@ function PayRules() {
   const num = k => e => setD({ ...d, [k]: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, '')) || 0) })
   return (
     <>
-      <Head title="Pay rules" sub="What a VA earns for each cancellation the carrier confirms, and the weekly limits." />
+      <Head title="Pay rules" sub="VAs are paid by the hour, from clock in and out. Paid every Monday." />
       <div className="fx-form-grid">
-        <Field label="Pay per cancellation ($)"><input className="tp-money" inputMode="decimal" value={d.perCancel} onChange={num('perCancel')} /></Field>
-        <Field label="Weekly minimum ($)" hint="Paid even in a slow week"><input className="tp-money" inputMode="decimal" value={d.weeklyMin} onChange={num('weeklyMin')} /></Field>
-        <Field label="Weekly hold cap" hint="Cancellations past this wait for a look"><input className="tp-num" inputMode="numeric" value={d.holdCap} onChange={num('holdCap')} /></Field>
+        <Field label="Hourly rate ($)" hint="Overtime past 40 hours a week at 1.5×"><input className="tp-money" inputMode="decimal" value={d.hourly} onChange={num('hourly')} /></Field>
       </div>
       <FormFoot dirty={!same(d, s.payRules)} onDiscard={() => setD(s.payRules)} onSave={() => { savePayRules(d); note('Pay rules saved (sample)') }} />
     </>

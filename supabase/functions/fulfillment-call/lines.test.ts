@@ -93,10 +93,10 @@ test('ring_client runs the pre-dial check first; a block says why and when, and 
   assert.ok(ok.log.some(l => l[0] === 'attempt'), 'the attempt is logged for the cap')
 })
 
-test('servicing call: the client sees their agent\'s verified number; carriers and the agent come from the directory and profile', async () => {
+test('servicing call: the client sees Ohvara\'s number (P890); carriers and the agent come from the directory and profile', async () => {
   const w = world({ line: { kind: 'servicing', lead_id: null, policy_id: POL } })
   await actLine(w.store, w.twilio, ENV, VA, { line_id: LINE, action: 'ring_client' })
-  assert.equal(posts(w.calls)[0].params.From, '+15559998888')
+  assert.equal(posts(w.calls)[0].params.From, '+15550001111')
   assert.equal(posts(w.calls)[0].params.Label, 'client')
   await actLine(w.store, w.twilio, ENV, VA, { line_id: LINE, action: 'ring_carrier', carrier_id: 'car-2' })
   const car = posts(w.calls).find(c => c.params?.Label === 'carrier')

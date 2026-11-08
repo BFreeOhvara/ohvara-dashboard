@@ -14,8 +14,8 @@ import { I, PAD } from './phoneIcons'
 // wrapper can't trap its position: fixed (Gotchas).
 // Prompt 764 (media/fulfillment-pay-per-cancel/phone.dc.html): a red
 // Recording pill while a recorded call is live (recovery_config.recording_live);
-// on the Result screen the confirmation number is optional, and saving a
-// Cancelled says the AI will check the recording.
+// on the Result screen the confirmation number is optional. P890: VA pay is
+// hourly, so nothing here mentions pay or an AI check.
 
 
 export const Svg = ({ d, size = 24, w = 2, stroke = 'currentColor' }) => (
@@ -85,7 +85,7 @@ function Result({ p, s, onClose, error: callError, recording }) {
             <i>{drafts && <Svg d={I.check} size={12} w={3.2} />}</i>No more payments will be drafted
           </button>
           {checking && (
-            <p className="pp-checking" role="status"><span aria-hidden="true" />Saved. AI listens to the recording to check the carrier confirmed the cancel.</p>
+            <p className="pp-checking" role="status"><span aria-hidden="true" />Saved.</p>
           )}
         </>
       ) : (
