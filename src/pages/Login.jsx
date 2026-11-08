@@ -4,59 +4,90 @@ import { Mail, Lock, ShieldCheck, Loader2, ArrowRight, ArrowLeft, MailCheck, Che
 import { useAuth } from '../hooks/useAuth'
 import { supabase, setKeepSignedIn, keepSignedIn } from '../lib/supabase'
 import { isNativeApp, webUrl } from '../lib/native'
-import { useSignupOpen } from '../lib/signupStatus'
 import { CodeBoxes } from '../components/agent/AgentUI'
-import { AuthPage, AuField, PasswordField, AuCheck, AuAlert } from '../components/auth/AuthShell'
+import { AuField, PasswordField, AuCheck, AuAlert } from '../components/auth/AuthShell'
+import { OhvaraMark } from '../components/ui/OhvaraMark'
 import { keepSubmitVisible, EMAIL_RE, SUPPORT_EMAIL } from '../components/auth/authUtils'
+import '@fontsource/urbanist/500.css'
+import '@fontsource/urbanist/600.css'
+import '@fontsource/urbanist/700.css'
+import './login.css'
 
-// Sign-in — Prompt 781: the theme-proof navy page (mockups media/sign-in/
-// SignIn + SignInPhone in the vault). The field says Email; the three legacy
-// accounts still type their username into it and useAuth.signIn resolves it
-// on the server (username-sign-in), unlisted. Two-step accounts get the code
-// card after the password, and nothing past /login opens until it checks out.
+// Sign-in — Prompt 895: a fresh page on the agent shell's look (DESIGN.md v17:
+// Urbanist, the --sh-* palette, frosted glass, the shell backdrop), in light
+// and dark. The card sits in the middle of the screen; the story sits to its
+// left and a sample of the lead flow (a lead called in seconds, a live call,
+// a booked call) to its right. On phones and tablets the card comes first.
+// Layout and tokens: ./login.css. The fields still come from AuthShell (the
+// other signed-out pages keep P781's navy shell untouched).
 //
+// Logic unchanged from P781: the field says Email; the three legacy accounts
+// still type their username into it and useAuth.signIn resolves it on the
+// server (username-sign-in), unlisted. Two-step accounts get the code card
+// after the password, and nothing past /login opens until it checks out.
 // Forgot password goes through account-email: same answer whoever asks, and
-// it only mails an account whose email is confirmed (a text-invite account
-// must click its confirm link first).
+// it only mails an account whose email is confirmed.
 
 const WRONG = 'That email and password don’t match. Check them and try again.'
+const SITE = 'https://ohvara.com'
 
+// DRAFT copy (P895) — for Brayden to OK or reword.
 function Story() {
   return (
-    <>
-      <span className="sx-pill"><i />For agents, Fulfillment and admins</span>
-      <h1 className="sx-h1">Every switch,<br /><span className="sx-grad">cancelled cleanly.</span></h1>
-      <p className="sx-lede">
-        You book the call. We get the old policy cancelled.<span className="sx-desk-only"> Everyone sees it happen, live.</span>
-      </p>
-      <div className="sx-preview" aria-hidden="true">
-        <div className="sx-pv-next">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="sx-pv-tag"><i />UP NEXT</span>
-            <span style={{ flex: 1 }} />
-            <span style={{ fontSize: 12.5, color: 'var(--sx-mute)' }}>in 12 min</span>
-          </div>
-          <div className="sx-pv-time">3:30 PM</div>
-          <div style={{ marginTop: 4, fontSize: 15, fontWeight: 700 }}>Linda Okafor</div>
-          <div style={{ fontSize: 12.5, color: 'var(--sx-mute)' }}>Cancel with Globe Life · Denver, CO</div>
-        </div>
-        <div className="sx-pv-done">
-          <span className="sx-pv-check"><Check size={16} strokeWidth={3} /></span>
-          <span>
-            <span style={{ display: 'block', fontSize: 14, fontWeight: 700 }}>Cancelled · verified</span>
-            <span style={{ display: 'block', fontSize: 12, color: 'var(--sx-dim)' }}>Globe Life confirmed on the call</span>
-          </span>
-        </div>
-        <div className="sx-pv-chip"><i />Booked by your agent · 2 min ago</div>
+    <div className="lg-story">
+      <span className="lg-pill"><i />For agents, VAs and admins</span>
+      <h1 className="lg-h1">Every lead called <span className="lg-grad">in seconds.</span></h1>
+      <p className="lg-lede">Ready now, they ring your phone. Not yet, they’re on your calendar.</p>
+    </div>
+  )
+}
+
+// Sample only (decoration): the new lead flow, never a cancellation.
+function FlowSample() {
+  return (
+    <div className="lg-flow" aria-hidden="true">
+      <div className="lg-fl-chip">
+        <span className="lg-fl-ok"><Check size={13} strokeWidth={3} /></span>
+        New lead · called in <b>8 sec</b>
       </div>
-    </>
+      <div className="lg-fl-card lg-fl-live">
+        <div className="lg-fl-row">
+          <span className="lg-fl-tag lg-fl-tag--live"><i />LIVE CALL</span>
+          <span className="lg-fl-time">0:21</span>
+        </div>
+        <div className="lg-fl-title">Take this call?</div>
+        <div className="lg-fl-name">Marcus Bell, 58</div>
+        <div className="lg-fl-sub">Final expense · Tampa, FL · ready now</div>
+        <div className="lg-fl-acts"><span className="lg-fl-yes">Yes, ring me</span><span className="lg-fl-no">Not now</span></div>
+      </div>
+      <div className="lg-fl-card lg-fl-booked">
+        <div className="lg-fl-row">
+          <span className="lg-fl-tag lg-fl-tag--booked"><i />BOOKED</span>
+          <span className="lg-fl-in">in 12 min</span>
+        </div>
+        <div className="lg-fl-big">3:30 PM</div>
+        <div className="lg-fl-name">Linda Okafor</div>
+        <div className="lg-fl-sub">Life insurance · Denver, CO</div>
+      </div>
+    </div>
+  )
+}
+
+function Foot({ phone = false }) {
+  return (
+    <div className={phone ? 'lg-foot lg-foot--phone' : 'lg-foot lg-foot--desk'}>
+      {!phone && <span>© {new Date().getFullYear()} Ohvara</span>}
+      <a href={`${SITE}/privacy`} target="_blank" rel="noreferrer">Privacy</a>
+      <a href={`${SITE}/terms`} target="_blank" rel="noreferrer">Terms</a>
+      <a href={`mailto:${SUPPORT_EMAIL}`}>{phone ? 'Help' : SUPPORT_EMAIL}</a>
+    </div>
   )
 }
 
 function AppGlyph() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <rect x="6" y="2" width="12" height="20" rx="3" /><rect x="10" y="18" width="4" height="1.6" rx=".8" fill="var(--sx-hi)" />
+      <rect x="6" y="2" width="12" height="20" rx="3" /><rect x="10" y="18" width="4" height="1.6" rx=".8" fill="var(--lg-getapp-ico)" />
     </svg>
   )
 }
@@ -65,8 +96,6 @@ export default function Login() {
   const { signIn, signOut, session, profile, loading, mfaRequired } = useAuth()
   const navigate = useNavigate()
   const [search] = useSearchParams()
-  // Sign-up open (web only): swaps the invite-only note for a Create account link. Closed or unknown keeps the note.
-  const signupOpen = useSignupOpen()
   // Prompt 775 — Delete my account lands here; the note shows once.
   const [deleted] = useState(() => {
     try { const v = sessionStorage.getItem('ohvara-deleted') === '1'; sessionStorage.removeItem('ohvara-deleted'); return v } catch { return false }
@@ -85,6 +114,13 @@ export default function Login() {
   const [code, setCode] = useState('')
   const [codeError, setCodeError] = useState('')
   const [verifying, setVerifying] = useState(false)
+
+  // Marks <html> while mounted so overscroll shows the page colour in either theme.
+  useEffect(() => {
+    const el = document.documentElement
+    el.classList.add('lg-root')
+    return () => el.classList.remove('lg-root')
+  }, [])
 
   // Role redirect — held while the two-step code is still owed.
   useEffect(() => {
@@ -169,8 +205,18 @@ export default function Login() {
   const codeStep = session && mfaRequired && !loading
 
   return (
-    <AuthPage left={<Story />}>
-      <section className="sx-card" aria-label={codeStep ? 'Two-step check' : forgotMode ? 'Reset your password' : 'Sign in'}>
+    <div className="lg-page">
+      <div className="lg-bd" aria-hidden="true" />
+      <header className="lg-top">
+        <span className="lg-brand">
+          <OhvaraMark height={36} back="var(--sh-mark-back)" front="var(--sh-mark-front)" />
+          <span className="lg-brand-name">Ohvara Portal</span>
+        </span>
+      </header>
+      <main className="lg-main">
+      <div className="lg-side lg-side--story"><Story /></div>
+      <div className="lg-mid">
+      <section className="lg-card" aria-label={codeStep ? 'Two-step check' : forgotMode ? 'Reset your password' : 'Sign in'}>
         {codeStep ? (
           <>
             <span className="sx-big-ico sx-big-ico--ok"><ShieldCheck size={24} strokeWidth={2} /></span>
@@ -237,22 +283,26 @@ export default function Login() {
                 : loading && session ? 'Loading…'
                 : <>Sign in<ArrowRight size={17} strokeWidth={2.4} /></>}
             </button>
-            {signupOpen === true && !isNativeApp() ? (
-              <div className="sx-invite-note">New here? <Link to="/signup">Create an account</Link></div>
-            ) : (
-              <div className="sx-invite-note">
-                New to Ohvara? Accounts are invite-only.<br />
-                Ask your agent or <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> for an invite.
-              </div>
-            )}
+            {/* P895: agents sign up themselves (Q57). DRAFT wording. The phone app never shows sign-up. */}
+            <div className="sx-invite-note lg-join">
+              {isNativeApp()
+                ? <>New agents sign up on the Ohvara website.</>
+                : <>New agent? <Link to="/signup">Create an account</Link></>}
+              <small>VAs and admins join by invite from Ohvara.</small>
+            </div>
           </form>
         )}
       </section>
       {!isNativeApp() && (
-        <a href="/app" className="sx-getapp">
-          <span className="sx-getapp-ico"><AppGlyph /></span>Get the phone app
+        <a href="/app" className="lg-getapp">
+          <span className="lg-getapp-ico"><AppGlyph /></span>Get the phone app
         </a>
       )}
-    </AuthPage>
+      </div>
+      <div className="lg-side lg-side--flow"><FlowSample /></div>
+      </main>
+      <Foot />
+      <Foot phone />
+    </div>
   )
 }

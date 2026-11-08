@@ -1,0 +1,273 @@
+/* Prompt 895 — the sign-in page (/login) on the agent shell's look (DESIGN.md v17): Urbanist, the --sh-* palette
+   from src/index.css, frosted glass panels and the shell backdrop, in light and dark (it follows data-theme like the
+   portal). The card sits in the middle of the screen; story on its left, a sample of the lead flow on its right.
+   Phones and tablets: one column, the card first.
+   The fields (AuField, PasswordField, AuCheck, AuAlert) still use auth.css's sx-* rules; this page feeds those rules
+   their --sx-* tokens from the shell palette, so the other signed-out pages keep P781's navy shell untouched.
+   No hex here: every colour is a --sh-* token (or a mix of one). */
+
+html.lg-root,
+html.lg-root body { background: var(--sh-base); color-scheme: dark; }
+/* No reserved scrollbar strip here (index.css keeps one app-wide): the page fits the screen on desktop. */
+html.lg-root { scrollbar-gutter: auto; }
+html.lg-root[data-theme="light"],
+html.lg-root[data-theme="light"] body { color-scheme: light; }
+
+.lg-page {
+  /* Shell fonts */
+  --font-ui: 'Urbanist', system-ui, sans-serif;
+  --font-display: 'Urbanist', system-ui, sans-serif;
+
+  /* Page tokens */
+  --lg-field: var(--sh-surface);
+  --lg-shadow: var(--sh-scrim);
+  --lg-getapp-ico: var(--sh-base);
+
+  /* auth.css's tokens, fed from the shell palette */
+  --sx-hi: var(--sh-ink);
+  --sx-soft: var(--sh-ink-2);
+  --sx-mid: var(--sh-ink-2);
+  --sx-mute: var(--sh-ink-3);
+  --sx-dim: var(--sh-ink-4);
+  --sx-faint: var(--sh-ink-4);
+  --sx-ph: var(--sh-ink-5);
+  --sx-field: var(--lg-field);
+  --sx-field-locked: color-mix(in srgb, var(--sh-ink) 4%, transparent);
+  --sx-line: var(--sh-edge);
+  --sx-line-soft: var(--sh-line);
+  --sx-line-strong: color-mix(in srgb, var(--sh-ink) 24%, transparent);
+  --sx-chip: color-mix(in srgb, var(--sh-ink) 7%, transparent);
+  --sx-teal: var(--sh-acc);
+  --sx-teal-hi: var(--sh-acc-line);
+  --sx-teal-ink: var(--sh-on-accent);
+  --sx-teal-tint: color-mix(in srgb, var(--sh-acc) 14%, transparent);
+  --sx-teal-tint-2: color-mix(in srgb, var(--sh-acc) 20%, transparent);
+  --sx-teal-line: color-mix(in srgb, var(--sh-acc-line) 40%, transparent);
+  --sx-focus-line: var(--sh-acc-line);
+  --sx-focus-ring: color-mix(in srgb, var(--sh-acc) 24%, transparent);
+  --sx-blue-hi: var(--sh-acc-line);
+  --sx-red: var(--sh-coral);
+  --sx-red-line: color-mix(in srgb, var(--sh-coral) 70%, transparent);
+  --sx-red-box: color-mix(in srgb, var(--sh-coral) 42%, transparent);
+  --sx-red-tint: color-mix(in srgb, var(--sh-coral) 13%, transparent);
+  --sx-red-text: var(--sh-ink);
+  --sx-amber: var(--sh-apricot);
+  --sx-shadow: var(--lg-shadow);
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  font-family: var(--font-ui);
+  font-weight: 500;
+  color: var(--sh-ink);
+  background: var(--sh-base);
+  overflow-x: hidden;
+}
+[data-theme="light"] .lg-page {
+  --lg-field: var(--sh-glass-hi);
+  --lg-getapp-ico: var(--sh-glass-hi);
+}
+.lg-page *, .lg-page *::before, .lg-page *::after { box-sizing: border-box; }
+.lg-page :focus-visible { outline: 2px solid var(--sh-acc-line); outline-offset: 2px; }
+.lg-page .sx-input:focus-visible, .lg-page .sx-input:focus { outline: none; }
+
+/* The shell backdrop (fixed, so it never scrolls or repeats) under its theme wash */
+.lg-bd {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    linear-gradient(var(--sh-bd-dim), var(--sh-bd-dim)),
+    var(--sh-bd-image) center / cover no-repeat,
+    var(--sh-base);
+}
+
+/* ---------- top: the bird + name ---------- */
+.lg-top { display: flex; align-items: center; padding: 28px 40px 0; }
+.lg-brand { display: inline-flex; align-items: center; gap: 11px; }
+.lg-brand-name { font-family: var(--font-display); font-size: 19px; font-weight: 600; letter-spacing: -0.01em; color: var(--sh-ink); }
+
+/* ---------- middle: story | card | flow sample ---------- */
+.lg-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 24px 40px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 440px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 64px;
+}
+.lg-side--story { justify-self: end; width: 100%; max-width: 420px; }
+.lg-side--flow { justify-self: start; width: 100%; max-width: 400px; }
+.lg-mid { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+
+/* Story */
+.lg-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 30px; padding: 0 13px; border-radius: 999px;
+  background: var(--sh-glass-panel); border: 1px solid var(--sh-glass-edge);
+  -webkit-backdrop-filter: var(--sh-glass-blur); backdrop-filter: var(--sh-glass-blur);
+  font-size: 12.5px; font-weight: 600; color: var(--sh-ink-2);
+}
+.lg-pill i { width: 6px; height: 6px; border-radius: 50%; background: var(--sh-acc-line); }
+.lg-h1 {
+  margin: 20px 0 0;
+  font-family: var(--font-display); font-size: 50px; font-weight: 700;
+  letter-spacing: -0.035em; line-height: 1.04; color: var(--sh-ink);
+  text-wrap: balance;
+}
+.lg-grad { color: var(--sh-acc-line); }
+.lg-lede { margin: 16px 0 0; max-width: 380px; font-size: 17px; line-height: 1.55; color: var(--sh-ink-2); }
+
+/* The card: frosted glass, the shell's neutral panel */
+.lg-card {
+  position: relative;
+  width: 440px; max-width: 100%;
+  padding: 34px 34px 28px; border-radius: 28px;
+  background: var(--sh-glass-panel);
+  border: 1px solid var(--sh-glass-edge);
+  box-shadow: 0 40px 80px -36px var(--lg-shadow), inset 0 1px 0 var(--sh-glass-hl);
+  -webkit-backdrop-filter: var(--sh-glass-blur); backdrop-filter: var(--sh-glass-blur);
+}
+.lg-card h2 { margin: 0; font-family: var(--font-display); font-size: 31px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; color: var(--sh-ink); }
+.lg-card .sx-card-sub { font-size: 15px; color: var(--sh-ink-3); }
+
+/* Primary button: the shell highlight (Booked blue) with its dark ink */
+.lg-page .sx-btn {
+  height: 54px; border-radius: 999px;
+  background: var(--sh-acc); color: var(--sh-on-accent);
+  font-size: 16px; font-weight: 700;
+  box-shadow: 0 16px 30px -18px color-mix(in srgb, var(--sh-acc) 90%, transparent);
+  transition: background-color 0.15s, opacity 0.15s, transform 0.15s;
+}
+.lg-page .sx-btn:hover { background: var(--sh-acc-hover); filter: none; }
+.lg-page .sx-btn:active { transform: translateY(1px); }
+.lg-page .sx-btn--ghost {
+  background: transparent; color: var(--sh-ink); border: 1px solid var(--sx-line-strong); box-shadow: none; height: 50px;
+}
+.lg-page .sx-btn--ghost:hover { background: var(--sx-chip); }
+.lg-page .sx-check-box { border-radius: 7px; }
+
+/* Sign-up row + the invite line */
+.lg-join { margin-top: 22px; font-size: 14px; color: var(--sh-ink-3); }
+.lg-join a { color: var(--sh-acc-line); font-weight: 700; text-decoration: none; }
+.lg-join a:hover { text-decoration: underline; }
+.lg-join small { display: block; margin-top: 6px; font-size: 12.5px; color: var(--sh-ink-4); }
+
+/* Two-step code boxes (CodeBoxes) on this page's palette, whatever the v16 ov-code rules say */
+.lg-page .ov-code,
+[data-theme="light"] .lg-page .ov-code {
+  background: var(--lg-field); border: 1px solid var(--sh-edge); color: var(--sh-ink); caret-color: var(--sh-acc-line);
+}
+.lg-page .ov-code:focus,
+[data-theme="light"] .lg-page .ov-code:focus {
+  background: var(--lg-field); border-color: var(--sh-acc-line); box-shadow: 0 0 0 4px var(--sx-focus-ring);
+}
+.lg-page .ov-code.is-error,
+[data-theme="light"] .lg-page .ov-code.is-error { border-color: var(--sx-red-line); }
+
+/* Get the phone app */
+.lg-getapp {
+  display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 16px 0 9px; border-radius: 999px;
+  background: var(--sh-glass-panel); border: 1px solid var(--sh-glass-edge);
+  -webkit-backdrop-filter: var(--sh-glass-blur); backdrop-filter: var(--sh-glass-blur);
+  font-size: 13.5px; font-weight: 600; color: var(--sh-ink-2); text-decoration: none;
+}
+.lg-getapp:hover { color: var(--sh-ink); background: color-mix(in srgb, var(--sh-ink) 9%, var(--sh-glass-panel)); }
+.lg-getapp-ico { width: 28px; height: 28px; border-radius: 8px; background: var(--sh-ink); color: var(--sh-base); display: flex; align-items: center; justify-content: center; }
+
+/* ---------- the flow sample (decoration only) ---------- */
+.lg-flow { position: relative; display: flex; flex-direction: column; gap: 14px; pointer-events: none; user-select: none; }
+.lg-fl-card, .lg-fl-chip {
+  background: var(--sh-glass-panel); border: 1px solid var(--sh-glass-edge);
+  box-shadow: 0 30px 60px -34px var(--lg-shadow), inset 0 1px 0 var(--sh-glass-hl);
+  -webkit-backdrop-filter: var(--sh-glass-blur); backdrop-filter: var(--sh-glass-blur);
+}
+.lg-fl-chip {
+  align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 9px; height: 40px; padding: 0 16px 0 8px; border-radius: 999px;
+  font-size: 13.5px; font-weight: 600; color: var(--sh-ink-2);
+}
+.lg-fl-chip b { color: var(--sh-ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+.lg-fl-ok { width: 26px; height: 26px; border-radius: 50%; background: var(--sh-f-sage); color: var(--sh-fi-sage); display: flex; align-items: center; justify-content: center; }
+.lg-fl-card { width: 320px; max-width: 100%; padding: 18px 18px 16px; border-radius: 22px; }
+.lg-fl-live { margin-left: 34px; }
+.lg-fl-booked { background: var(--sh-cf-sky); border-color: var(--sh-card-edge, var(--sh-glass-edge)); color: var(--sh-ci, var(--sh-ink)); }
+.lg-fl-row { display: flex; align-items: center; gap: 8px; }
+.lg-fl-tag {
+  display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.07em;
+}
+.lg-fl-tag i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.lg-fl-tag--live { background: color-mix(in srgb, var(--sh-coral) 16%, transparent); color: var(--sh-coral); }
+.lg-fl-tag--live i { animation: lg-pulse 1.6s ease-in-out infinite; }
+.lg-fl-tag--booked { background: var(--sh-f-sky); color: var(--sh-fi-sky); }
+.lg-fl-time { margin-left: auto; font-family: var(--font-mono); font-size: 12.5px; color: var(--sh-ink-3); }
+.lg-fl-in { margin-left: auto; font-size: 12.5px; font-weight: 600; opacity: 0.85; }
+.lg-fl-title { margin-top: 12px; font-size: 13px; font-weight: 600; color: var(--sh-ink-3); }
+.lg-fl-big { margin-top: 12px; font-family: var(--font-display); font-size: 30px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+.lg-fl-name { margin-top: 4px; font-size: 16px; font-weight: 700; }
+.lg-fl-sub { margin-top: 2px; font-size: 13px; color: var(--sh-ink-3); }
+.lg-fl-booked .lg-fl-sub { color: inherit; opacity: 0.82; }
+.lg-fl-acts { margin-top: 14px; display: flex; gap: 8px; }
+.lg-fl-yes, .lg-fl-no { display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 700; }
+.lg-fl-yes { background: var(--sh-acc); color: var(--sh-on-accent); }
+.lg-fl-no { border: 1px solid var(--sx-line-strong); color: var(--sh-ink-2); }
+
+@keyframes lg-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@keyframes lg-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.lg-card, .lg-story, .lg-flow > * { animation: lg-rise 0.5s cubic-bezier(.2, .7, .2, 1) both; }
+.lg-story { animation-delay: 0.06s; }
+.lg-flow > :nth-child(1) { animation-delay: 0.16s; }
+.lg-flow > :nth-child(2) { animation-delay: 0.26s; }
+.lg-flow > :nth-child(3) { animation-delay: 0.36s; }
+@media (prefers-reduced-motion: reduce) {
+  .lg-card, .lg-story, .lg-flow > *, .lg-fl-tag--live i { animation: none; }
+}
+
+/* ---------- foot ---------- */
+.lg-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; font-size: 13px; color: var(--sh-ink-4); }
+.lg-foot a { color: var(--sh-ink-3); text-decoration: none; }
+.lg-foot a:hover { color: var(--sh-ink); }
+.lg-foot--desk { padding: 0 40px 26px; }
+.lg-foot--phone { display: none; }
+
+/* ---------- narrower desktops: smaller story, flow sample still beside ---------- */
+@media (max-width: 1379px) {
+  .lg-main { column-gap: 44px; padding: 20px 32px; }
+  .lg-h1 { font-size: 42px; }
+  .lg-lede { font-size: 16px; }
+  .lg-fl-card { width: 290px; }
+  .lg-fl-live { margin-left: 18px; }
+}
+
+/* ---------- tablets and phones: one column, the card first ---------- */
+@media (max-width: 1179px) {
+  .lg-top { padding: 22px 22px 0; justify-content: center; }
+  .lg-brand-name { font-size: 17px; }
+  .lg-main {
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    flex: none; padding: 22px 14px 0; gap: 26px;
+  }
+  .lg-mid { order: 1; width: 100%; max-width: 460px; gap: 16px; }
+  .lg-side--story { order: 2; justify-self: auto; max-width: 460px; padding: 0 8px; text-align: center; }
+  .lg-side--flow { display: none; }
+  .lg-pill { display: none; }
+  .lg-h1 { margin: 0; font-size: 26px; letter-spacing: -0.03em; line-height: 1.15; }
+  .lg-lede { margin: 8px auto 0; font-size: 14.5px; line-height: 1.5; }
+  .lg-card { width: 100%; padding: 26px 22px 20px; border-radius: 26px; }
+  .lg-card h2 { font-size: 28px; }
+  .lg-page { justify-content: flex-start; }
+  .lg-foot--desk { display: none; }
+  .lg-foot--phone { display: flex; justify-content: center; gap: 16px; margin-top: auto; padding: 28px 0 20px; font-size: 12.5px; }
+}
+@media (max-width: 370px) {
+  .lg-main { padding: 18px 10px 0; }
+  .lg-card { padding: 22px 16px 18px; }
+  .lg-card h2 { font-size: 26px; }
+}
