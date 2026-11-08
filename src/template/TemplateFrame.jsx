@@ -44,6 +44,8 @@ import { dailyTotal, rangeWords, tierOf } from './spendPlan'
 import { TalkDrawer, TalkStatus } from './Talk'
 import { SUPPORT_EMAIL } from '../components/auth/authUtils'
 import './glass.css'
+import './p911.css'
+import { useMessagesToggle } from './msgToggle'
 import './flow.css'
 import './palette.css'
 import './fit867.css'
@@ -383,9 +385,14 @@ export default function TemplateFrame() {
   const { data: settings } = useSampleSettings()
   const { data: billing } = useSampleBilling()
   const stats = useHeadStats(layout)
+  // P911: the top-right Messages icon shows selected while Messages is open; a second click closes it to Overview.
+  const msg = useMessagesToggle(layoutOf(pathname) === 'messages', paths.home())
   const status = useDataStatus()
   const source = useDataSource()
   const unread = threads.reduce((n, t) => n + t.unread, 0)
+  const msgLink = (
+    <NavLink to={paths.messages()} className={`fx-ib tp-wig${msg.closing ? ' is-closing' : ''}`} aria-label={layoutOf(pathname) === 'messages' ? 'Close Messages' : 'Messages'} {...wig} onClick={e => { wig.onClick?.(e); msg.onClick(e) }}><MessageSquare size={18} />{unread > 0 && <span className="fx-badge">{unread}</span>}</NavLink>
+  )
   const { data: needList } = useSampleNeeds()
   const { data: allLeads } = useSampleLeads()
   // P910: the Leads count = leads waiting on the agent (calls to mark, live calls pinned), in its grey circle.
@@ -433,13 +440,13 @@ export default function TemplateFrame() {
   }, [])
 
   return (
-    <div className={`tp tp-app fx is-${layout}`} ref={appRef}>
+    <div className={`tp tp-app fx is-${layout}${msg.closing ? ' is-msg-closing' : ''}`} ref={appRef}>
       <div className="tp-sky" aria-hidden="true"><i /><i /><i /></div>
 
       <header className={`tp-phone-top fx-ptop${menuOn ? ' is-menu' : ''}`}>
         <Link to={paths.home()} className="fx-brand" aria-label="Ohvara home"><OhvaraMark height={28} back="var(--ov-mark-back)" front="var(--ov-mark-front)" className="fx-mark" /></Link>
         <span className="tp-grow" />
-        <Link to={paths.messages()} className="fx-ib tp-wig" aria-label="Messages" {...wig}><MessageSquare size={18} />{unread > 0 && <span className="fx-badge">{unread}</span>}</Link>
+        {msgLink}
         <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} />{bell > 0 && <span className="fx-badge">{bell}</span>}</button>
         <button type="button" className={`fx-me tp-wig av-${avatarHue(account.name)}`} aria-label="Menu" aria-haspopup="dialog" aria-expanded={menuOn} {...wig} onClick={toggleMenu}>{initials(account.name).toUpperCase()}</button>
       </header>
@@ -451,7 +458,7 @@ export default function TemplateFrame() {
         <PillTabs as="nav" label="Pages" className="tp-tabs fx-tabs" itemClass="tp-tab fx-tab" value={active} persistKey="tpl-tabs"
           items={TABS.map(t => ({ key: t.key, to: t.to(), label: t.label, extra: t.key === 'leads' && needs > 0 ? <span className="fx-tb is-circle" aria-label={`${needs} waiting on you`}>{needs}</span> : null }))} />
         <div className="fx-tr">
-          <Link to={paths.messages()} className="fx-ib tp-wig" aria-label="Messages" {...wig}><MessageSquare size={18} />{unread > 0 && <span className="fx-badge">{unread}</span>}</Link>
+          {msgLink}
           <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} />{bell > 0 && <span className="fx-badge">{bell}</span>}</button>
           <button type="button" className={`tp-me fx-me tp-wig av-${avatarHue(account.name)}`} aria-label={`Your account, ${account.name}`} aria-haspopup="dialog" aria-expanded={menuOn} {...wig} onClick={toggleMenu}>{initials(account.name).toUpperCase()}</button>
         </div>

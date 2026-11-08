@@ -13,6 +13,7 @@ const GROWTH = TIERS.find(t => t.key === 'growth').monthly
 import { DEFAULT_LIVE_HOURS } from '../../lib/leadSplit.js'
 import { formatPhone } from '../phoneMask.js'
 import { answerCheck, markLapsed } from '../../lib/clientCheck.js'
+import { SUPPORT_THREAD } from '../support911.js'
 
 // The one door to sample info for the clickable template. Screens read only through the named functions below.
 // Every read returns { data, isLoading: false, error: null }, the shape react-query hooks give, and record fields
@@ -131,11 +132,19 @@ const mkAdded = (id, p, book, o) => mkClient(id, p, {
 })
 
 const seedClients = [
-  mkClient('sample-client-1', people.gloria, { policy_number: 'SAMPLE-1001', carrier_name: 'Harborline Life', draft_day: 12, note: 'Setting up the new policy. Review call Fri, Nov 6.', next_step: 'Review call Fri, Nov 6, 4:15 PM' }),
+  mkClient('sample-client-1', people.gloria, { policy_number: 'SAMPLE-1001', carrier_name: 'Harborline Life', draft_day: 12, note: 'Setting up the new policy. Review call Fri, Nov 6.', next_step: 'Review call Fri, Nov 6, 4:15 PM',
+    // P911: new policy, step 2 (the hand-off call is booked).
+    track: { kind: 'new_policy', done: { sold: 'Oct 27' }, next: 'Fri, Nov 6, 4:15 PM' } }),
   mkClient('sample-client-2', people.luis, { policy_number: 'SAMPLE-1002', carrier_name: 'Pinecrest Assurance', stage: 'protected', status: 'effective', monthly_premium: 112, annual_premium: 1344, next_step: null, draft_day: 27, check_from: '2026-06-01', checked_through: '2026-09-27' }),
-  mkClient('sample-client-3', people.robert, { policy_number: 'SAMPLE-1003', stage: 'setting_up', draft_day: 5, next_step: 'Review call Thu, Nov 5, 3:00 PM' }),
-  mkClient('sample-client-4', people.denise, { policy_number: 'SAMPLE-1004', carrier_name: 'Harborline Life', stage: 'setting_up', draft_day: 20, next_step: 'Packet check Fri, Nov 6' }),
-  mkClient('sample-client-5', people.renee, { policy_number: 'SAMPLE-1005', carrier_name: 'Pinecrest Assurance', stage: 'requests', status: 'request_open', note: 'A change on the policy is open', next_step: 'Address change in progress', request: 'Address change in progress', draft_day: 15, check_from: '2026-04-01', checked_through: '2026-10-15' }),
+  mkClient('sample-client-3', people.robert, { policy_number: 'SAMPLE-1003', stage: 'setting_up', draft_day: 5, next_step: 'Waiting on the carrier',
+    // P911: new policy, step 3 (hand-off done, waiting on the carrier's approval).
+    track: { kind: 'new_policy', done: { sold: 'Oct 27', handoff: 'Oct 28' }, next: null } }),
+  mkClient('sample-client-4', people.denise, { policy_number: 'SAMPLE-1004', carrier_name: 'Harborline Life', stage: 'setting_up', draft_day: 20, next_step: 'Cancel call Thu, Nov 5, 10:00 AM',
+    // P911: new policy, step 4 (approved; the old policy is cancelled before its draft on the 8th).
+    track: { kind: 'new_policy', done: { sold: 'Oct 26', handoff: 'Oct 27', approved: 'Oct 30' }, next: 'Thu, Nov 5, 10:00 AM · before the old draft on the 8th' } }),
+  mkClient('sample-client-5', people.renee, { policy_number: 'SAMPLE-1005', carrier_name: 'Pinecrest Assurance', stage: 'requests', status: 'request_open', note: 'A change on the policy is open', next_step: 'Address change in progress', request: 'Address change in progress', draft_day: 15, check_from: '2026-04-01', checked_through: '2026-10-15',
+    // P911: change request, step 2 (the call is booked). Working until it's confirmed, then back to Protected.
+    track: { kind: 'change', done: { requested: 'Oct 29' }, next: 'Wed, Nov 4, 1:00 PM' } }),
   mkClient('sample-client-6', people.carla, { policy_number: 'SAMPLE-1006', stage: 'protected', status: 'effective', monthly_premium: 74.25, annual_premium: 891, next_step: null, draft_day: 27, check_from: '2026-08-03', checked_through: '2026-09-27' }),
   // P885: a missed payment in year one. The agent was warned at the first miss (Q42); the save call is the team's.
   mkClient('sample-client-7', { first: 'Ann', last: 'Lee', phone: '(512) 555-0164', city: 'Round Rock', state: 'TX' }, {
@@ -150,18 +159,35 @@ const seedClients = [
       { label: 'Payment watch, month 4 of 12', at: 'Missed Nov 3', done: false },
     ],
     calls: [{ at: 'Thu, Jul 16, 11:20 AM', result: 'Answered', by: 'Fulfillment' }],
+    // P911: saving the policy, step 3 (the save call is booked; the client isn't reached yet).
+    track: { kind: 'save', done: { found: 'Oct 31', booked: 'Nov 1' }, next: 'Tue, Nov 3, 10:00 AM' },
   }),
   // P891: the sample import. Dana brought three of her own clients from a file on Tue, Nov 3: one waiting for the
   // welcome call, one welcomed (said yes to texts), one already serviced since.
-  mkAdded('sample-client-8', { first: 'Maria', last: 'Lopez', phone: '(512) 555-0199', city: 'Austin', state: 'TX' }, 'added', { carrier_name: 'Americo', product_name: 'Mortgage Protection 25', policy_number: 'AM-1234567', monthly_premium: 84.2, face_amount: 250000, draft_day: 3, effective: 'Jun 1, 2025' }),
+  mkAdded('sample-client-8', { first: 'Maria', last: 'Lopez', phone: '(512) 555-0199', city: 'Austin', state: 'TX' }, 'added', { carrier_name: 'Americo', product_name: 'Mortgage Protection 25', policy_number: 'AM-1234567', monthly_premium: 84.2, face_amount: 250000, draft_day: 3, effective: 'Jun 1, 2025',
+    // P911: client you added, step 2 (the welcome call is booked).
+    track: { kind: 'added', done: { added: 'Nov 3' }, next: 'Thu, Nov 5, 11:00 AM' } }),
   mkAdded('sample-client-9', { first: 'Tom', last: 'Reyes', phone: '(512) 555-0122', city: 'Pflugerville', state: 'TX' }, 'welcomed', { carrier_name: 'Foresters', product_name: 'Strong Foundation', policy_number: 'FF-5521904', monthly_premium: 58.75, face_amount: 150000, draft_day: 15, effective: 'Mar 1, 2024', texts: true, check_from: '2024-03-01', checked_through: '2026-10-15' }),
   mkAdded('sample-client-10', { first: 'Lena', last: 'Brooks', phone: '(737) 555-0181', city: 'Georgetown', state: 'TX' }, 'serviced', { carrier_name: 'Mutual of Omaha', product_name: 'Term Life Express', policy_number: 'MO-3390217', monthly_premium: 41.3, face_amount: 100000, draft_day: 1, effective: 'Sep 1, 2023', texts: false, check_from: '2023-09-01', checked_through: '2026-10-01' }),
   // P899: a check due today (drafted Oct 30, asked 3 days later), and a closed client (hidden unless turned on).
   mkClient('sample-client-11', { first: 'Irene', last: 'Moss', phone: '(919) 555-0148', city: 'Cary', state: 'NC' }, { policy_number: 'SAMPLE-1011', carrier_name: 'Mutual of Omaha', stage: 'protected', status: 'effective', monthly_premium: 92.6, annual_premium: 1111.2, draft_day: 30, check_from: '2026-05-01', checked_through: '2026-09-30', submitted: 'Mon, Apr 27' }),
-  mkClient('sample-client-12', { first: 'Frank', last: 'Dale', phone: '(615) 555-0177', city: 'Franklin', state: 'TN' }, { policy_number: 'SAMPLE-1012', carrier_name: 'Americo', stage: 'closed', status: 'cancelled', closed: true, monthly_premium: 0, draft_day: 9, note: 'Cancelled by the client in September. Gone for good.', submitted: 'Thu, Mar 12' }),
+  mkClient('sample-client-12', { first: 'Frank', last: 'Dale', phone: '(615) 555-0177', city: 'Franklin', state: 'TN' }, { policy_number: 'SAMPLE-1012', carrier_name: 'Americo', stage: 'closed', status: 'cancelled', closed: true, monthly_premium: 0, draft_day: 9, note: 'Cancelled by the client in September. Gone for good.', submitted: 'Thu, Mar 12',
+    // P911: a save that couldn't be saved ends Closed, with the reason.
+    track: { kind: 'save', done: { found: 'Sep 9', booked: 'Sep 9', reached: 'Sep 10' }, closed: 'Couldn’t be saved: Frank cancelled with the carrier. He didn’t want the cover any more.' } }),
+  // P911: an immediate-draft sale. Not a replacement (no old policy to cancel); the carrier approved it on the spot and
+  // drafted the first payment that day. It stays Working until the hand-off call is done and that payment clears.
+  mkClient('sample-client-13', { first: 'Owen', last: 'Price', phone: '(210) 555-0137', city: 'San Antonio', state: 'TX' }, { policy_number: 'SAMPLE-1013', carrier_name: 'Americo', stage: 'setting_up', draft_day: 30, monthly_premium: 0, annual_premium: 0, submitted: 'Fri, Oct 30',
+    note: 'Immediate draft: the first payment came out the day of the sale.', next_step: 'Hand-off call Tue, Nov 3, 11:00 AM',
+    track: { kind: 'new_policy', done: { sold: 'Oct 30', approved: 'Oct 30' }, skip: ['old_cancel'], next: 'Tue, Nov 3, 11:00 AM', immediate: true } }),
 ]
 
 const seedThreads = [
+  // P911: Ohvara Support, pinned at the top of Messages: the admin team (Brayden and Jordan) answers here as Ohvara
+  // Support. It can't be deleted or hidden. Matches Dana's line in admin Messages.
+  { id: SUPPORT_THREAD, support: true, client_id: null, name: 'Ohvara Support', unread: 1, messages: [
+    { id: 's1', from: 'team', text: 'Welcome to Ohvara Support. Anything about your account, billing or leads, write here. Brayden or Jordan answers, usually the same day.', at: 'Mon, Oct 26, 9:00 AM' },
+    { id: 's2', from: 'me', text: 'Can I take more live transfers next week? I have Tuesday and Thursday open.', at: 'Mon, Nov 2, 10:02 AM' },
+    { id: 's3', from: 'team', text: 'Got it. We’ll look at your hours and come back to you today.', at: 'Mon, Nov 2, 10:20 AM' }] },
   { id: 'thread-1', client_id: 'sample-client-1', name: 'Gloria Santos', unread: 1, messages: [
     { id: 'm1', from: 'team', text: 'Gloria’s packet is in. Her review call is Fri, Nov 6 at 4:15 PM your time.', at: 'Fri, Oct 30, 5:44 PM' },
     { id: 'm2', from: 'me', text: 'Great, thank you.', at: 'Fri, Oct 30, 6:02 PM' },
@@ -649,3 +675,6 @@ export function useSampleNeeds(...a) { return useImpl().useNeeds(...a) }
 export function useSampleSignup(...a) { return useImpl().useSignup(...a) }
 export function useSampleOverview(...a) { return useImpl().useOverview(...a) }
 export function useSampleActions(...a) { return useImpl().useActions(...a) }
+
+// P911: the sample clients, for the stage-checklist tests (each journey has one at a different step).
+export { seedClients as SAMPLE_CLIENTS }

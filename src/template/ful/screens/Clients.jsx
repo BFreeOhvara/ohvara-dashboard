@@ -5,6 +5,8 @@ import { useFulClients, useFulCalls, useFulTasks, useFulThreads, useFulAgents, u
 import { Avatar, Chip, Money, SampleTag, Empty, PillTabs, useNote } from '../../kit'
 import { RecordDrawer, Block } from '../../Record'
 import { clientStatusOf, clientStatus, requestTag } from '../../../lib/clientCheck.js'
+import { stagesOf } from '../../../lib/clientStages.js'
+import { StageBlock } from '../../Stages911'
 import { fp } from '../paths'
 import { CALL_WORD, CALL_TONE, KIND, kindTone } from '../words'
 import { VerifyCaller } from '../Clock879'
@@ -14,6 +16,7 @@ import { VerifyCaller } from '../Clock879'
 // open calls and servicing steps for that client, and the thread with the agent about them (the client never sees it).
 // P907: the statuses are P899's (Working · Needs attention · Protected · Closed, lib/clientCheck), and every client
 // shows their next booked call: the system books every call, so "next step" is a time, not a to-do.
+// P911: a Working client shows the same stage checklist as the agent's (read-only here; VAs move steps from their calls).
 
 // The next open booking per client, across the team: a cancel-the-old-policy call or a booked servicing call.
 function useNextBooked() {
@@ -34,6 +37,7 @@ function ClientCard({ c, i, open, next, day }) {
   const note = useNote()
   const { tone, label } = statusOf(c, day)
   const req = requestTag(c)
+  const stage = clientStatusOf(c, day) === 'working' ? stagesOf(c) : null
   return (
     <article className={`fx-card fx-ccard is-${tone}`} style={{ '--i': i }}>
       <Link to={fp('clients', c.id)} className="fx-cover" aria-label={`Open ${c.name}`} />
@@ -41,6 +45,7 @@ function ClientCard({ c, i, open, next, day }) {
       {req && <small className="fs-cl-req">{req}</small>}
       <h3>{c.name}</h3>
       <p>{c.carrier_name} · {c.city}, {c.state}</p>
+      {stage && <small className="fs-cl-stage">{stage.current ? `Stage ${stage.at} of ${stage.of} · ${stage.current.label}` : stage.label}</small>}
       <div className="fx-ccard-mid">
         <span><small>Agent</small><b>{c.agent}</b></span>
         <span><small>Next booked call</small><b>{next ? next.text : 'None booked'}</b>{next && <small className="fs-cl-next">{next.word}</small>}</span>
@@ -98,6 +103,7 @@ function ClientDrawer({ id, onClose }) {
       )}
       {/* P879 (N-E-61): check the caller before any policy detail. */}
       <VerifyCaller key={c.id} client={c} />
+      {(statusOf(c, isoOf(today)).key === 'working' || c.track?.closed) && <StageBlock c={c} who="va" />}
       <Block title="Policy">
         <dl className="fx-facts">{[['Carrier', c.carrier_name], ['Product', c.product_name], ['Policy', c.policy_number], ['Phone', c.client_phone], ['Agent', c.agent]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
         {c.note && <p className="tp-sub">{c.note}</p>}

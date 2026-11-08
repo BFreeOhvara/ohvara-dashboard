@@ -4,10 +4,13 @@ import { Search, ArrowUpRight } from 'lucide-react'
 import { useAdmThreads, useAdmActions } from '../data'
 import { Avatar, Chip, Empty, Seg } from '../../template/kit'
 import { ap } from '../paths'
+import { SUPPORT_NAME } from '../../template/support911'
 
 // P849 — Messages: the admin line with every agent and every VA, one thread per person (today's shared inbox for
 // admin). ?to=<person id> opens that person's line (Agents, Fulfillment, Leads and Billing link here). P867: Jordan is a
 // full admin (no partner thread or view). Same panes as the agent and VA pages. Sample only: nothing is sent.
+// P911: this line is what agents and VAs see as "Ohvara Support", pinned at the top of their Messages. Admins (Brayden
+// and Jordan) answer it as Ohvara Support: the other side sees that name, not the admin's.
 const PERSON = { Agent: 'agents', Fulfillment: 'team' }
 
 export default function Messages() {
@@ -45,18 +48,18 @@ export default function Messages() {
       <div className="tp-conv">
         <div className="tp-conv-h">
           <Avatar name={t.name} />
-          <span className="tp-grow"><b>{t.name}</b><small>{`${t.role} · the admin line. Only admins and ${first} see this.`}</small></span>
+          <span className="tp-grow"><b>{t.name}</b><small>{`${t.role} · their ${SUPPORT_NAME} line. Only admins and ${first} see this.`}</small></span>
           <Chip tone={t.role === 'Agent' ? 'blue' : 'green'}>{t.role}</Chip>
           {PERSON[t.role] && <Link to={ap(PERSON[t.role], t.who)} className="tp-link">Open<ArrowUpRight size={14} /></Link>}
         </div>
         <div className="tp-conv-b">
           {t.messages.map(m => {
             const mine = m.from === 'me'
-            return <div key={m.id} className={`tp-bub${mine ? ' me' : ''}`}>{m.text}<small>{mine ? 'You' : t.name} · {m.at}</small></div>
+            return <div key={m.id} className={`tp-bub${mine ? ' me' : ''}`}>{m.text}<small>{mine ? `${SUPPORT_NAME} (you)` : t.name} · {m.at}</small></div>
           })}
         </div>
         <form className="tp-conv-f" onSubmit={send}>
-          <input className="tp-input" aria-label={`Message ${otherSide}`} placeholder={`Message ${otherSide}…`} value={text} onChange={e => setText(e.target.value)} />
+          <input className="tp-input" aria-label={`Reply to ${otherSide} as ${SUPPORT_NAME}`} placeholder={`Reply to ${otherSide} as ${SUPPORT_NAME}…`} value={text} onChange={e => setText(e.target.value)} />
           <button type="submit" className="tp-primary fx-accent" disabled={!text.trim()}>Send</button>
         </form>
       </div>

@@ -18,7 +18,7 @@ test('statuses: Working, Needs attention, Protected, and Closed behind a switch'
   assert.equal(clientStatusOf(mk('b', { stage: 'needs_attention', ...done }), today), 'working') // a problem the team is fixing
   assert.equal(clientStatusOf(mk('c', { missed: { done: false }, ...done }), today), 'working') // a missed payment
   assert.equal(clientStatusOf(mk('d', done), today), 'protected')
-  assert.equal(clientStatusOf(mk('e', { stage: 'requests', request: 'Address change in progress', ...done }), today), 'protected')
+  assert.equal(clientStatusOf(mk('e', { stage: 'requests', request: 'Address change in progress', ...done }), today), 'working') // P911: an open change request is pending, so Working (one rule for Protected)
   assert.equal(requestTag(mk('e', { stage: 'requests', request: 'Address change in progress' })), 'Address change in progress')
   assert.equal(requestTag(mk('f', { stage: 'requests', next_step: 'Beneficiary change in progress' })), 'Beneficiary change in progress')
   assert.equal(requestTag(mk('g')), null)

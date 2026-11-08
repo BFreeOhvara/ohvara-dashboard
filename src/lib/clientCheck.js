@@ -15,7 +15,9 @@
 // tap for all, or by ticking only the ones that fell off. Yes → Protected. No → Working, and the VA gets a save call.
 // Checks run monthly for the first 12 drafts, then every 3 months (admin settings).
 
-export const CHECK_DEFAULTS = { delayDays: 3, monthlyFor: 12, thenEvery: 3 }
+import { trackOpen, trackClosed, saveTrack } from './clientStages.js'
+
+export const CHECK_DEFAULTS ={ delayDays: 3, monthlyFor: 12, thenEvery: 3 }
 
 export const CLIENT_STATUS = {
   needs_attention: { key: 'needs_attention', tone: 'warn', label: 'Needs attention', sub: 'Still on the books?' },
@@ -88,13 +90,17 @@ export function nextCheck(c, today, s = CHECK_DEFAULTS) {
 
 const CLOSED = new Set(['closed', 'cancelled', 'canceled', 'terminated', 'surrendered', 'not_taken', 'declined'])
 // The agent's status for a client. Old servicing stages fold in: setting_up and needs_attention (a problem the team
-// is fixing) are Working; requests and protected are in force, so they're Protected unless the check is due.
+// is fixing) are Working. P911, one rule for Protected: nothing pending AND the latest draft cleared, so an open
+// change request is Working too, and a client on a stage checklist (lib/clientStages, c.track) stays Working until
+// its last step is done (a save that can't be saved ends Closed).
 export function clientStatusOf(c, today, s = CHECK_DEFAULTS) {
   if (!c) return 'working'
-  if (c.closed || c.stage === 'closed' || CLOSED.has(String(c.status || '').toLowerCase())) return 'closed'
+  if (c.closed || c.stage === 'closed' || CLOSED.has(String(c.status || '').toLowerCase()) || trackClosed(c)) return 'closed'
   if (c.fixing) return 'working'
   if (c.missed && !c.missed.done) return 'working'
-  if (c.stage === 'setting_up' || c.stage === 'needs_attention' || c.stage === 'working' || c.fromLead) return 'working'
+  if (c.track?.kind) {
+    if (trackOpen(c)) return 'working'
+  } else if (c.stage === 'setting_up' || c.stage === 'needs_attention' || c.stage === 'working' || c.stage === 'requests' || c.request || c.fromLead) return 'working'
   if (dueCheck(c, today, s)) return 'needs_attention'
   return 'protected'
 }
@@ -145,7 +151,7 @@ export const listQuestion = l => (l.clients.length === 1
 // An answer for one client on the check for `draft`. Yes clears it; No hands it to the team (a save call).
 export function answerCheck(c, draft, onBooks) {
   const base = { ...c, checked_through: !c.checked_through || draft > c.checked_through ? draft : c.checked_through }
-  return onBooks ? { ...base, fixing: null } : { ...base, fixing: { why: 'off_books', since: draft } }
+  return onBooks ? { ...base, fixing: null } : { ...base, fixing: { why: 'off_books', since: draft }, track: saveTrack(draft) }
 }
 // A whole list: every client is answered; the ids in `fellOff` are No, the rest Yes. Returns { yes, no } id lists.
 export function answerList(list, fellOff = []) {
@@ -156,7 +162,7 @@ export function answerList(list, fellOff = []) {
 // Lapsed, from any client card: straight to Working, with a save call. A due check counts as answered (No).
 export function markLapsed(c, today, s = CHECK_DEFAULTS) {
   const due = dueCheck(c, today, s)
-  return { ...c, checked_through: due ? due.draft : c.checked_through || null, fixing: { why: 'lapsed', since: today } }
+  return { ...c, checked_through: due ? due.draft : c.checked_through || null, fixing: { why: 'lapsed', since: today }, track: saveTrack(today) }
 }
 
 // Business days: Mon-Fri.

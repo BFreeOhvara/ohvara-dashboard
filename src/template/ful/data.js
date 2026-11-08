@@ -3,6 +3,7 @@ import { shortDate } from '../../lib/clientCheck.js'
 import { instantOf, clockOf, dateOf, zoneOf, freeVa, blockTime, nextSlot, preferredWindow, windowOfMinute, minuteOf, zoneAbbr } from '../../lib/callSlots.js'
 import { typeOfKind, isCallKind, callType, CALL_TYPES, RETRY_KINDS, CALLBACK_WHY } from './bookings.js'
 import { draftIn } from '../../lib/clientCheck.js'
+import { SUPPORT_THREAD } from '../support911.js'
 
 // P845 — the one door to the Fulfillment (VA) side's sample info, like ../data for the agent side. Screens read only
 // through the hooks below; every read returns { data, isLoading: false, error: null }, the react-query shape, so the
@@ -85,18 +86,24 @@ const mkClient = (id, first, last, agent, o) => ({
   next_step: '', submitted: 'Oct 21', attention: null, note: '', calls: [], ...o,
 })
 const seedClients = [
-  mkClient('fc-gloria', 'Gloria', 'Santos', 'ag-dana', { client_phone: '(305) 555-0156', city: 'Miami', state: 'FL', stage: 'setting_up', next_step: 'Cancellation call today 2:00 PM', carrier_name: 'Americo', product_name: 'Mortgage Protection 25', policy_number: 'AM-2209184', monthly_premium: 88.4, note: 'Replacing an older Globe policy. Wants the old one closed the day the new one starts.', answered_in: 'afternoon' }),
+  mkClient('fc-gloria', 'Gloria', 'Santos', 'ag-dana', { client_phone: '(305) 555-0156', city: 'Miami', state: 'FL', stage: 'setting_up', next_step: 'Cancellation call today 2:00 PM', carrier_name: 'Americo', product_name: 'Mortgage Protection 25', policy_number: 'AM-2209184', monthly_premium: 88.4, note: 'Replacing an older Globe policy. Wants the old one closed the day the new one starts.', answered_in: 'afternoon',
+    // P911: new policy, step 4 (the old policy's cancel call is today).
+    track: { kind: 'new_policy', done: { sold: 'Oct 28', handoff: 'Oct 29', approved: 'Nov 2' }, next: 'today, 2:00 PM' } }),
   mkClient('fc-robert', 'Robert', 'Chen', 'ag-marcus', { client_phone: '(480) 555-0142', city: 'Phoenix', state: 'AZ', stage: 'protected', carrier_name: 'Foresters', product_name: 'Strong Foundation', policy_number: 'FF-7712406', monthly_premium: 52.1 }),
   mkClient('fc-luis', 'Luis', 'Ortega', 'ag-priya', { client_phone: '(813) 555-0119', city: 'Tampa', state: 'FL', stage: 'needs_attention', attention: 'Draft failed on Nov 1', next_step: 'Payment change call', carrier_name: 'Transamerica', product_name: 'Trendsetter Super 20', policy_number: 'TA-5530981', monthly_premium: 71.25, best_window: 'Evening' }),
   mkClient('fc-denise', 'Denise', 'Walker', 'ag-dana', { client_phone: '(214) 555-0171', city: 'Dallas', state: 'TX', stage: 'requests', next_step: 'Beneficiary change', carrier_name: 'Mutual of Omaha', policy_number: 'MO-4471188', monthly_premium: 47.9 }),
-  mkClient('fc-harold', 'Harold', 'Nguyen', 'ag-marcus', { client_phone: '(713) 555-0188', city: 'Houston', state: 'TX', stage: 'setting_up', next_step: 'Cancellation call today 3:30 PM', carrier_name: 'Americo', policy_number: 'AM-2209377', monthly_premium: 96 }),
+  mkClient('fc-harold', 'Harold', 'Nguyen', 'ag-marcus', { client_phone: '(713) 555-0188', city: 'Houston', state: 'TX', stage: 'setting_up', next_step: 'Cancellation call today 3:30 PM', carrier_name: 'Americo', policy_number: 'AM-2209377', monthly_premium: 96,
+    track: { kind: 'new_policy', done: { sold: 'Oct 29', handoff: 'Oct 30', approved: 'Nov 3' }, next: 'today, 3:30 PM' } }),
   mkClient('fc-carla', 'Carla', 'Jones', 'ag-priya', { client_phone: '(404) 555-0133', city: 'Atlanta', state: 'GA', stage: 'protected', carrier_name: 'Foresters', policy_number: 'FF-7712589', monthly_premium: 39.75, draft_day: 1, check_from: '2026-05-20' }),
   mkClient('fc-renee', 'Renee', 'Ortiz', 'ag-dana', { client_phone: '(303) 555-0127', city: 'Denver', state: 'CO', stage: 'needs_attention', attention: 'Packet not delivered', next_step: 'Policy packet check', carrier_name: 'Transamerica', policy_number: 'TA-5531044', monthly_premium: 58.3 }),
-  mkClient('fc-walter', 'Walter', 'Price', 'ag-marcus', { client_phone: '(602) 555-0194', city: 'Mesa', state: 'AZ', stage: 'setting_up', next_step: 'Cancellation call today 4:15 PM', carrier_name: 'Mutual of Omaha', policy_number: 'MO-4471342', monthly_premium: 61 }),
+  mkClient('fc-walter', 'Walter', 'Price', 'ag-marcus', { client_phone: '(602) 555-0194', city: 'Mesa', state: 'AZ', stage: 'setting_up', next_step: 'Cancellation call today 4:15 PM', carrier_name: 'Mutual of Omaha', policy_number: 'MO-4471342', monthly_premium: 61,
+    track: { kind: 'new_policy', done: { sold: 'Oct 30', handoff: 'Oct 31', approved: 'Nov 3' }, next: 'today, 4:15 PM' } }),
   mkClient('fc-irene', 'Irene', 'Baker', 'ag-priya', { client_phone: '(727) 555-0109', city: 'Clearwater', state: 'FL', stage: 'protected', carrier_name: 'Americo', policy_number: 'AM-2209455', monthly_premium: 73.6 }),
   mkClient('fc-tom', 'Tom', 'Fischer', 'ag-dana', { client_phone: '(512) 555-0122', city: 'Round Rock', state: 'TX', stage: 'requests', next_step: 'Address change', carrier_name: 'Foresters', policy_number: 'FF-7712633', monthly_premium: 44.2 }),
   mkClient('fc-nadia', 'Nadia', 'Khan', 'ag-marcus', { client_phone: '(480) 555-0177', city: 'Tempe', state: 'AZ', stage: 'protected', carrier_name: 'Transamerica', policy_number: 'TA-5531102', monthly_premium: 82.9 }),
-  mkClient('fc-paul', 'Paul', 'Rivera', 'ag-priya', { client_phone: '(813) 555-0165', city: 'Brandon', state: 'FL', stage: 'setting_up', next_step: 'Cancellation call Fri 10:00 AM', carrier_name: 'Mutual of Omaha', policy_number: 'MO-4471399', monthly_premium: 55.5, best_window: 'Morning', submitted: 'Nov 4' }),
+  mkClient('fc-paul', 'Paul', 'Rivera', 'ag-priya', { client_phone: '(813) 555-0165', city: 'Brandon', state: 'FL', stage: 'setting_up', next_step: 'Cancellation call Fri 10:00 AM', carrier_name: 'Mutual of Omaha', policy_number: 'MO-4471399', monthly_premium: 55.5, best_window: 'Morning', submitted: 'Nov 4',
+    // P911: new policy, step 2 (the hand-off call comes first; the old policy's cancel is booked for Fri).
+    track: { kind: 'new_policy', done: { sold: 'Nov 4' }, next: 'Thu, 11:00 AM' } }),
   // P885: a year-one client whose Nov 3 draft was returned (found from Dana's forwarded carrier email).
   // P891: clients Dana brought in from her own book (Add clients / Import), waiting for their welcome call.
   mkClient('fc-maria', 'Maria', 'Lopez', 'ag-dana', { added: true, client_phone: '(512) 555-0199', city: 'Austin', state: 'TX', stage: 'setting_up', next_step: 'Welcome call today', carrier_name: 'Americo', product_name: 'Mortgage Protection 25', policy_number: 'AM-1234567', monthly_premium: 84.2, face_amount: 250000, draft_day: 3, effective: 'Jun 1, 2025', email: 'maria@example.com', submitted: 'Nov 3', note: 'Prefers evenings.', best_window: 'Evening' }),
@@ -177,6 +184,11 @@ const seedPayouts = [
 
 // Messages: the VA and an agent, one thread per client (the client never sees them).
 const seedThreads = [
+  // P911: Ohvara Support, pinned at the top of Messages: the admin team answers here as Ohvara Support.
+  { id: SUPPORT_THREAD, support: true, client_id: null, agent_id: null, unread: 1, messages: [
+    { id: 's1', from: 'support', text: 'Welcome to Ohvara Support. Anything about your shifts, pay or the app, write here. Brayden or Jordan answers, usually the same day.', at: 'Mon, 8:00 AM' },
+    { id: 's2', from: 'support', text: 'Days off go through Settings › Shift. For anything else, this is the place.', at: 'Today, 8:05 AM' },
+  ] },
   { id: 'th-1', client_id: 'fc-gloria', agent_id: 'ag-dana', unread: 2, messages: [
     { id: 'm1', from: 'agent', text: 'Gloria wants the Globe policy closed the same day Americo starts. Can you do it on today\'s call?', at: 'Today, 9:12 AM' },
     { id: 'm2', from: 'me', text: 'Yes. Her call is at 2:00 PM. I\'ll ask Globe for an end date of Nov 5.', at: 'Today, 9:20 AM' },
@@ -345,7 +357,8 @@ function useFulQueueSample() { return NO_QUEUE }
 function useFulTasksSample() { const s = useStore(); return ok(s.tasks.map(t => taskRow(s, t))) }
 function useFulThreadsSample() {
   const s = useStore()
-  return ok(s.threads.map(t => { const c = clientOf(s, t.client_id); return { ...t, name: fullName(c), agent: agentName(t.agent_id) } }))
+  // P911: Ohvara Support has no client or agent.
+  return ok(s.threads.map(t => { if (t.support) return { ...t, name: 'Ohvara Support', agent: 'Ohvara Support' }; const c = clientOf(s, t.client_id); return { ...t, name: fullName(c), agent: agentName(t.agent_id) } }))
 }
 function useFulFeedSample() { const s = useStore(); return ok(s.feed) }
 function useFulSettingsSample() { const s = useStore(); return ok(s.settings) }

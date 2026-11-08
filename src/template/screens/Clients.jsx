@@ -12,6 +12,8 @@ import { CallOrCopy } from '../CallOrCopy'
 import { agentOpensSaveCall } from '../ful/data'
 import { useCheckSettings, todayFor } from '../checkSettings'
 import { CLIENT_STATUS, STATUS_ORDER, clientStatusOf, clientStatus, requestTag, workingWhy, dueCheck, nextCheck, checkLists, listQuestion, answerList, shortDate, ordinal } from '../../lib/clientCheck.js'
+import { stagesOf, dateWord } from '../../lib/clientStages.js'
+import { StageBlock } from '../Stages911'
 import '../p899.css'
 
 // P899 — Clients, simplified. Agents don't work clients, the team does: the agent sees whether a policy is safe
@@ -52,7 +54,7 @@ function CheckList({ list, i }) {
           return (
             <li key={c.id} className={gone ? 'is-off' : ''}>
               <Avatar name={fullName(c)} tone={gone ? 'mute' : 'warn'} />
-              <span className="tp-grow"><Link to={paths.client(c.id)}><b>{fullName(c)}</b></Link><small>{c.carrier_name}{Number(c.monthly_premium) > 0 ? <> · <Money v={c.monthly_premium} /> a month</> : null}</small></span>
+              <span className="tp-grow"><Link to={paths.client(c.id)}><b>{fullName(c)}</b></Link><small>{[c.carrier_name, [c.city, c.state].filter(Boolean).join(', ')].filter(Boolean).join(' · ')}</small></span>
               <label className="ck-off"><input type="checkbox" checked={gone} onChange={() => flip(c.id)} /><span>{gone ? 'Fell off' : many ? 'Fell off?' : 'No longer on the books'}</span></label>
             </li>
           )
@@ -68,36 +70,48 @@ function CheckList({ list, i }) {
   )
 }
 
+// P911: when the client came on: "Sold Oct 27", or "Added by you Nov 3".
+const cameOn = c => (c.added ? `Added by you ${dateWord(c.submitted) || ''}` : `Sold ${dateWord(c.submitted) || ''}`).trim()
+// P911: the card's one line for where a client stands.
+function standOf(c, st, due) {
+  if (st === 'working') {
+    const s = stagesOf(c)
+    return { kicker: s.current ? `Stage ${s.at} of ${s.of}` : s.label, text: s.current ? s.current.label : workingWhy(c), stages: s }
+  }
+  if (st === 'needs_attention' && due) return { kicker: 'Monthly check', text: `Still on the books? It drafted ${shortDate(due.draft)}.` }
+  if (st === 'closed') return { kicker: 'Closed', text: c.track?.closed || c.note || 'Gone for good.' }
+  return { kicker: 'Protected', text: 'Nothing needed' }
+}
+
+// P911: every card the same shape: name, carrier · city, state, "Drafts the 12th · Sold Oct 27", one line for where it
+// stands, and the buttons pinned at the bottom. No premium (it's optional; the drawer shows it if entered).
 function ClientCard({ c, i, today, settings, onLapsed }) {
   const answer = useAnswer()
   const st = clientStatusOf(c, today, settings)
   const { tone, label } = clientStatus(st)
   const name = fullName(c)
-  const tag = requestTag(c)
   const due = st === 'needs_attention' ? dueCheck(c, today, settings) : null
-  const premium = Number(c.monthly_premium) > 0
+  const stand = standOf(c, st, due)
+  const canLapse = st !== 'closed' && !c.fixing && !c.fromLead && !(c.missed && !c.missed.done)
   return (
-    <article className={`fx-card fx-ccard is-${tone}`} style={{ '--i': i }}>
+    <article className={`fx-card fx-ccard ck-card is-${tone}`} style={{ '--i': i }}>
       <Link to={paths.client(c.id)} className="fx-cover" aria-label={`Open ${name}`} />
       <div className="fx-ccard-top"><Avatar name={name} tone={tone} /><span className="fx-tag">{label}</span></div>
       <h3>{name}</h3>
-      {where(c) && <p>{where(c)}</p>}
-      {tag && <span className="tp-tag ck-req"><Wrench size={11} aria-hidden="true" />{tag}</span>}
-      {(premium || c.draft_day) && <div className="fx-ccard-mid">
-        {premium && <span><small>Premium</small><Money v={c.monthly_premium} /></span>}
-        {c.draft_day && <span><small>Drafts</small><b>The {ordinal(Number(c.draft_day))}</b></span>}
-      </div>}
-      {st === 'working' && <p className="ck-why">{workingWhy(c)}</p>}
-      {due && <p className="ck-why ck-q">Still on the books? It drafted {shortDate(due.draft)}.</p>}
-      <div className="fx-ccard-bot">
-        {due ? <>
+      <p className="ck-where">{where(c) || 'Details to be added'}</p>
+      <p className="ck-dates"><span>{c.draft_day ? <>Drafts the <b>{ordinal(Number(c.draft_day))}</b></> : 'No draft date yet'}</span><span>{cameOn(c)}</span></p>
+      <div className={`ck-stand is-${st}`}>
+        <small>{stand.kicker}</small>
+        <span>{stand.text}</span>
+        {stand.stages && <span className="sl-bar" aria-hidden="true">{stand.stages.steps.map(s => <i key={s.key} className={`is-${s.state}`} />)}</span>}
+      </div>
+      <div className="fx-ccard-bot ck-bot">
+        {due && <>
           <button type="button" className="tp-primary sm fx-accent fx-over" onClick={() => answer([c], due.draft)}>Yes</button>
           <button type="button" className="tp-btn ov-ghost sm fx-over" onClick={() => answer([c], due.draft, [c.id])}>No</button>
-          <span className="tp-grow" />
-        </> : <>
-          {st !== 'closed' && !c.fixing && <button type="button" className="tp-btn ov-ghost sm fx-over ck-lapse" onClick={() => onLapsed(c)}>Lapsed</button>}
-          <span className="tp-grow" />
         </>}
+        {!due && canLapse && <button type="button" className="tp-btn ov-ghost sm fx-over ck-lapse" onClick={() => onLapsed(c)}>Lapsed</button>}
+        <span className="tp-grow" />
         <Link to={paths.messages()} className="fx-mini fx-over" aria-label={`Message the team about ${name}`}><MessageSquare size={14} /></Link>
       </div>
     </article>
@@ -119,8 +133,11 @@ function ClientDrawer({ id, onClose, today, settings, onLapsed }) {
   const next = st === 'protected' ? nextCheck(c, today, settings) : null
   const thread = threads.find(t => t.client_id === c.id)
   const send = () => { if (thread) sendMessage(thread.id, msg.trim()); setMsg(''); note('Message sent to the team') }
+  // P911: premium is optional; it shows only when it was entered.
   const facts = [['Name', name], ['Phone', c.client_phone], ['City', c.city || 'Not given'], ['State', c.state || 'Not given'], ['Carrier', c.carrier_name || 'Not given'],
-    ['Draft date', c.draft_day ? `The ${ordinal(Number(c.draft_day))} of each month` : 'Not given'], ['Monthly premium', Number(c.monthly_premium) > 0 ? <Money v={c.monthly_premium} /> : 'Not given'], ['Notes', c.notes || 'None']]
+    ['Draft date', c.draft_day ? `The ${ordinal(Number(c.draft_day))} of each month` : 'Not given'], [c.added ? 'Added by you' : 'Sold', dateWord(c.submitted) || 'Not given'],
+    ...(Number(c.monthly_premium) > 0 ? [['Monthly premium', <Money key="p" v={c.monthly_premium} />]] : []), ['Notes', c.notes || 'None']]
+  const onTrack = st === 'working' || (st === 'closed' && c.track?.closed)
   return (
     <RecordDrawer label={name} kicker={`Client · since ${c.submitted}`} tone={tone} onClose={onClose}
       hero={<>
@@ -145,8 +162,9 @@ function ClientDrawer({ id, onClose, today, settings, onLapsed }) {
           </div>
         </section>
       )}
-      {st === 'working' && <Block title="Our team is on it" sub={c.next_step || undefined}><p className="tp-mid">{workingWhy(c)}</p></Block>}
-      {st === 'closed' && <Block title="Closed"><p className="tp-mid">{c.note || 'Gone for good. Nothing more from the team.'}</p></Block>}
+      {/* P911: every Working client shows the steps we take, so nothing is forgotten (read-only; the team moves them). */}
+      {onTrack && <StageBlock c={c} />}
+      {st === 'closed' && !c.track?.closed && <Block title="Closed"><p className="tp-mid">{c.note || 'Gone for good. Nothing more from the team.'}</p></Block>}
       <Block title="Details" aside={next ? <span className="ck-next">Next check {shortDate(next.askOn)}</span> : null}>
         <dl className="fx-facts">{facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       </Block>
@@ -207,7 +225,7 @@ export default function Clients() {
 
       {showLists && <div className="ck-lists" aria-label="Monthly check">{lists.map((l, i) => <CheckList key={l.draft} list={l} i={i} />)}</div>}
 
-      <div className="fx-cgrid" aria-label="Clients">
+      <div className="fx-cgrid ck-grid" aria-label="Clients">
         {rows.map((c, i) => <ClientCard key={c.id} c={c} i={i} today={today} settings={settings} onLapsed={setLapsing} />)}
         {rows.length === 0 && clients.length > 0 && <section className="fx-tile"><Empty title={stage === 'needs_attention' ? 'Nothing to check' : 'No clients match'} sub={stage === 'needs_attention' ? 'Every policy is confirmed on the books. The next check comes 3 days after each draft.' : 'Check the spelling, or show every status.'} /></section>}
         {clients.length === 0 && <FirstRun icon={Users} title="Your clients show here" sub="Submit a sale and our team takes it from there. You just see whether each policy is safe, and once a month confirm it’s still on the books."><Link to={paths.submit()} className="tp-primary fx-accent"><Plus size={16} />Submit your first policy</Link><button type="button" className="tp-btn ov-ghost" onClick={() => setAdding(true)}><UserPlus size={16} />Add clients you already have</button></FirstRun>}

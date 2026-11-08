@@ -39,6 +39,8 @@ import '../flow.css'
 import '../palette.css'
 import './ful.css'
 import MoreBelow from '../MoreBelow'
+import { useMessagesToggle } from '../msgToggle'
+import '../p911.css'
 import '@fontsource/urbanist/500.css'
 import '@fontsource/urbanist/600.css'
 import '@fontsource/urbanist/700.css'
@@ -277,6 +279,8 @@ export default function FulFrame() {
   const layout = page.key
   const title = fulTitleOf(layout)
   const stats = useHeadStats(layout)
+  // P911: the top-right Messages icon shows selected while Messages is open; a second click closes it to Overview.
+  const msg = useMessagesToggle(active === 'messages', fp('overview'))
   const { data: { timeZone: fulTz } } = useFulSettings()
   const { data: day } = useFulDay()
   const { data: clients } = useFulClients()
@@ -409,13 +413,13 @@ export default function FulFrame() {
 
   const tops = (
     <>
-      <Link to={fp('messages')} className="fx-ib tp-wig" aria-label="Messages" {...wig}><MessageSquare size={18} />{day.unread > 0 && <span className="fx-badge">{day.unread}</span>}</Link>
+      <NavLink to={fp('messages')} className={`fx-ib tp-wig${msg.closing ? ' is-closing' : ''}`} aria-label={active === 'messages' ? 'Close Messages' : 'Messages'} {...wig} onClick={e => { wig.onClick?.(e); msg.onClick(e) }}><MessageSquare size={18} />{day.unread > 0 && <span className="fx-badge">{day.unread}</span>}</NavLink>
       <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} /><span className="fx-badge">3</span></button>
     </>
   )
 
   return (
-    <div className={`tp tp-app fx fs is-${layout}`} ref={appRef}>
+    <div className={`tp tp-app fx fs is-${layout}${msg.closing ? ' is-msg-closing' : ''}`} ref={appRef}>
       <div className="tp-sky" aria-hidden="true"><i /><i /><i /></div>
 
       <header className="tp-phone-top fx-ptop">
