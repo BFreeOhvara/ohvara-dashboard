@@ -7,14 +7,15 @@
 export const SENDER = 'Deedstone'
 
 export const LEAD_TEXTS = {
-  instant: "Hi [Lead first name], thanks for asking about mortgage protection. This is Deedstone, texting for a licensed agent. We'll call you shortly to set up a time to talk.",
-  not_reached_d0: 'Hi [Lead first name], we tried to reach you about the mortgage protection info you asked for. Reply here with a good time to talk.',
+  // P902: no welcome text on arrival. A new lead gets a call first; these start from the call's outcome.
+  not_reached_d0: "Hi [Lead first name], it's Deedstone. We just tried to call about the life insurance info you asked for. Pick a time that works for you: [Reschedule link]",
   not_reached_d1: 'Hi [Lead first name], following up on your mortgage protection request. When is a good time for a quick call with a licensed agent?',
   not_reached_d3: "Hi [Lead first name], we're still happy to help with mortgage protection. Reply with a day and time that works and we'll set it up.",
   not_reached_d7: 'Hi [Lead first name], one more check-in on your mortgage protection request. Reply any time and a licensed agent will reach out.',
   not_reached_monthly: "Hi [Lead first name], checking in from Deedstone. If you still want help with mortgage protection, reply here and we'll set up a call.",
-  confirm: "Hi [Lead first name], you're booked with [Agent first name], a licensed agent, on [Appointment time]. Need a different time? Reschedule here: [Reschedule link]",
-  reminder_day_before: 'Hi [Lead first name], a reminder that your call with [Agent first name] is on [Appointment time]. Need a different time? Reschedule here: [Reschedule link]',
+  confirm: "You're set, [Lead first name]. [Agent first name] will call you on [Appointment time]. Reply C to confirm or change it here: [Reschedule link]",
+  reminder_day_before: 'Hi [Lead first name], a reminder: [Agent first name] calls you tomorrow, [Appointment time]. Reply C to confirm or change it here: [Reschedule link]',
+  reminder_morning: 'Good morning [Lead first name]! [Agent first name] calls you today, [Appointment time]. Need a different time? [Reschedule link]',
   reminder_1h: 'Hi [Lead first name], your call with [Agent first name] starts in about an hour, at [Appointment time]. Need to reschedule? [Reschedule link]',
   no_show_rebook: "Hi [Lead first name], sorry we missed you. We'll call shortly to find a new time, or reply here with one that works for you.",
   // Not in the workflow drafts yet: the one text after STOP (P873 draft, same shape as recovery-sms STOP_REPLY).

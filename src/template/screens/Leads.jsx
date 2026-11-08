@@ -85,7 +85,7 @@ function Row({ e, lead, last }) {
     <li className={`lc-ev${later ? ' is-later' : last ? ' now' : ' done'}`} data-kind={e.kind}>
       <i />
       <div>
-        <span className="lc-ev-h"><b>{e.label}</b>{later && <span className="lc-sched">{e.kind === 'text_sent' ? 'Scheduled' : 'Next'}</span>}</span>
+        <span className="lc-ev-h"><b>{e.label}</b>{later && <span className="lc-sched">{e.kind === 'text_sent' ? 'Planned' : 'Next'}</span>}</span>
         <span className="lc-ev-by">{e.by} · {atLabel(e.at, clockNow())}</span>
         {isText && <div className={`tp-bub lc-bub${theirs ? '' : ' me'}`}>{e.text}{!theirs && <small>Automatic · preview, sends when your leads go live</small>}{theirs && <small>From {lead.first_name}</small>}</div>}
         {e.kind === 'call_task' && <span className={`lc-task is-${e.task === 'you' ? 'you' : 'team'}`}>{e.task === 'you' ? 'For you' : 'For our team'}</span>}

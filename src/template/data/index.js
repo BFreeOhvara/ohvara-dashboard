@@ -35,6 +35,11 @@ const people = {
   sam: { first: 'Sam', last: 'Rivera', phone: '(210) 555-0158', city: 'San Antonio', state: 'TX' },
   mark: { first: 'Mark', last: 'Daniels', phone: '(727) 555-0114', city: 'Clearwater', state: 'FL' },
   nina: { first: 'Nina', last: 'Shah', phone: '(512) 555-0161', city: 'Round Rock', state: 'TX' },
+  // P902: one lead per first-call outcome that the board didn't have yet.
+  lena: { first: 'Lena', last: 'Fox', phone: '(470) 555-0124', city: 'Marietta', state: 'GA' },
+  gloriap: { first: 'Gloria', last: 'Price', phone: '(214) 555-0172', city: 'Dallas', state: 'TX' },
+  ray: { first: 'Ray', last: 'Ortiz', phone: '(405) 555-0166', city: 'Norman', state: 'OK' },
+  brian: { first: 'Brian', last: 'Cole', phone: '(614) 555-0139', city: 'Columbus', state: 'OH' },
 }
 
 // P873: every lead sits somewhere on its path (leadLifecycle.js STAGES) on the sample clock, Mon, Nov 2, 2:14 PM.
@@ -75,6 +80,13 @@ const seedLeads = [
   // P878: Mark confirmed by text (the card says confirmed); Nina was sold but her servicing details aren't in yet.
   mkLead('sample-lead-15', people.mark, { stage: 'booked', came: '2026-10-31T16:20', apptAt: '2026-11-04T11:00', reply: { text: 'Yes, see you Wednesday', at: '2026-11-02T09:31' } }),
   mkLead('sample-lead-16', people.nina, { stage: 'sold', status: 'closed', outcome: 'sold', submitted: false, came: '2026-10-28T12:10', apptAt: '2026-10-30T13:00' }),
+  // P902: the first call's other outcomes. Gloria said not now with a time (booked as a callback: the booking texts);
+  // Lena said not now with no time (Follow up, no texts); Ray said no; Brian was a wrong number (Closed, admin's Lead
+  // quality list). Only no answer and booked send texts.
+  mkLead('sample-lead-17', people.gloriap, { stage: 'booked', firstCall: 'not_now', came: '2026-11-02T11:20', apptAt: '2026-11-03T17:30' }),
+  mkLead('sample-lead-18', people.lena, { stage: 'follow_up', status: 'contacted', outcome: 'follow_up', firstCall: 'not_now', came: '2026-11-02T09:05', follow: 'Wed, Nov 4', followAt: '2026-11-04T16:00' }),
+  mkLead('sample-lead-19', people.ray, { stage: 'not_interested', status: 'bad', outcome: 'not_interested', firstCall: 'hard_no', reason: 'Not interested on the first call', came: '2026-11-02T09:47' }),
+  mkLead('sample-lead-20', people.brian, { stage: 'not_interested', status: 'bad', outcome: 'not_interested', firstCall: 'wrong_number', reason: 'Wrong number', came: '2026-11-02T08:02' }),
 ]
 
 const mkClient = (id, p, o) => ({

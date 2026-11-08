@@ -22,5 +22,5 @@ test('ID checks match migration 230', () => {
   assert.ok(!validLocationId(''))
   assert.ok(validWorkflowId(null) && validWorkflowId('') && validWorkflowId('9f1c2b3a-4d5e-4f60'))
   assert.ok(!validWorkflowId('x'))
-  assert.equal(GHL_EVENTS.length, 4)
+  assert.equal(GHL_EVENTS.length, 5) // P902: + no answer after the first call
 })

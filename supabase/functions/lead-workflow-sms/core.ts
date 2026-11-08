@@ -1,8 +1,11 @@
-// The rules for the Booked Appointments texts to a mortgage_protection lead:
-//   not reached   welcome text now, then day 0 (+4 h), day 1, day 3, day 7,
+// The rules for the Booked Appointments texts to a mortgage_protection lead (P902: brain/ohvara/Lead Text Workflows.md;
+// GoHighLevel is the engine that sends them, this is Ohvara's own Twilio path, off while sms_live is off):
+//   no text before the first call. The flows start only from the first call's outcome (leads.text_flow, p902):
+//   no answer     the missed-call text right away, then day 1, day 3, day 7,
 //                 then check-ins at day 30, 60 and 90 (MONTHLY_MAX = 3, P848)
 //                 and nothing after; a reply, a booking or an opt-out stops them
-//   booked        confirmation now, a reminder the day before and 1 hour before
+//   booked        the booking text now, a reminder the evening before (6:30 PM),
+//                 the morning of (8:30 AM, when the call is 2.5 h+ later) and 1 hour before
 //   no-show       a rebook text right away, for the first NO_SHOW_MAX no-shows
 // Every step is ONE row in inbound_events (180): planned as 'scheduled', then
 // updated in place to 'done' (detail.twilio_sid, detail.body: the exact words
@@ -43,6 +46,7 @@ export type Lead = {
   state: string | null
   agent_id: string | null        // leads.assigned_rep_id
   agent_name: string | null      // the assigned agent's full name
+  text_flow?: string | null      // P902: leads.text_flow ('no_answer' | 'booked' | null); only no_answer plans the cadence
 }
 
 export type Detail = Record<string, unknown>
@@ -85,14 +89,14 @@ const E164 = /^\+[1-9][0-9]{7,14}$/
 
 type StepInfo = { kind: 'text_sent' | 'reminder'; label: string; summary: string }
 export const STEPS: Record<Step, StepInfo> = {
-  instant: { kind: 'text_sent', label: 'Welcome text', summary: 'Thanks them and says a call is coming.' },
-  not_reached_d0: { kind: 'text_sent', label: 'Follow-up text, same day', summary: 'Asks for a good time to talk.' },
+  not_reached_d0: { kind: 'text_sent', label: 'Missed-call text', summary: 'We just tried to call: pick a time that works.' },
   not_reached_d1: { kind: 'text_sent', label: 'Follow-up text, day 1', summary: 'Asks when a quick call works.' },
   not_reached_d3: { kind: 'text_sent', label: 'Follow-up text, day 3', summary: 'Asks for a day and time that works.' },
   not_reached_d7: { kind: 'text_sent', label: 'Follow-up text, day 7', summary: 'One more check-in before the day 30, 60 and 90 texts.' },
   not_reached_monthly: { kind: 'text_sent', label: 'Check-in text', summary: 'Checks in at day 30, 60 and 90, then stops.' },
   confirm: { kind: 'reminder', label: 'Confirmation text', summary: 'Confirms the appointment time, with a reschedule link.' },
-  reminder_day_before: { kind: 'reminder', label: 'Reminder text', summary: 'The day before the appointment, with a reschedule link.' },
+  reminder_day_before: { kind: 'reminder', label: 'Reminder text, the evening before', summary: 'The evening before the appointment, with a reschedule link.' },
+  reminder_morning: { kind: 'reminder', label: 'Reminder text, the morning of', summary: 'The morning of the appointment, with a reschedule link.' },
   reminder_1h: { kind: 'reminder', label: 'Reminder text, 1 hour before', summary: 'An hour before the appointment, with a reschedule link.' },
   no_show_rebook: { kind: 'text_sent', label: 'Rebook text', summary: 'Says sorry we missed them and that a new time is coming.' },
 }
@@ -120,10 +124,9 @@ const STOP_WORDS: Record<StopReason, { why: string; label: string }> = {
 }
 export const STOP_STEP = 'cadence_stop'
 
-// The not-reached cadence, from the moment it's planned.
+// The no-answer cadence, from the moment the first call ends with no answer (P902: no welcome text before the call).
 const CADENCE: [Step, number][] = [
-  ['instant', 0],
-  ['not_reached_d0', 4 * HOUR],
+  ['not_reached_d0', 0],
   ['not_reached_d1', DAY],
   ['not_reached_d3', 3 * DAY],
   ['not_reached_d7', 7 * DAY],
@@ -131,7 +134,7 @@ const CADENCE: [Step, number][] = [
 ]
 const isStep = (s: unknown): s is Step => typeof s === 'string' && Object.hasOwn(STEPS, s)
 const stoppable = (s: Step) => s.startsWith('not_reached_')
-const isReminder = (s: Step) => s === 'confirm' || s === 'reminder_day_before' || s === 'reminder_1h'
+const isReminder = (s: Step) => s === 'confirm' || s === 'reminder_day_before' || s === 'reminder_morning' || s === 'reminder_1h'
 
 const stepOf = (e: Event) => (typeof e.detail?.step === 'string' ? e.detail.step : null)
 const seqOf = (e: Event) => Number(e.detail?.seq ?? 1)
@@ -165,6 +168,21 @@ export function appointments(events: Event[]): string[] {
     if (out[out.length - 1] !== t) out.push(t)
   }
   return out
+}
+
+// A wall-clock time in the lead's zone on the appointment's local day (dayShift days before), e.g. 6:30 PM the evening
+// before. null when the state's zone is unknown.
+export function localOnApptDay(appt: string, state: string | null, dayShift: number, hh: number, mm: number): Date | null {
+  const tz = zonesForState(state)?.[0]
+  if (!tz) return null
+  const parts = (d: Date) => Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hourCycle: 'h23',
+  }).formatToParts(d).map(x => [x.type, Number(x.value)]))
+  const p = parts(new Date(appt))
+  const guess = Date.UTC(p.year, p.month - 1, p.day - dayShift, hh, mm)
+  const g = parts(new Date(guess))
+  const offset = Date.UTC(g.year, g.month - 1, g.day, g.hour % 24, g.minute) - guess
+  return new Date(guess - offset)
 }
 
 const isBooked = (lead: Lead, events: Event[]) =>
@@ -253,9 +271,10 @@ export async function plan(deps: Deps, leadId: string): Promise<Result> {
     if (await cx.insert(newRow(lead, step, seq, at, extra))) planned.push(`${step}:${seq}`)
   }
 
-  // Not reached: the whole cadence, once, unless something already stops it.
+  // No answer on the first call: the whole cadence, once, unless something already stops it. Any other outcome (or no
+  // first call yet) plans nothing here: no text before the first call (P902).
   const stopReason = await cx.stopReason()
-  if (!stopReason && !events.some(e => CADENCE.some(([s]) => s === stepOf(e)))) {
+  if (!stopReason && lead.text_flow === 'no_answer' && !events.some(e => CADENCE.some(([s]) => s === stepOf(e)))) {
     for (const [step, offset] of CADENCE) await add(step, 1, when(now.getTime() + offset))
   }
   const stopped = stopReason ? await cx.stop(stopReason) : 0
@@ -276,9 +295,15 @@ export async function plan(deps: Deps, leadId: string): Promise<Result> {
       const seq = appts.length
       const extra = { appointment_at: latest }
       await add('confirm', seq, when(now.getTime()), extra)
-      const dayBefore = when(appt - DAY)
-      if (dayBefore.getTime() > now.getTime() && dayBefore.getTime() < appt - HOUR) {
+      // The evening before at 6:30 PM and the morning of at 8:30 AM, in the lead's zone (Lead Text Workflows §2).
+      const evening = localOnApptDay(latest, lead.state, 1, 18, 30)
+      const dayBefore = evening ? when(evening.getTime()) : null
+      if (dayBefore && dayBefore.getTime() > now.getTime() && dayBefore.getTime() < appt - HOUR) {
         await add('reminder_day_before', seq, dayBefore, extra)
+      }
+      const morning = localOnApptDay(latest, lead.state, 0, 8, 30)
+      if (morning && morning.getTime() > now.getTime() && appt - morning.getTime() >= 150 * MIN) {
+        await add('reminder_morning', seq, when(morning.getTime()), extra)
       }
       const hourBefore = when(appt - HOUR)
       if (hourBefore.getTime() > now.getTime() && hourBefore.getTime() < appt) {

@@ -20,7 +20,7 @@ Deno.serve(req => handle(req, {
   isCron: r => isCron(r, supabase),
   ghl: key => ghlClient(key, (url, init) => fetch(url, init)),
   settings: () => supabase.from('ghl_settings')
-    .select('enabled, location_id, workflow_new_inbound, workflow_appointment_reminder, workflow_no_show, workflow_opt_out')
+    .select('enabled, location_id, workflow_new_inbound, workflow_appointment_reminder, workflow_no_show, workflow_opt_out, workflow_no_answer')
     .eq('id', true).maybeSingle() as PromiseLike<{ data: Settings | null; error: { message: string } | null }>,
   rpc: (fn, args) => supabase.rpc(fn, args),
   log: msg => console.error(msg),

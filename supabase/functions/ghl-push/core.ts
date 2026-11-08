@@ -7,7 +7,14 @@
 // outbox rows and, per row: upsert the GHL contact, set its Ohvara tags, add
 // it to the event's workflow when one is set, then mark the row done.
 // Logs carry error text only, never a phone, email or name.
+//
+// P902: two more events. call_outcome (the speed-to-lead call's one outcome): sets the contact's custom fields
+// (detail, keys in ../_shared/leadFlows.js GHL_OUTCOME_FIELDS), one ohvara-call-<outcome> tag, and adds the contact
+// to the no-answer workflow when text_flow is no_answer (the booked texts ride on the stage → appointment_reminder
+// event that follows). flow_stop: anything the lead did stopped the no-answer flow, so the contact leaves that
+// workflow and gets ohvara-flow-stopped.
 import { GhlError, type GhlClient } from './api.ts'
+import { OUTCOME_TAGS, outcomeTag, GHL_OUTCOME_FIELDS } from '../_shared/leadFlows.js'
 
 export const STAGES = ['new', 'contacting', 'booked', 'met', 'sold', 'follow_up', 'lost'] as const
 export const BATCH = 25
@@ -21,11 +28,12 @@ export type Settings = {
   workflow_appointment_reminder: string | null
   workflow_no_show: string | null
   workflow_opt_out: string | null
+  workflow_no_answer?: string | null // P902
 }
 
 export type OutboxRow = {
   id: number
-  event: 'new_inbound' | 'stage' | 'appointment_reminder' | 'no_show' | 'opt_out'
+  event: 'new_inbound' | 'stage' | 'appointment_reminder' | 'no_show' | 'opt_out' | 'call_outcome' | 'flow_stop'
   lead_id: string | null
   stage: string | null
   contact_id: string | null
@@ -33,6 +41,7 @@ export type OutboxRow = {
   phone: string | null
   email: string | null
   state: string | null
+  detail?: Record<string, unknown> | null // P902: call_outcome / flow_stop fields
 }
 
 export type Deps = {
@@ -49,6 +58,21 @@ export const WORKFLOW_FOR: Record<OutboxRow['event'], keyof Settings | null> = {
   no_show: 'workflow_no_show',
   opt_out: 'workflow_opt_out',
   stage: null,
+  call_outcome: null, // P902: workflow_no_answer only when detail.text_flow is no_answer (workflowFor below)
+  flow_stop: null,
+}
+
+export function workflowFor(row: OutboxRow): keyof Settings | null {
+  if (row.event === 'call_outcome') return row.detail?.text_flow === 'no_answer' ? 'workflow_no_answer' : null
+  return WORKFLOW_FOR[row.event]
+}
+
+// P902: the call_outcome fields as GoHighLevel custom fields (by key; Jordan makes one custom field per key).
+export function customFieldsFor(row: OutboxRow) {
+  if (row.event !== 'call_outcome' || !row.detail) return []
+  return GHL_OUTCOME_FIELDS.map(([key]) => [key, row.detail![key]] as const)
+    .filter(([, v]) => v !== null && v !== undefined && v !== '')
+    .map(([key, v]) => ({ key, field_value: String(v) }))
 }
 
 export const stageTag = (s: string) => `ohvara-stage-${s.replace(/_/g, '-')}`
@@ -57,12 +81,18 @@ export const stageTag = (s: string) => `ohvara-stage-${s.replace(/_/g, '-')}`
 // a lead carries exactly one stage tag.
 export function tagsFor(row: OutboxRow) {
   const add = ['ohvara']
-  let remove: string[] = []
+  const remove: string[] = []
   if (row.event === 'opt_out') add.push('ohvara-opted-out')
   if (row.event === 'no_show') add.push('ohvara-no-show')
+  if (row.event === 'call_outcome' && typeof row.detail?.first_call_outcome === 'string') {
+    const tag = outcomeTag(row.detail.first_call_outcome)
+    add.push(tag)
+    remove.push(...OUTCOME_TAGS.filter(t => t !== tag))
+  }
+  if (row.event === 'flow_stop') add.push('ohvara-flow-stopped')
   if (row.stage && (STAGES as readonly string[]).includes(row.stage)) {
     add.push(stageTag(row.stage))
-    remove = STAGES.filter(s => s !== row.stage).map(stageTag)
+    remove.push(...STAGES.filter(s => s !== row.stage).map(stageTag))
   }
   return { add, remove }
 }
@@ -79,11 +109,14 @@ export async function pushRow(row: OutboxRow, s: Settings, api: GhlClient): Prom
     email: row.email,
     state: row.state,
     dndSms: row.event === 'opt_out',
+    customFields: customFieldsFor(row),
   })
   const { add, remove } = tagsFor(row)
   if (remove.length) await api.removeTags(contactId, remove)
   await api.addTags(contactId, add)
-  const key = WORKFLOW_FOR[row.event]
+  // flow_stop: out of the no-answer workflow (GoHighLevel stops its remaining texts).
+  if (row.event === 'flow_stop' && s.workflow_no_answer) await api.removeFromWorkflow(contactId, s.workflow_no_answer)
+  const key = workflowFor(row)
   const workflowId = key ? (s[key] as string | null) : null
   if (workflowId) await api.addToWorkflow(contactId, workflowId)
   return contactId

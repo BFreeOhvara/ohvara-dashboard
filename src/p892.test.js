@@ -1,6 +1,6 @@
 // P892 — AI speed to lead. The routing (in hours Yes/No, out of hours, Appointments only, no AI consent → VA, opt-out,
-// no answer twice, hand-off with no VA free), the edge function's core with fakes, the words agents see, and the
-// migration agreeing with the rules.
+// no answer twice), the edge function's core with fakes, the words agents see, and the migration agreeing with the
+// rules. P902 retired the VA hand-off: a new lead the AI calls never goes to a VA (src/p902.test.js).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -79,26 +79,27 @@ test('"stop calling" is honoured at once, at any point', () => {
   }
 })
 
-test('no answer twice: retry in 2 minutes, then the no-answer texts and VA call tasks', () => {
+test('no answer twice: retry in 2 minutes, then the no-answer flow', () => {
   const one = runCall([{ type: 'no_answer' }], {}, 1)
   assert.deepEqual([one.s.outcome, one.s.retryInSecs, one.acts], ['no_answer', 120, ['retry', 'log']])
   const voicemail = runCall([{ type: 'voicemail' }], {}, 1)
   assert.deepEqual(voicemail.acts, ['retry', 'log'])
   const two = runCall([{ type: 'no_answer' }], {}, 2)
-  assert.deepEqual([two.s.outcome, two.acts], ['no_answer', ['va_no_answer', 'log']])
+  assert.deepEqual([two.s.outcome, two.acts], ['no_answer', ['no_answer_flow', 'log']])
 })
 
-test('hand-off: warm to a VA; nobody free in 60 s → callback task', () => {
-  for (const reason of ['asked_person', 'coverage_or_price', 'confused_upset']) {
-    const r = runCall([{ type: 'answered' }, { type: 'signal', reason }, { type: 'va_taken' }])
-    assert.deepEqual([r.s.outcome, r.s.reason, r.acts], ['handed_to_va', reason, ['handoff', 'log']])
+test('P902: asks for a person, coverage or price → the agent goes over it (Check agent or book), never a VA', () => {
+  for (const reason of ['asked_person', 'coverage_or_price']) {
+    const r = runCall([{ type: 'answered' }, { type: 'signal', reason }], { agent: transferAgent, nowMs: WED_9AM_CT })
+    assert.deepEqual([r.s.phase, r.acts], ['checking', ['check_agent']], reason)
+    const late = runCall([{ type: 'answered' }, { type: 'signal', reason }], { agent: transferAgent, nowMs: WED_530PM_CT })
+    assert.deepEqual([late.s.phase, late.acts], ['booking', ['book']], reason)
   }
+  // A failed call counts as no answer (try 2, then the no-answer flow).
   const failed = runCall([...QUAL, { type: 'error' }], { agent: transferAgent, nowMs: WED_9AM_CT })
-  assert.equal(failed.s.reason, 'ai_failed')
-  const none = runCall([{ type: 'answered' }, { type: 'signal', reason: 'asked_person' }, { type: 'va_wait', secs: 30 }, { type: 'va_wait', secs: 60 }])
-  assert.deepEqual([none.s.outcome, none.s.callbackTask, none.acts], ['handed_to_va', true, ['handoff', 'callback_task', 'end', 'log']])
-  // An unknown signal changes nothing.
-  assert.deepEqual(aiStep(startState(), { type: 'signal', reason: 'weather' }).act, [])
+  assert.deepEqual([failed.s.outcome, failed.acts.at(-2)], ['no_answer', 'retry'])
+  // Signals the AI no longer acts on change nothing.
+  for (const reason of ['confused_upset', 'weather']) assert.deepEqual(aiStep({ ...startState(), phase: 'talking' }, { type: 'signal', reason }).act, [])
 })
 
 test('agents see the speed, never "AI"; staff see who called', () => {
@@ -108,23 +109,24 @@ test('agents see the speed, never "AI"; staff see who called', () => {
     assert.doesNotMatch(line, /\bAI\b|virtual|assistant|robot|bot\b/i, line)
   }
   assert.equal(agentLine({ secs: 1, outcome: 'booked' }), 'Called in 1 second. Reached them. Booked')
-  assert.equal(staffLine({ secs: 9, outcome: 'handed_to_va', attempt: 1 }), 'AI called in 9 s · Handed to a VA')
+  assert.equal(staffLine({ secs: 9, outcome: 'wrong_number', attempt: 1 }), 'AI called in 9 s · Wrong number')
+  assert.equal(agentLine({ secs: 4, outcome: 'not_now', callbackAt: '2026-11-03T17:30' }), 'Called in 4 seconds. Reached them. Booked a callback')
   // The agent sample timeline uses agentLine for its AI-called leads.
   const lc = readFileSync('src/template/leadLifecycle.js', 'utf8')
   assert.match(lc, /agentLine\(/)
 })
 
-test('admin numbers: reached %, booked, transferred, handed, average seconds, minutes, cost', () => {
+test('admin numbers: reached %, booked, transferred, not now, wrong number, average seconds, minutes, cost', () => {
   const s = aiStats(SAMPLE_AI_CALLS, SAMPLE_CENTS_PER_MIN)
-  // P903 added three transfer-branch calls (no push answer, phone not answered, No then asked for a person).
-  assert.equal(s.calls, 12)
-  assert.equal(s.leads, 11)
-  assert.equal(s.reached, 10) // Daniel never answered
-  assert.equal(s.reachedPct, 91)
-  assert.deepEqual([s.booked, s.transferred, s.handed, s.noAnswer, s.optOut], [4, 1, 3, 2, 1])
+  // P903 added three transfer-branch calls; P902 one sample per first-call outcome (Brian Cole: wrong number).
+  assert.equal(s.calls, 13)
+  assert.equal(s.leads, 12)
+  assert.equal(s.reached, 11) // Daniel never answered
+  assert.equal(s.reachedPct, 92)
+  assert.deepEqual([s.booked, s.transferred, s.notNow, s.hardNo, s.wrongNumber, s.noAnswer, s.optOut], [5, 1, 2, 1, 1, 2, 1])
   assert.equal(s.avgSecs, 8)
-  assert.ok(s.minutes > 27 && s.minutes < 28)
-  assert.equal(s.costCents, (4 + 5 + 4 + 2 + 1 + 2 + 3 + 4 + 5 + 3) * 13)
+  assert.ok(s.minutes > 27.9 && s.minutes <= 28)
+  assert.equal(s.costCents, (3 + 5 + 4 + 4 + 5 + 4 + 2 + 1 + 2 + 3 + 1) * 13)
   for (const o of OUTCOMES) assert.ok(SAMPLE_AI_CALLS.some(c => c.outcome === o), `sample for ${o}`)
   assert.equal(aiStats([]).reachedPct, 0)
 })
@@ -153,7 +155,6 @@ function fakes({ live = true, ready = true, takes = { by: 'ai', reason: null }, 
     toVa: async (_id, reason) => { log.push(['toVa', reason]); call().status = 'to_va' },
     status: async (_id, st, patch = {}) => { log.push(['status', st]); Object.assign(call(), { status: st, ...Object.fromEntries(Object.entries(patch).filter(([, v]) => v != null)) }); return call() },
     result: async (_id, outcome, patch = {}) => { log.push(['result', outcome, !!patch.callback_task]); call().status = 'done' },
-    handoff: async (_id, reason) => { log.push(['handoff', reason]); call().status = 'handing_off'; return 'q1' },
     slots: async () => slots,
     book: async (_id, at) => { log.push(['book', at]); call().booked_for = at; return { ok: true } },
     insertCheck: async () => { check = { id: 'chk1', status: 'sent', answer: null, expires_at: new Date(nowMs + 30000).toISOString() }; return check },
@@ -161,10 +162,9 @@ function fakes({ live = true, ready = true, takes = { by: 'ai', reason: null }, 
     sendCheck: async () => { log.push(['push']); return true },
     markCheck: async (_id, patch) => { log.push(['check', patch.status]); if (check) Object.assign(check, patch) },
     clearCheck: async (_c, _a, why) => { log.push(['clear', why]) },
-    lineConference: async () => 'line-abc',
   }
   const provider = { ...noProvider(), key: 'retell', ready, start: async () => ({ providerCallId: 'rc1' }), transfer: async (_id, to) => { log.push(['transfer', to]) }, say: async () => { log.push(['say']) }, parse: b => b, toolReply: (_t, r) => r }
-  const env = { now: () => nowMs, from: '+18005550110', bridgeNumber: '+18005550111', words: { opening: 'Hi {first}', hold: 'hold', toPerson: 'person', noPerson: 'none free' } }
+  const env = { now: () => nowMs, from: '+18005550110', words: { opening: 'Hi {first}', hold: 'hold' } }
   return { store, provider, env, log, call, setCheck: patch => Object.assign(check, patch) }
 }
 const ev = (f, type, extra = {}) => core.onEvent(f.store, f.provider, f.env, { providerCallId: 'rc1', callId: f.call().id, type, ...extra })
@@ -204,7 +204,7 @@ test('core: in hours No / timer runs out → times to book → booked', async ()
   assert.ok((await tool(g, 'check_status')).slots)
 })
 
-test('core: out of hours and Appointments only go straight to times; no times → a VA', async () => {
+test('core: out of hours and Appointments only go straight to times; no times → not now (never a VA)', async () => {
   const f = fakes({ nowMs: WED_530PM_CT })
   await core.start(f.store, f.provider, f.env, f.call().id); await ev(f, 'answered')
   assert.ok((await tool(f, 'qualified')).slots)
@@ -214,11 +214,13 @@ test('core: out of hours and Appointments only go straight to times; no times �
   assert.ok((await tool(a, 'qualified')).slots)
   const n = fakes({ slots: [], nowMs: WED_530PM_CT })
   await core.start(n.store, n.provider, n.env, n.call().id); await ev(n, 'answered')
-  assert.equal((await tool(n, 'qualified')).hold, true)
-  assert.deepEqual(n.log.at(-1), ['handoff', 'ai_failed'])
+  const r = await tool(n, 'qualified')
+  assert.equal(r.end, true)
+  assert.match(r.say, /Dana will call you to find a time that works/)
+  assert.deepEqual(n.log.at(-1), ['result', 'not_now', false])
 })
 
-test('core: no answer → result no_answer (the SQL schedules try 2); stop → opt-out; hand-off timeout → callback', async () => {
+test('core: no answer → result no_answer (the SQL schedules try 2); stop → opt-out; a failed start → no answer', async () => {
   const f = fakes()
   await core.start(f.store, f.provider, f.env, f.call().id)
   await ev(f, 'ended', { reason: 'no_answer', durationSecs: 0 })
@@ -227,13 +229,13 @@ test('core: no answer → result no_answer (the SQL schedules try 2); stop → o
   await core.start(s.store, s.provider, s.env, s.call().id); await ev(s, 'answered')
   assert.equal((await tool(s, 'stop')).end, true)
   assert.deepEqual(s.log.at(-1), ['result', 'opt_out', false])
-  const h = fakes()
-  await core.start(h.store, h.provider, h.env, h.call().id); await ev(h, 'answered')
-  assert.equal((await tool(h, 'handoff', { reason: 'coverage_or_price', summary: 'Asked what it costs' })).say, 'person')
-  await core.handoffTimeout(h.store, h.provider, h.env, h.call().id)
-  assert.deepEqual(h.log.slice(-2), [['say'], ['result', 'handed_to_va', true]])
-  assert.match(await core.twiml(h.store, '11111111-1111-4111-8111-111111111111'), /<Conference[^>]*>line-abc<\/Conference>/)
-  assert.match(await core.twiml(h.store, 'not-a-line'), /<Hangup\/>/)
+  const x = fakes()
+  x.provider.start = async () => { throw new Error('provider down') }
+  assert.equal((await core.start(x.store, x.provider, x.env, x.call().id)).code, 'start_failed')
+  assert.deepEqual(x.log.at(-1), ['result', 'no_answer', false])
+  assert.ok(!x.log.some(e => e[0] === 'toVa'))
+  assert.equal(core.handoffTimeout, undefined)
+  assert.equal(core.twiml, undefined)
 })
 
 // ── The migration ────────────────────────────────────────────────────────────────────────────────────────────────
@@ -254,7 +256,7 @@ test('the migration: off by default, not applied, the same timers and words', ()
   for (const s of ['route_cancel_phone(e, p_lead', 'sms_set_opt(e, true', "va_outcome = 'callback'"]) assert.ok(sql.includes(s), s)
   assert.match(sql, /create policy ai_calls_staff_read .* using \(public\.is_admin\(\) or public\.is_fulfillment\(\)\)/)
   assert.equal(AI_RULES.retryAfterSecs, 120)
-  assert.equal(AI_RULES.handoffWaitSecs, 60)
+  assert.equal(AI_RULES.handoffWaitSecs, undefined) // P902: no hand-off wait; p902_lead_outcomes.sql retires it
   // The agent-facing timeline label in SQL matches agentLine's words.
   for (const w of ['Reached them. Booked', 'Reached them. Live transfer to you', 'Reached them. Our team is on it', 'Asked not to be called']) assert.ok(sql.includes(w), w)
 })

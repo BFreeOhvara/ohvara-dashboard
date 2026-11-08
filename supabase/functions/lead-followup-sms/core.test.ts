@@ -24,8 +24,8 @@ const NOON = new Date('2026-10-28T12:00:00-05:00')
 const STATUS: Record<Stage, string> = {
   just_submitted: 'New', not_reached: 'No Answer', reached: 'Contacted', opted_out: 'New',
 }
-const STAGES: Stage[] = ['just_submitted', 'not_reached', 'reached', 'opted_out']
-const SENDABLE: Stage[] = ['just_submitted', 'not_reached', 'reached']
+const STAGES: Stage[] = ['not_reached', 'reached', 'opted_out'] // P902: just_submitted (New) has no text any more
+const SENDABLE: Stage[] = ['not_reached', 'reached'] // P902: no text on arrival (status New)
 
 function make(stage: Stage, over: Partial<Deps> = {}, lead: Partial<Lead> = {}) {
   const sent: { to: string; body: string; from: Sender }[] = []
@@ -54,7 +54,7 @@ const body = (r: Awaited<ReturnType<typeof handle>>) => r.body as { status: stri
 test('stageFor: opt-out wins; New / No Answer / reached statuses; anything else is no stage', () => {
   assert.equal(stageFor('New', true), 'opted_out')
   assert.equal(stageFor('Contacted', true), 'opted_out')
-  assert.equal(stageFor('New', false), 'just_submitted')
+  assert.equal(stageFor('New', false), null) // P902: a new lead gets a call first, no text
   assert.equal(stageFor('No Answer', false), 'not_reached')
   for (const s of ['Contacted', 'Follow-Up', 'Booked', 'Appointment Booked']) assert.equal(stageFor(s, false), 'reached')
   for (const s of ['Not Interested', 'Closed', null]) assert.equal(stageFor(s, false), null)
@@ -92,7 +92,7 @@ for (const stage of STAGES) {
 }
 
 test('an agent with an id but no name → skipped_no_agent, send 0', async () => {
-  const t = make('just_submitted', {}, { agent_name: '  ' })
+  const t = make('not_reached', {}, { agent_name: '  ' })
   assert.equal(body(await t.run()).status, 'skipped_no_agent')
   assert.equal(t.sent.length, 0)
 })
@@ -123,16 +123,16 @@ for (const stage of SENDABLE) {
 }
 
 test('quiet hours use the lead\'s zone, not the server\'s: 8:30 AM Chicago is 9:30 AM New York', async () => {
-  let t = make('just_submitted', { now: () => at('07:30') }, { state: 'NY' })   // 8:30 AM ET
+  let t = make('not_reached', { now: () => at('07:30') }, { state: 'NY' })   // 8:30 AM ET
   assert.equal(body(await t.run()).status, 'sent')
-  t = make('just_submitted', { now: () => at('07:30') }, { state: 'CA' })       // 5:30 AM PT
+  t = make('not_reached', { now: () => at('07:30') }, { state: 'CA' })       // 5:30 AM PT
   assert.equal(body(await t.run()).status, 'skipped_quiet_hours')
   assert.equal(t.sent.length, 0)
 })
 
 test('unknown zone → skipped (unknown_zone), send 0', async () => {
   for (const state of [null, '', 'ZZ', 'Illinois']) {
-    const t = make('just_submitted', {}, { state })
+    const t = make('not_reached', {}, { state })
     assert.equal(body(await t.run()).status, 'skipped_quiet_hours')
     assert.equal(t.logs[0].error, 'unknown_zone')
     assert.equal(t.sent.length, 0)
@@ -183,14 +183,14 @@ test(`cap: ${MAX_TEXTS_PER_LEAD} texts already sent to the lead → skipped_cap,
 // ── the other skips ─────────────────────────────────────────────────────────
 test('not mortgage_protection → skipped_not_mp, send 0, even with sms_live on', async () => {
   for (const lead_type of ['cancellation', 'policy_help', null]) {
-    const t = make('just_submitted', {}, { lead_type })
+    const t = make('not_reached', {}, { lead_type })
     assert.equal(body(await t.run()).status, 'skipped_not_mp')
     assert.equal(t.sent.length, 0)
   }
 })
 
 test('a status with no stage → skipped_no_stage, send 0', async () => {
-  const t = make('just_submitted', {}, { status: 'Not Interested' })
+  const t = make('not_reached', {}, { status: 'Not Interested' })
   assert.deepEqual(body(await t.run()), { status: 'skipped_no_stage', stage: null })
   assert.equal(t.sent.length, 0)
 })
@@ -198,7 +198,7 @@ test('a status with no stage → skipped_no_stage, send 0', async () => {
 test('no phone or a bad phone → skipped_no_phone, send 0, opt-out not looked up', async () => {
   for (const phone of [null, '555-12']) {
     let looked = 0
-    const t = make('just_submitted', { optedOut: async () => { looked++; return false } }, { phone })
+    const t = make('not_reached', { optedOut: async () => { looked++; return false } }, { phone })
     assert.equal(body(await t.run()).status, 'skipped_no_phone')
     assert.equal(t.sent.length, 0)
     assert.equal(looked, 0)
@@ -216,15 +216,15 @@ test('a template that needs a link and no LEAD_BOOKING_URL → skipped_no_link, 
 })
 
 test('bad id → 400; missing lead → 404; send 0', async () => {
-  let t = make('just_submitted')
+  let t = make('not_reached')
   assert.equal((await handle(t.deps, { lead_id: 'nope' })).status, 400)
-  t = make('just_submitted', { getLead: async () => null })
+  t = make('not_reached', { getLead: async () => null })
   assert.equal((await t.run()).status, 404)
   assert.equal(t.sent.length, 0)
 })
 
 test('Twilio error → failed is logged with the error', async () => {
-  const t = make('just_submitted', { send: async () => ({ ok: false, error: '400 21610' }) })
+  const t = make('not_reached', { send: async () => ({ ok: false, error: '400 21610' }) })
   assert.equal(body(await t.run()).status, 'failed')
   assert.equal(t.logs[0].status, 'failed')
   assert.equal(t.logs[0].error, '400 21610')
@@ -266,20 +266,20 @@ test('a filled-in link is logged exactly as sent', async () => {
 })
 
 test('words are only kept for a text that went: failed and skipped rows have none', async () => {
-  let t = make('just_submitted', { send: async () => ({ ok: false, error: '400 21610' }) })
+  let t = make('not_reached', { send: async () => ({ ok: false, error: '400 21610' }) })
   await t.run()
   assert.equal(t.logs[0].status, 'failed')
   assert.equal(t.logs[0].body, null)
-  t = make('just_submitted', { smsLive: async () => false })
+  t = make('not_reached', { smsLive: async () => false })
   await t.run()
   assert.equal(t.logs[0].status, 'skipped_gate')
   assert.equal(t.logs[0].body ?? null, null)
 })
 
 test('no lead first name → "Hi, …"', async () => {
-  const t = make('just_submitted', {}, { contact_name: null })
+  const t = make('not_reached', {}, { contact_name: null })
   await t.run()
-  assert.ok(t.sent[0].body.startsWith('Hi, this is Sam, a licensed agent'))
+  assert.ok(t.sent[0].body.startsWith('Hi, Sam here, a licensed agent'))
 })
 
 // ── the drafts and the switch ───────────────────────────────────────────────
@@ -315,4 +315,11 @@ test('static: nothing under lead-followup-sms turns sms_live on', async () => {
     assert.ok(src.length > 0)
     for (const re of turnsOn) assert.equal(re.test(src), false, `${f} matches ${re}`)
   }
+})
+
+// ── P902: no text on arrival ────────────────────────────────────────────────
+test('P902: a New lead gets no text (a call comes first)', async () => {
+  const t = make('not_reached', {}, { status: 'New' })
+  assert.deepEqual(body(await t.run()), { status: 'skipped_no_stage', stage: null })
+  assert.equal(t.sent.length, 0)
 })

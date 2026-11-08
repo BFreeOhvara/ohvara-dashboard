@@ -21,6 +21,8 @@ const CENTRAL = '+13125550199'
 const NOON = new Date('2026-10-28T12:00:00-05:00')
 // Friday 10:00 AM: the day-before reminder lands Thursday 10:00 AM, the 1 h one 9:00 AM.
 const APPT = new Date('2026-10-30T10:00:00-05:00')
+// P902: an afternoon call also gets the morning-of reminder (8:30 AM, 2.5 h+ before).
+const APPT_PM = new Date('2026-10-30T15:00:00-05:00')
 const HOUR = 3600e3
 const iso = (t: Date | number) => new Date(t).toISOString()
 
@@ -43,7 +45,7 @@ function make(o: { live?: boolean; templates?: Record<Step, Template>; lead?: Pa
   const sent: { to: string; body: string; from: string }[] = []
   const lead: Lead = {
     id: LEAD, lead_type: 'mortgage_protection', inbound_stage: 'new', phone: '(312) 555-1234',
-    contact_name: 'Maria Lopez', state: 'IL', agent_id: AGENT, agent_name: 'Sam Lee', ...o.lead,
+    contact_name: 'Maria Lopez', state: 'IL', agent_id: AGENT, agent_name: 'Sam Lee', text_flow: 'no_answer', ...o.lead,
   }
   let n = 0
   const clash = (r: Row, lead_id: string, step: unknown, seq: string) =>
@@ -102,14 +104,15 @@ function make(o: { live?: boolean; templates?: Record<Step, Template>; lead?: Pa
 }
 
 const STEPS_ALL: Step[] = [
-  'instant', 'not_reached_d0', 'not_reached_d1', 'not_reached_d3', 'not_reached_d7',
-  'not_reached_monthly', 'confirm', 'reminder_day_before', 'reminder_1h', 'no_show_rebook',
+  'not_reached_d0', 'not_reached_d1', 'not_reached_d3', 'not_reached_d7',
+  'not_reached_monthly', 'confirm', 'reminder_day_before', 'reminder_morning', 'reminder_1h', 'no_show_rebook',
 ]
 const CADENCE: Step[] = ['not_reached_d0', 'not_reached_d1', 'not_reached_d3', 'not_reached_d7', 'not_reached_monthly']
 
 // Sets up a lead so `step` (seq 1) gets planned, then plans.
 async function setup(f: ReturnType<typeof make>, step: Step) {
   if (step === 'confirm' || step === 'reminder_day_before' || step === 'reminder_1h') f.book(APPT)
+  if (step === 'reminder_morning') f.book(APPT_PM)
   if (step === 'no_show_rebook') {
     const past = new Date(NOON.getTime() - 2 * HOUR)
     f.rows.push({ id: 'b1', lead_id: LEAD, kind: 'booked', state: 'done', at: iso(NOON.getTime() - 24 * HOUR), detail: { appointment_at: iso(past) }, created_at: iso(NOON.getTime() - 24 * HOUR) })
@@ -139,8 +142,9 @@ for (const step of STEPS_ALL) {
 }
 
 // ── (2) stops ───────────────────────────────────────────────────────────────
-function assertStopped(f: ReturnType<typeof make>, reason: string, label: string) {
-  for (const step of CADENCE) {
+// P902: the missed-call text (not_reached_d0) goes at once, so `from` = 1 when the tick already sent it.
+function assertStopped(f: ReturnType<typeof make>, reason: string, label: string, from = 1) {
+  for (const step of CADENCE.slice(from)) {
     const rows = f.of(step)
     assert.equal(rows.length, 1, `${step}: one row`)
     assert.equal(rows[0].state, 'skipped', `${step} skipped`)
@@ -156,7 +160,7 @@ function assertStopped(f: ReturnType<typeof make>, reason: string, label: string
 test('reply stops cadence', async () => {
   const f = make({ live: true, templates: CLEAN })
   await f.plan()
-  await f.tick()                                   // welcome text goes
+  await f.tick()                                   // the missed-call text goes
   assert.equal(f.sent.length, 1)
   f.s.now = new Date(NOON.getTime() + HOUR)
   f.reply()
@@ -173,7 +177,7 @@ test('reply stops cadence', async () => {
   await g.plan()
   g.s.repliesTable = true
   await g.tick()
-  assertStopped(g, 'stopped_reply', 'Follow-up texts stopped: they replied')
+  assertStopped(g, 'stopped_reply', 'Follow-up texts stopped: they replied', 0)
 })
 
 test('booking stops cadence', async () => {
@@ -188,7 +192,9 @@ test('booking stops cadence', async () => {
   for (const step of ['confirm', 'reminder_day_before', 'reminder_1h'] as Step[]) {
     assert.equal(f.of(step).filter(r => r.state === 'scheduled').length, 1, `${step} scheduled`)
   }
-  assert.equal(f.at('reminder_day_before').toISOString(), iso(APPT.getTime() - 24 * HOUR))
+  // The evening before at 6:30 PM in the lead's zone (Thu, Oct 29, CDT); no morning-of text for a 10 AM call.
+  assert.equal(f.at('reminder_day_before').toISOString(), iso(new Date('2026-10-29T18:30:00-05:00')))
+  assert.equal(f.of('reminder_morning').length, 0)
   assert.equal(f.at('reminder_1h').toISOString(), iso(APPT.getTime() - HOUR))
   await f.tick()
   assert.equal(f.of('confirm')[0].state, 'done')
@@ -201,9 +207,8 @@ test('opt-out stops cadence', async () => {
   await f.plan()
   f.s.optedOut = true
   await f.tick()
-  assertStopped(f, 'stopped_opt_out', 'Follow-up texts stopped: they opted out')
-  assert.equal(f.of('instant')[0].state, 'skipped')
-  assert.equal(f.of('instant')[0].detail.reason, 'opt_out')
+  assertStopped(f, 'stopped_opt_out', 'Follow-up texts stopped: they opted out', 0)
+  assert.equal(f.of('not_reached_d0')[0].state, 'skipped')
   assert.equal(f.sent.length, 0)
 })
 
@@ -213,13 +218,13 @@ test('every send uses the central number from settings', async () => {
   await f.plan()
   await f.tick()
   f.s.central = '+13125550142'
-  f.s.now = f.at('not_reached_d0')
+  f.s.now = f.at('not_reached_d1')
   await f.tick()
   assert.equal(f.sent.length, 2)
   assert.equal(f.sent[0].from, CENTRAL)
   assert.equal(f.sent[1].from, '+13125550142')
   for (const m of f.sent) assert.equal(m.to, '+13125551234')
-  assert.equal(f.of('instant')[0].detail.twilio_sid, 'SM1')
+  assert.equal(f.of('not_reached_d0')[0].detail.twilio_sid, 'SM1')
 })
 
 test('null central number skips no_sender', async () => {
@@ -228,7 +233,7 @@ test('null central number skips no_sender', async () => {
   await f.plan()
   await f.tick()
   assert.equal(f.sent.length, 0)
-  const rows = f.of('instant')
+  const rows = f.of('not_reached_d0')
   assert.equal(rows.length, 1)
   assert.equal(rows[0].state, 'skipped')
   assert.equal(rows[0].detail.reason, 'no_sender')
@@ -239,7 +244,7 @@ test('no duplicate steps', async () => {
   const f = make({ live: false })
   await f.plan(); await f.plan(); await f.plan()
   const afterFirst = f.rows.length
-  assert.equal(afterFirst, 6)
+  assert.equal(afterFirst, 5)
   await f.tick(); await f.plan()
   assert.equal(f.rows.length, afterFirst, 'a skipped step is not planned again')
   f.book(APPT)
@@ -289,12 +294,12 @@ test('VA rows are left alone, with sms on and off', async () => {
     assert.equal(r.status, 200)
     assert.equal(r.body.stopped, 0)
     assert.equal(f.of(STOP_STEP).length, 0)
-    assert.deepEqual(r.body.planned, ['instant', ...CADENCE].map(s => `${s}:1`))
+    assert.deepEqual(r.body.planned, CADENCE.map(s => `${s}:1`))
     assert.equal(vaRows(), before)
 
     // Every text step comes due; each text sent matches a text row, none a VA row.
     await f.tick()
-    for (const step of CADENCE) {
+    for (const step of CADENCE.slice(1)) {
       f.s.now = f.at(step)
       await f.tick()
       await f.plan()
@@ -302,8 +307,8 @@ test('VA rows are left alone, with sms on and off', async () => {
     assert.equal(vaRows(), before)
     const texts = f.rows.filter(x => x.detail?.step)
     assert.equal(f.sent.length, texts.filter(x => x.state === 'done').length)
-    assert.equal(f.sent.length, smsLive ? 6 : 0)
-    if (!smsLive) assert.equal(texts.filter(x => x.state === 'skipped' && x.detail.reason === 'sms_off').length, 6)
+    assert.equal(f.sent.length, smsLive ? 5 : 0)
+    if (!smsLive) assert.equal(texts.filter(x => x.state === 'skipped' && x.detail.reason === 'sms_off').length, 5)
     for (const row of f.rows.filter(x => x.detail?.va_step)) {
       assert.equal(row.detail.twilio_sid, undefined)
       assert.equal(row.state, 'scheduled')
@@ -348,7 +353,7 @@ test('rows match inbound_events checks', async () => {
   const f = make({ live: true, templates: CLEAN })
   await f.plan()
   await f.tick()
-  for (const step of ['not_reached_d0', 'not_reached_d1', 'not_reached_d3', 'not_reached_d7', 'not_reached_monthly'] as Step[]) {
+  for (const step of ['not_reached_d1', 'not_reached_d3', 'not_reached_d7', 'not_reached_monthly'] as Step[]) {
     f.s.now = f.at(step)
     await f.tick()
   }
@@ -402,20 +407,20 @@ test('no words on a row that did not go: send failure and every skip', async () 
   f.deps.send = async () => ({ ok: false, error: '400 21610' })
   await f.plan()
   await f.tick()
-  assert.equal(f.of('instant')[0].state, 'skipped')
-  assert.equal(f.of('instant')[0].detail.reason, 'send_failed')
-  assert.equal('body' in f.of('instant')[0].detail, false)
+  assert.equal(f.of('not_reached_d0')[0].state, 'skipped')
+  assert.equal(f.of('not_reached_d0')[0].detail.reason, 'send_failed')
+  assert.equal('body' in f.of('not_reached_d0')[0].detail, false)
   // sms_live off and the draft placeholder, the two that hold everything today.
   const off = make({ live: false, templates: CLEAN })
   await off.plan()
   await off.tick()
-  assert.equal(off.of('instant')[0].detail.reason, 'sms_off')
-  assert.equal('body' in off.of('instant')[0].detail, false)
+  assert.equal(off.of('not_reached_d0')[0].detail.reason, 'sms_off')
+  assert.equal('body' in off.of('not_reached_d0')[0].detail, false)
   const draft = make({ live: true })
   await draft.plan()
   await draft.tick()
-  assert.equal(draft.of('instant')[0].detail.reason, 'draft_copy')
-  assert.equal('body' in draft.of('instant')[0].detail, false)
+  assert.equal(draft.of('not_reached_d0')[0].detail.reason, 'draft_copy')
+  assert.equal('body' in draft.of('not_reached_d0')[0].detail, false)
   // A row still waiting has no words yet.
   assert.equal('body' in f.of('not_reached_d0')[0].detail, false)
 })
@@ -453,26 +458,26 @@ test('quiet hours: planned and moved into the window, never sent outside it', as
   const f = make({ live: true, templates: CLEAN })
   f.s.now = late
   await f.plan()
-  assert.equal(f.at('instant').toISOString(), iso(new Date('2026-10-29T08:00:00-05:00')))
+  assert.equal(f.at('not_reached_d0').toISOString(), iso(new Date('2026-10-29T08:00:00-05:00')))
   // A row that came due at night (a late tick) is moved, not sent.
-  const row = f.of('instant')[0]
+  const row = f.of('not_reached_d0')[0]
   row.at = iso(late)
   await f.tick()
   assert.equal(f.sent.length, 0)
-  assert.equal(f.of('instant')[0].state, 'scheduled')
-  assert.equal(f.at('instant').toISOString(), iso(new Date('2026-10-29T08:00:00-05:00')))
+  assert.equal(f.of('not_reached_d0')[0].state, 'scheduled')
+  assert.equal(f.at('not_reached_d0').toISOString(), iso(new Date('2026-10-29T08:00:00-05:00')))
   // Unknown state: never texted.
   const g = make({ live: true, templates: CLEAN, lead: { state: null } })
   await g.plan()
   await g.tick()
   assert.equal(g.sent.length, 0)
-  assert.equal(g.of('instant')[0].detail.reason, 'quiet_hours')
+  assert.equal(g.of('not_reached_d0')[0].detail.reason, 'quiet_hours')
 })
 
 test('missing phone and missing reschedule link skip', async () => {
   const f = make({ live: true, templates: CLEAN, lead: { phone: null } })
   await f.plan(); await f.tick()
-  assert.equal(f.of('instant')[0].detail.reason, 'no_phone')
+  assert.equal(f.of('not_reached_d0')[0].detail.reason, 'no_phone')
   const g = make({ live: true, templates: CLEAN, link: null })
   g.book(APPT)
   await g.plan(); await g.tick()
@@ -503,4 +508,29 @@ test('handle: plan and tick only; bad lead_id and other lead types refused', asy
   const g = make({ lead: { lead_type: 'policy_help' } })
   assert.equal((await handle(g.deps, { action: 'plan', lead_id: LEAD })).status, 422)
   assert.equal(g.rows.length, 0)
+})
+
+// ── (P902) no text before the first call; the flow comes from its outcome ────
+test('P902: no text is planned until the first call ends with no answer', async () => {
+  for (const flow of [null, 'booked']) {
+    const f = make({ live: true, templates: CLEAN, lead: { text_flow: flow } })
+    const r = await f.plan()
+    assert.deepEqual(r.body.planned, [], `text_flow ${flow}: nothing planned on arrival`)
+    await f.tick()
+    assert.equal(f.sent.length, 0)
+  }
+  const g = make({ live: true, templates: CLEAN })   // text_flow no_answer
+  const r = await g.plan()
+  assert.equal(r.body.planned[0], 'not_reached_d0:1')
+  assert.equal(g.at('not_reached_d0').toISOString(), iso(NOON), 'the missed-call text goes right away')
+})
+
+test('P902: an afternoon booking gets the evening-before, morning-of and 1-hour reminders', async () => {
+  const f = make({ live: false, templates: CLEAN, lead: { text_flow: 'booked' } })
+  f.book(APPT_PM)
+  await f.plan()
+  assert.equal(f.at('reminder_day_before').toISOString(), iso(new Date('2026-10-29T18:30:00-05:00')))
+  assert.equal(f.at('reminder_morning').toISOString(), iso(new Date('2026-10-30T08:30:00-05:00')))
+  assert.equal(f.at('reminder_1h').toISOString(), iso(APPT_PM.getTime() - HOUR))
+  assert.equal(f.of('not_reached_d0').length, 0)
 })

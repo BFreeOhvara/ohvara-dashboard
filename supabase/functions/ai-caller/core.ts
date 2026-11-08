@@ -2,16 +2,16 @@
 // core.test.ts runs it with in-memory fakes). No Deno APIs here, so node --test loads it.
 //
 // Actions (index.ts checks who may call each):
-//   start            {call_id}          the new-lead trigger / the sweep (cron secret): dial within 10 s, or hand to a VA
-//   event            provider webhook   answered, ended, and the AI's tool calls (check agent, times, book, hand off, stop)
-//   bridge           {call_id, line_id} a VA took the hand-off: transfer the lead into that VA's line (cron secret)
-//   handoff_timeout  {call_id}          nobody took it in 60 s: tell the lead someone will call back, end (cron secret)
-//   twiml            ?line=…            the bridge number's answer: join the VA's line (Twilio)
-import { aiStep, AI_RULES, HANDOFF_REASONS, WAIT_QUESTIONS, WAIT_RULE, transferSay } from './rules.js'
+//   start            {call_id}          the new-lead trigger / the sweep (cron secret): dial within 10 s
+//   event            provider webhook   answered, ended, and the AI's tool calls (check agent, times, book, outcome, stop)
+// P902: no hand-off to a VA (the bridge, hand-off timeout and twiml actions are gone). Asks for a person, or about
+// coverage or price → "Your agent will go over that with you" → Check agent → transfer, or book. A call that fails
+// counts as no answer. Every call ends in one first-call outcome (../_shared/leadFlows.js), which decides the texts.
+import { aiStep, AI_RULES, ASK_AGENT_REASONS, SAID_OUTCOMES, WAIT_QUESTIONS, WAIT_RULE, transferSay } from './rules.js'
 import type { Ev, Provider } from './providers.ts'
 import { whisperWords } from '../help-transfer/core.ts'
 
-export type Phase = 'queued' | 'dialing' | 'talking' | 'checking' | 'transferring' | 'booking' | 'handing_off' | 'done' | 'to_va'
+export type Phase = 'queued' | 'dialing' | 'talking' | 'checking' | 'transferring' | 'booking' | 'done' | 'to_va'
 export type Call = {
   id: string; lead_id: string; agent_id: string | null; attempt: number; status: Phase
   provider_call_id: string | null; control_url?: string | null; check_id: string | null; routed: string | null; summary: string | null
@@ -32,7 +32,6 @@ export interface Store {
   toVa(callId: string, reason: string): Promise<void>
   status(callId: string, status: Phase, patch?: Record<string, unknown>): Promise<Call | null>
   result(callId: string, outcome: string, patch?: Record<string, unknown>): Promise<unknown>
-  handoff(callId: string, reason: string, summary: string): Promise<string | null>
   slots(callId: string): Promise<string[]>
   book(callId: string, at: string): Promise<{ ok: boolean; code?: string }>
   insertCheck(row: { agent_id: string; lead_id: string; ai_call_id: string; summary: Record<string, unknown> }): Promise<CheckRow | null>
@@ -42,9 +41,8 @@ export interface Store {
   // check that ran out is replaced on the agent's phones ("Missed. We're booking them on your calendar").
   markCheck(id: string, patch: Record<string, unknown>, whenStatus?: string[]): Promise<void>
   clearCheck(check: CheckRow, agentId: string, why: 'booking' | 'gone'): Promise<void>
-  lineConference(lineId: string): Promise<string | null>
 }
-export type Env = { now(): number; from: string | null; bridgeNumber: string | null; words: Record<string, string> }
+export type Env = { now(): number; from: string | null; words: Record<string, string> }
 
 const refuse = (code: string, status = 400) => Object.assign(new Error(code), { status, code })
 
@@ -74,7 +72,8 @@ export async function start(store: Store, provider: Provider, env: Env, callId: 
     await store.status(c.id, 'dialing', { provider_call_id: r.providerCallId })
     return { ok: true, provider_call_id: r.providerCallId }
   } catch (e) {
-    await store.toVa(c.id, `start_failed: ${String((e as Error).message).slice(0, 80)}`)
+    // P902: a failed AI call counts as no answer (try 2 in 2 minutes, then the no-answer texts), never a VA hand-off.
+    await store.result(c.id, 'no_answer', { summary: `start_failed: ${String((e as Error).message).slice(0, 80)}` })
     return { ok: false, code: 'start_failed' }
   }
 }
@@ -99,15 +98,15 @@ export async function onEvent(store: Store, provider: Provider, env: Env, ev: Ev
       await store.result(c.id, r.s.outcome ?? 'no_answer', patch) // the SQL schedules try 2, or hands to the no-answer path
       return { ok: true, outcome: r.s.outcome }
     }
-    if (ph === 'handing_off') { await store.result(c.id, 'handed_to_va', { ...patch, callback_task: ev.reason !== 'transferred' }); return { ok: true } }
     if (ph === 'transferring' && ev.reason === 'transferred') {
       if (c.check_id) await store.markCheck(c.check_id, { status: 'connected', connected_at: new Date(env.now()).toISOString(), delivered: true }, ['ringing'])
       await store.result(c.id, 'transferred', patch)
       return { ok: true }
     }
     if (c.booked_for) { await store.result(c.id, 'booked', patch); return { ok: true } }
-    await store.result(c.id, 'reached', patch)
-    return { ok: true }
+    // Hung up, or the line dropped, before any result: counts as no answer (the texts send them the booking link).
+    await store.result(c.id, 'no_answer', patch)
+    return { ok: true, outcome: 'no_answer' }
   }
   // Tool calls: the AI asks us what to do next.
   return provider.toolReply(ev.toolCallId, await tool(store, provider, env, c, ev.name, ev.args))
@@ -121,12 +120,13 @@ function waiting(p: Provider, first: boolean) {
   return first ? { keep_talking: true, ask: WAIT_QUESTIONS, rule: WAIT_RULE } : { keep_talking: true }
 }
 
-async function slotsReply(store: Store, env: Env, c: Call, say?: string) {
+async function slotsReply(store: Store, env: Env, c: Call, say?: string, agentFirst?: string) {
   const slots = await store.slots(c.id)
   if (!slots.length) {
-    // No time open in the next 3 days: a VA books it with the agent.
-    await store.handoff(c.id, 'ai_failed', 'No open time in the agent’s calendar in the next 3 days.')
-    return { say: [say, env.words.toPerson].filter(Boolean).join(' '), hold: true }
+    // No time open in the next 3 days: "{agent} will call you to find a time" → not now, no time (the agent's Follow
+    // up, no texts). Never a VA.
+    await store.result(c.id, 'not_now', { summary: 'No open time in the agent’s calendar in the next 3 days.' })
+    return { say: [say, transferSay('noTimes', agentFirst)].filter(Boolean).join(' '), end: true }
   }
   return { say, slots, next: 'book' }
 }
@@ -139,31 +139,36 @@ export async function tool(store: Store, provider: Provider, env: Env, c: Call, 
       await store.result(c.id, 'opt_out')
       return { end: true }
     }
-    case 'handoff': {
-      const reason = String(args.reason ?? '')
-      const why = (reason in HANDOFF_REASONS ? reason : 'ai_failed') as keyof typeof HANDOFF_REASONS
-      const q = await store.handoff(c.id, why, String(args.summary ?? '').slice(0, 1200))
-      return q ? { say: env.words.toPerson, hold: true } : { say: env.words.noPerson, end: true }
+    case 'outcome': { // what the caller said: not now (with or without a time), hard no, wrong number
+      const result = String(args.result ?? '')
+      if (!SAID_OUTCOMES.includes(result)) return { ok: false, code: 'unknown_outcome' }
+      const at = result === 'not_now' && Number.isFinite(Date.parse(String(args.at ?? ''))) ? new Date(String(args.at)).toISOString() : null
+      await store.result(c.id, result, { callback_at: at, summary: args.summary ?? null })
+      return { ok: true, end: true }
     }
+    case 'ask_agent': // asked for a person, or about coverage or price: the agent goes over it (Check agent → transfer, or book)
     case 'qualified': {
-      if (!agent) return slotsReply(store, env, c)
+      const askedAgent = name === 'ask_agent' && String(args.reason ?? '') in ASK_AGENT_REASONS
+      const pre = askedAgent ? transferSay('agentWill') : undefined
+      if (c.status !== 'talking') return c.status === 'booking' ? slotsReply(store, env, c, pre, agent?.first) : { ok: false, code: 'not_talking' }
+      if (!agent) return slotsReply(store, env, c, pre)
       const r = step(c, { type: 'qualified' }, { agent, nowMs })
       if (!r.act.includes('check_agent')) {
         await store.status(c.id, 'booking', { routed: r.s.routed, summary: args.summary ?? null })
-        return slotsReply(store, env, c)
+        return slotsReply(store, env, c, pre, agent.first)
       }
       const lead = await store.lead(c.lead_id)
       const chk = await store.insertCheck({ agent_id: agent.id, lead_id: c.lead_id, ai_call_id: c.id,
         summary: { name: lead?.first ?? null, age: lead?.age ?? null, state: lead?.state ?? null, need: lead?.need ?? null, your_client: false } })
       if (!chk || !(await store.sendCheck(chk, agent.id))) {
         await store.status(c.id, 'booking', { routed: r.s.routed, summary: args.summary ?? null })
-        return slotsReply(store, env, c) // agent being checked by a VA, or the push failed: book
+        return slotsReply(store, env, c, pre, agent.first) // agent being checked by a VA, or the push failed: book
       }
       await store.status(c.id, 'checking', { routed: r.s.routed, check_id: chk.id, summary: args.summary ?? null })
-      return { say: checkSay(provider), next: 'check_status', wait_secs: 3, ...waiting(provider, true) }
+      return { say: [pre, checkSay(provider)].filter(Boolean).join(' '), next: 'check_status', wait_secs: 3, ...waiting(provider, true) }
     }
     case 'check_status': {
-      if (c.status !== 'checking') return c.status === 'booking' ? slotsReply(store, env, c) : { ok: false, code: 'not_checking' }
+      if (c.status !== 'checking') return c.status === 'booking' ? slotsReply(store, env, c, undefined, agent?.first) : { ok: false, code: 'not_checking' }
       const chk = c.check_id ? await store.check(c.check_id) : null
       const expired = !!chk?.expires_at && Date.parse(chk.expires_at) <= nowMs
       const answer = chk?.answer === 'yes' ? 'yes' : chk?.answer === 'no' || chk?.status === 'failed' || expired ? (chk?.answer ?? 'none') : null
@@ -186,10 +191,10 @@ export async function tool(store: Store, provider: Provider, env: Env, c: Call, 
         await store.clearCheck(chk, agent?.id ?? '', 'booking')
       }
       await store.status(c.id, 'booking')
-      return slotsReply(store, env, c, transferSay('bounce', agent?.first))
+      return slotsReply(store, env, c, transferSay('bounce', agent?.first), agent?.first)
     }
     case 'transfer_failed': { // the agent's phone wasn't answered in about 20 s: the caller is back with the AI, who books
-      if (c.status !== 'transferring') return c.status === 'booking' ? slotsReply(store, env, c) : { ok: false, code: 'not_transferring' }
+      if (c.status !== 'transferring') return c.status === 'booking' ? slotsReply(store, env, c, undefined, agent?.first) : { ok: false, code: 'not_transferring' }
       const r = step(c, { type: 'transfer_bounced' })
       await store.status(c.id, r.s.phase as Phase)
       if (c.check_id) {
@@ -197,44 +202,19 @@ export async function tool(store: Store, provider: Provider, env: Env, c: Call, 
         const chk = await store.check(c.check_id)
         if (chk) await store.clearCheck(chk, agent?.id ?? '', 'booking')
       }
-      return slotsReply(store, env, c, transferSay('bounce', agent?.first))
+      return slotsReply(store, env, c, transferSay('bounce', agent?.first), agent?.first)
     }
-    case 'slots': return slotsReply(store, env, c)
+    case 'slots': return slotsReply(store, env, c, undefined, agent?.first)
     case 'book': {
       const at = String(args.at ?? '')
       if (!Number.isFinite(Date.parse(at))) return { ok: false, code: 'bad_time' }
       const r = await store.book(c.id, at)
-      if (!r.ok) return { ok: false, ...(await slotsReply(store, env, c)) }
+      if (!r.ok) return { ok: false, ...(await slotsReply(store, env, c, undefined, agent?.first)) }
       return { ok: true, booked_for: at, end_after: true }
     }
     default:
       return { ok: false, code: 'unknown_tool' }
   }
-}
-
-// ── bridge / timeout / twiml ────────────────────────────────────────────────────────────────────────────────────
-export async function bridge(store: Store, provider: Provider, env: Env, callId: string, lineId: string) {
-  const c = await store.call(callId)
-  if (!c || c.status !== 'handing_off') return { ok: false, code: 'gone' }
-  if (!env.bridgeNumber) { await store.result(c.id, 'handed_to_va', { callback_task: true }); return { ok: false, code: 'no_bridge' } }
-  await provider.transfer(c.provider_call_id ?? '', `${env.bridgeNumber}`, c.control_url) // the bridge number answers with twiml(line)
-  await store.status(c.id, 'handing_off', { line_id: lineId })
-  return { ok: true }
-}
-
-export async function handoffTimeout(store: Store, provider: Provider, env: Env, callId: string) {
-  const c = await store.call(callId)
-  if (!c || c.status !== 'handing_off') return { ok: false, code: 'gone' }
-  try { await provider.say(c.provider_call_id ?? '', env.words.noPerson, true, c.control_url) } catch { /* the call may already be over */ }
-  await store.result(c.id, 'handed_to_va', { callback_task: true })
-  return { ok: true }
-}
-
-const xml = (s: string) => s.replace(/[<>&"']/g, ch => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[ch]!))
-export async function twiml(store: Store, lineId: string) {
-  const conf = /^[0-9a-f-]{36}$/i.test(lineId) ? await store.lineConference(lineId) : null
-  if (!conf) return '<?xml version="1.0" encoding="UTF-8"?><Response><Hangup/></Response>'
-  return `<?xml version="1.0" encoding="UTF-8"?><Response><Dial><Conference startConferenceOnEnter="true" endConferenceOnExit="false" beep="false">${xml(conf)}</Conference></Dial></Response>`
 }
 
 // ── one entry point ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -243,8 +223,6 @@ export async function handle(action: string, body: any, d: { store: Store; provi
   const uuid = /^[0-9a-f-]{36}$/i
   switch (action) {
     case 'start': if (!uuid.test(id)) throw refuse('call_id'); return start(d.store, d.provider, d.env, id)
-    case 'bridge': if (!uuid.test(id)) throw refuse('call_id'); return bridge(d.store, d.provider, d.env, id, String(body?.line_id ?? ''))
-    case 'handoff_timeout': if (!uuid.test(id)) throw refuse('call_id'); return handoffTimeout(d.store, d.provider, d.env, id)
     case 'event': {
       const ev = d.provider.parse(body)
       if (!ev) return { ok: true, ignored: true }

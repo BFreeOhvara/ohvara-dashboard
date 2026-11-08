@@ -57,6 +57,11 @@ async function sendSms(to: string, body: string): Promise<{ ok: boolean; sid?: s
 }
 
 const deps: Deps = {
+  // P902: P696's queue only while no_answer_recovery_live is on (off: superseded by the lead text flows).
+  async p696Live() {
+    const { data } = await supabase.from('recovery_config').select('no_answer_recovery_live').limit(1).maybeSingle()
+    return !!data?.no_answer_recovery_live
+  },
   // Each claim function hands back nothing until recovery_config.sms_live is on.
   async claim(fn) {
     const { data: rows, error } = await supabase.rpc(fn, { p_limit: 25 })

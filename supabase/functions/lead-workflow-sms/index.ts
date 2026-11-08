@@ -46,7 +46,7 @@ const deps: Deps = {
   },
   async getLead(id) {
     const { data, error } = await db.from('leads')
-      .select('id, lead_type, inbound_stage, phone, contact_name, state, assigned_rep_id, agent:profiles!leads_assigned_rep_id_fkey(full_name)')
+      .select('id, lead_type, inbound_stage, phone, contact_name, state, assigned_rep_id, text_flow, agent:profiles!leads_assigned_rep_id_fkey(full_name)')
       .eq('id', id).maybeSingle()
     if (error) throw error
     if (!data) return null
@@ -54,7 +54,7 @@ const deps: Deps = {
     return {
       id: data.id, lead_type: data.lead_type, inbound_stage: data.inbound_stage, phone: data.phone,
       contact_name: data.contact_name, state: data.state, agent_id: data.assigned_rep_id,
-      agent_name: agent?.full_name ?? null,
+      agent_name: agent?.full_name ?? null, text_flow: data.text_flow ?? null,
     }
   },
   async events(leadId) {

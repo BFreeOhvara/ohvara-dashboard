@@ -29,7 +29,6 @@ function fakes({ talks = true } = {}) {
     toVa: async (_id, reason) => { log.push(['toVa', reason]); call.status = 'to_va' },
     status: async (_id, st, patch = {}) => { log.push(['status', st]); Object.assign(call, { status: st, ...Object.fromEntries(Object.entries(patch).filter(([, v]) => v != null)) }); return call },
     result: async (_id, outcome, patch = {}) => { log.push(['result', outcome, !!patch.callback_task]); call.status = 'done' },
-    handoff: async (_id, reason) => { log.push(['handoff', reason]); call.status = 'handing_off'; return 'q1' },
     slots: async () => [SLOT],
     book: async (_id, at) => { log.push(['book', at]); call.booked_for = at; return { ok: true } },
     insertCheck: async row => { log.push(['insertCheck', row.summary]); check = { id: 'chk1', status: 'sent', answer: null, expires_at: new Date(WED_9AM_CT + 30000).toISOString(), summary: row.summary }; return check },
@@ -37,7 +36,6 @@ function fakes({ talks = true } = {}) {
     sendCheck: async () => { log.push(['push']); return true },
     markCheck: async (_id, patch) => { log.push(['check', patch.status]); Object.assign(check, patch) },
     clearCheck: async (_c, agentId, why) => { log.push(['clear', why, agentId]) },
-    lineConference: async () => 'line-abc',
   }
   const provider = {
     ...noProvider(), key: talks ? 'vapi' : 'ghl', ready: true, talksWhileWaiting: talks,
@@ -45,7 +43,7 @@ function fakes({ talks = true } = {}) {
     transfer: async (_id, to, _url, o) => { log.push(['transfer', to, o]) },
     say: async () => {}, parse: b => b, toolReply: (_t, r) => r,
   }
-  const env = { now: () => WED_9AM_CT, from: '+18005550110', bridgeNumber: null, words: { opening: 'Hi {first}', toPerson: 'person', noPerson: 'none free' } }
+  const env = { now: () => WED_9AM_CT, from: '+18005550110', words: { opening: 'Hi {first}' } }
   const ev = (type, extra = {}) => core.onEvent(store, provider, env, { providerCallId: 'pc1', callId: call.id, type, ...extra })
   const tool = (name, args = {}) => ev('tool', { name, args, toolCallId: null })
   const setCheck = p => Object.assign(check, p)
@@ -136,17 +134,18 @@ test('beat 5, Yes but the agent\'s phone isn\'t answered in about 20 s → bounc
   assert.equal((await f.tool('transfer_failed')).end, true)
 })
 
-test('after a bounce the caller asks for a person → the P892 VA hand-off', async () => {
+test('P902: after a bounce the caller asks for a person → "Your agent will go over that", times to book, never a VA', async () => {
   const f = fakes()
   await f.toCheck()
   f.setCheck({ status: 'yes', answer: 'yes' })
   await f.tool('check_status')
   await f.tool('transfer_failed')
-  const r = await f.tool('handoff', { reason: 'asked_person', summary: 'Wants a person' })
-  assert.deepEqual([r.say, r.hold], ['person', true])
-  assert.deepEqual(f.log.at(-1), ['handoff', 'asked_person'])
-  await f.ev('ended', { reason: 'transferred', durationSecs: 90 })
-  assert.deepEqual(f.log.at(-1), ['result', 'handed_to_va', false])
+  const r = await f.tool('ask_agent', { reason: 'asked_person', summary: 'Wants a person' })
+  assert.match(r.say, /^Your agent will go over that with you\./)
+  assert.deepEqual([r.slots, r.next], [[SLOT], 'book'])
+  assert.ok(!f.log.some(x => x[0] === 'handoff' || x[0] === 'toVa'))
+  await f.tool('book', { at: SLOT }); await f.ev('ended', { reason: 'hangup', durationSecs: 90 })
+  assert.deepEqual(f.log.at(-1), ['result', 'booked', false])
 })
 
 test('stray tool calls outside their beat are refused, not acted on', async () => {
@@ -178,8 +177,9 @@ test('Vapi: warm-transfer-say-message = whisper to the agent only, 20 s ring, ba
 })
 
 test('sample calls show every branch beat by beat; agents still never see "AI"', () => {
-  const branches = SAMPLE_AI_CALLS.filter(c => c.transfer).map(c => `${c.transfer.check}/${c.transfer.phone || '-'}/${c.transfer.then || '-'}`)
-  assert.deepEqual(branches.sort(), ['no/-/asked_person', 'no/-/booked', 'none/-/booked', 'yes/answered/-', 'yes/no_answer/booked'])
+  const branches = SAMPLE_AI_CALLS.filter(c => c.transfer).map(c => `${c.transfer.check}/${c.transfer.phone || '-'}`)
+  assert.deepEqual(branches.sort(), ['no/-', 'no/-', 'none/-', 'yes/answered', 'yes/no_answer'])
+  assert.ok(SAMPLE_AI_CALLS.every(c => !c.transfer?.then)) // P902: no hand-off branch
   const yes = beatsOf(SAMPLE_AI_CALLS.find(c => c.id === 'ai-1'))
   assert.match(yes.at(-1), /whisper played · caller connected · AI left the call/)
   assert.deepEqual(transferBeats({ agent: 'Dana', check: 'yes', answerSecs: 9, phone: 'no_answer', then: 'booked', bookedFor: 'Thu 2:30 PM CT' }), [

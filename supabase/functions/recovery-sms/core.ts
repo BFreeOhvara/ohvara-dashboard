@@ -60,6 +60,9 @@ export type Deps = {
   // recovery_sms_log.body (219) on the row mark / logConfirm just wrote.
   keepWords(policyId: string, kind: string, sid: string, body: string): Promise<void>
   appUrl: string
+  // P902: P696's no-answer recovery is superseded by the lead text flows (brain/ohvara/Lead Text Workflows.md). Its
+  // queue is read only while recovery_config.no_answer_recovery_live is on (default off). Unset = on (old tests).
+  p696Live?(): Promise<boolean>
 }
 
 // P696 no-answer texts, then P771 missed-by-us apologies.
@@ -79,7 +82,9 @@ export async function sendDue(deps: Deps) {
       console.error('[recovery-sms] keepWords', err instanceof Error ? err.message : String(err))
     }
   }
+  const p696 = deps.p696Live ? await deps.p696Live() : true
   for (const [claim, mark] of QUEUES) {
+    if (claim === 'recovery_claim_due' && !p696) continue
     const rows = await deps.claim(claim)
     claimed += rows.length
     for (const r of rows) {

@@ -41,6 +41,7 @@ export type ContactInput = {
   email?: string | null
   state?: string | null
   dndSms?: boolean
+  customFields?: { key: string; field_value: string }[] // P902: call_outcome fields
 }
 
 export function ghlClient(apiKey: string, fetchFn: Fetch) {
@@ -79,6 +80,9 @@ export function ghlClient(apiKey: string, fetchFn: Fetch) {
       call('DELETE', `/contacts/${encodeURIComponent(contactId)}/tags`, { tags }),
     addToWorkflow: (contactId: string, workflowId: string) =>
       call('POST', `/contacts/${encodeURIComponent(contactId)}/workflow/${encodeURIComponent(workflowId)}`, {}),
+    // P902: a stopped no-answer flow takes the contact out of that workflow.
+    removeFromWorkflow: (contactId: string, workflowId: string) =>
+      call('DELETE', `/contacts/${encodeURIComponent(contactId)}/workflow/${encodeURIComponent(workflowId)}`, {}),
   }
 }
 
@@ -98,5 +102,6 @@ export function contactBody(c: ContactInput) {
   if (c.email) body.email = c.email
   if (c.state) body.state = c.state
   if (c.dndSms) body.dndSettings = { SMS: { status: 'active', message: 'Opted out in Ohvara' } }
+  if (c.customFields?.length) body.customFields = c.customFields
   return body
 }

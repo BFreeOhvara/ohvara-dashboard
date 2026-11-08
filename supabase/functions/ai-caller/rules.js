@@ -4,14 +4,16 @@
 //
 // The AI calls ONLY fresh form leads, within 10 seconds. It never takes inbound calls (call ads and live-transfer calls
 // still ring a VA), never calls clients, never does servicing. It qualifies with the VA questions, then Check agent →
-// cold transfer, or books. It hands to a VA (warm, top of the queue) when the lead asks for a person, asks about coverage
-// or price, is confused or upset, or the AI fails. Off until Brayden switches ai_caller_live on.
+// cold transfer, or books. P902: it never hands a new lead to a VA. Asks for a person, or about coverage or price ->
+// "Your agent will go over that with you" -> Check agent -> transfer, or book if the agent can't. A failed call counts
+// as no answer. Every call ends in one outcome (supabase/functions/_shared/leadFlows.js FIRST_CALL_OUTCOMES), which
+// decides the texts. Off until Brayden switches ai_caller_live on.
+import { FIRST_CALL_OUTCOMES, AGENT_OUTCOME, OUTCOME_LABEL } from '../_shared/leadFlows.js'
 
 export const AI_RULES = {
   firstCallSecs: 10, // a fresh form lead is dialled within 10 s of arriving
   checkSecs: 30, // Check agent: Yes / No / no answer in 30 s (P880's timer)
   ringSecs: 20, // the agent's phone rings about 20 s, then the lead comes back to the AI to book
-  handoffWaitSecs: 60, // a hand-off nobody takes in 60 s becomes a callback task
   retryAfterSecs: 120, // no answer: one more try 2 minutes later
   maxAttempts: 2,
   maxCallSecs: 300, // admin setting (60-900)
@@ -24,6 +26,10 @@ export const TRANSFER_WORDS = {
   connecting: 'Perfect, I’m connecting you with {agent} now. They’ll take great care of you.',
   bounce: 'Our specialists are all with clients right now, so let’s get you on {agent}’s calendar.',
   holdOnly: 'One moment while I check.', // only when the provider can't talk while it waits
+  // P902: asks for a person, or about coverage or price. Then Check agent -> transfer, or book.
+  agentWill: 'Your agent will go over that with you.',
+  // P902: no open time in the agent's calendar in the next 3 days. The lead goes to the agent's Follow up.
+  noTimes: '{agent} will call you to find a time that works. Thanks so much for your time today.',
 }
 // While the agent decides (up to 30 s): light, useful questions, one at a time. Never coverage or price.
 export const WAIT_QUESTIONS = [
@@ -34,16 +40,17 @@ export const WAIT_QUESTIONS = [
 export const WAIT_RULE = 'Ask these one at a time and wait for each answer. Never talk about coverage, prices or carriers while you wait.'
 export const transferSay = (key, agentFirst) => TRANSFER_WORDS[key].replace('{agent}', agentFirst || 'your agent')
 
-// Why a call goes to a person. Agent screens never show these.
-export const HANDOFF_REASONS = {
+// P902: what turns the call to the agent (the AI says TRANSFER_WORDS.agentWill, then Check agent -> transfer or book).
+export const ASK_AGENT_REASONS = {
   asked_person: 'Asked for a person',
   coverage_or_price: 'Asked about coverage or price',
-  confused_upset: 'Confused or upset',
-  ai_failed: 'The call had a problem',
 }
+// What the caller can tell the AI that ends the call with an outcome of its own (the `outcome` tool).
+export const SAID_OUTCOMES = ['not_now', 'hard_no', 'wrong_number']
 
-// The results on a call. reached = talked, but not booked or transferred (not interested, hung up, wrong number).
-export const OUTCOMES = ['reached', 'booked', 'transferred', 'handed_to_va', 'no_answer', 'opt_out']
+// The results on a call: the first-call outcomes (P902). booked / transferred / no_answer come from the call itself;
+// not_now (with or without a time), hard_no and wrong_number from what the caller says; opt_out from "stop calling".
+export const OUTCOMES = FIRST_CALL_OUTCOMES
 
 // ── Who calls a new lead ─────────────────────────────────────────────────────────────────────────────────────────
 // lead: { source: 'form' | 'call_in' | 'live_call' | 'client', consent_version, agent_id }
@@ -97,8 +104,8 @@ export { DAY_KEYS }
 
 // ── The call, step by step ────────────────────────────────────────────────────────────────────────────────────────
 // A small state machine the edge function drives from provider events. aiStep(state, event, ctx) → { s, act }.
-// act: what the function must do next: dial | check_agent | transfer_agent | book | handoff | callback_task |
-//      retry | va_no_answer | dnc | end | log. ctx: { agent, nowMs, vaFree }.
+// act: what the function must do next: dial | check_agent | transfer_agent | book | retry | no_answer_flow | dnc |
+//      end | log. ctx: { agent, nowMs }. P902: no hand-off to a VA anywhere.
 export const startState = (attempt = 1) => ({ phase: 'dialing', attempt, outcome: null, reason: null, routed: null })
 
 const done = (s, outcome, extra = {}) => ({ ...s, phase: 'done', outcome, ...extra })
@@ -107,20 +114,21 @@ export function aiStep(s, ev, ctx = {}) {
   const t = ev?.type
   // "Stop calling" wins over everything, at any point of the call.
   if (t === 'stop') return { s: done(s, 'opt_out'), act: ['dnc', 'end', 'log'] }
-  if (t === 'signal' && HANDOFF_REASONS[ev.reason] && !['done', 'handing_off'].includes(s.phase)) {
-    return { s: { ...s, phase: 'handing_off', reason: ev.reason, waited: 0 }, act: ['handoff'] }
+  if (s.phase === 'done') return { s, act: [] }
+  // What the caller says ends the call with its own outcome: not now (with or without a time), hard no, wrong number.
+  if (t === 'said' && SAID_OUTCOMES.includes(ev.outcome) && s.phase !== 'dialing') {
+    return { s: done(s, ev.outcome, ev.outcome === 'not_now' && ev.at ? { callbackAt: ev.at } : {}), act: ['end', 'log'] }
   }
-  if (t === 'error' && !['done', 'dialing'].includes(s.phase) && s.phase !== 'handing_off') {
-    return { s: { ...s, phase: 'handing_off', reason: 'ai_failed', waited: 0 }, act: ['handoff'] }
-  }
+  // Asks for a person, or about coverage or price: "Your agent will go over that with you", then the same route as a
+  // qualified lead (Check agent → transfer, or book). Never a VA.
+  if (t === 'signal' && ASK_AGENT_REASONS[ev.reason] && s.phase === 'talking') return aiStep(s, { type: 'qualified' }, ctx)
+  // A call that fails counts as no answer (tried once more in 2 minutes, then the no-answer texts).
+  if (t === 'error' && s.phase !== 'dialing') return noAnswer(s)
   switch (s.phase) {
     case 'dialing':
       if (t === 'answered') return { s: { ...s, phase: 'talking' }, act: [] }
-      if (t === 'no_answer' || t === 'voicemail' || t === 'busy' || t === 'error') {
-        // No voicemail from the AI. Try once more in 2 minutes, then the no-answer texts and VA call tasks take over.
-        if (s.attempt < AI_RULES.maxAttempts) return { s: done(s, 'no_answer', { retryInSecs: AI_RULES.retryAfterSecs }), act: ['retry', 'log'] }
-        return { s: done(s, 'no_answer'), act: ['va_no_answer', 'log'] }
-      }
+      // No voicemail from the AI. Try once more in 2 minutes, then the no-answer flow (texts by GoHighLevel).
+      if (t === 'no_answer' || t === 'voicemail' || t === 'busy' || t === 'error') return noAnswer(s)
       break
     case 'talking':
       if (t === 'qualified') {
@@ -129,7 +137,7 @@ export function aiStep(s, ev, ctx = {}) {
           ? { s: { ...s, phase: 'checking', routed: r.key }, act: ['check_agent'] }
           : { s: { ...s, phase: 'booking', routed: r.key }, act: ['book'] }
       }
-      if (t === 'ended') return { s: done(s, 'reached'), act: ['log'] }
+      if (t === 'ended') return noAnswer(s) // hung up before any result: the no-answer texts send them the link
       break
     case 'checking':
       if (t === 'check_answer') {
@@ -137,29 +145,27 @@ export function aiStep(s, ev, ctx = {}) {
           ? { s: { ...s, phase: 'transferring' }, act: ['transfer_agent'] }
           : { s: { ...s, phase: 'booking', checked: ev.answer || 'none' }, act: ['book'] } // No, no answer in 30 s, failed push
       }
-      if (t === 'ended') return { s: done(s, 'reached'), act: ['log'] }
+      if (t === 'ended') return noAnswer(s)
       break
     case 'transferring':
       if (t === 'transfer_ok') return { s: done(s, 'transferred'), act: ['log'] }
       if (t === 'transfer_bounced') return { s: { ...s, phase: 'booking', checked: 'bounced' }, act: ['book'] }
-      if (t === 'ended') return { s: done(s, 'reached'), act: ['log'] }
+      if (t === 'ended') return noAnswer(s)
       break
     case 'booking':
       if (t === 'booked') return { s: done(s, 'booked', { bookedFor: ev.at }), act: ['end', 'log'] }
-      if (t === 'ended') return { s: done(s, 'reached'), act: ['log'] }
-      break
-    case 'handing_off':
-      if (t === 'va_taken') return { s: done(s, 'handed_to_va'), act: ['log'] }
-      if (t === 'va_wait') {
-        const waited = ev.secs ?? 0
-        if (waited >= AI_RULES.handoffWaitSecs) return { s: done(s, 'handed_to_va', { callbackTask: true }), act: ['callback_task', 'end', 'log'] }
-        return { s: { ...s, waited }, act: [] }
-      }
-      if (t === 'ended') return { s: done(s, 'handed_to_va', { callbackTask: true }), act: ['callback_task', 'log'] }
+      // No open time in the next 3 days: "{agent} will call you to find a time" → the agent's Follow up, no texts.
+      if (t === 'no_times') return { s: done(s, 'not_now', { noTimes: true }), act: ['end', 'log'] }
+      if (t === 'ended') return noAnswer(s)
       break
     default:
   }
   return { s, act: [] }
+}
+
+function noAnswer(s) {
+  if (s.attempt < AI_RULES.maxAttempts) return { s: done(s, 'no_answer', { retryInSecs: AI_RULES.retryAfterSecs }), act: ['retry', 'log'] }
+  return { s: done(s, 'no_answer'), act: ['no_answer_flow', 'log'] }
 }
 
 // Run a list of events through the machine (tests, sample data).
@@ -175,8 +181,8 @@ export function runCall(events, ctx = {}, attempt = 1) {
 }
 
 // ── P903: a transfer call's beats, for staff timelines (admin AI calls, sample) ────────────────────────────────────
-// t: { agent, check: 'yes' | 'no' | 'none', answerSecs, phone: 'answered' | 'no_answer' (after a Yes), then: 'booked' |
-//      'asked_person' (after a bounce or a No), bookedFor }
+// t: { agent, check: 'yes' | 'no' | 'none', answerSecs, phone: 'answered' | 'no_answer' (after a Yes), bookedFor }
+// (P902: after a bounce or a No the AI always books; there is no hand-off to a VA.)
 export function transferBeats(t) {
   const out = ['Qualified', `Checked ${t.agent}: “Live caller ready” push sent · kept the caller talking`]
   if (t.check === 'none') out.push(`No answer to the push in ${AI_RULES.checkSecs} s`)
@@ -188,31 +194,20 @@ export function transferBeats(t) {
     }
     out.push(`${t.agent}’s phone not answered in ${AI_RULES.ringSecs} s · caller back with the AI`)
   } else out.push('Back with the AI')
-  out.push(t.then === 'asked_person' ? 'Caller asked for a person · handed to a VA' : `Booked ${t.bookedFor || 'the next open time'}`)
+  out.push(`Booked ${t.bookedFor || 'the next open time'}`)
   return out
 }
 
 // ── Lines on the lead's timeline ──────────────────────────────────────────────────────────────────────────────────
 // Agents see the speed and what happened, never "AI" (their words come from here, and src/p892.test.js checks it).
 const secsWord = n => `${n} second${n === 1 ? '' : 's'}`
-const AGENT_RESULT = {
-  reached: 'Reached them',
-  booked: 'Reached them. Booked',
-  transferred: 'Reached them. Live transfer to you',
-  handed_to_va: 'Reached them. Our team is on it',
-  no_answer: 'No answer',
-  opt_out: 'Asked not to be called',
-}
-export function agentLine({ secs, outcome }) {
+export function agentLine({ secs, outcome, callbackAt }) {
   const head = secs == null ? 'Called' : `Called in ${secsWord(Math.max(0, Math.round(secs)))}`
-  return `${head}. ${AGENT_RESULT[outcome] || 'Reached them'}`
-}
-const STAFF_RESULT = {
-  reached: 'Reached, not booked', booked: 'Booked', transferred: 'Transferred to the agent', handed_to_va: 'Handed to a VA',
-  no_answer: 'No answer', opt_out: 'Opted out',
+  const word = outcome === 'not_now' && callbackAt ? AGENT_OUTCOME.not_now_time : AGENT_OUTCOME[outcome] || 'Reached them'
+  return `${head}. ${word}`
 }
 export const staffLine = ({ secs, outcome, attempt }) =>
-  `AI called in ${Math.round(secs ?? 0)} s${attempt > 1 ? ` (try ${attempt})` : ''} · ${STAFF_RESULT[outcome] || outcome}`
+  `AI called in ${Math.round(secs ?? 0)} s${attempt > 1 ? ` (try ${attempt})` : ''} · ${OUTCOME_LABEL[outcome] || outcome}`
 
 // ── Admin numbers ─────────────────────────────────────────────────────────────────────────────────────────────────
 // calls: [{ outcome, attempt, secs (seconds from lead in to first dial, first attempt), duration (s), cost_cents }]
@@ -230,7 +225,8 @@ export function aiStats(calls = [], centsPerMin = null) {
     : centsPerMin == null ? null : Math.round(billedMin * centsPerMin)
   return {
     calls: calls.length, leads, reached: reachedLeads, reachedPct: leads ? Math.round((reachedLeads / leads) * 100) : 0,
-    booked: n('booked'), transferred: n('transferred'), handed: n('handed_to_va'), noAnswer: n('no_answer'), optOut: n('opt_out'),
+    booked: n('booked'), transferred: n('transferred'), notNow: n('not_now'), hardNo: n('hard_no'), wrongNumber: n('wrong_number'),
+    noAnswer: n('no_answer'), optOut: n('opt_out'),
     avgSecs: secs.length ? Math.round((secs.reduce((a, b) => a + b, 0) / secs.length) * 10) / 10 : null,
     minutes, costCents: cost,
   }

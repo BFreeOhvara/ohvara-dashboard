@@ -63,7 +63,7 @@ export const firstName = (full: string | null) => (full ?? '').trim().split(/\s+
 export function stageFor(status: string | null, optedOut: boolean): Stage | null {
   if (optedOut) return 'opted_out'
   switch (status) {
-    case 'New': return 'just_submitted'
+    // P902: no text on arrival. A new lead gets a call first; 'New' has no text (the just_submitted draft is retired).
     case 'No Answer': return 'not_reached'
     case 'Contacted': case 'Follow-Up': case 'Booked': case 'Appointment Booked': return 'reached'
   }

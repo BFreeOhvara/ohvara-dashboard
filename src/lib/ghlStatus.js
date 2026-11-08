@@ -11,6 +11,7 @@ export const GHL_EVENTS = [
   { key: 'workflow_appointment_reminder', label: 'Appointment reminder' },
   { key: 'workflow_no_show', label: 'No-show' },
   { key: 'workflow_opt_out', label: 'Opt-out' },
+  { key: 'workflow_no_answer', label: 'No answer after the first call' }, // P902 (migration p902_lead_outcomes)
 ]
 
 const LOCATION_RE = /^[A-Za-z0-9]{6,64}$/

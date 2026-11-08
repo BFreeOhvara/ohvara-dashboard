@@ -43,7 +43,7 @@ test('form checks and patch', () => {
   const f = formFromSettings(ROW)
   assert.deepEqual(checkForm(f), {})
   assert.deepEqual(patchFromForm({ ...f, locationId: ' l1C08ntBrFjLS0elLIYU ', workflows: { ...f.workflows, workflow_no_show: '  ' } }),
-    { location_id: 'l1C08ntBrFjLS0elLIYU', workflow_new_inbound: '9f1c2b3a-4d5e-4f60', workflow_appointment_reminder: null, workflow_no_show: null, workflow_opt_out: null })
+    { location_id: 'l1C08ntBrFjLS0elLIYU', workflow_new_inbound: '9f1c2b3a-4d5e-4f60', workflow_appointment_reminder: null, workflow_no_show: null, workflow_opt_out: null, workflow_no_answer: null })
   assert.ok(checkForm({ ...f, locationId: '' }).locationId)
   assert.ok(checkForm({ ...f, locationId: 'bad id!' }).locationId)
   assert.ok(checkForm({ ...f, workflows: { ...f.workflows, workflow_opt_out: 'x' } }).workflow_opt_out)
@@ -53,7 +53,7 @@ test('form checks and patch', () => {
 test('save settings: writes only the admin-editable columns, never the switch', async () => {
   const { sb, calls } = fake()
   assert.deepEqual(await saveGhlSettings(sb, formFromSettings(ROW)), { ok: true })
-  assert.deepEqual(Object.keys(calls.updates[0]).sort(), ['location_id', 'workflow_appointment_reminder', 'workflow_new_inbound', 'workflow_no_show', 'workflow_opt_out'])
+  assert.deepEqual(Object.keys(calls.updates[0]).sort(), ['location_id', 'workflow_appointment_reminder', 'workflow_new_inbound', 'workflow_no_answer', 'workflow_no_show', 'workflow_opt_out'])
   assert.equal((await saveGhlSettings(fake().sb, { ...formFromSettings(ROW), locationId: '' })).ok, false)
   assert.equal((await saveGhlSettings(fake({ updated: [] }).sb, formFromSettings(ROW))).ok, false)
   assert.equal((await saveGhlSettings(fake({ updateErr: { message: 'x' } }).sb, formFromSettings(ROW))).ok, false)

@@ -1,6 +1,7 @@
 import { LEAD_TEXTS, SENDER, leadText } from './leadTexts.js'
 import { phoneDigits, formatPhone } from './phoneMask.js'
 import { agentLine } from '../lib/aiCallerRules.js'
+import { planFlow, fillWords } from '../lib/leadFlows.js'
 
 // P873 — a lead, start to finish (brain/ohvara/Lead Lifecycle.md is the written version). Pure functions only, so
 // the sample store, the screens and the tests share one set of rules, and P848 swaps the sample rows for
@@ -75,75 +76,110 @@ export const TEAM = 'Maya, Fulfillment'
 const fullName = l => `${l.first_name} ${l.last_name}`
 const apptWords = s => `${dayLabel(s)} at ${timeLabel(s)}`
 
+// P902 (Lead Text Workflows): a new lead gets a call first, never a text. The first call ends in one outcome; only no
+// answer and booked start texts, planned from the shared flows (src/lib/leadFlows.js). Texts after
+// now are on the timeline as Planned. Agents don't see the no-answer chase (agentView.js agentEvents).
+const ZONE_WORD = { AZ: 'MST', TX: 'CT', FL: 'ET', GA: 'ET', NC: 'ET', TN: 'CT', CO: 'MT', WA: 'PT', CA: 'PT', IN: 'ET', KY: 'ET', NV: 'PT', OH: 'ET', IL: 'CT' }
+export const SAMPLE_AGENT = { first: 'Dana', number: '(737) 555-0100' }
+
 export function seedEvents(l, now = clockNow()) {
   const ev = []
   const add = (kind, at, label, o = {}) => ev.push({ id: `${l.id}-e${ev.length + 1}`, kind, at, label, state: at > now ? 'scheduled' : 'done', ...o })
   const text = (step, at, o = {}) => add('text_sent', at, 'Text', { step, text: leadText(step, { lead: l.first_name, appt: l.apptAt ? apptWords(l.apptAt) : undefined }), by: SENDER, role: 'auto', ...o })
   const team = (at, label, o = {}) => add('va_call', at, label, { by: TEAM, role: 'team', ...o })
   const you = (kind, at, label, o = {}) => add(kind, at, label, { by: 'You', role: 'you', ...o })
+  const auto = (kind, at, label, o = {}) => add(kind, at, label, { by: 'Automatic', role: 'auto', ...o })
   const c = l.came
   const live = l.kind === 'live_call'
+  const speed = l.speed ?? 8
   add('came_in', c, live ? 'Called the number on the page' : 'Filled in the mortgage protection form', { by: fullName(l), role: 'lead' })
-  text('instant', addMin(c, 1))
 
-  const tries = (n, from) => {
-    const at = [from, addMin(from, 24 * 60 - 7), addMin(from, 3 * 24 * 60 - 12)]
-    const steps = ['not_reached_d0', 'not_reached_d1', 'not_reached_d3']
-    for (let i = 0; i < n; i++) { team(at[i], `Called, try ${i + 1} of ${MAX_TRIES}. No answer`); text(steps[i], addMin(at[i], 1)) }
-  }
-  // P892: a lead the team reached seconds after it came in shows the speed ("Called in 9 seconds"), never who or what called.
-  const book = () => {
-    if (l.speed != null) {
-      team(c, agentLine({ secs: l.speed, outcome: 'booked' }))
-      add('booked', addMin(c, 4), `Booked for ${whenLabel(l.apptAt)}`, { by: TEAM, role: 'team' })
-      text('confirm', addMin(c, 5))
-    } else {
-      tries(1, addMin(c, 3))
-      add('text_received', addMin(c, 28), 'Replied', { text: l.firstReply || 'Tomorrow after 5 works', by: l.first_name, role: 'lead' })
-      team(addMin(c, 35), 'Called. Reached them')
-      add('booked', addMin(c, 36), `Booked for ${whenLabel(l.apptAt)}`, { by: TEAM, role: 'team' })
-      text('confirm', addMin(c, 37))
+  // One flow's steps from the shared rules: texts (GoHighLevel sends them), our team's calls, the day 97 close.
+  const flowRows = (flow, start, { appt = l.apptAt, stoppedAt = null } = {}) => {
+    for (const s of planFlow(flow, { start, appt, now, stoppedAt })) {
+      if (s.state === 'stopped') continue
+      if (s.kind === 'text') {
+        const words = fillWords(s.words, { first: l.first_name, agent: SAMPLE_AGENT.first, number: SAMPLE_AGENT.number,
+          day: appt ? dayLabel(appt) : '', time: appt ? timeLabel(appt) : '', zone: ZONE_WORD[l.state], link: 'deedstone.com/b/sample' })
+        add('text_sent', s.at, s.label, { step: s.key, flow, text: words, by: SENDER, role: 'auto' })
+      } else if (s.kind === 'call') team(s.at, s.label, { step: s.key, flow })
+      else auto('outcome', s.at, 'Closed: couldn’t reach. No reply after the day 90 check-in', { step: s.key, flow })
     }
-    text('reminder_day_before', addMin(l.apptAt, -24 * 60))
-    text('reminder_1h', addMin(l.apptAt, -60))
+  }
+  // The first call: no answer, tried again 2 minutes later, then the no-answer flow (stopped by anything they do).
+  const noAnswer = (from, stoppedAt = null) => {
+    team(from, agentLine({ secs: speed, outcome: 'no_answer' }), { first_call: 'no_answer' })
+    team(addMin(from, 2), 'Calls again in 2 minutes. No answer')
+    auto('outcome', addMin(from, 3), 'No-answer texts started', { flow: 'no_answer' })
+    flowRows('no_answer', addMin(from, 3), { stoppedAt })
+    if (stoppedAt) auto('follow_up', stoppedAt, 'No-answer texts stopped', { flow_action: 'stopped' })
+  }
+  const bookedFlow = (at, label = `Booked for ${whenLabel(l.apptAt)}`) => {
+    add('booked', at, label, { by: TEAM, role: 'team' })
+    auto('outcome', at, 'Booking texts started', { flow: 'booked' })
+    flowRows('booked', at)
+  }
+  const book = () => {
+    if (l.speed != null || l.firstCall === 'not_now') {
+      // Reached on the first call: booked there, or "not now" with a time (a callback, booked the same way).
+      const callback = l.firstCall === 'not_now'
+      team(c, agentLine({ secs: speed, outcome: callback ? 'not_now' : 'booked', callbackAt: callback ? l.apptAt : null }), { first_call: callback ? 'not_now' : 'booked' })
+      bookedFlow(addMin(c, 4), callback ? `Callback booked for ${whenLabel(l.apptAt)}` : undefined)
+    } else {
+      // No answer first; they replied to the missed-call text, our team called back and booked them.
+      const replied = addMin(c, 28)
+      noAnswer(c, replied)
+      add('text_received', replied, 'Replied', { text: l.firstReply || 'Tomorrow after 5 works', by: l.first_name, role: 'lead' })
+      team(addMin(c, 35), 'Called. Reached them')
+      bookedFlow(addMin(c, 36))
+    }
   }
 
   switch (l.stage) {
     case 'new': team(addMin(c, 1), 'Calls right away'); break
     case 'calling': {
-      tries(l.tries || 1, addMin(c, 3))
+      noAnswer(c, l.reply ? l.reply.at : null)
       if (l.reply) replyRows(l, l.reply.text, l.reply.at).forEach(r => add(r.kind, r.at, r.label, r))
-      else if ((l.tries || 1) < MAX_TRIES) team(addMin(c, (l.tries || 1) * 24 * 60 + 60), `Calls again, try ${(l.tries || 1) + 1} of ${MAX_TRIES}`)
-      else text('not_reached_d7', addMin(c, 7 * 24 * 60))
       break
     }
     case 'ringing':
-      team(l.speed != null ? c : addMin(c, 2), l.speed != null ? agentLine({ secs: l.speed, outcome: 'transferred' }) : 'Called. Reached them')
+      team(l.speed != null ? c : addMin(c, 2), l.speed != null ? agentLine({ secs: l.speed, outcome: 'transferred' }) : 'Called. Reached them', { first_call: 'transferred' })
       add('transferred', addMin(c, 3), 'Live transfer. Ringing you now', { by: TEAM, role: 'team' })
       break
     case 'missed':
-      team(addMin(c, 2), 'Called. Reached them')
+      team(addMin(c, 2), 'Called. Reached them', { first_call: 'transferred' })
       add('transferred', addMin(c, 3), 'Live transfer to you', { by: TEAM, role: 'team' })
       add('missed', addMin(c, 4), 'You did not pick up. The team is booking a time', { by: 'Automatic', role: 'auto' })
       team(addMin(c, 20), 'Books a time with them')
       break
     case 'unreachable':
-      tries(MAX_TRIES, addMin(c, 3))
-      text('not_reached_d7', addMin(c, 7 * 24 * 60))
-      ;[30, 60, 90].forEach(d => text('not_reached_monthly', addMin(c, d * 24 * 60), { label: `Check-in, day ${d}` }))
-      add('outcome', addMin(c, 97 * 24 * 60), 'Closed: no reply after the day 90 check-in', { by: 'Automatic', role: 'auto' })
+      noAnswer(c)
       break
-    case 'opted_out':
-      tries(1, addMin(c, 3))
-      add('text_received', addMin(c, 50), 'Replied', { text: 'STOP', by: l.first_name, role: 'lead' })
-      text('stop_confirm', addMin(c, 50))
-      add('outcome', addMin(c, 50), 'Closed: opted out. All calls and texts stopped', { by: 'Automatic', role: 'auto' })
+    case 'opted_out': {
+      const stop = addMin(c, 50)
+      noAnswer(c, stop)
+      add('text_received', stop, 'Replied', { text: 'STOP', by: l.first_name, role: 'lead' })
+      text('stop_confirm', stop)
+      auto('outcome', stop, 'Closed: opted out. All calls and texts stopped')
       break
+    }
     default: { // booked, showed, no_show, follow_up, sold, not_interested
+      // First-call outcomes with no texts: not now with no time (Follow up), hard no, wrong number.
+      if (l.firstCall === 'not_now' && !l.apptAt) {
+        team(c, agentLine({ secs: speed, outcome: 'not_now' }), { first_call: 'not_now' })
+        auto('follow_up', addMin(c, 1), `Not a good time. Follow up ${l.follow || 'when you pick'}`)
+        if (l.followAt) you('follow_up', l.followAt, 'Call back')
+        break
+      }
+      if (l.firstCall === 'hard_no' || l.firstCall === 'wrong_number') {
+        team(c, agentLine({ secs: speed, outcome: l.firstCall }), { first_call: l.firstCall })
+        auto('outcome', addMin(c, 1), l.firstCall === 'wrong_number' ? 'Closed: wrong number' : 'Not interested. Calls and texts stop')
+        break
+      }
       // An appointment lead goes through booking; a live call the agent answered skips straight to talking.
       if (l.apptAt) book()
       else {
-        team(addMin(c, 2), 'Called. Reached them')
+        team(addMin(c, 2), 'Called. Reached them', { first_call: 'transferred' })
         add('transferred', addMin(c, 3), 'Live transfer. You answered', { by: TEAM, role: 'team' })
       }
       const end = l.apptAt ? addMin(l.apptAt, 30) : addMin(c, 30)

@@ -54,11 +54,16 @@ test('the seeded timeline is in time order, done before now and scheduled after'
   const at = l.events.map(e => e.at)
   assert.deepEqual(at, [...at].sort())
   for (const e of l.events) assert.equal(e.state, e.at > SAMPLE_NOW ? 'scheduled' : 'done', e.label)
-  assert.deepEqual(l.events.map(e => e.kind), ['came_in', 'text_sent', 'va_call', 'text_sent', 'text_received', 'va_call', 'booked', 'text_sent', 'text_sent', 'text_sent'])
-  // Unreachable: three tries, the day 7 text, check-ins at day 30, 60 and 90, then closed.
+  // P902: no text before the first call. No answer → retry → the missed-call text; her reply stops that flow; booked →
+  // the booking text, the evening before, the morning of and 1 hour before (Planned).
+  assert.deepEqual(l.events.map(e => e.kind), ['came_in', 'va_call', 'va_call', 'outcome', 'text_sent', 'follow_up', 'text_received', 'va_call', 'booked', 'outcome', 'text_sent', 'text_sent', 'text_sent', 'text_sent'])
+  assert.deepEqual(l.events.filter(e => e.state === 'scheduled').map(e => e.at), ['2026-11-04T18:30', '2026-11-05T08:30', '2026-11-05T14:00'])
+  // Unreachable: the first call and the 2-minute retry (too late that evening for a same-day call), calls on day 1 and
+  // day 3, the day 7 text, check-ins at day 30, 60 and 90, then closed.
   const u = mk('c', 'Victor', 'unreachable', { came: '2026-07-28T19:05' })
   assert.deepEqual(u.events.filter(e => e.label.startsWith('Check-in')).map(e => e.label), ['Check-in, day 30', 'Check-in, day 60', 'Check-in, day 90'])
-  assert.equal(u.events.filter(e => e.kind === 'va_call').length, 3)
+  assert.equal(u.events.filter(e => e.kind === 'va_call').length, 4)
+  assert.match(u.events.at(-1).label, /^Closed: couldn’t reach/)
   const o = mk('d', 'Joan', 'opted_out')
   assert.equal(o.events.filter(e => e.kind === 'text_sent').at(-1).step, 'stop_confirm')
 })

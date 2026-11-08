@@ -33,3 +33,10 @@
   .ai-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ai-tiles b { font-size: 20px; }
 }
+
+/* P902 — admin Lead quality (bad leads from the first call). */
+.ai-quality { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding-top: 6px; border-top: 1px solid var(--ov-line); }
+.ai-quality p { margin: 0; overflow-wrap: anywhere; }
+.ai-flows { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 14px; min-width: 0; }
+.ai-flow { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ai-flow h3 { margin: 0; font-size: 14px; }

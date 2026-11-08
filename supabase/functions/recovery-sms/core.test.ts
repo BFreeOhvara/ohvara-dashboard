@@ -168,3 +168,15 @@ test('inbound keywords', () => {
   assert.equal(inboundIntent('anything', 'STOP'), 'stop')
   assert.equal(inboundIntent('stop', 'START'), 'start')
 })
+
+// ── P902: P696 is superseded; its queue is skipped while its switch is off ──
+test('P902: the P696 queue is not read while no_answer_recovery_live is off', async () => {
+  const asked: string[] = []
+  const deps = {
+    claim: async (fn: string) => { asked.push(fn); return [] },
+    mark: async () => {}, logConfirm: async () => {}, send: async () => ({ ok: true }), keepWords: async () => {},
+    appUrl: 'https://portal.test', p696Live: async () => false,
+  } as unknown as Deps
+  await sendDue(deps)
+  assert.deepEqual(asked, ['missed_claim_due'])
+})

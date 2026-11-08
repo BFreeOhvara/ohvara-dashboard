@@ -136,7 +136,7 @@ export const withSoldLeads = (clients = [], leads = []) => [...soldLeadClients(l
 
 // The agent's timeline: what happened that matters to them. Call attempts and the chase texts are the team's work and
 // stay off it; where the lead came from is never shown. Incoming texts, automatic replies and call tasks stay on.
-const CHASE = /^not_reached/
+const CHASE = /^(not_reached|na_)/ // P902: the no-answer flow's texts (leadFlows.js na_*)
 const ATTEMPT = /^(Called, try|Calls again)/
 export function agentEvents(l) {
   return (l.events || [])

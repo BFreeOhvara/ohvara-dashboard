@@ -7,12 +7,13 @@
 //   npx.cmd supabase functions deploy ai-caller --no-verify-jwt --project-ref jjextitmbptoaolacocs
 //
 // Secrets: AI_PROVIDER (retell | vapi | ghl; unset = not connected, every lead goes to a VA), AI_WEBHOOK_SECRET
-// (the provider sends it as ?k= on our webhook URL), AI_FROM_NUMBER (the Deedstone caller ID, on the provider),
-// AI_BRIDGE_NUMBER (a Twilio number whose voice URL is this function's ?twiml=1&line=…), and per provider:
+// (the provider sends it as ?k= on our webhook URL), AI_FROM_NUMBER (the Deedstone caller ID, on the provider), and
+// per provider (P902: no bridge number any more, the AI never hands a new lead to a VA):
 // RETELL_API_KEY + RETELL_AGENT_ID, or VAPI_API_KEY + VAPI_ASSISTANT_ID + VAPI_PHONE_NUMBER_ID, or GHL_AI_WORKFLOW_ID.
-// Plus the push keys notify-push uses (APNS_*, FCM_SERVICE_ACCOUNT). Needs migration p892 (and p880, p882, p889).
+// Plus the push keys notify-push uses (APNS_*, FCM_SERVICE_ACCOUNT). Needs migrations p892 then p902 (and p880, p882,
+// p889).
 import { createClient } from 'npm:@supabase/supabase-js'
-import { handle, twiml, type Store, type CheckRow } from './core.ts'
+import { handle, type Store, type CheckRow } from './core.ts'
 import { noProvider, retell, vapi, ghl, type Provider } from './providers.ts'
 import { isCron } from '../_shared/cronAuth.ts'
 import { sendersFromEnv } from '../notify-push/senders.ts'
@@ -26,8 +27,6 @@ const senders = sendersFromEnv()
 // The transfer beats' words (check, connecting, bounce, hold) live in rules.js TRANSFER_WORDS (P903).
 const WORDS = {
   opening: 'Hi {first}, this is Deedstone’s virtual assistant, calling about the request you just sent us. Is now a good time for two quick questions?',
-  toPerson: 'Let me get one of our team on the line for you. One moment.',
-  noPerson: 'Everyone on our team is with someone right now. One of us will call you back in a few minutes.',
 }
 
 function provider(): Provider {
@@ -79,7 +78,6 @@ const store: Store = {
   async toVa(callId, reason) { await rpc('ai_caller_to_va', { p_call: callId, p_reason: reason }) },
   async status(callId, status, patch = {}) { return rpc('ai_caller_status', { p_call: callId, p_status: status, p_patch: patch }) },
   async result(callId, outcome, patch = {}) { return rpc('ai_caller_result', { p_call: callId, p_outcome: outcome, p_patch: patch }) },
-  async handoff(callId, reason, summary) { return rpc('ai_caller_handoff', { p_call: callId, p_reason: reason, p_summary: summary }) },
   async slots(callId) { return rpc<string[]>('ai_caller_slots', { p_call: callId, p_limit: 6 }) },
   async book(callId, at) { return rpc('ai_caller_book', { p_call: callId, p_at: at }) },
   async insertCheck(row) {
@@ -111,20 +109,14 @@ const store: Store = {
       if (devices?.length) await sendAll(senders, devices, clearPush({ id: c.id, summary: c.summary ?? {} }, why))
     } catch (e) { console.error('ai-caller clearCheck', c.id, (e as Error).message) }
   },
-  async lineConference(lineId) { const { data } = await admin.from('va_lines').select('conference, status').eq('id', lineId).maybeSingle(); return data && data.status !== 'ended' ? data.conference : null },
 }
 
 const cors = { 'Content-Type': 'application/json' }
 Deno.serve(async req => {
   const url = new URL(req.url)
   try {
-    // Twilio asks the bridge number what to do: join the VA's line.
-    if (url.searchParams.get('twiml') === '1') {
-      if (url.searchParams.get('k') !== env('AI_WEBHOOK_SECRET') || !env('AI_WEBHOOK_SECRET')) return new Response('forbidden', { status: 403 })
-      return new Response(await twiml(store, url.searchParams.get('line') ?? ''), { headers: { 'Content-Type': 'text/xml' } })
-    }
     const body = await req.json().catch(() => ({}))
-    const d = { store, provider: provider(), env: { now: () => Date.now(), from: env('AI_FROM_NUMBER') || null, bridgeNumber: env('AI_BRIDGE_NUMBER') || null, words: WORDS } }
+    const d = { store, provider: provider(), env: { now: () => Date.now(), from: env('AI_FROM_NUMBER') || null, words: WORDS } }
     if (url.searchParams.get('k')) {
       // The provider's webhook and tool calls.
       if (!env('AI_WEBHOOK_SECRET') || url.searchParams.get('k') !== env('AI_WEBHOOK_SECRET')) return new Response('forbidden', { status: 403 })

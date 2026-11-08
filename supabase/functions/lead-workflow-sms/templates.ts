@@ -5,8 +5,8 @@
 // No Deno APIs, so node --test can load it.
 
 export type Step =
-  | 'instant' | 'not_reached_d0' | 'not_reached_d1' | 'not_reached_d3' | 'not_reached_d7'
-  | 'not_reached_monthly' | 'confirm' | 'reminder_day_before' | 'reminder_1h' | 'no_show_rebook'
+  | 'not_reached_d0' | 'not_reached_d1' | 'not_reached_d3' | 'not_reached_d7'
+  | 'not_reached_monthly' | 'confirm' | 'reminder_day_before' | 'reminder_morning' | 'reminder_1h' | 'no_show_rebook'
 
 export type Template = { body: string; needsLink: boolean }
 
@@ -14,13 +14,11 @@ export type Template = { body: string; needsLink: boolean }
 // that still holds it (reason 'draft_copy').
 export const OPT_OUT_PLACEHOLDER = '[OPT-OUT LINE PLACEHOLDER: pending lawyer review]'
 
-// DRAFT: not approved, not A2P-registered
-export const DRAFT_INSTANT =
-  `Hi [Lead first name], thanks for asking about mortgage protection. This is Ohvara, texting for a licensed agent. We'll call you shortly to set up a time to talk. ${OPT_OUT_PLACEHOLDER}`
+// P902: no welcome text. A new lead gets a call first; the texts start from the call's outcome.
 
 // DRAFT: not approved, not A2P-registered
 export const DRAFT_NOT_REACHED_D0 =
-  `Hi [Lead first name], we tried to reach you about the mortgage protection info you asked for. Reply here with a good time to talk. ${OPT_OUT_PLACEHOLDER}`
+  `Hi [Lead first name], it's Deedstone. We just tried to call about the life insurance info you asked for. Pick a time that works for you: [Reschedule link] ${OPT_OUT_PLACEHOLDER}`
 
 // DRAFT: not approved, not A2P-registered
 export const DRAFT_NOT_REACHED_D1 =
@@ -40,11 +38,15 @@ export const DRAFT_NOT_REACHED_MONTHLY =
 
 // DRAFT: not approved, not A2P-registered
 export const DRAFT_CONFIRM =
-  `Hi [Lead first name], you're booked with [Agent first name], a licensed agent, on [Appointment time]. Need a different time? Reschedule here: [Reschedule link] ${OPT_OUT_PLACEHOLDER}`
+  `You're set, [Lead first name]. [Agent first name] will call you on [Appointment time]. Reply C to confirm or change it here: [Reschedule link] ${OPT_OUT_PLACEHOLDER}`
 
 // DRAFT: not approved, not A2P-registered
 export const DRAFT_REMINDER_DAY_BEFORE =
-  `Hi [Lead first name], a reminder that your call with [Agent first name] is on [Appointment time]. Need a different time? Reschedule here: [Reschedule link] ${OPT_OUT_PLACEHOLDER}`
+  `Hi [Lead first name], a reminder: [Agent first name] calls you tomorrow, [Appointment time]. Reply C to confirm or change it here: [Reschedule link] ${OPT_OUT_PLACEHOLDER}`
+
+// DRAFT: not approved, not A2P-registered (P902)
+export const DRAFT_REMINDER_MORNING =
+  `Good morning [Lead first name]! [Agent first name] calls you today, [Appointment time]. Need a different time? [Reschedule link] ${OPT_OUT_PLACEHOLDER}`
 
 // DRAFT: not approved, not A2P-registered
 export const DRAFT_REMINDER_1H =
@@ -57,14 +59,14 @@ export const DRAFT_NO_SHOW_REBOOK =
 // A template with "[Reschedule link]" sets needsLink, so a missing
 // LEAD_RESCHEDULE_URL skips it (reason 'no_link') instead of sending a bracket.
 export const TEMPLATES: Record<Step, Template> = {
-  instant: { body: DRAFT_INSTANT, needsLink: false },
-  not_reached_d0: { body: DRAFT_NOT_REACHED_D0, needsLink: false },
+  not_reached_d0: { body: DRAFT_NOT_REACHED_D0, needsLink: true },
   not_reached_d1: { body: DRAFT_NOT_REACHED_D1, needsLink: false },
   not_reached_d3: { body: DRAFT_NOT_REACHED_D3, needsLink: false },
   not_reached_d7: { body: DRAFT_NOT_REACHED_D7, needsLink: false },
   not_reached_monthly: { body: DRAFT_NOT_REACHED_MONTHLY, needsLink: false },
   confirm: { body: DRAFT_CONFIRM, needsLink: true },
   reminder_day_before: { body: DRAFT_REMINDER_DAY_BEFORE, needsLink: true },
+  reminder_morning: { body: DRAFT_REMINDER_MORNING, needsLink: true },
   reminder_1h: { body: DRAFT_REMINDER_1H, needsLink: true },
   no_show_rebook: { body: DRAFT_NO_SHOW_REBOOK, needsLink: false },
 }
