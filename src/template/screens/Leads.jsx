@@ -17,6 +17,7 @@ import { paths } from '../paths'
 import { FirstRun } from '../DataState'
 import '../leads873.css'
 import '../p878.css'
+import { FilterPills } from '../FilterPills'
 
 // P878: Leads as a board of the agent's five statuses (agentView.js), left to right: Our team is on it, Booked, Needs
 // you, Follow up, Sold. Closed sits under a filter, with its reason on each lead. Never call attempts, the text sequence
@@ -187,11 +188,12 @@ export default function Leads() {
         <button type="button" className="fx-pillbtn" aria-label="Change your daily lead spend" onClick={() => setSpend(true)}><Wallet size={15} aria-hidden="true" /><b className="tp-money">{money(dailyTotal(billing.spend))}</b><small>a day</small></button>
       </div>
 
-      <Seg label="Status" className="lc-stages" value={laneKey} onChange={setLane} options={[{ key: 'all', label: showClosed ? 'All' : 'All open', count: shown.filter(x => ALL.some(l => inLane(l, x))).length }, ...ALL.map(l => ({ key: l.key, label: l.label, count: shown.filter(x => inLane(l, x)).length }))]} />
+      {/* P893: each status pill in its own colour with its count, like the Clients page; the picked one goes darker */}
+      <FilterPills label="Status" value={laneKey} onChange={setLane} items={[{ key: 'all', label: showClosed ? 'All' : 'All open', count: shown.filter(x => ALL.some(l => inLane(l, x))).length }, ...ALL.map(l => ({ key: l.key, label: l.label, tone: l.tone, count: shown.filter(x => inLane(l, x)).length }))]} />
       <p className="lc-explain">{(ALL.find(l => l.key === laneKey) || { explain: 'Five statuses, left to right. Our team works every lead until it’s booked or on the line with you.' }).explain}</p>
 
       {leads.length === 0 && <FirstRun icon={Inbox} title="Your leads show here" sub="Each lead lands here the moment it comes in. Our team calls it right away, books it on your calendar or rings you live, and you see every step." />}
-      <div className={`fx-board lc-board${lanes.length === 1 ? ' is-one' : ''}`} role="region" aria-label="Leads by stage">
+      <div className={`fx-board lc-board${lanes.length === 1 ? ' is-one' : ''}`} style={{ '--lanes': lanes.length }} role="region" aria-label="Leads by stage">
         {lanes.map((lane, li) => {
           const rows = shown.filter(l => inLane(lane, l))
           return (

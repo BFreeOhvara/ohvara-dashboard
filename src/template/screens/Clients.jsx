@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Search, Plus, Phone, MessageSquare, TriangleAlert, CalendarClock, MapPin, Users, UserPlus } from 'lucide-react'
 import { useDataSource, useSampleClients, useSampleClient, useSampleThreads, useSampleActions } from '../data'
-import { Avatar, Chip, Drawer, Money, SampleTag, Empty, PillTabs, useNote } from '../kit'
+import { Avatar, Chip, Drawer, Money, SampleTag, Empty, useNote } from '../kit'
 import { RecordDrawer, Stepper, Block } from '../Record'
 import { stageLabel, CLIENT_STEPS } from '../stages'
 import { paths } from '../paths'
@@ -10,10 +10,8 @@ import { MissedPaymentBlock } from '../PaymentIntake'
 import { AgentDocsBlock } from '../docs886/Docs886'
 import { FirstRun } from '../DataState'
 import { AddClients } from '../AddClients891'
+import { FilterPills } from '../FilterPills'
 import { BOOK_STATUS, BOOK_STEPS, ordinal } from '../../lib/bookImport.js'
-
-// How far along servicing is, for the meter on each card.
-const doneShare = c => c.steps.filter(s => s.done).length / c.steps.length
 
 // Your book: one big card per client, filled with its stage colour. A card opens the client in a drawer at its
 // own URL (paths.client); the grid stays put behind it.
@@ -21,20 +19,20 @@ function ClientCard({ c, i }) {
   const note = useNote()
   const [tone, label] = stageLabel[c.stage]
   const name = `${c.client_first_name} ${c.client_last_name}`
-  const share = Math.round(doneShare(c) * 100)
+  // P893: no "% set up" meter; only the fields that have a value
+  const where = [c.carrier_name, [c.city, c.state].filter(Boolean).join(', ')].filter(Boolean).join(' · ')
+  const premium = Number(c.monthly_premium) > 0
   return (
     <article className={`fx-card fx-ccard is-${tone}`} style={{ '--i': i }}>
       <Link to={paths.client(c.id)} className="fx-cover" aria-label={`Open ${name}`} />
       <div className="fx-ccard-top"><Avatar name={name} tone={tone} />{c.added && <span className="tp-tag bi-by">Added by you</span>}<span className="fx-tag">{c.added ? BOOK_STATUS[c.book][1] : label}</span></div>
       <h3>{name}</h3>
-      <p>{c.carrier_name} · {c.city}, {c.state}</p>
-      <div className="fx-ccard-mid">
-        <span><small>Premium <SampleTag>Sample</SampleTag></small><Money v={c.monthly_premium} /></span>
-        <span><small>Next step</small><b>{c.next_step || 'Nothing needed'}</b></span>
-      </div>
-      <div className="fx-meter" role="img" aria-label={`${share}% through servicing`}><i style={{ '--w': share / 100 }} /></div>
+      {where && <p>{where}</p>}
+      {(premium || c.next_step) && <div className="fx-ccard-mid">
+        {premium && <span><small>Premium <SampleTag>Sample</SampleTag></small><Money v={c.monthly_premium} /></span>}
+        {c.next_step && <span><small>Next step</small><b>{c.next_step}</b></span>}
+      </div>}
       <div className="fx-ccard-bot">
-        <span>{share}% set up</span>
         <span className="tp-grow" />
         <button type="button" className="fx-mini fx-over" aria-label={`Call ${name}`} onClick={() => note(`Calling ${c.client_phone}`)}><Phone size={14} /></button>
         <Link to={paths.messages()} className="fx-mini fx-over" aria-label={`Message the team about ${name}`}><MessageSquare size={14} /></Link>
@@ -137,14 +135,12 @@ export default function Clients() {
   const counts = useMemo(() => Object.fromEntries(Object.keys(stageLabel).map(s => [s, clients.filter(c => c.stage === s).length])), [clients])
   const rows = clients.filter(c => (stage === 'all' || c.stage === stage) && `${c.client_first_name} ${c.client_last_name} ${c.policy_number} ${c.client_phone}`.toLowerCase().includes(q.trim().toLowerCase()))
   const options = [{ key: 'all', label: 'All', count: clients.length }, { key: 'needs_attention', label: 'Needs attention', count: counts.needs_attention }, { key: 'setting_up', label: 'Setting up', count: counts.setting_up }, { key: 'protected', label: 'Protected', count: counts.protected }, { key: 'requests', label: 'Requests', count: counts.requests }]
-  // Each status button carries its stage colour (flow.css P834 .fx-filter.is-tone); All stays neutral.
-  const toneOf = key => (stageLabel[key] ? ` is-tone is-${stageLabel[key][0]}` : '')
+  // P893: each status pill carries its stage colour (FilterPills); All stays neutral.
   return (
     <div className="tp-page fx-page">
       <div className="fx-tools">
         <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a client" placeholder="Find a client, phone or policy" value={q} onChange={e => setQ(e.target.value)} /></label>
-        <PillTabs label="Status" className="fx-filters" itemClass="fx-filter" value={stage} onChange={k => setParams(k === 'all' ? {} : { stage: k })}
-          items={options.map(o => ({ ...o, className: toneOf(o.key).trim() }))} />
+        <FilterPills label="Status" value={stage} onChange={k => setParams(k === 'all' ? {} : { stage: k })} items={options.map(o => ({ ...o, tone: stageLabel[o.key]?.[0] }))} />
         <span className="tp-grow" />
         <button type="button" className="tp-btn ov-ghost" onClick={() => setAdding(true)}><UserPlus size={16} />Add clients</button>
         <Link to={paths.submit()} className="tp-primary fx-accent"><Plus size={16} />Submit a policy</Link>

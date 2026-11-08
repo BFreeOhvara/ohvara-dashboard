@@ -44,6 +44,7 @@ import './glass.css'
 import './flow.css'
 import './palette.css'
 import './fit867.css'
+import './p893.css'
 import MoreBelow from './MoreBelow'
 import '@fontsource/urbanist/500.css'
 import '@fontsource/urbanist/600.css'
@@ -383,6 +384,9 @@ export default function TemplateFrame() {
   const bell = needList.now.length
   const close = useCallback(() => setPanel(null), [])
   const open = which => e => { wig.onClick(e); setPanel(which) }
+  // P893: the avatar toggles its menu (a second click closes it, with the menu's close animation)
+  const toggleMenu = e => { wig.onClick(e); setPanel(p => (p === 'menu' ? null : 'menu')) }
+  const menuOn = panel === 'menu'
   const flipTheme = e => { wig.onClick(e); setTheme(theme === 'dark' ? 'light' : 'dark') }
   // P890: no Active switch. Live transfers ring the agent inside their live-call hours (How you take leads, P889).
   const take = billing.take
@@ -423,24 +427,24 @@ export default function TemplateFrame() {
     <div className={`tp tp-app fx is-${layout}`} ref={appRef}>
       <div className="tp-sky" aria-hidden="true"><i /><i /><i /></div>
 
-      <header className="tp-phone-top fx-ptop">
+      <header className={`tp-phone-top fx-ptop${menuOn ? ' is-menu' : ''}`}>
         <Link to={paths.home()} className="fx-brand" aria-label="Ohvara home"><OhvaraMark height={28} back="var(--ov-mark-back)" front="var(--ov-mark-front)" className="fx-mark" /></Link>
         <span className="tp-grow" />
         <Link to={paths.messages()} className="fx-ib tp-wig" aria-label="Messages" {...wig}><MessageSquare size={18} />{unread > 0 && <span className="fx-badge">{unread}</span>}</Link>
         <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} />{bell > 0 && <span className="fx-badge">{bell}</span>}</button>
-        <button type="button" className={`fx-me tp-wig av-${avatarHue(account.name)}`} aria-label="Menu" {...wig} onClick={open('menu')}>{initials(account.name).toUpperCase()}</button>
+        <button type="button" className={`fx-me tp-wig av-${avatarHue(account.name)}`} aria-label="Menu" aria-haspopup="dialog" aria-expanded={menuOn} {...wig} onClick={toggleMenu}>{initials(account.name).toUpperCase()}</button>
       </header>
 
       {/* P841: the desktop logo sits in the page, not in the sticky header, so it scrolls away with the page */}
       <Link to={paths.home()} className="fx-brand fx-brand-page" aria-label="Ohvara home"><OhvaraMark height={30} back="var(--ov-mark-back)" front="var(--ov-mark-front)" className="fx-mark" /><b>ohvara</b></Link>
-      <header className="tp-top fx-top">
+      <header className={`tp-top fx-top${menuOn ? ' is-menu' : ''}`}>
         <span className="fx-top-gap" aria-hidden="true" />
         <PillTabs as="nav" label="Pages" className="tp-tabs fx-tabs" itemClass="tp-tab fx-tab" value={active} persistKey="tpl-tabs"
           items={TABS.map(t => ({ key: t.key, to: t.to(), label: t.label, extra: t.key === 'leads' && needs > 0 ? <span className="fx-tb">{needs}</span> : null }))} />
         <div className="fx-tr">
           <Link to={paths.messages()} className="fx-ib tp-wig" aria-label="Messages" {...wig}><MessageSquare size={18} />{unread > 0 && <span className="fx-badge">{unread}</span>}</Link>
           <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} />{bell > 0 && <span className="fx-badge">{bell}</span>}</button>
-          <button type="button" className={`tp-me fx-me tp-wig av-${avatarHue(account.name)}`} aria-label={`Your account, ${account.name}`} aria-expanded={panel === 'menu'} {...wig} onClick={open('menu')}>{initials(account.name).toUpperCase()}</button>
+          <button type="button" className={`tp-me fx-me tp-wig av-${avatarHue(account.name)}`} aria-label={`Your account, ${account.name}`} aria-haspopup="dialog" aria-expanded={menuOn} {...wig} onClick={toggleMenu}>{initials(account.name).toUpperCase()}</button>
         </div>
       </header>
 

@@ -1,14 +1,15 @@
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, Check, Clock, CalendarDays, Phone } from 'lucide-react'
+import { ArrowUpRight, Check, Clock, CalendarDays } from 'lucide-react'
 import { rangeWords } from '../spendPlan'
 import { countByStatus } from '../agentView'
 import { useSampleOverview, useSampleClients, useSampleBilling, useSampleLeads, useSampleAppointments, useSampleNeeds } from '../data'
 import { Avatar, Empty } from '../kit'
 import { CountUp } from '../motion'
-import { NeedCard, FyiList } from '../NeedsNow'
+import { NeedCard } from '../NeedsNow'
 import { useNeedAction } from '../needAction'
 import { laneOf, LANES, stageLabel } from '../stages'
 import { paths } from '../paths'
+import '../p893.css'
 
 // P841: a little more page. Next up is the second colour-filled tile (the Booked blue); under the pair, a This week
 // strip of the working week's calls (leads blue, clients yellow, as on Calendar); under Needs you, a Lead mix tile
@@ -90,18 +91,34 @@ function Ring({ value, of }) {
   )
 }
 
-// The working week, Mon to Fri, one column per day with its calls; today is marked.
+// The working week, Mon to Fri, one column per day with its calls; today is marked. P893: all five days always show,
+// a day with nothing booked keeps its (empty) box. The week is the one holding today (or the first call).
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+function workWeek(appts, today) {
+  const ref = appts.find(a => a.date === today) || appts[0]
+  const year = Number(ref?.iso?.slice(0, 4)) || new Date().getFullYear()
+  const base = ref ? new Date(Date.UTC(year, Math.max(0, MON.indexOf(ref.mon || 'Nov')), ref.date)) : new Date()
+  const back = (base.getUTCDay() + 6) % 7 // days since Monday
+  return Array.from({ length: 5 }, (_, i) => {
+    const d = new Date(base.getTime() + (i - back) * 86400000)
+    return { day: DOW[d.getUTCDay()], date: d.getUTCDate(), mon: MON[d.getUTCMonth()] }
+  })
+}
+const inDay = (a, d) => a.date === d.date && (a.mon || 'Nov') === d.mon
+const minOf = t => { const m = String(t).match(/(\d+):(\d+) ([AP])M/); return m ? ((Number(m[1]) % 12) + (m[3] === 'P' ? 12 : 0)) * 60 + Number(m[2]) : 0 }
+
 function WeekStrip({ appts, today }) {
-  const days = [...new Map(appts.map(a => [a.date, a.day])).entries()].sort((a, b) => a[0] - b[0])
-  const monOf = d => appts.find(a => a.date === d)?.mon || 'Nov' // P848: real appointments carry their month
+  const week = workWeek(appts, today)
   return (
     <ol className="fx-wk" aria-label="Calls this week">
-      {days.map(([date, day]) => {
-        const list = appts.filter(a => a.date === date)
+      {week.map(d => {
+        const list = appts.filter(a => inDay(a, d)).sort((x, y) => minOf(x.time) - minOf(y.time))
         return (
-          <li key={date} className={date === today ? 'is-today' : date < today ? 'is-past' : ''}>
-            <span className="fx-wk-d"><b>{day}</b><small>{monOf(date)} {date}</small><i className="tp-num">{list.length}</i></span>
+          <li key={`${d.mon}${d.date}`} className={`${d.date === today ? 'is-today' : d.date < today ? 'is-past' : ''}${list.length ? '' : ' is-empty'}`.trim()}>
+            <span className="fx-wk-d"><b>{d.day}</b><small>{d.mon} {d.date}</small><i className="tp-num">{list.length}</i></span>
             {list.map(a => <Link key={a.id} to={apptTo(a)} className={`fx-wk-ev is-${a.kind === 'client' ? 'teal' : 'blue'}`}><small>{a.time}</small><b>{a.who.split(' ')[0]}</b></Link>)}
+            {!list.length && <span className="fx-wk-none">Nothing booked</span>}
           </li>
         )
       })}
@@ -120,7 +137,7 @@ function LeadMix({ leads }) {
         {rows.filter(r => r.n).map(r => <i key={r.key} className={`is-${r.tone}`} style={{ flexGrow: r.n / total }} />)}
       </div>
       <ul className="fx-mix-key">
-        {rows.map(r => <li key={r.key} className={`is-${r.tone}`}><Link to={`${paths.leads()}?lane=${r.key}`}><i aria-hidden="true" /><span>{r.label}</span><b className="tp-num">{r.n}</b></Link></li>)}
+        {rows.map(r => <li key={r.key} className={`is-${r.tone}`}><span className="fx-keyi"><i aria-hidden="true" /><span>{r.label}</span><b className="tp-num">{r.n}</b></span></li>)}
       </ul>
     </>
   )
@@ -146,6 +163,8 @@ export default function Overview() {
   // P873: Needs you now, the six lifecycle triggers in order, each with its action; FYI apart and quiet.
   const { data: needs } = useSampleNeeds()
   const act = useNeedAction()
+  const today = o.todayAppts[0]?.date ?? appts[0]?.date
+  const weekCalls = workWeek(appts, today).reduce((n, d) => n + appts.filter(a => inDay(a, d)).length, 0)
 
   return (
     <div className="tp-page fx-page fx-ovl">
@@ -171,7 +190,7 @@ export default function Overview() {
           <Tile className="fx-ovl-book is-fill is-green" i={1} title="Your book" sub={`${clients.length} clients`} to={paths.clients()} label="Open Clients">
             <Ring value={prot} of={clients.length} />
             <ul className="fx-ringstats">
-              {BOOK.map(([k, label]) => <li key={k}><Link to={paths.clients(k)}><small>{label}</small><b className="tp-num">{nBy(k)}</b></Link></li>)}
+              {BOOK.map(([k, label]) => <li key={k}><span className="fx-stat"><small>{label}</small><b className="tp-num">{nBy(k)}</b></span></li>)}
             </ul>
           </Tile>
 
@@ -181,14 +200,13 @@ export default function Overview() {
                 <b className="fx-huge">{next.time.replace(/ (AM|PM)/, '')}<small>{next.time.slice(-2)}</small></b>
                 <span className="fx-next-who"><Avatar name={next.who} tone={toneOfAppt(next)} /><span><b>{next.who}</b><small>{next.label} · today</small></span></span>
                 <div className="tp-row tp-wrap fx-next-acts">
-                  <Link to={apptTo(next)} className="tp-primary sm fx-accent"><Phone size={14} />Call {next.who.split(' ')[0]}</Link>
-                  <Link to={paths.calendar()} className="fx-pillbtn"><CalendarDays size={14} />Calendar</Link>
+                  <Link to={paths.calendar()} className="tp-primary sm fx-accent"><CalendarDays size={14} />Calendar</Link>
                 </div>
               </>
             ) : <p className="fx-calm">The team books new appointments inside your hours.</p>}
             <ul className="fx-later">
-              {later.map(a => <li key={a.id}><Link to={apptTo(a)}><Clock size={13} aria-hidden="true" />{a.time}<b>{a.who}</b></Link></li>)}
-              {soon.map(a => <li key={a.id}><Link to={apptTo(a)}><CalendarDays size={13} aria-hidden="true" />{a.day} {a.time}<b>{a.who}</b></Link></li>)}
+              {later.map(a => <li key={a.id}><span className="fx-chipi"><Clock size={13} aria-hidden="true" />{a.time}<b>{a.who}</b></span></li>)}
+              {soon.map(a => <li key={a.id}><span className="fx-chipi"><CalendarDays size={13} aria-hidden="true" />{a.day} {a.time}<b>{a.who}</b></span></li>)}
             </ul>
           </Tile>
         </div>
@@ -204,7 +222,6 @@ export default function Overview() {
             {needs.now.length > 0
               ? <div className="fx-ncards">{needs.now.map((r, i) => <NeedCard key={r.id} item={r} i={i} onAct={act} />)}</div>
               : <p className="fx-calm"><Check size={16} aria-hidden="true" />No one is waiting on you. Live calls, people to call back and outcomes to mark show here first.</p>}
-            <FyiList items={needs.fyi} />
           </div>
         </section>
 
@@ -213,8 +230,8 @@ export default function Overview() {
         </Tile>
       </div>
 
-      <Tile className="fx-ovl-week" i={6} title="This week" sub={`${appts.length} calls, Mon to Fri`} to={paths.calendar()} label="Open Calendar">
-        <WeekStrip appts={appts} today={o.todayAppts[0]?.date ?? appts[0]?.date} />
+      <Tile className="fx-ovl-week" i={6} title="This week" sub={`${weekCalls} calls, Mon to Fri`} to={paths.calendar()} label="Open Calendar">
+        <WeekStrip appts={appts} today={today} />
       </Tile>
     </div>
   )

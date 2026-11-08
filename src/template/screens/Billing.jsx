@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Layers, CreditCard, Check, PauseCircle, PlayCircle, LogOut, Phone, PlusCircle, CalendarClock } from 'lucide-react'
 import { useSampleBilling, useSampleActions, useSampleSettings, useSampleAppointments } from '../data'
 import { Chip, Drawer, Field, Money, SampleTag, Seg, Pending, useNote } from '../kit'
@@ -9,8 +9,9 @@ import { SpendSliders, SpendSummary, BookedMeter, TakeLeads } from '../PlanBuild
 import { bought, vaCost, tierOf, dailyTotal, rangeWords, spendOk, openSlotsPerWeek } from '../spendPlan'
 import { LEAD_MODES, liveHoursText, takeOk } from '../../lib/leadSplit'
 import { TalkDrawer } from '../Talk'
-import { paths } from '../paths'
 import '../p878.css'
+import '../p893.css'
+import { Results } from '../Results'
 
 // P878 — Billing, from the hole check (N-G-02, N-G-09, N-H-28, N-A-23, N-A-30, N-I-03, N-I-05). Sample only: nothing is
 // charged, every price is a draft. P889: one daily spend and How you take leads (Appointments only, or Appointments +
@@ -126,6 +127,9 @@ export default function Billing() {
   const { data: appts } = useSampleAppointments()
   const { setSpend, setTake, resume, keepPlan, topUp, fixCard } = useSampleActions()
   const note = useNote()
+  const { hash } = useLocation()
+  // P893: Results lives here now; /activity?view=results lands on it (#results)
+  useEffect(() => { if (hash === '#results') document.getElementById('results')?.scrollIntoView({ block: 'start' }) }, [hash])
   const [spend, setDraft] = useState({ daily: dailyTotal(b.spend) })
   const [take, setTakeDraft] = useState(b.take)
   const [range, setRange] = useState('week')
@@ -216,8 +220,14 @@ export default function Billing() {
         </ul>
       </section>
 
-      <section className="fx-tile fx-s12 pb-hist" style={{ '--i': 5 }} aria-label="History">
-        <header className="fx-tile-h"><span className="tp-grow"><h2>History</h2><p>Sample amounts. Pricing is not final.</p></span><Link to={paths.activity()} className="tp-btn ov-ghost">See your results</Link></header>
+      {/* P893: Results moved here from Activity: what the spend bought, the week against the usual week, policies saved */}
+      <section className="pb-results" id="results" aria-label="Results">
+        <h2>Results</h2>
+        <Results />
+      </section>
+
+      <section className="fx-tile fx-s12 pb-hist" style={{ '--i': 6 }} aria-label="History">
+        <header className="fx-tile-h"><span className="tp-grow"><h2>History</h2><p>Sample amounts. Pricing is not final.</p></span><a href="#results" className="tp-btn ov-ghost">See your results</a></header>
         <ul className="fx-rows fx-hist">{b.history.map(h => <li key={h.id} className="fx-row is-flat"><span className="fx-row-ic"><Layers size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{h.label}</b><small>{h.at}</small></span><Money v={h.amount} /></li>)}</ul>
       </section>
 

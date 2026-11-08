@@ -31,8 +31,8 @@ const REACH = [
   { key: 'book', label: 'Book a call', icon: CalendarClock },
 ]
 const STEPS = [
-  { key: 'client', label: 'The client', sub: 'Who you sold to', Icon: User, needs: ['name', 'phone', 'dob', 'licence', 'booking'] },
-  { key: 'policy', label: 'The policy', sub: 'Carrier and policy details', Icon: ShieldCheck, needs: ['carrier', 'number', 'face', 'premium', 'draftDay', 'oldCarrier', 'spouse'] },
+  { key: 'client', label: 'The client', sub: 'Who you sold to', Icon: User, needs: ['name', 'phone', 'city', 'state', 'licence', 'booking'] },
+  { key: 'policy', label: 'The policy', sub: 'Carrier and policy details', Icon: ShieldCheck, needs: ['carrier', 'product', 'premium', 'draftDay', 'oldCarrier', 'spouse'] },
   { key: 'review', label: 'Review', sub: 'Check and submit', Icon: ClipboardCheck, needs: [] },
 ]
 const NEXT = [
@@ -60,7 +60,7 @@ function Steps({ at, done, onPick }) {
 function Review({ f, onEdit }) {
   const rows = [
     ['client', 'The client', [['Name', f.name], ['Phone', formatPhone(f.phone)], ['Date of birth', f.dob || 'Not given'], ['Email', f.email || 'Not given'], ['Lives in', livesIn(f) || 'Not given'], [f.reach === 'book' ? 'Call booked' : 'Best time', f.reach === 'book' ? reachText(f) : f.best]]],
-    ['policy', 'The policy', [['Product', f.product], ['Carrier', f.carrier], [f.numberKind === 'policy' ? 'Policy number' : 'Application number', f.number || 'Not given'], ['Face amount', money0(f.face)], ['Monthly premium', money0(f.premium)], ['Draft day', f.draftDay ? `The ${f.draftDay}${['1', '21'].includes(f.draftDay) ? 'st' : ['2', '22'].includes(f.draftDay) ? 'nd' : ['3', '23'].includes(f.draftDay) ? 'rd' : 'th'} of each month` : 'Not given'], ['Beneficiary', f.beneficiary ? `${f.beneficiary}${f.relation ? ` (${f.relation})` : ''}` : 'Not given'], ['Replaces', f.replacing ? `${f.oldCarrier || 'Not given'}${f.oldNumber ? `, ${f.oldNumber}` : ''}` : 'Nothing'], ...(f.spouse ? [['Second insured', `${f.spouse.name || 'Not given'} · ${money0(f.spouse.face)}`]] : [])]],
+    ['policy', 'The policy', [['Product', f.product], ['Carrier', f.carrier], [f.numberKind === 'policy' ? 'Policy number' : 'Application number', f.number || 'Not given'], ['Face amount', money0(f.face)], ['Monthly premium', money0(f.premium)], ['Draft day', f.draftDay ? `The ${f.draftDay}${['1', '21'].includes(f.draftDay) ? 'st' : ['2', '22'].includes(f.draftDay) ? 'nd' : ['3', '23'].includes(f.draftDay) ? 'rd' : 'th'} of each month` : 'Not given'], ['Notes', f.notes?.trim() || 'Not given'], ['Beneficiary', f.beneficiary ? `${f.beneficiary}${f.relation ? ` (${f.relation})` : ''}` : 'Not given'], ['Replaces', f.replacing ? `${f.oldCarrier || 'Not given'}${f.oldNumber ? `, ${f.oldNumber}` : ''}` : 'Nothing'], ...(f.spouse ? [['Second insured', `${f.spouse.name || 'Not given'} · ${money0(f.spouse.face)}`]] : [])]],
   ]
   return (
     <div className="fx-sub-review">
@@ -185,7 +185,7 @@ export default function Submit() {
 
         <div className="fx-sub-body" key={S.key}>
           {S.key === 'client' && <>
-            <p className="tp-sub">Name and number are needed. The rest helps the team reach them.</p>
+            <p className="tp-sub">Name, phone, city and state are needed. Fields marked optional can wait.</p>
             <div className="fx-form-grid">
               <Field label="Full name" hint="Type a name or number to find your lead."><input className={bad('name') ? 'tp-danger' : ''} value={f.name} onChange={e => { setF({ ...f, name: e.target.value, linked: null }); setTyped('name'); setActive(0) }} onKeyDown={onMatchKey} onBlur={() => setTyped(null)} placeholder="First and last name" autoComplete="off" {...(typed === 'name' ? combo : {})} /></Field>
               <Field label="Phone"><PhoneInput invalid={bad('phone')} value={f.phone} onChange={d => { setF({ ...f, phone: d, linked: null }); setTyped('phone'); setActive(0) }} onKeyDown={onMatchKey} onBlur={() => setTyped(null)} {...(typed === 'phone' ? combo : {})} /></Field>
@@ -194,9 +194,9 @@ export default function Submit() {
             {f.linked && <p className="lc-linked"><Check size={15} aria-hidden="true" /><span>{f.linked.kind === 'lead' ? `Your lead · ${f.linked.stage}. Submitting makes them a client.` : 'Your client. This adds a policy to their record.'}</span><button type="button" onClick={() => setF({ ...f, linked: null })}>Not them</button></p>}
             <div className="fx-form-grid">
               <Field label="Email, optional"><input value={f.email} onChange={set('email')} placeholder="name@example.com" inputMode="email" autoComplete="off" /></Field>
-              <Field label="City"><input value={f.city} onChange={set('city')} autoComplete="off" /></Field>
-              <Field label="State"><StateSelect invalid={bad('licence')} value={f.state} onChange={v => setF({ ...f, state: v })} /></Field>
-              <Field label="Date of birth"><input type="date" className={bad('dob') ? 'tp-danger' : ''} value={f.dob} max="2008-11-02" onChange={set('dob')} /></Field>
+              <Field label="City"><input className={bad('city') ? 'tp-danger' : ''} value={f.city} onChange={set('city')} autoComplete="off" /></Field>
+              <Field label="State"><StateSelect invalid={bad('licence') || bad('state')} value={f.state} onChange={v => setF({ ...f, state: v })} /></Field>
+              <Field label="Date of birth, optional"><input type="date" value={f.dob} max="2008-11-02" onChange={set('dob')} /></Field>
             </div>
             {missing.includes('licence') && <p className="fx-sub-err" role="alert">Your verified licence doesn{'’'}t cover {stateName(f.state)}. Only submit sales you wrote in a state you{'’'}re licensed in. Just licensed there? Check your licence again in Settings, Licence.</p>}
             <div className="fx-sub-field"><b>Reaching the client</b><small>Their local time.</small><Seg label="Reaching the client" value={f.reach} onChange={v => setF({ ...f, reach: v })} options={REACH} /></div>
@@ -215,12 +215,13 @@ export default function Submit() {
             </div>
             <div className="fx-sub-field"><b>Number</b><small>The application number is fine until the policy is issued.</small><Seg label="Number type" value={f.numberKind} onChange={v => setF({ ...f, numberKind: v })} options={[{ key: 'policy', label: 'Policy number' }, { key: 'application', label: 'Application number' }]} /></div>
             <div className="fx-form-grid">
-              <Field label={f.numberKind === 'policy' ? 'Policy number' : 'Application number'}><input className={bad('number') ? 'tp-danger' : ''} value={f.number} onChange={set('number')} autoComplete="off" /></Field>
-              <Field label="Face amount"><input className={bad('face') ? 'tp-danger' : ''} value={f.face} onChange={set('face')} inputMode="decimal" placeholder="$250,000" /></Field>
+              <Field label={`${f.numberKind === 'policy' ? 'Policy number' : 'Application number'}, optional`} hint="Often not known yet. Add it later."><input value={f.number} onChange={set('number')} autoComplete="off" /></Field>
+              <Field label="Face amount, optional"><input value={f.face} onChange={set('face')} inputMode="decimal" placeholder="$250,000" /></Field>
               <Field label="Monthly premium"><input className={bad('premium') ? 'tp-danger' : ''} value={f.premium} onChange={set('premium')} inputMode="decimal" placeholder="$86.40" /></Field>
               <Field label="Draft day" hint="The day of the month the premium comes out."><Select label="Draft day" invalid={bad('draftDay')} placeholder="Pick a day" value={f.draftDay} onChange={v => setF({ ...f, draftDay: v })} options={DRAFT_DAYS} /></Field>
               <Field label="Beneficiary, optional"><input value={f.beneficiary} onChange={set('beneficiary')} placeholder="Full name" autoComplete="off" /></Field>
               <Field label="Relationship, optional"><input value={f.relation} onChange={set('relation')} placeholder="Spouse, child…" autoComplete="off" /></Field>
+              <Field label="Notes, optional"><textarea className="tp-input fx-ta" value={f.notes} onChange={set('notes')} placeholder="Anything the team should know" /></Field>
             </div>
             <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Does it replace a policy they have now?</b><p className="tp-sub">We cancel the old one only after the new one is issued and its first payment goes through, so they{'’'}re never without cover.</p></div><Switch on={f.replacing} label="Replaces a policy" onChange={v => setF({ ...f, replacing: v })} /></div>
             {f.replacing && <div className="fx-form-grid">
@@ -232,9 +233,9 @@ export default function Submit() {
               <small>Their own client and policy, in the same household as {f.name.trim() || 'this client'}.</small>
               <div className="fx-form-grid">
                 <Field label="Full name"><input value={f.spouse.name} onChange={e => setSpouse({ name: e.target.value })} autoComplete="off" /></Field>
-                <Field label="Date of birth"><input type="date" value={f.spouse.dob} max="2008-11-02" onChange={e => setSpouse({ dob: e.target.value })} /></Field>
-                <Field label="Policy or application number"><input value={f.spouse.number} onChange={e => setSpouse({ number: e.target.value })} autoComplete="off" /></Field>
-                <Field label="Face amount"><input value={f.spouse.face} onChange={e => setSpouse({ face: e.target.value })} inputMode="decimal" /></Field>
+                <Field label="Date of birth, optional"><input type="date" value={f.spouse.dob} max="2008-11-02" onChange={e => setSpouse({ dob: e.target.value })} /></Field>
+                <Field label="Policy or application number, optional"><input value={f.spouse.number} onChange={e => setSpouse({ number: e.target.value })} autoComplete="off" /></Field>
+                <Field label="Face amount, optional"><input value={f.spouse.face} onChange={e => setSpouse({ face: e.target.value })} inputMode="decimal" /></Field>
                 <Field label="Monthly premium"><input value={f.spouse.premium} onChange={e => setSpouse({ premium: e.target.value })} inputMode="decimal" /></Field>
               </div>
             </div> : <button type="button" className="tp-btn ov-ghost fx-self" onClick={() => setF({ ...f, spouse: { ...EMPTY_SPOUSE } })}><UserPlus size={15} />Add a second insured (a spouse)</button>}

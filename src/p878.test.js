@@ -110,7 +110,13 @@ test('Submit: the policy details, a licensed state, a replacement and a spouse',
   clearUnknownCarriers()
   // The old call (no policy step) still asks only for name, phone and carrier.
   assert.deepEqual(missingFields(EMPTY_SUBMIT), ['name', 'phone', 'carrier'])
-  assert.deepEqual(missingFields(base, { policy: true }), ['dob', 'number', 'face', 'premium', 'draftDay'])
+  // P893: date of birth, policy number and face amount are optional; city, state, premium and draft day are not.
+  assert.deepEqual(missingFields(base, { policy: true }), ['premium', 'draftDay'])
+  assert.deepEqual(missingFields({ ...base, city: '', state: '' }, { policy: true }), ['city', 'state', 'premium', 'draftDay'])
+  const lean = buildSubmission({ ...base, premium: '52', draftDay: '15', notes: ' Wants a call after 5 ' }, 'agent', { policy: true })
+  assert.deepEqual(lean.policy, { kind: 'policy', number: null, face: null, premium: 52, draftDay: 15, beneficiary: null, relation: null })
+  assert.equal(lean.dob, null)
+  assert.equal(lean.notes, 'Wants a call after 5')
   assert.deepEqual(missingFields(policy, { policy: true, licensed: ['TX'] }), [])
   assert.deepEqual(missingFields(policy, { policy: true, licensed: ['FL'] }), ['licence'])
   assert.deepEqual(missingFields({ ...policy, replacing: true }, { policy: true }), ['oldCarrier'])

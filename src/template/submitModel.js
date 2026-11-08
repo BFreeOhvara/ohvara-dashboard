@@ -18,9 +18,9 @@ export const EMPTY_SPOUSE = { name: '', dob: '', number: '', face: '', premium: 
 export const EMPTY_SUBMIT = {
   name: '', phone: '', city: '', state: '', email: '', dob: '', reach: 'best', best: 'Evenings', booking: EMPTY_BOOKING, carrier: '', product: 'Mortgage protection',
   numberKind: 'policy', number: '', face: '', premium: '', draftDay: '', beneficiary: '', relation: '',
-  replacing: false, oldCarrier: '', oldNumber: '', spouse: null,
+  replacing: false, oldCarrier: '', oldNumber: '', spouse: null, notes: '',
 }
-export const NEEDED = { name: 'Client name', phone: 'Phone number', dob: 'Date of birth', licence: 'A state you’re licensed in', booking: 'Call time', carrier: 'Carrier', number: 'Policy or application number', face: 'Face amount', premium: 'Monthly premium', draftDay: 'Draft day', oldCarrier: 'The carrier being replaced', spouse: 'Second insured details' }
+export const NEEDED = { name: 'Client name', phone: 'Phone number', city: 'City', state: 'State', licence: 'A state you’re licensed in', booking: 'Call time', carrier: 'Carrier', product: 'Product', premium: 'Monthly premium', draftDay: 'Draft day', oldCarrier: 'The carrier being replaced', spouse: 'Second insured details' }
 export const DRAFT_DAYS = Array.from({ length: 28 }, (_, i) => String(i + 1))
 const amount = v => Number(String(v || '').replace(/[^\d.]/g, ''))
 
@@ -29,21 +29,23 @@ const booked = f => f.reach === 'book' && !!f.booking?.time && !!f.booking.iso &
 // The required fields still missing: a name, all 10 digits of the phone, a carrier, and (Book a call) a picked time.
 // P878: with { policy: true } also the policy details; licensed = the agent's licensed states (a sale in any other
 // state can't be submitted).
+// P893 (Brayden): required = full name, phone, city, state, carrier, product, monthly premium, draft day. Optional =
+// email, date of birth, policy number (often unknown at submit; added later), face amount, notes.
 export function missingFields(f, { policy = false, licensed = null } = {}) {
   const out = []
   if (!f.name.trim()) out.push('name')
   if (!phoneComplete(f.phone)) out.push('phone')
-  if (policy && !f.dob) out.push('dob')
+  if (policy && !f.city.trim()) out.push('city')
+  if (policy && !f.state) out.push('state')
   if (licensed && f.state && !licensed.includes(f.state)) out.push('licence')
   if (f.reach === 'book' && !booked(f)) out.push('booking')
   if (!f.carrier.trim()) out.push('carrier')
   if (policy) {
-    if (!f.number.trim()) out.push('number')
-    if (!(amount(f.face) > 0)) out.push('face')
+    if (!f.product) out.push('product')
     if (!(amount(f.premium) > 0)) out.push('premium')
     if (!f.draftDay) out.push('draftDay')
     if (f.replacing && !f.oldCarrier.trim()) out.push('oldCarrier')
-    if (f.spouse && (!f.spouse.name.trim() || !f.spouse.dob || !f.spouse.number.trim() || !(amount(f.spouse.face) > 0) || !(amount(f.spouse.premium) > 0))) out.push('spouse')
+    if (f.spouse && (!f.spouse.name.trim() || !(amount(f.spouse.premium) > 0))) out.push('spouse')
   }
   return out
 }
@@ -77,8 +79,10 @@ export function buildSubmission(f, by = 'agent', opts = {}) {
     // P878: the policy, the old one it replaces (cancelled only after the new one is issued and its first payment
     // goes through), and a spouse as their own policy in the same household.
     dob: f.dob || null,
-    policy: f.number.trim() ? { kind: f.numberKind, number: f.number.trim(), face: amount(f.face), premium: amount(f.premium), draftDay: Number(f.draftDay) || null, beneficiary: f.beneficiary.trim() || null, relation: f.relation.trim() || null } : null,
+    // P893: the policy number is optional (often unknown at submit), so the policy is kept whenever it has a premium.
+    policy: f.number.trim() || amount(f.premium) > 0 ? { kind: f.numberKind, number: f.number.trim() || null, face: amount(f.face) || null, premium: amount(f.premium), draftDay: Number(f.draftDay) || null, beneficiary: f.beneficiary.trim() || null, relation: f.relation.trim() || null } : null,
+    notes: (f.notes || '').trim() || null,
     replaces: f.replacing ? { carrier: f.oldCarrier.trim(), number: f.oldNumber.trim() || null, cancelWhen: 'after_new_issued_and_first_payment' } : null,
-    household: f.spouse ? [{ name: f.spouse.name.trim(), dob: f.spouse.dob, number: f.spouse.number.trim(), face: amount(f.spouse.face), premium: amount(f.spouse.premium), carrier: listed ? listed.name : f.carrier.trim() }] : [],
+    household: f.spouse ? [{ name: f.spouse.name.trim(), dob: f.spouse.dob || null, number: f.spouse.number.trim() || null, face: amount(f.spouse.face) || null, premium: amount(f.spouse.premium), carrier: listed ? listed.name : f.carrier.trim() }] : [],
   }
 }
