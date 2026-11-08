@@ -157,7 +157,7 @@ const seedTasks = [
   // P907: callbacks. A missed incoming call, a text reply that needs a person, or someone who asked: each one is a
   // booked call, never a queue. who = the person when they aren't a client yet.
   mkTask('cb-1', 'callback', null, { why: 'asked', agent_id: 'ag-dana', who: { name: 'Angela Moore', phone: '(210) 555-0147', city: 'San Antonio', state: 'TX' }, window: 'Afternoon', note: 'Asked us to call back after lunch. A question about her Globe Life policy.' }),
-  mkTask('cb-2', 'callback', null, { why: 'missed_call', agent_id: 'ag-marcus', who: { name: 'Owen Price', phone: '(702) 555-0119', city: 'Henderson', state: 'NV' }, note: 'Asked the AI for a real person at 8:31 AM. No VA was free within 60 seconds; he was told someone would call back.' }),
+  mkTask('cb-2', 'callback', null, { why: 'missed_call', agent_id: 'ag-marcus', who: { name: 'Owen Price', phone: '(702) 555-0119', city: 'Henderson', state: 'NV' }, note: 'Called us at 8:31 AM and nobody picked up. The system booked this callback.' }),
   mkTask('cb-3', 'callback', null, { why: 'reply', agent_id: 'ag-dana', who: { name: 'Hector Ruiz', phone: '(469) 555-0193', city: 'Plano', state: 'TX' }, note: 'Replied “yes call me” to the day-60 check-in text. The automatic answer already went.' }),
 ]
 

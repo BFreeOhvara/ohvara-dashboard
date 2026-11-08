@@ -1269,8 +1269,8 @@
   },
   "fromai": {
    "kind": "walkthrough",
-   "title": "Taking a lead from the AI",
-   "duration": 161.8,
+   "title": "The AI caller and you",
+   "duration": 131.8,
    "src": "fromai.mp4",
    "poster": "fromai-poster.jpg",
    "captions": "fromai.captions.json",
@@ -1278,54 +1278,50 @@
    "chapters": [
     {
      "t": 0.4,
-     "label": "Taking a lead from the AI"
+     "label": "The AI caller and you"
     },
     {
-     "t": 12.7,
-     "label": "Handed over live"
+     "t": 12.5,
+     "label": "The AI never hands a lead to you"
     },
     {
-     "t": 34.4,
+     "t": 27.6,
+     "label": "What reaches you"
+    },
+    {
+     "t": 40.8,
      "label": "Read why it was booked"
     },
     {
-     "t": 53.9,
+     "t": 55.3,
      "label": "Who has it"
     },
     {
-     "t": 66.4,
+     "t": 65.1,
      "label": "Don't start over"
     },
     {
-     "t": 84,
-     "label": "The answers it didn't get"
-    },
-    {
-     "t": 92.7,
-     "label": "Transfer or book"
-    },
-    {
-     "t": 108.1,
+     "t": 83,
      "label": "Price? Not yours"
     },
     {
-     "t": 120.5,
+     "t": 95.4,
      "label": "Another time? Move"
     },
     {
-     "t": 133,
+     "t": 105.5,
      "label": "Recap"
     },
     {
-     "t": 151.5,
+     "t": 121.6,
      "label": "Now try it"
     }
    ],
    "helpAt": {
-    "ai_handoff": 34.4
+    "ai_handoff": 40.8
    },
-   "sizeBytes": 6043046,
-   "builtAt": "2026-11-08T20:55:37.745Z"
+   "sizeBytes": 5235090,
+   "builtAt": "2026-11-08T22:25:20.653Z"
   },
   "welcome": {
    "kind": "walkthrough",

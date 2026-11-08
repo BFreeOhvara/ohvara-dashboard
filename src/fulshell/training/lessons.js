@@ -10,7 +10,7 @@
 //
 // Bump TRAINING_VERSION when a lesson's check changes, so a VA's old pass is shown as "updated, take the check again".
 
-export const TRAINING_VERSION = '2026-11-08.2' // P907: speed is now Working in bookings; callbacks, check-ins, fromai, reminders follow the bookings
+export const TRAINING_VERSION = '2026-11-08.3' // P907: speed is now Working in bookings; callbacks, check-ins, fromai, reminders follow the bookings
 export const PASS_MARK = 0.8 // 4 of 5, 4 of 4, 3 of 3: a check passes at 80% or better
 
 const say = (text, o = {}) => ({ who: 'You', text, ...o })
@@ -277,37 +277,38 @@ export const LESSONS = [
     ],
   },
   {
-    // P897: the From the AI card (P892). The AI caller is off until Brayden switches it on; the lesson is ready for then.
+    // P897 lesson id kept (its video, the "?" map). P902: the AI never hands a new lead to a VA; it transfers to the
+    // agent or books them. P907: this lesson now teaches what the AI caller does, and what reaches the VA.
     id: 'fromai',
     tryIt: { path: ['schedule'], do: 'Open a callback on your Schedule, read why it was booked, and press Start.', button: 'Start' },
-    title: 'Taking a lead from the AI',
-    job: 'The AI caller hands you a lead. Carry on from where it stopped.',
+    title: 'The AI caller and you',
+    job: 'The AI calls new leads and passes them to their agent. You never take a lead from it.',
     minutes: 3,
-    why: 'The lead is on the line and has already answered questions. Starting over sounds like nobody listened, and a lead who feels unheard hangs up.',
+    why: 'Knowing what the AI already did keeps you from calling a lead twice, or talking about things only the agent covers.',
     steps: [
-      'Once the AI caller is switched on, it calls new form leads within seconds. It hands a lead to you when they ask for a person, ask about price or cover, get confused or upset, or when it gets stuck.',
-      'It hands over live: the call rings on your phone marked From the AI. Read the From the AI box first: why it handed over, how long it talked, what it already asked, and the agent.',
-      'Don\'t start over. Pick up from what the AI already asked.',
-      'Then get the answers the AI didn\'t (question type, carrier, state, how soon).',
-      'The line on the lead says what\'s next: live transfer if they\'re ready now (Check agent), or book them.',
+      'Once the AI caller is switched on, it calls new form leads within seconds.',
+      'It never hands a lead to you. Asked for a person, or about cover or price, it says their agent will go over that, then transfers them live to the agent or books a time with the agent.',
+      'What reaches you is a booked call: someone called us and nobody answered, or a reply needs a person. The system books it at the next open time, and it lands on your Schedule.',
+      'Open the call and read why it was booked before you dial. Don\'t start over: pick up from what is on the record.',
+      'A lead says the AI already called them? That is right. Tell them their agent goes through the details with them.',
       'Never talk price or cover. Your licensed agent goes through that with them.',
-      'No VA was free within 60 seconds? The AI told the lead someone calls back shortly, and the system booked a callback at the next open time. It is on the Schedule of the VA who has it.',
     ],
     script: {
-      title: 'Picking up from the AI',
+      title: 'When a lead mentions the AI',
       lines: [
-        say('Hi [first name], it\'s [your first name] with Deedstone, I\'m here now. Your licensed agent goes through the monthly cost with you. Can I check two quick things first?', { approve: true }),
+        hear('Someone already called me about this.'),
+        say('That was our assistant, it reaches everyone right away. Your licensed agent goes through the coverage and the monthly cost with you. How can I help today?', { approve: true }),
         hear('How much is it going to be?'),
         say('I\'m not licensed to talk about coverage, price or whether you qualify. Your licensed agent will go through all of that with you.', { approve: true }),
       ],
     },
-    dos: ['Read the From the AI box before you speak', 'Pick up where the AI stopped', 'Call an AI callback at its booked time'],
-    donts: ['Don\'t start the questions over', 'Don\'t talk price or cover', 'Don\'t leave a warm hand-off waiting'],
-    portal: { shot: 'phone-ring', clicks: [{ spot: 'answer', text: 'A call From the AI: answer, then read the box first' }] },
+    dos: ['Read why a call was booked before you dial', 'Pick up from what is on the record', 'Call at the booked time'],
+    donts: ['Don\'t call a new lead the AI is working', 'Don\'t talk price or cover', 'Don\'t start the questions over'],
+    portal: { shot: 'schedule', clicks: [{ spot: 'cal', text: 'What reaches you is a booked call on your Schedule' }] },
     check: [
-      ok('A lead comes to you From the AI. What do you do first?', ['Start the questions from the top', 'Read the From the AI box', 'Book them straight away', 'Text them'], 1, 'Read what the AI already learned, then carry on.'),
-      ok('The AI handed her over because she asked about price. You:', ['Give a rough price', 'Say your licensed agent goes through price with her', 'Hang up', 'Ask the AI'], 1, 'Price is the agent\'s.'),
-      ok('The AI booked a callback because no VA was free. When do you call?', ['At its booked time, on your Schedule', 'At the end of the day', 'Tomorrow', 'Only if they text again'], 0, 'It is a booked call, like any other.'),
+      ok('A new lead asks the AI for a real person. Who gets them?', ['You, live', 'Their agent: a live transfer or a booked time', 'Nobody', 'The next VA free'], 1, 'The AI never hands a lead to a VA.'),
+      ok('A lead asks you about price. You:', ['Give a rough price', 'Say your licensed agent goes through price with them', 'Hang up', 'Ask the AI'], 1, 'Price is the agent\'s.'),
+      ok('Someone called us and nobody answered. What happens?', ['Nothing', 'A callback is booked at the next open time, on a VA\'s Schedule', 'The AI calls them forever', 'You get an email'], 1, 'It is a booked call, like any other.'),
     ],
   },
   {
