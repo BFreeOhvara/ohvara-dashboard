@@ -126,7 +126,12 @@ function WeekStrip({ appts, today }) {
   )
 }
 
-// Every open lead in one bar, split by the agent's five statuses (P878), with a count per status.
+// Every open lead in one bar, split by the agent's five statuses (P894: Live transfer, Booked, No show, Follow up, Sold),
+// with a count per status. Leads our team is still calling aren't a status; the tile's sub line counts them.
+const mixSub = by => {
+  const open = LANES.reduce((t, l) => t + by[l.key], 0)
+  return `${open} open lead${open === 1 ? '' : 's'} by status${by.team ? ` · ${by.team} with our team` : ''}`
+}
 function LeadMix({ leads }) {
   const by = countByStatus(leads)
   const rows = LANES.map(l => ({ ...l, n: by[l.key] }))
@@ -221,11 +226,11 @@ export default function Overview() {
             </header>
             {needs.now.length > 0
               ? <div className="fx-ncards">{needs.now.map((r, i) => <NeedCard key={r.id} item={r} i={i} onAct={act} />)}</div>
-              : <p className="fx-calm"><Check size={16} aria-hidden="true" />No one is waiting on you. Live calls, people to call back and outcomes to mark show here first.</p>}
+              : <p className="fx-calm"><Check size={16} aria-hidden="true" />No one is waiting on you. Live calls, people to call back and results to mark show here first.</p>}
           </div>
         </section>
 
-        <Tile className="fx-ovl-mix" i={5} title="Lead mix" sub={`${leads.length - countByStatus(leads).closed} open leads by status`} to={paths.leads()} label="Open Leads">
+        <Tile className="fx-ovl-mix" i={5} title="Lead mix" sub={mixSub(countByStatus(leads))} to={paths.leads()} label="Open Leads">
           <LeadMix leads={leads} />
         </Tile>
       </div>

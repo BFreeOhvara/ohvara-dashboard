@@ -119,12 +119,12 @@ test('Needs you now: the triggers, most urgent first, each with its action', () 
   const now = needsYouNow({ leads, clients, billingNeeds })
   assert.deepEqual(now.map(n => n.trigger), ['live', 'starting', 'outcome', 'call', 'finish', 'follow', 'servicing', 'billing'])
   assert.deepEqual(now.map(n => n.action), TRIGGERS.map(t => t.action))
-  assert.deepEqual(TRIGGERS.map(t => t.action), ['Answer', 'Join call', 'Mark outcome', 'Call', 'Finish', 'Call back', 'Open', 'Open billing'])
+  assert.deepEqual(TRIGGERS.map(t => t.action), ['Answer', 'Join call', 'Mark result', 'Call', 'Finish', 'Call back', 'Open', 'Open billing'])
   assert.equal(TRIGGERS.some(t => t.action === 'Reply'), false)
   // Servicing off (leads only): no Finish.
   assert.equal(needsYouNow({ leads, servicing: false }).some(n => n.trigger === 'finish'), false)
   // FYI: the team is on it.
-  assert.deepEqual(forYourInfo({ leads }).map(f => f.title), ['Missed transfer', 'No-show', 'New booking'])
+  assert.deepEqual(forYourInfo({ leads }).map(f => f.title), ['Missed transfer', 'No show', 'New booking'])
   assert.deepEqual(forYourInfo({ leads: [mk('q', 'Q', 'rebooking')] }).map(f => f.title), ['Rebooking'])
 })
 

@@ -171,7 +171,7 @@ export function seedEvents(l, now = clockNow()) {
 // ── Moves ──────────────────────────────────────────────────────────────────────────────────────────────────────
 // What the agent can do to a lead, and the timeline row it leaves. Returns the new lead.
 const MOVE_ROWS = {
-  showed: ['outcome', 'Showed'], booked: ['booked', 'Moved to Booked'], no_show: ['no_show', 'Marked no-show'],
+  showed: ['outcome', 'Took the live call'], booked: ['booked', 'Moved to Booked'], no_show: ['no_show', 'Marked no show'],
   sold: ['outcome', 'Sold'], follow_up: ['outcome', 'Follow up'], not_interested: ['outcome', 'Not interested'],
 }
 export const AGENT_MOVES = Object.keys(MOVE_ROWS)
@@ -195,6 +195,24 @@ export function applyMove(lead, stage, extra = {}, now = clockNow()) {
 }
 
 const OUTCOME_STAGES = ['showed', 'no_show', 'sold', 'follow_up', 'not_interested']
+
+// P894: a no-show (or a lead whose time the agent moved) picked a new time from the one-tap link: back to Booked, with
+// the new time and its reminders. Nobody does this by hand; the rebook page (Deedstone) or the team's booking does.
+export function rebookLead(lead, apptAt, now = clockNow()) {
+  if (!['no_show', 'rebooking'].includes(lead.stage)) throw new Error(`Only a no-show or a rebooking lead can be rebooked, not ${lead.stage}`)
+  if (!apptAt || apptAt <= now) throw new Error('A rebook needs a time later than now')
+  const n = (lead.events || []).length
+  const row = (i, o) => ({ id: `${lead.id}-r${n + i}`, state: o.at > now ? 'scheduled' : 'done', ...o })
+  const appt = `${dayLabel(apptAt)} at ${timeLabel(apptAt)}`
+  const rows = [
+    row(1, { kind: 'booked', at: now, label: `Rebooked for ${whenLabel(apptAt)}`, by: lead.first_name, role: 'lead' }),
+    row(2, { kind: 'text_sent', step: 'confirm', at: now, label: 'Text', text: leadText('confirm', { lead: lead.first_name, appt }), by: SENDER, role: 'auto' }),
+    row(3, { kind: 'text_sent', step: 'reminder_1h', at: addMin(apptAt, -60), label: 'Text', text: leadText('reminder_1h', { lead: lead.first_name, appt }), by: SENDER, role: 'auto' }),
+  ]
+  // The rebook call the team had lined up is no longer needed.
+  const events = (lead.events || []).map(e => (e.state === 'scheduled' && /rebook/i.test(e.label) ? { ...e, state: 'skipped' } : e))
+  return { ...lead, stage: 'booked', dbStage: STAGES.booked.db, outcome: null, apptAt, appt: whenLabel(apptAt), undo: null, events: [...events.filter(e => e.state !== 'skipped'), ...rows] }
+}
 
 // ── The automatic replier (P878) ───────────────────────────────────────────────────────────────────────────────
 // Nobody replies to a lead by hand: there is no reply box. An incoming text is read for what the person wants and
@@ -248,7 +266,7 @@ export function closeCallTask(lead, now = clockNow()) {
 export const TRIGGERS = [
   { key: 'live', title: 'Live transfer ringing', action: 'Answer' },
   { key: 'starting', title: 'Appointment starting', action: 'Join call' },
-  { key: 'outcome', title: 'How did it go?', action: 'Mark outcome' },
+  { key: 'outcome', title: 'How did it go?', action: 'Mark result' },
   { key: 'call', title: 'Asked you to call', action: 'Call' },
   { key: 'finish', title: 'Finish servicing details', action: 'Finish' },
   { key: 'follow', title: 'Follow-up due today', action: 'Call back' },
@@ -270,7 +288,7 @@ export function needsYouNow({ leads = [], clients = [], billingNeeds = [], servi
     const m = minutesFrom(now, l.apptAt)
     push(T.starting, l, `Appointment at ${timeLabel(l.apptAt)}`, m > 0 ? `In ${m} min` : 'Now')
   })
-  leads.filter(l => needsOutcome(l, now)).forEach(l => push(T.outcome, l, l.stage === 'showed' ? 'You talked. Mark the outcome' : `Appointment at ${timeLabel(l.apptAt)} ended`, l.stage === 'showed' ? 'Now' : 'Ended'))
+  leads.filter(l => needsOutcome(l, now)).forEach(l => push(T.outcome, l, l.stage === 'showed' ? 'You took the live call. Pick the result' : `Appointment at ${timeLabel(l.apptAt)} has passed`, l.stage === 'showed' ? 'Now' : 'Ended'))
   leads.filter(agentCallTask).forEach(l => push(T.call, l, `“${l.reply.text}”`, l.reply.at.slice(0, 10) === now.slice(0, 10) ? timeLabel(l.reply.at) : atLabel(l.reply.at, now)))
   if (servicing) leads.filter(l => l.stage === 'sold' && !l.submitted).forEach(l => push(T.finish, l, 'Sold. Add the policy details so the team can service it', 'Today'))
   leads.filter(l => l.stage === 'follow_up' && l.follow === dayLabel(now)).forEach(l => push(T.follow, l, 'You set this callback', 'Today'))
@@ -283,7 +301,7 @@ export function forYourInfo({ leads = [] }) {
   const out = []
   leads.forEach(l => {
     if (l.stage === 'missed') out.push({ id: `fyi-missed-${l.id}`, ref: l.id, name: fullName(l), title: 'Missed transfer', what: 'The team is booking a time' })
-    if (l.stage === 'no_show') out.push({ id: `fyi-noshow-${l.id}`, ref: l.id, name: fullName(l), title: 'No-show', what: 'They got a link to pick a new time' })
+    if (l.stage === 'no_show') out.push({ id: `fyi-noshow-${l.id}`, ref: l.id, name: fullName(l), title: 'No show', what: 'They got a link to pick a new time' })
     if (l.stage === 'rebooking') out.push({ id: `fyi-rebook-${l.id}`, ref: l.id, name: fullName(l), title: 'Rebooking', what: 'They got your apology and a link to pick a new time' })
     if (l.stage === 'booked' && l.fresh) out.push({ id: `fyi-booked-${l.id}`, ref: l.id, name: fullName(l), title: 'New booking', what: `Booked for ${whenLabel(l.apptAt)}` })
   })

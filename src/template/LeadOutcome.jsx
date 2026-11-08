@@ -5,7 +5,7 @@ import { Drawer, Field, Seg, Switch, useNote } from './kit'
 import { Select } from './Select'
 import { useSampleActions, useSampleBilling } from './data'
 import { paths } from './paths'
-import { agentChip } from './agentView'
+import { agentChip, agentStatusOf, resultsFor, RESULT_LABEL } from './agentView'
 import { laneOf } from './stages'
 import { leadText } from './leadTexts'
 
@@ -30,7 +30,7 @@ function UndoBar({ lead }) {
   useEffect(() => { if (left <= 0) sendNoShowText(lead.id) }, [left, lead.id, sendNoShowText])
   return (
     <div className="lc-undo" role="status">
-      <span className="tp-grow"><b>Marked no-show</b><small>{lead.first_name}{'’'}s rebook link sends in {Math.max(left, 0)} s</small></span>
+      <span className="tp-grow"><b>Marked no show</b><small>{lead.first_name}{'’'}s rebook link sends in {Math.max(left, 0)} s</small></span>
       <button type="button" className="tp-btn ov-ghost" onClick={() => { undoNoShow(lead.id); note('Undone. No text went out') }}><Undo2 size={14} aria-hidden="true" />Undo</button>
     </div>
   )
@@ -38,18 +38,16 @@ function UndoBar({ lead }) {
 
 const FOLLOW_DAYS = ['Mon, Nov 2', 'Tue, Nov 3', 'Wed, Nov 4', 'Thu, Nov 5', 'Fri, Nov 6', 'Mon, Nov 9']
 const REASONS = ['Not interested right now', 'Already covered', 'Cannot afford it', 'Wrong number']
-const SHOWED = [{ key: 'showed', label: 'Showed' }, { key: 'no_show', label: 'No-show' }]
-const HOW = [{ key: 'sold', label: 'Sold' }, { key: 'follow_up', label: 'Follow up' }, { key: 'not_interested', label: 'Not interested' }]
-
-// P873 — after an appointment (or a live call): did they show, and how did it go? Showed → Sold / Follow up /
-// Not interested; No-show hands them back to the team to rebook. Sold offers "Submit for servicing" when the agent's
-// plan has servicing. start: skip straight to an outcome (the Sold / Not interested buttons on the lead).
+// P894 — the result, one question. Only the results the lead's status allows (agentView.js AGENT_RESULTS):
+// Live transfer → Sold / Follow up / Not interested; Booked → Sold / No show / Follow up / Not interested;
+// No show → Not interested; Follow up → Sold / Booked / Not interested. No show hands them to the rebook link.
+// Sold offers "Submit for servicing" when the agent's plan has servicing. start: open at that result.
 export function OutcomePrompt({ lead, start = null, onClose }) {
   const { moveLead, markNoShow, sendBookingLink } = useSampleActions()
   const { data: billing } = useSampleBilling()
   const note = useNote()
-  const [came, setCame] = useState(start ? 'showed' : null)
-  const [how, setHow] = useState(start)
+  const allowed = lead ? resultsFor(lead) : []
+  const [how, setHow] = useState(allowed.includes(start) ? start : null)
   const [when, setWhen] = useState(FOLLOW_DAYS[3])
   const [why, setWhy] = useState(REASONS[0])
   const [link, setLink] = useState(true)
@@ -57,9 +55,11 @@ export function OutcomePrompt({ lead, start = null, onClose }) {
   if (!lead) return null
   const name = `${lead.first_name} ${lead.last_name}`
   const plan = billing.servicing?.status === 'active'
-  const ready = came === 'no_show' || (came === 'showed' && how)
+  const live = agentStatusOf(lead) === 'live'
+  const ready = !!how
   const save = () => {
-    if (came === 'no_show') { markNoShow(lead.id); onClose(); return }
+    if (how === 'no_show') { markNoShow(lead.id); onClose(); return }
+    if (how === 'booked') { moveLead(lead.id, 'booked'); note(`${name} moved to Booked`); onClose(); return }
     moveLead(lead.id, how, how === 'follow_up' ? { follow: when } : how === 'not_interested' ? { reason: why } : {})
     if (how === 'follow_up' && link) sendBookingLink(lead.id)
     if (how === 'sold') { setSold(true); note(`${name} marked sold`); return }
@@ -83,19 +83,21 @@ export function OutcomePrompt({ lead, start = null, onClose }) {
   }
 
   return (
-    <Drawer open onClose={onClose} title="How did it go?" sub={`${name}${lead.appt ? ` · ${lead.appt}` : ''}`}
-      footer={<><button type="button" className="tp-primary fx-accent" disabled={!ready} onClick={save}>{came === 'no_show' ? 'Mark no-show' : how === 'sold' ? 'Mark sold' : 'Save'}</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
-      <div className="lc-q"><b>Did {lead.first_name} show up?</b><Seg label={`Did ${lead.first_name} show up?`} value={came} onChange={v => { setCame(v); if (v === 'no_show') setHow(null) }} options={SHOWED} role="radiogroup" /></div>
-      {came === 'showed' && <div className="lc-q"><b>How did it go?</b><Seg label="How did it go?" value={how} onChange={setHow} options={HOW} role="radiogroup" /></div>}
-      {came === 'showed' && how === 'sold' && <p className="tp-sub">{plan ? 'Next you can submit it for servicing. The details fill in for you.' : 'Your plan does not include policy servicing yet.'}</p>}
-      {came === 'showed' && how === 'follow_up' && <>
-        <Field label="Follow up on" hint="It shows in Needs you now on the day."><Select label="Follow up on" value={when} onChange={setWhen} options={FOLLOW_DAYS} /></Field>
+    <Drawer open onClose={onClose} title={live ? 'How did the live call go?' : 'How did it go?'} sub={`${name}${lead.appt ? ` · ${lead.appt}` : live ? ' · live transfer' : ''}`}
+      footer={<><button type="button" className="tp-primary fx-accent" disabled={!ready} onClick={save}>{how === 'no_show' ? 'Mark no show' : how === 'sold' ? 'Mark sold' : 'Save'}</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
+      {allowed.length
+        ? <div className="lc-q"><b>What happened?</b><Seg label="What happened?" value={how} onChange={setHow} options={allowed.map(k => ({ key: k, label: RESULT_LABEL[k] }))} role="radiogroup" /></div>
+        : <p className="tp-sub">Nothing to mark on this lead.</p>}
+      {how === 'sold' && <p className="tp-sub">{plan ? 'Next you can submit it for servicing. The details fill in for you.' : 'Your plan does not include policy servicing yet.'}</p>}
+      {how === 'follow_up' && <>
+        <Field label="Follow up on" hint="We remind you that day."><Select label="Follow up on" value={when} onChange={setWhen} options={FOLLOW_DAYS} /></Field>
         <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Send a booking link</b><p className="tp-sub">An automatic text lets {lead.first_name} pick a time on your calendar.</p></div><Switch on={link} label="Send a booking link" onChange={setLink} /></div>
         {link && <div className="tp-chat"><div className="tp-bub me">{leadText('booking_link', { lead: lead.first_name })}<small>Deedstone · draft wording · sends when your leads go live</small></div></div>}
       </>}
-      {came === 'showed' && how === 'not_interested' && <Field label="Reason" hint="All calls and texts stop."><Select label="Reason" value={why} onChange={setWhy} options={REASONS} /></Field>}
-      {came === 'no_show' && <>
-        <p className="tp-sub">{lead.first_name} gets a text right away with a one-tap link to pick a new time. If they don{'’'}t, the team calls. You have {UNDO_SECONDS} seconds to undo.</p>
+      {how === 'not_interested' && <Field label="Reason" hint="All calls and texts stop."><Select label="Reason" value={why} onChange={setWhy} options={REASONS} /></Field>}
+      {how === 'booked' && <p className="tp-sub">{lead.first_name} goes on Booked. Send a booking link from the lead if they still need to pick a time.</p>}
+      {how === 'no_show' && <>
+        <p className="tp-sub">{lead.first_name} gets a text right away with a one-tap link to pick a new time; when they do, they go back to Booked. If they don{'’'}t, the team calls. You have {UNDO_SECONDS} seconds to undo.</p>
         <div className="tp-chat"><div className="tp-bub me">{leadText('no_show_link', { lead: lead.first_name })}<small>Deedstone · draft wording · sends when your leads go live</small></div></div>
       </>}
     </Drawer>

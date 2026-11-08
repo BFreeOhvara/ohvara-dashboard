@@ -10,14 +10,11 @@ export const CLIENT_STEPS = [
   { key: 'setting_up', label: 'Setting up' }, { key: 'needs_attention', label: 'Needs you' }, { key: 'requests', label: 'Request open' }, { key: 'protected', label: 'Protected' },
 ]
 
-// P878: the agent's Leads board is the five agent statuses (agentView.js), left to right; Closed sits under a filter.
+// P878/P894: the agent's Leads board is the five agent statuses (agentView.js), left to right; Closed sits under a
+// filter. The lead drawer's buttons are the results its status allows (agentView.js resultsFor).
 // The VA and admin portals keep every stage (leadLifecycle.js LEAD_LANES).
 export const LANES = AGENT_STATUSES
 export const CLOSED_LANE = CLOSED_STATUS
 // The status (with its tone) of a lead, or of a bare stage (treated as a lead at that stage).
 export const laneOf = leadOrStage => agentStatus(agentStatusOf(typeof leadOrStage === 'string' ? { stage: leadOrStage } : leadOrStage || { stage: 'new' }))
 
-// The lead drawer's stepper: where a lead can be moved.
-export const LEAD_STEPS = [
-  { key: 'booked', label: 'Booked' }, { key: 'follow_up', label: 'Follow up' }, { key: 'sold', label: 'Sold' }, { key: 'not_interested', label: 'Not interested' },
-]

@@ -157,7 +157,15 @@ export function useFulScheduleReal() {
 }
 // Appointments the VA booked for agents: they live on the agent's calendar (agent_bookings), not readable by a VA yet.
 export function useFulBookedReal() { return { data: [], isLoading: false, error: null } }
-export function useAgentApptsReal() { return [] }
+// P894: the agent's booked calls, so the desk's picker greys out every time within 30 minutes of one (lib/callSlots
+// agentFree). agent_booked_slots comes with migration p894; until it's applied this is empty and the server is the check.
+export function useAgentApptsReal(agentId) {
+  const q = useQuery({
+    queryKey: [K, 'agent-booked', agentId], enabled: !!agentId, ...LIVE,
+    queryFn: async () => { const { data, error } = await supabase.rpc('agent_booked_slots', { p_agent: agentId }); if (error) { if (isMissing(error)) return []; throw error } return data || [] },
+  })
+  return useMemo(() => (q.data || []).map((iso, i) => ({ id: `booked-${i}`, iso: typeof iso === 'string' ? iso : iso?.agent_booked_slots })), [q.data])
+}
 export function useVaForReal() { return null }
 
 // The 30-minute rule's inputs for this VA. With no rota on the database yet, the team at any time is this VA alone,

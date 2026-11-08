@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 import { toLead, toClient, wallOf, weekOf, weekToPortal, portalToRows, toActivity, boughtOf, DEFAULT_TZ } from '../lib/agentReal'
 import { atLabel, whenLabel, minutesFrom, needsYouNow, forYourInfo } from '../template/leadLifecycle'
+import { canMove, RESULT_LABEL, withSoldLeads } from '../template/agentView'
 import { normalizeSettings } from '../lib/agentSettings'
 import { outcomeArgs } from '../lib/leadOutcomes'
 import { invokeBilling } from '../lib/billing'
@@ -122,6 +123,17 @@ export function useClientsReal() {
 }
 export function useClientReal(id) {
   const all = useClientsReal()
+  return { ...all, data: all.data.find(c => c.id === id) || null }
+}
+// P894: the Clients page — every sold lead is on it as Setting up, a client row or not (agentView.js withSoldLeads).
+export function useClientsBoardReal() {
+  const clients = useClientsReal()
+  const leads = useLeadsReal()
+  const data = useMemo(() => withSoldLeads(clients.data, leads.data), [clients.data, leads.data])
+  return { ...clients, data, isLoading: clients.isLoading || leads.isLoading }
+}
+export function useClientBoardReal(id) {
+  const all = useClientsBoardReal()
   return { ...all, data: all.data.find(c => c.id === id) || null }
 }
 export function useServicingTasks() {
@@ -387,6 +399,7 @@ export function useActionsReal() {
   const qc = useQueryClient()
   const note = useNote()
   const clients = useClientsReal().data
+  const leads = useLeadsReal().data
   const tz = useTz()
   return useMemo(() => {
     // The screen shows its own confirmation first; ours lands just after, so "starts soon" or a failure is what stays.
@@ -404,6 +417,9 @@ export function useActionsReal() {
     }
     const saveSettings = (p, fail) => rpc('save_my_agent_settings', { p }, fail)
     const outcome = (id, stage, extra = {}) => {
+      // P894: only the results the lead's status allows (agentView.js AGENT_RESULTS).
+      const lead = leads.find(l => l.id === id)
+      if (lead && !canMove(lead, stage)) return later(`That lead can’t be moved to ${RESULT_LABEL[stage] || stage} from where it is. Nothing changed`)
       if (stage === 'no_show') return rpc('lead_mark_no_show', { p_lead: id })
       const o = { sold: 'sold', follow_up: 'follow_up', not_interested: 'not_interested' }[stage]
       if (!o) return later('Only Sold, Follow up and Not interested save for now. The team moves the rest')
@@ -418,7 +434,9 @@ export function useActionsReal() {
     const KIND = { 'Change address': 'address_change', 'Change beneficiary': 'beneficiary_change', 'Change billing date': 'draft_date_change', 'Reinstate policy': 'lapse_save' }
     return {
       moveLead: outcome,
-      markNoShow: id => rpc('lead_mark_no_show', { p_lead: id }),
+      markNoShow: id => outcome(id, 'no_show'),
+      // A rebook comes from the lead's one-tap link or the team's booking, never the agent.
+      rebookLead: () => {},
       undoNoShow: soon('Undo for a no-show'),
       sendNoShowText: () => {},
       addLeadNote: (id, text) => rpc('add_inbound_note', { p_lead: id, p_note: text }),
@@ -491,7 +509,7 @@ export function useActionsReal() {
       },
       bookFulfillmentCall: soon('Booking a team call from here'),
     }
-  }, [me, qc, note, clients, tz])
+  }, [me, qc, note, clients, leads, tz])
 }
 
 export const useSignupReal = () => ({ data: { covers: ['Booked appointments and live calls, at a daily spend you set', 'A team that calls every lead right away and books them on your calendar', 'Servicing that keeps your policies on the books', 'Your own portal and phone app'] }, isLoading: false, error: null })
@@ -506,7 +524,7 @@ export function useStatusReal() {
 export const REAL = {
   useStatus: useStatusReal,
   source: 'real', useNow: useWallNow, useWeek: useWeekReal,
-  useLeads: useLeadsReal, useLead: useLeadReal, useClients: useClientsReal, useClient: useClientReal, useAppointments: useAppointmentsReal,
+  useLeads: useLeadsReal, useLead: useLeadReal, useClients: useClientsBoardReal, useClient: useClientBoardReal, useAppointments: useAppointmentsReal,
   useThreads: useThreadsReal, useActivity: useActivityReal, useBilling: useBillingReal, useTalks: useTalksReal, useFeedback: useFeedbackReal,
   useBlocks: useBlocksReal, useSetup: useSetupReal, useSettings: useSettingsReal, useNeeds: useNeedsReal, useSignup: useSignupReal,
   useOverview: useOverviewReal, useActions: useActionsReal,

@@ -1,6 +1,7 @@
 import { useSyncExternalStore, useMemo, createContext, useContext, createElement } from 'react'
 import { instantOf, clockOf, dateOf, zoneOf } from '../../lib/callSlots.js'
-import { seedEvents, applyMove, closeCallTask, whenLabel, needsYouNow, forYourInfo, addMin, STAGES, SAMPLE_NOW } from '../leadLifecycle.js'
+import { seedEvents, applyMove, rebookLead, closeCallTask, whenLabel, needsYouNow, forYourInfo, addMin, STAGES, SAMPLE_NOW } from '../leadLifecycle.js'
+import { canMove, withSoldLeads } from '../agentView.js'
 import { leadText, SENDER } from '../leadTexts.js'
 import { wallet as walletOf, expected, startsText } from '../spendPlan.js'
 import { DEFAULT_LIVE_HOURS } from '../../lib/leadSplit.js'
@@ -265,8 +266,14 @@ const fullName = c => `${c.client_first_name} ${c.client_last_name}`
 
 function useLeadsSample() { const s = useStore(); return ok(s.leads) }
 function useLeadSample(id) { const s = useStore(); return ok(s.leads.find(l => l.id === id) || s.leads[0]) }
-function useClientsSample() { const s = useStore(); return ok(s.clients) }
-function useClientSample(id) { const s = useStore(); return ok(s.clients.find(c => c.id === id) || s.clients[0]) }
+// P894: every sold lead is on Clients as Setting up (agentView.js withSoldLeads), worked out once per store change.
+let clientsMemo = { clients: null, leads: null, out: [] }
+const clientsOf = s => {
+  if (clientsMemo.clients !== s.clients || clientsMemo.leads !== s.leads) clientsMemo = { clients: s.clients, leads: s.leads, out: withSoldLeads(s.clients, s.leads) }
+  return clientsMemo.out
+}
+function useClientsSample() { const s = useStore(); return ok(clientsOf(s)) }
+function useClientSample(id) { const s = useStore(); const all = clientsOf(s); return ok(all.find(c => c.id === id) || all[0]) }
 function useAppointmentsSample() { const s = useStore(); return ok(s.appointments) }
 function useThreadsSample() { const s = useStore(); return ok(s.threads) }
 function useActivitySample() { const s = useStore(); return ok(s.activity) }
@@ -320,7 +327,7 @@ function bookedChart(thisWeek) {
 function useOverviewSample() {
   const s = useStore()
   const open = Object.values(s.tasks).filter(v => !v).length
-  const by = st => s.clients.filter(c => c.stage === st).length
+  const by = st => clientsOf(s).filter(c => c.stage === st).length
   return ok({
     name: 'Dana', book: { protected: by('protected'), settingUp: by('setting_up'), needsAttention: by('needs_attention'), requestsOpen: by('requests') },
     stepsOpen: open,
@@ -368,8 +375,10 @@ const log = (s, who, text, kind) => [{ id: `a${s.activity.length + 1}-${text.len
 
 function useActionsSample() {
   return useMemo(() => ({
+    // P894: only the results the lead's status allows (agentView.js AGENT_RESULTS); anything else changes nothing.
     moveLead: (id, stage, extra = {}) => set(s => {
       const lead = s.leads.find(l => l.id === id)
+      if (!lead || !canMove(lead, stage)) return s
       return { ...s, leads: s.leads.map(l => (l.id === id ? applyMove(l, stage, extra, SAMPLE_NOW) : l)), activity: log(s, `${lead.first_name} ${lead.last_name}`, `Moved to ${STAGES[stage].label}.`, 'moved') }
     }),
     // P878: nobody texts a lead by hand. A call task from the automatic replier closes when the agent calls back.
@@ -381,7 +390,13 @@ function useActionsSample() {
       return { ...s, leads: s.leads.map(l => (l.id === id ? { ...l, events: [...l.events, row] } : l)), activity: log(s, `${lead.first_name} ${lead.last_name}`, 'You asked our team to call.', 'call') }
     }),
     // No-show with a short Undo (N-C-45): the lead keeps a copy of itself until the rebook text goes.
-    markNoShow: id => set(s => ({ ...s, leads: s.leads.map(l => (l.id === id ? { ...applyMove(l, 'no_show', {}, SAMPLE_NOW), undo: { ...l, undo: null } } : l)) })),
+    markNoShow: id => set(s => ({ ...s, leads: s.leads.map(l => (l.id === id && canMove(l, 'no_show') ? { ...applyMove(l, 'no_show', {}, SAMPLE_NOW), undo: { ...l, undo: null } } : l)) })),
+    // P894: they picked a new time from the one-tap link: back to Booked (the rebook page or the team does this, not the agent).
+    rebookLead: (id, apptAt) => set(s => {
+      const lead = s.leads.find(l => l.id === id)
+      if (!lead || !['no_show', 'rebooking'].includes(lead.stage)) return s
+      return { ...s, leads: s.leads.map(l => (l.id === id ? rebookLead(l, apptAt, SAMPLE_NOW) : l)), activity: log(s, `${lead.first_name} ${lead.last_name}`, `Picked a new time: ${whenLabel(apptAt)}. Back on Booked.`, 'moved') }
+    }),
     undoNoShow: id => set(s => ({ ...s, leads: s.leads.map(l => (l.id === id && l.undo ? { ...l.undo, events: [...l.undo.events, { id: `${id}-u${l.events.length + 1}`, kind: 'outcome', at: SAMPLE_NOW, label: 'Undid the no-show. No text went out', state: 'done', by: 'You', role: 'you', audit: true }] } : l)) })),
     sendNoShowText: id => set(s => ({ ...s, leads: s.leads.map(l => (l.id === id && l.undo ? { ...l, undo: null, events: l.events.map(e => (e.step === 'no_show_link' && e.state === 'scheduled' ? { ...e, label: 'Text', state: 'done' } : e)) } : l)) })),
     // Follow up: an automatic text with a link to book on the agent's calendar (N-D-22).

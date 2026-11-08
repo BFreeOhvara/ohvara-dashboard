@@ -11,7 +11,8 @@ import { inferTimezoneFromState, zonedTimeToUtcIso, SELECTABLE_TIMEZONES, SPLIT_
 //   3. VA gap. A VA never has two calls whose starts are under 30 minutes apart. A slot is open when at least one VA
 //      on shift then (not off) is free; the usual VA first, else the lightest free one; nobody free = Taken.
 //   4. Agent calendar. Appointments on one agent can't overlap: nothing within the agent's appointment length plus
-//      buffer of another (30 minutes when the agent has no setting).
+//      buffer of another, and (P894) never within 30 minutes of another booked call, whatever the length setting. A VA
+//      or the AI can't book inside that gap: the picker greys it out and the server refuses it (migration p894).
 // Sample data runs this in the browser only; the backend (P848/P852) must enforce the same rule on the server.
 
 export const GAP_MIN = 30
@@ -194,8 +195,10 @@ export function vaSlots({ date, clocks, clientTz, team, calls = [], prefer = nul
 
 // ── The agent rule ────────────────────────────────────────────────────────────────────────────────────────────
 // Open when no appointment of this agent (appts: [{ id, iso }]) starts within length + buffer minutes of `iso`.
+export const AGENT_GAP_MIN = 30
+export const agentGap = (length, buffer) => Math.max(AGENT_GAP_MIN, (length || DEFAULT_APPT_MIN) + (buffer || 0))
 export const agentFree = (iso, appts, { length = DEFAULT_APPT_MIN, buffer = 0, exceptId = null } = {}) =>
-  !appts.some(a => a.id !== exceptId && a.iso && startsTooClose(a.iso, iso, (length || DEFAULT_APPT_MIN) + (buffer || 0)))
+  !appts.some(a => a.id !== exceptId && a.iso && startsTooClose(a.iso, iso, agentGap(length, buffer)))
 // Inside someone's working hours on their own clock: it starts at or after open and ends by close, on a workday.
 // hours = { tz, open, close (minutes after midnight), days? (weekday numbers, 0 = Sunday) }.
 export function inHours(iso, hours, length = DEFAULT_APPT_MIN) {

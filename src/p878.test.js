@@ -16,20 +16,20 @@ const mk = (id, stage, o = {}) => {
   return { ...l, events: seedEvents(l) }
 }
 
-test('agents see five statuses, with Closed only under a filter', () => {
-  assert.deepEqual(AGENT_STATUSES.map(s => s.label), ['Our team is on it', 'Booked', 'Needs you', 'Follow up', 'Sold'])
+test('agents see five statuses, with Closed only under a filter (P894: live transfer and booked first)', () => {
+  assert.deepEqual(AGENT_STATUSES.map(s => s.label), ['Live transfer', 'Booked', 'No show', 'Follow up', 'Sold'])
   const leads = [
     mk('a', 'new'), mk('b', 'calling'), mk('c', 'missed'), mk('d', 'no_show'), mk('e', 'rebooking'),
     mk('f', 'booked', { apptAt: '2026-11-05T15:00' }),
-    mk('g', 'booked', { apptAt: '2026-11-02T13:00' }), // ended: needs an outcome
+    mk('g', 'booked', { apptAt: '2026-11-02T13:00' }), // time passed: still Booked, with Mark result
     mk('h', 'sold', { submitted: false }), mk('i', 'sold', { submitted: true }),
     mk('j', 'follow_up', { follow: 'Mon, Nov 9' }),
     mk('k', 'opted_out'), mk('l', 'not_interested', { reason: 'Already covered' }),
   ]
-  assert.deepEqual(countByStatus(leads), { on_it: 5, booked: 1, needs_you: 2, follow: 1, sold: 1, closed: 2 })
-  // Leads only (no servicing): a sale is done when it's marked.
-  assert.equal(agentStatusOf(leads[7], { servicing: false }), 'sold')
-  assert.deepEqual(agentChip(leads[6]), ['warn', 'Needs you: mark the outcome'])
+  assert.deepEqual(countByStatus(leads), { live: 0, booked: 2, no_show: 1, follow: 1, sold: 2, closed: 2, team: 4 })
+  assert.equal(agentStatusOf(leads[7]), 'sold')
+  assert.deepEqual(agentChip(leads[6]), ['blue', 'Booked · mark result'])
+  assert.deepEqual(agentChip(leads[7]), ['green', 'Sold · add the policy details'])
   assert.deepEqual(agentChip(leads[11]), ['mute', 'Closed: already covered'])
 })
 

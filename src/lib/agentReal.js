@@ -40,8 +40,16 @@ export function phoneText(raw) {
 }
 const yesNo = v => (v === true || v === 'yes' || v === 'Yes' ? true : v === false || v === 'no' || v === 'No' ? false : null)
 
-// leads.inbound_stage (+ outcome, live-call result) to the portal's stage (template/leadLifecycle.js STAGES).
-export function stageOfInbound(r, appt) {
+// P894: a no-show the lead hasn't rebooked yet: the newest no_show row (213's lead_mark_no_show) is after the newest
+// booking. A later booking (the lead picked a time from the one-tap link, or the team booked) puts it back on Booked.
+export function noShowOpen(events = []) {
+  const last = k => Math.max(-Infinity, ...events.filter(e => e.kind === k && e.state !== 'skipped').map(e => new Date(e.created_at || e.at).getTime()))
+  const ns = last('no_show')
+  return Number.isFinite(ns) && ns > last('booked')
+}
+
+// leads.inbound_stage (+ outcome, live-call result, the no-show rows) to the portal's stage (template/leadLifecycle.js STAGES).
+export function stageOfInbound(r, appt, events = []) {
   if (r.inbound_stage === 'sold' || r.outcome === 'sold') return 'sold'
   if (r.inbound_stage === 'follow_up' || r.outcome === 'follow_up') return 'follow_up'
   if (r.inbound_stage === 'lost') {
@@ -51,6 +59,7 @@ export function stageOfInbound(r, appt) {
   }
   if (r.inbound_stage === 'met') return 'showed'
   if (r.inbound_stage === 'booked') return 'booked'
+  if (noShowOpen(events)) return 'no_show'
   if (r.inbound_product === 'live_call') {
     if (r.transfer_status === 'requested') return 'ringing'
     if (r.live_call_result === 'missed') return 'missed'
@@ -75,7 +84,7 @@ export function eventRow(e, tz) {
 // The appointment instant from a lead's events (a "booked" row's detail, or a scheduled booked row).
 export function apptInstant(events) {
   const booked = (events || []).filter(e => e.kind === 'booked' && e.state !== 'skipped').sort((a, b) => new Date(b.at) - new Date(a.at))
-  for (const e of booked) { if (e.detail?.appointment_at) return e.detail.appointment_at; if (e.state === 'scheduled') return e.at }
+  for (const e of booked) { const at = e.detail?.appointment_at || e.detail?.at; if (at) return at; if (e.state === 'scheduled') return e.at }
   return null
 }
 
@@ -84,7 +93,7 @@ export function toLead(r, events = [], tz = DEFAULT_TZ) {
   const qa = r.qualifier_answers || {}
   const [first, last] = splitName(r.contact_name)
   const apptIso = apptInstant(events)
-  const stage = stageOfInbound(r, apptIso)
+  const stage = stageOfInbound(r, apptIso, events)
   const came = wallOf(r.delivered_at || r.created_at, tz)
   const apptAt = apptIso ? wallOf(apptIso, tz) : null
   const followAt = r.follow_up_at ? wallOf(r.follow_up_at, tz) : null
