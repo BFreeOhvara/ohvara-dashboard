@@ -536,3 +536,17 @@
 /* P907 — Clients: the request tag under the status, and the kind of the next booked call */
 .fs-cl-req { display: block; margin-top: -4px; font-size: 11.5px; font-weight: 600; color: var(--ov-mid); }
 .fs-cl-next { display: block; font-size: 11px; color: var(--ov-mid); }
+/* P907 — one screen at 1440x900: the hero's actions sit beside the countdown, the pair and the right column are
+   compact, so nothing is cut off at the fold (the peek rule). */
+.fs-ov .fs-next { gap: 18px; }
+.fs-ov .fs-day-r { gap: 12px; }
+.fs-ov .fs-ov-pair .fx-tile { gap: 8px; }
+.fs-ov .fs-ov-hero { gap: 10px; }
+.fs-ov .fs-ov-pay .fs-minibars { height: 56px; }
+.fs-ov .fs-ov-pay .fs-minibars i { height: calc(var(--h) * 38px + 4px); }
+.fs-ov .fs-uplist a { padding: 6px 12px; }
+.fs-ov .fs-uplist .fs-upmore a { padding: 4px 12px; }
+@media (min-width: 1000px) {
+  .fs-ov .fs-ov-side { gap: 12px; }
+  .fs-ov-side .fs-agents li { padding: 6px 12px; }
+}

@@ -19,14 +19,15 @@ import { VerifyCaller } from '../Clock879'
 function useNextBooked() {
   const { data: calls } = useFulCalls()
   const { data: tasks } = useFulTasks()
-  const { today, dayName } = useFulClock()
+  const { today, dayName, nowIso } = useFulClock()
   return useMemo(() => {
     const m = {}
-    const put = (cid, iso, text, word, to) => { if (cid && iso && (!m[cid] || iso < m[cid].iso)) m[cid] = { iso, text, word, to } }
-    calls.filter(k => k.status === 'booked' || k.status === 'no_answer').forEach(k => put(k.client_id, k.iso || `${String(k.day).padStart(2, '0')}${k.time}`, `${k.day === today ? 'Today' : dayName(k.day)}, ${k.time}`, 'Cancel the old policy', fp('schedule', k.id)))
+    // Only what is still ahead: a past call that wasn't answered is rebooked, not "next".
+    const put = (cid, iso, text, word, to) => { if (cid && iso && (!nowIso || iso >= nowIso) && (!m[cid] || iso < m[cid].iso)) m[cid] = { iso, text, word, to } }
+    calls.filter(k => k.iso && (k.status === 'booked' || k.status === 'no_answer')).forEach(k => put(k.client_id, k.iso, `${k.day === today ? 'Today' : dayName(k.day)}, ${k.time}`, 'Cancel the old policy', fp('schedule', k.id)))
     tasks.filter(t => t.iso && t.status !== 'done').forEach(t => put(t.client_id, t.iso, t.due_text, KIND[t.kind] || 'Call', fp('servicing', t.id)))
     return m
-  }, [calls, tasks, today, dayName])
+  }, [calls, tasks, today, dayName, nowIso])
 }
 const statusOf = (c, day) => clientStatus(clientStatusOf(c, day))
 function ClientCard({ c, i, open, next, day }) {

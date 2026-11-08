@@ -5,7 +5,7 @@ import { useFulDay, useFulPay, useFulAgents, useFulSource, minutesOf } from '../
 import { Avatar } from '../../kit'
 import { CountUp, usd } from '../../motion'
 import { fp } from '../paths'
-import { CALL_WORD, CALL_TONE, KIND } from '../words'
+import { CALL_TONE, KIND } from '../words'
 import { TrainingNudge } from '../../../fulshell/training/Training'
 import { ClockTile } from '../Clock879'
 import { MY_SHEET, MY_RATE, hoursOf, weekPay } from '../p879'
@@ -13,7 +13,7 @@ import { MY_SHEET, MY_RATE, hoursOf, weekPay } from '../p879'
 // P845 — the VA Overview. Same Solvik shape as the agent's (head stats, one dominant tile, a right column, colour
 // carried by a few filled tiles) but VA content. P907: the VA works in bookings. The dominant tile is the next booked
 // call (any kind: hand-off, cancel the old policy, save, change, cancel request, callback, welcome, yearly review) with
-// a live countdown and today's booked calls; the right column is a small "Next calls" box (a few rows) over the agents
+// a live countdown and the day's progress (the list of today's calls is the Next calls box, not repeated here); the right column is a small "Next calls" box (a few rows) over the agents
 // this VA serves; under the hero, Servicing booked today (teal) and This week's pay (sage). No queue, no call reviews.
 // Peek rule (every VA page): when the page scrolls, the next section peeks in at the bottom; no tall box is cut off.
 function Tile({ className = '', i, title, sub, to, label, children }) {
@@ -34,7 +34,6 @@ const ref = k => k.ref || k.id
 const toneOf = k => k.tone || CALL_TONE[k.status] || 'blue'
 const wordOf = k => k.word || 'Cancel the old policy'
 const labelOf = k => k.label || (k.old_carrier ? `Closing ${k.old_carrier} · new policy ${k.carrier}` : '')
-const stateOf = k => (k.done ? 'Done' : k.state === 'no_answer' ? 'Try again' : CALL_WORD[k.status] && !k.word ? CALL_WORD[k.status] : 'Booked')
 const isDone = k => (k.done != null ? k.done : k.status === 'cancelled' || k.status === 'passed')
 
 // mm:ss to the next call, ticking; past the hour it reads 1 h 58 min.
@@ -127,28 +126,17 @@ export default function Overview() {
                 </div>
                 <span className="fs-next-at"><CalendarClock size={14} aria-hidden="true" />Booked for {next.time}</span>
                 <span className="fx-next-who"><Avatar name={next.name} tone={toneOf(next)} /><span><b>{next.name}</b><small>{labelOf(next)}</small></span></span>
+              </div>
+              <div className="fs-day-r">
                 <div className="tp-row tp-wrap fx-next-acts">
                   <Link to={fp('schedule', ref(next))} className="tp-primary sm fx-accent"><PhoneCall size={14} />Open the call</Link>
                   {nextAgent && <Link to={fp('messages')} className="fx-pillbtn"><MessageSquare size={14} />Message {nextAgent}</Link>}
                 </div>
-              </div>
-              <div className="fs-day-r">
                 <div className="fs-daypulse">
                   <DayRing done={done.length} of={day.today.length} />
                   <span className="tp-grow"><b>{done.length} of {day.today.length} done today</b><small>Booked calls per hour</small></span>
                   <HourSpark calls={day.today} />
                 </div>
-                <ol className="fs-dayline" aria-label="Today's booked calls">
-                  {day.today.map((k, i) => (
-                    <li key={ref(k)} style={{ '--i': i }} className={`is-${toneOf(k)}${ref(k) === ref(next) ? ' is-next' : ''}`}>
-                      <Link to={fp('schedule', ref(k))}>
-                        <small className="tp-num">{k.time}</small>
-                        <span className="tp-grow"><b>{k.name}</b><small>{wordOf(k)}</small></span>
-                        <span className="fs-st">{ref(k) === ref(next) ? 'Next' : stateOf(k)}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ol>
               </div>
             </div>
           ) : <p className="fx-calm"><Check size={16} aria-hidden="true" />{day.today.length ? `Every booked call today is done.${day.tomorrow.length ? ` Tomorrow has ${day.tomorrow.length}.` : ''}` : real ? 'No booked calls today. The system books every call here: hand-offs, saves, changes, callbacks.' : `Every booked call today is done. Tomorrow has ${day.tomorrow.length}.`}</p>}
@@ -158,7 +146,7 @@ export default function Overview() {
           <Tile className="is-fill is-teal fs-ov-serv" i={1} title="Servicing today" sub={`${day.tasks.overdue.length} overdue · ${day.tasks.today.length} booked today`} to={fp('servicing')} label="Open Servicing">
             <b className="fx-huge tp-num"><CountUp value={servToday.length} /><small>steps</small></b>
             <ul className="fx-later">
-              {servToday.slice(0, 3).map(t => <li key={t.id}><Link to={fp('servicing', t.id)}><LifeBuoy size={13} aria-hidden="true" />{KIND[t.kind]}<b>{t.name}</b></Link></li>)}
+              {servToday.slice(0, 2).map(t => <li key={t.id}><Link to={fp('servicing', t.id)}><LifeBuoy size={13} aria-hidden="true" />{KIND[t.kind]}<b>{t.name}</b></Link></li>)}
             </ul>
           </Tile>
 
@@ -169,7 +157,7 @@ export default function Overview() {
               <small className="fs-paynote">{pay.payouts.length ? 'Your last payout' : 'No payouts yet'}. Hours from clock in and out show here once time tracking goes live.</small>
             </Tile>
           ) : (
-            <Tile className="is-fill is-green fs-ov-pay" i={2} title="This week's pay" sub={`Paid ${pay.payday} · ${cents(MY_RATE)} an hour`} to={fp('pay')} label="Open Pay">
+            <Tile className="is-fill is-green fs-ov-pay" i={2} title="This week's pay" sub={`${hrs.hours.toFixed(1)} hours so far · ${cents(MY_RATE)} an hour · paid ${pay.payday}`} to={fp('pay')} label="Open Pay">
               <b className="fx-huge tp-money"><CountUp value={hrs.pay} format={cents} /></b>
               <div className="fs-minibars" role="img" aria-label={hourDays.map(d => `${d.name} ${d.h.toFixed(1)} hours`).join(', ')}>
                 {hourDays.map(d => (
@@ -179,7 +167,6 @@ export default function Overview() {
                   </span>
                 ))}
               </div>
-              <small className="fs-paynote">{hrs.hours.toFixed(1)} hours so far this week</small>
             </Tile>
           )}
         </div>
