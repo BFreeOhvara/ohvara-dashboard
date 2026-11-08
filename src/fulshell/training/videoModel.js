@@ -6,10 +6,12 @@ import VIDEOS from './videos.json' with { type: 'json' }
 export const WATCHED_AT = 0.9 // about 90% of a video seen counts as watched
 const BUCKET = 2 // seconds per "seen" bucket
 
-// Where the files are served from: VITE_TRAINING_VIDEO_BASE once hosting is set up (a Supabase Storage bucket or
-// Vercel Blob, Brayden's door list), else the app's own /training-video/ folder (local and preview builds only).
+// Where the files are served from (P896): the public Supabase Storage bucket `training` on the live project, so every
+// build (live, preview, local) plays them with no Vercel setting. VITE_TRAINING_VIDEO_BASE overrides it, e.g.
+// '/training-video/' to test freshly built files from the app's own public folder.
+export const HOSTED_BASE = 'https://jjextitmbptoaolacocs.supabase.co/storage/v1/object/public/training/'
 export function videoBase(env = {}) {
-  const b = env.VITE_TRAINING_VIDEO_BASE || VIDEOS.base || '/training-video/'
+  const b = env.VITE_TRAINING_VIDEO_BASE || VIDEOS.base || HOSTED_BASE
   return b.endsWith('/') ? b : `${b}/`
 }
 

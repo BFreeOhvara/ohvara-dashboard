@@ -43,8 +43,8 @@ test('captions: the line on screen and the word being said', () => {
   assert.equal(cueAt(cues, 4).words[0], 'Thursday.')
 })
 
-test('files come from the hosting base once set, else the app folder', () => {
-  assert.equal(videoBase({}), '/training-video/')
+test('files come from the hosted training bucket unless VITE_TRAINING_VIDEO_BASE overrides it', () => {
+  assert.equal(videoBase({}), 'https://jjextitmbptoaolacocs.supabase.co/storage/v1/object/public/training/')
   assert.equal(videoBase({ VITE_TRAINING_VIDEO_BASE: 'https://x.supabase.co/storage/v1/object/public/training' }), 'https://x.supabase.co/storage/v1/object/public/training/')
   assert.equal(fmtTime(185.4), '3:05')
 })

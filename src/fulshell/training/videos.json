@@ -1,5 +1,5 @@
 {
- "base": "/training-video/",
+ "base": "https://jjextitmbptoaolacocs.supabase.co/storage/v1/object/public/training/",
  "lessons": {
   "booking": {
    "kind": "walkthrough",
