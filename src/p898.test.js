@@ -56,27 +56,27 @@ test('Not interested back to Follow up stays on the record', () => {
   const back = agentMove(CASES.not_interested[0], 'follow_up', { follow: 'Thu, Nov 5', followAt: '2026-11-05T09:00' }, SAMPLE_NOW)
   assert.equal(agentStatusOf(back), 'follow')
   assert.equal(back.follow, 'Thu, Nov 5')
-  const row = back.events.at(-1)
+  const row = back.events.find(e => e.audit) // P910: the follow-up call and its reminder texts follow it
   assert.match(row.label, /^Changed from Not interested to Follow up Thu, Nov 5/)
   assert.equal(row.audit, true)
 })
 
-test('a live-transfer lead lands on Booked with "Live call · Mark result", never its own column', () => {
+test('P910: a live call gets no column: it is pinned (live) until marked, then moves to that status', () => {
   const ringing = CASES.ringing[0]
-  assert.equal(agentStatusOf(ringing), 'booked')
-  assert.deepEqual(agentChip(ringing), ['blue', 'Live call · ringing now'])
+  assert.equal(agentStatusOf(ringing), 'live')
+  assert.deepEqual(agentChip(ringing), ['violet', 'Live call · ringing now'])
   const took = agentMove(ringing, 'showed', {}, SAMPLE_NOW)
   assert.equal(isLiveCall(took), true)
-  assert.equal(agentStatusOf(took), 'booked')
+  assert.equal(agentStatusOf(took), 'live')
   assert.equal(needsResult(took), true)
-  assert.deepEqual(agentChip(took), ['blue', 'Live call · mark result'])
+  assert.deepEqual(agentChip(took), ['violet', 'Live call · pick the result'])
   assert.deepEqual(resultsFor(took), ['sold', 'follow_up', 'not_interested'])
-  // Picking a result takes it off Booked.
+  // Picking a result unpins it.
   assert.equal(agentStatusOf(agentMove(took, 'sold', {}, SAMPLE_NOW)), 'sold')
   assert.equal(agentStatusOf(agentMove(took, 'not_interested', { reason: 'Already covered' }, SAMPLE_NOW)), 'not_interested')
   const by = countByStatus([ringing, took, CASES.booked[0]])
-  assert.equal(by.booked, 3)
-  assert.equal('live' in by, false)
+  assert.equal(by.booked, 1)
+  assert.equal(by.live, 2)
 })
 
 test('Follow up asks for a day: the next ten weekdays, the reminder on that day', () => {
@@ -103,5 +103,5 @@ test('Leads page: no team bar, no "Five statuses" line; Call is a phone-only tap
   const picker = readFileSync(new URL('./template/LeadOutcome.jsx', import.meta.url), 'utf8')
   assert.match(picker, /role="radiogroup" aria-label="Result"/)
   assert.match(picker, /role="radiogroup" aria-label="Follow up day"/)
-  assert.match(picker, /followAt: picked\.at/) // the real save needs the date, not just the label
+  assert.match(picker, /followAt: slot\.at/) // the real save needs the date, not just the label
 })

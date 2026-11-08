@@ -99,7 +99,7 @@ test('the founding lock: the first 20 paying agents keep these prices for 12 mon
   assert.match(SQL, /create or replace function public\.billing_book_for\(/)
   assert.match(SQL, /founding_until > d/)
   const billing = readFileSync('src/template/screens/Billing.jsx', 'utf8')
-  assert.match(billing, /Your prices are locked until \{b\.founding\.until\}/)
+  assert.match(billing, /\['Founding price lock', `Until \$\{b\.founding\.until\}`/) // P910 Billing rebuild
 })
 
 test('admin revenue and the pilot results keep the plan fee and the 12% apart', () => {

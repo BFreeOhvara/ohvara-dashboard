@@ -55,6 +55,8 @@ create function pg_temp.added(a uuid, n int, src text) returns void language sql
     from generate_series(1, n) g
 $$;
 select pg_temp.day(0);
+-- P910: these checks are for P909's one-day rhythm (charge tomorrow); p910_paid_day_ahead.sql tests two days ahead.
+update public.billing_settings set days_ahead = 1 where id;
 
 
 -- ── a. price book version 3 ─────────────────────────────────────────────────
@@ -150,6 +152,8 @@ select pg_temp.pay('a9090000-0000-4000-8000-00000000000a', 5, 'failed');
 select pg_temp.day(5);
 select public.lead_spend_morning_retry();
 select pg_temp.pay('a9090000-0000-4000-8000-00000000000a', 5, 'failed');
+-- P910: day 4's spend is reported first; an unpaid day reserves nothing, so unreported money would read as credit.
+select public.lead_spend_record_delivered('a9090000-0000-4000-8000-00000000000a', 'appts', pg_temp.e(4), 10000);
 select public.lead_spend_nightly();
 select is((pg_temp.ch('a9090000-0000-4000-8000-00000000000a', 5)).status, 'cancelled', 'f11 a declined day that passed is let go');
 select is((select count(*)::int from public.lead_spend_charges where agent_id = 'a9090000-0000-4000-8000-00000000000a' and kind = 'nightly' and for_day = pg_temp.e(6)), 1, 'f12 and tomorrow is charged as usual');

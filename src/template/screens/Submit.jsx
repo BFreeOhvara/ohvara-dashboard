@@ -114,10 +114,13 @@ export default function Submit() {
   const { data: leads } = useSampleLeads()
   const { data: clients } = useSampleClients()
   const [params, setParams] = useSearchParams()
-  // Opened from a sold lead (paths.submit(leadId)): the form starts filled in from that lead.
+  // Opened from a sold lead (paths.submit(leadId)): the form starts filled in from that lead. P910: everything Ohvara
+  // already has (name, phone, city, state, and the AI's notes: what they want and what they said), for live calls and
+  // booked calls alike. The agent only adds the carrier, premium, draft date and when the client is easiest to reach.
   const [f, setF] = useState(() => {
     const l = leads.find(x => x.id === params.get('lead'))
-    return l ? { ...EMPTY, ...fillFromMatch({ kind: 'lead', id: l.id, name: `${l.first_name} ${l.last_name}`, phone: l.phone, city: l.city, state: l.state, stage: chipWords(l) }) } : EMPTY
+    const notes = l ? [l.wants && `Wants: ${l.wants}`, l.note].filter(Boolean).join('\n') : ''
+    return l ? { ...EMPTY, ...fillFromMatch({ kind: 'lead', id: l.id, name: `${l.first_name} ${l.last_name}`, phone: l.phone, city: l.city, state: l.state, stage: chipWords(l) }), notes } : EMPTY
   })
   useEffect(() => { if (params.get('lead')) setParams({}, { replace: true }) }, [params, setParams])
   const [tried, setTried] = useState(false)

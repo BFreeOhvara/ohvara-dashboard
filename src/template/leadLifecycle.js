@@ -2,6 +2,7 @@ import { LEAD_TEXTS, SENDER, leadText } from './leadTexts.js'
 import { phoneDigits, formatPhone } from './phoneMask.js'
 import { agentLine } from '../lib/aiCallerRules.js'
 import { planFlow, fillWords } from '../lib/leadFlows.js'
+import { shortDate } from '../lib/clientCheck.js'
 
 // P873 — a lead, start to finish (brain/ohvara/Lead Lifecycle.md is the written version). Pure functions only, so
 // the sample store, the screens and the tests share one set of rules, and P848 swaps the sample rows for
@@ -212,6 +213,15 @@ const MOVE_ROWS = {
 }
 export const AGENT_MOVES = Object.keys(MOVE_ROWS)
 
+// P910: a follow-up call's reminder texts that will still go out: 6:30 PM the day before and 8:30 AM that morning,
+// each only if it's still ahead and before the call (a same-day follow-up booked this afternoon gets none).
+export function followReminders(at, now = clockNow()) {
+  const eve = `${addMin(`${at.slice(0, 10)}T00:00`, -24 * 60).slice(0, 10)}T18:30`
+  const morn = `${at.slice(0, 10)}T08:30`
+  return [{ step: 'follow_day_before', at: eve, label: 'Reminder, the evening before' }, { step: 'follow_morning', at: morn, label: 'Reminder, the morning of' }]
+    .filter(r => r.at > now && r.at < at)
+}
+
 export function applyMove(lead, stage, extra = {}, now = clockNow()) {
   if (!AGENT_MOVES.includes(stage)) throw new Error(`An agent cannot move a lead to ${stage}`)
   const s = STAGES[stage]
@@ -221,13 +231,24 @@ export function applyMove(lead, stage, extra = {}, now = clockNow()) {
   const changed = OUTCOME_STAGES.includes(lead.stage) && lead.stage !== stage
   if (changed) label = `Changed from ${STAGES[lead.stage].label} to ${label}`
   const rows = [{ id: `${lead.id}-m${(lead.events || []).length + 1}`, kind, at: now, label, state: 'done', by: 'You', role: 'you', ...(changed ? { audit: true } : {}) }]
+  const id = () => `${lead.id}-m${(lead.events || []).length + rows.length + 1}`
+  // P910: vaCall = the re-engage call the system booked on the VA Schedule ({ at, va }); not a lead field.
+  const { vaCall, ...fields } = extra
   if (stage === 'no_show') {
-    // The one-tap rebook text waits out the short Undo (N-C-45), then sends; the team calls if they don't rebook.
-    rows.push({ id: `${lead.id}-m${(lead.events || []).length + 2}`, kind: 'text_sent', step: 'no_show_link', at: now, label: 'Text', state: 'scheduled', text: leadText('no_show_link', { lead: lead.first_name }), by: SENDER, role: 'auto' })
-    rows.push({ id: `${lead.id}-m${(lead.events || []).length + 3}`, kind: 'va_call', at: addMin(now, 45), label: 'Calls to rebook if they have not picked a time', state: 'scheduled', by: TEAM, role: 'team' })
+    // The one-tap rebook text waits out the short Undo (N-C-45), then sends. P910: a VA re-engage call is booked at
+    // the next open slot in the lead's best window; it's dropped if they rebook from the link first.
+    rows.push({ id: id(), kind: 'text_sent', step: 'no_show_link', at: now, label: 'Text', state: 'scheduled', text: leadText('no_show_link', { lead: lead.first_name }), by: SENDER, role: 'auto' })
+    rows.push({ id: id(), kind: 'va_call', at: vaCall?.at || addMin(now, 45), label: `Calls to rebook${vaCall?.va ? `: ${vaCall.va} is booked` : ''} if they haven't picked a time`, state: 'scheduled', by: vaCall?.va ? `${vaCall.va}, Fulfillment` : TEAM, role: 'team' })
+  }
+  if (stage === 'follow_up' && fields.followAt) {
+    // P910 (Lead Text Workflows 7): the follow-up call on the agent's calendar and its two reminder texts.
+    const at = fields.followAt
+    const appt = timeLabel(at)
+    rows.push({ id: id(), kind: 'follow_up', at, label: `Your follow-up call${fields.followAuto ? ', booked for you' : ''}`, state: at > now ? 'scheduled' : 'done', by: 'You', role: 'you' })
+    followReminders(at, now).forEach(r => rows.push({ id: id(), kind: 'text_sent', step: r.step, at: r.at, label: r.label, state: 'scheduled', text: leadText(r.step, { lead: lead.first_name, appt }), by: SENDER, role: 'auto' }))
   }
   const status = stage === 'sold' ? 'closed' : stage === 'not_interested' ? 'bad' : stage === 'follow_up' ? 'contacted' : lead.status
-  return { ...lead, ...extra, stage, status, dbStage: s.db, outcome: s.outcome || (stage === 'no_show' || stage === 'showed' ? null : lead.outcome), fresh: false, events: [...(lead.events || []), ...rows] }
+  return { ...lead, ...fields, stage, status, dbStage: s.db, outcome: s.outcome || (stage === 'no_show' || stage === 'showed' ? null : lead.outcome), fresh: false, events: [...(lead.events || []), ...rows] }
 }
 
 const OUTCOME_STAGES = ['showed', 'no_show', 'sold', 'follow_up', 'not_interested']
@@ -294,42 +315,34 @@ export function closeCallTask(lead, now = clockNow()) {
   return { ...lead, reply: lead.reply ? { ...lead.reply, called: true } : null, events: [...(lead.events || []), row] }
 }
 
-// ── Needs you now ──────────────────────────────────────────────────────────────────────────────────────────────
-// The six things that need the agent, most urgent first, each with its one action. FYI items are quiet: the team
-// is already on them.
-// P878: no "Replied by text" (nobody replies by hand). A reply that needs the agent arrives as a call task; a sale not
-// yet submitted for servicing and billing actions need the agent too.
+// ── Your to-dos (P910; was "Needs you now") ────────────────────────────────────────────────────────────────────
+// Only real agent jobs (Brayden, Nov 8): calls to mark (a booked call whose time has passed, a live call left unmarked
+// after its day) and the monthly "Still on the books?" check. A live call on its own day is pinned at the top of Leads
+// and the Overview instead (agentView.js liveCalls); call tasks, unfinished sales and billing show on their own pages.
 export const TRIGGERS = [
-  { key: 'live', title: 'Live transfer ringing', action: 'Answer' },
-  { key: 'starting', title: 'Appointment starting', action: 'Join call' },
   { key: 'outcome', title: 'How did it go?', action: 'Mark result' },
-  { key: 'call', title: 'Asked you to call', action: 'Call' },
-  { key: 'finish', title: 'Finish servicing details', action: 'Finish' },
-  { key: 'follow', title: 'Follow-up due today', action: 'Call back' },
-  { key: 'servicing', title: 'A client needs you', action: 'Open' },
-  { key: 'billing', title: 'Billing', action: 'Open billing' },
+  { key: 'live', title: 'Live call to mark', action: 'Mark result' },
+  { key: 'check', title: 'Still on the books?', action: 'Answer' },
 ].map((t, i) => ({ ...t, rank: i + 1 }))
 const T = Object.fromEntries(TRIGGERS.map(t => [t.key, t]))
 export const JOIN_BEFORE = 15 // minutes before an appointment it starts to need you
 export const APPT_LENGTH = 30
 
-export const needsOutcome = (l, now = clockNow()) => l.stage === 'showed' || (l.stage === 'booked' && !!l.apptAt && minutesFrom(l.apptAt, now) >= APPT_LENGTH)
-const starting = (l, now) => l.stage === 'booked' && !!l.apptAt && minutesFrom(now, l.apptAt) <= JOIN_BEFORE && minutesFrom(l.apptAt, now) < APPT_LENGTH
+// A booked call whose time has passed (30 minutes after it started). A live call is liveToMark, below.
+export const needsOutcome = (l, now = clockNow()) => l.stage === 'booked' && !!l.apptAt && minutesFrom(l.apptAt, now) >= APPT_LENGTH
+const liveOn = l => [...(l.events || [])].reverse().find(e => e.kind === 'transferred')?.at || l.liveAt || l.came || ''
+// A live call the agent took and didn't mark by the end of its day.
+export const liveToMark = (l, now = clockNow()) => l.stage === 'showed' && !l.apptAt && !!liveOn(l) && liveOn(l).slice(0, 10) < now.slice(0, 10)
 
-export function needsYouNow({ leads = [], clients = [], billingNeeds = [], servicing = true }, now = clockNow()) {
+// checks = lib/clientCheck checkLists(...) for today: one to-do per draft date asked about.
+export function needsYouNow({ leads = [], checks = [] }, now = clockNow()) {
   const out = []
   const push = (t, l, what, when) => out.push({ id: `${t.key}-${l.id}`, trigger: t.key, rank: t.rank, title: t.title, action: t.action, ref: l.id, kind: 'lead', name: fullName(l), phone: l.phone, what, when })
-  leads.filter(l => l.stage === 'ringing').forEach(l => push(T.live, l, `${l.city}, ${l.state} · on the line with the team`, 'Now'))
-  leads.filter(l => starting(l, now)).forEach(l => {
-    const m = minutesFrom(now, l.apptAt)
-    push(T.starting, l, `Appointment at ${timeLabel(l.apptAt)}`, m > 0 ? `In ${m} min` : 'Now')
-  })
-  leads.filter(l => needsOutcome(l, now)).forEach(l => push(T.outcome, l, l.stage === 'showed' ? 'You took the live call. Pick the result' : `Appointment at ${timeLabel(l.apptAt)} has passed`, l.stage === 'showed' ? 'Now' : 'Ended'))
-  leads.filter(agentCallTask).forEach(l => push(T.call, l, `“${l.reply.text}”`, l.reply.at.slice(0, 10) === now.slice(0, 10) ? timeLabel(l.reply.at) : atLabel(l.reply.at, now)))
-  if (servicing) leads.filter(l => l.stage === 'sold' && !l.submitted).forEach(l => push(T.finish, l, 'Sold. Add the policy details so the team can service it', 'Today'))
-  leads.filter(l => l.stage === 'follow_up' && l.follow === dayLabel(now)).forEach(l => push(T.follow, l, 'You set this callback', 'Today'))
-  clients.filter(c => c.stage === 'needs_attention').forEach(c => out.push({ id: `servicing-${c.id}`, trigger: 'servicing', rank: T.servicing.rank, title: T.servicing.title, action: T.servicing.action, ref: c.id, kind: 'client', name: `${c.client_first_name} ${c.client_last_name}`, phone: c.client_phone, what: c.attention || 'Needs you', when: 'Today' }))
-  billingNeeds.forEach(b => out.push({ id: `billing-${b.key}`, trigger: 'billing', rank: T.billing.rank, title: b.title, action: T.billing.action, ref: b.key, kind: 'billing', name: b.name, phone: null, what: b.what, when: b.when }))
+  leads.filter(l => needsOutcome(l, now)).forEach(l => push(T.outcome, l, `Booked call at ${timeLabel(l.apptAt)} has passed`, l.apptAt.slice(0, 10) === now.slice(0, 10) ? 'Today' : dayLabel(l.apptAt)))
+  leads.filter(l => liveToMark(l, now)).forEach(l => push(T.live, l, `Live call ${dayLabel(liveOn(l))}. Pick how it went`, dayLabel(liveOn(l))))
+  checks.forEach(c => out.push({ id: `check-${c.draft}`, trigger: 'check', rank: T.check.rank, title: T.check.title, action: T.check.action, ref: c.draft, kind: 'check',
+    name: c.clients.length === 1 ? `${c.clients[0].client_first_name} ${c.clients[0].client_last_name}` : `${c.clients.length} clients`, phone: null,
+    what: `Drafted ${shortDate(c.draft)}. Still on the books? One tap`, when: 'Today' }))
   return out.sort((a, b) => a.rank - b.rank)
 }
 

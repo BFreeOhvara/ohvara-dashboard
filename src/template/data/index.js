@@ -1,7 +1,10 @@
 import { useSyncExternalStore, useMemo, createContext, useContext, createElement } from 'react'
 import { instantOf, clockOf, dateOf, zoneOf } from '../../lib/callSlots.js'
+import { bookNoShowCall, cancelNoShowCall } from '../ful/data.js'
+import { checkLists, CHECK_DEFAULTS } from '../../lib/clientCheck.js'
 import { seedEvents, applyMove, rebookLead, closeCallTask, whenLabel, needsYouNow, forYourInfo, addMin, STAGES, SAMPLE_NOW } from '../leadLifecycle.js'
-import { canMove, withSoldLeads } from '../agentView.js'
+import { canMove, withSoldLeads, followUpPick } from '../agentView.js'
+import { wallOf } from '../../lib/agentReal.js'
 import { leadText, SENDER } from '../leadTexts.js'
 import { nightly as nightlyOf, expected, startsText, TIERS } from '../spendPlan.js'
 
@@ -38,6 +41,9 @@ const people = {
   // P902: one lead per first-call outcome that the board didn't have yet.
   lena: { first: 'Lena', last: 'Fox', phone: '(470) 555-0124', city: 'Marietta', state: 'GA' },
   gloriap: { first: 'Gloria', last: 'Price', phone: '(214) 555-0172', city: 'Dallas', state: 'TX' },
+  // P910: two live calls the agent took, one this afternoon (pinned) and one last Friday left unmarked (a to-do).
+  wes: { first: 'Wes', last: 'Hart', phone: '(210) 555-0153', city: 'San Antonio', state: 'TX' },
+  june: { first: 'June', last: 'Moss', phone: '(813) 555-0147', city: 'Tampa', state: 'FL' },
   ray: { first: 'Ray', last: 'Ortiz', phone: '(405) 555-0166', city: 'Norman', state: 'OK' },
   brian: { first: 'Brian', last: 'Cole', phone: '(614) 555-0139', city: 'Columbus', state: 'OH' },
 }
@@ -64,10 +70,10 @@ const seedLeads = [
   // P878: Dana asked a coverage question after booking: the automatic replier answered and made a call task for the agent.
   mkLead('sample-lead-1', people.dana, { stage: 'booked', fresh: true, came: '2026-11-02T10:52', apptAt: '2026-11-05T15:00', note: 'Wants coverage until the mortgage is paid off. Two kids, 9 and 12.', reply: { text: 'Does this cover my husband too? He wants to know before Thursday.', at: '2026-11-02T13:40' } }),
   mkLead('sample-lead-2', people.carla, { stage: 'missed', kind: 'live_call', came: '2026-11-02T09:08', best_time: 'Mornings' }),
-  mkLead('sample-lead-3', people.harold, { stage: 'ringing', kind: 'live_call', came: '2026-11-02T14:11', age_band: '55 to 64' }),
+  mkLead('sample-lead-3', people.harold, { stage: 'ringing', kind: 'live_call', came: '2026-11-02T14:11', age_band: '55 to 64', wants: 'Cover the mortgage so his wife keeps the house', note: 'Retiring in 4 years. Mortgage about $180,000.' }),
   mkLead('sample-lead-4', people.renee, { stage: 'no_show', came: '2026-10-29T17:40', apptAt: '2026-11-02T11:00' }),
   mkLead('sample-lead-5', people.denise, { stage: 'sold', status: 'closed', outcome: 'sold', submitted: true, came: '2026-10-24T16:05', apptAt: '2026-10-27T11:00' }),
-  mkLead('sample-lead-6', people.robert, { stage: 'follow_up', status: 'contacted', outcome: 'follow_up', came: '2026-10-27T18:12', apptAt: '2026-10-30T15:00', follow: 'Mon, Nov 2', followAt: '2026-11-02T16:00' }),
+  mkLead('sample-lead-6', people.robert, { stage: 'follow_up', status: 'contacted', outcome: 'follow_up', came: '2026-10-27T18:12', apptAt: '2026-10-30T15:00', follow: 'Mon, Nov 2', followAt: '2026-11-02T16:30' }),
   // P892: Owen was called seconds after his form came in (the agent sees the speed only).
   mkLead('sample-lead-7', people.owen, { stage: 'booked', came: '2026-10-30T12:20', apptAt: '2026-11-02T14:00', age_band: '35 to 44', speed: 9 }),
   mkLead('sample-lead-8', people.ellen, { stage: 'booked', came: '2026-10-31T09:15', apptAt: '2026-11-02T13:00', firstReply: 'Monday at 1 is good' }),
@@ -86,6 +92,10 @@ const seedLeads = [
   mkLead('sample-lead-17', people.gloriap, { stage: 'booked', firstCall: 'not_now', came: '2026-11-02T11:20', apptAt: '2026-11-03T17:30' }),
   mkLead('sample-lead-18', people.lena, { stage: 'follow_up', status: 'contacted', outcome: 'follow_up', firstCall: 'not_now', came: '2026-11-02T09:05', follow: 'Wed, Nov 4', followAt: '2026-11-04T16:00' }),
   mkLead('sample-lead-19', people.ray, { stage: 'not_interested', status: 'bad', outcome: 'not_interested', firstCall: 'hard_no', reason: 'Not interested on the first call', came: '2026-11-02T09:47' }),
+  // P910: live calls the AI collected and the agent took. Wes: this afternoon, still to mark (pinned on Leads and the
+  // Overview). June: last Friday, never marked (pinned, and a to-do since her day ended).
+  mkLead('sample-lead-21', people.wes, { stage: 'showed', kind: 'live_call', came: '2026-11-02T13:41', age_band: '45 to 54', best_time: 'Evenings', wants: 'A policy that pays off the house if he dies', note: 'Married, two teens. $240,000 left on the mortgage, 22 years. Has a $50,000 policy through work.' }),
+  mkLead('sample-lead-22', people.june, { stage: 'showed', kind: 'live_call', came: '2026-10-30T16:17', age_band: '55 to 64', best_time: 'Mornings', wants: 'Compare with the cover her bank offered', note: 'Widowed. Bank quoted her $96 a month. Wants it in writing.' }),
   mkLead('sample-lead-20', people.brian, { stage: 'not_interested', status: 'bad', outcome: 'not_interested', firstCall: 'wrong_number', reason: 'Wrong number', came: '2026-11-02T08:02' }),
 ]
 
@@ -185,6 +195,9 @@ const seedAppointments = [
   { id: 'ap6', day: 'Fri', date: 6, time: '2:00 PM', who: 'Luis Ortega', label: 'Check-in call', kind: 'client', ref: 'sample-client-2' },
   { id: 'ap7', day: 'Fri', date: 6, time: '4:15 PM', who: 'Gloria Santos', label: 'Review call', kind: 'client', ref: 'sample-client-1' },
   { id: 'ap9', day: 'Wed', date: 4, time: '10:00 AM', who: 'Mark Daniels', label: 'Appointment', kind: 'lead', ref: 'sample-lead-15' },
+  // P910: a follow-up is the agent's own call, on their calendar.
+  { id: 'ap10', day: 'Mon', date: 2, time: '4:30 PM', who: 'Robert Chen', label: 'Follow-up call', kind: 'lead', ref: 'sample-lead-6' },
+  { id: 'ap11', day: 'Wed', date: 4, time: '4:00 PM', who: 'Lena Fox', label: 'Follow-up call', kind: 'lead', ref: 'sample-lead-18' },
 ]
 // P854: each appointment is one instant (iso, seeds: the day and time on the agent's clock) plus the client's zone (tz).
 // No two overlap (lib/callSlots agentFree): ap5 moved off ap4's 3:00 PM. date/day/time stay on the agent's clock.
@@ -259,11 +272,14 @@ const seed = {
     take: { mode: param('take') === 'appts' ? 'appts' : 'both', hours: DEFAULT_LIVE_HOURS, tz: 'America/Chicago' },
     booked: sampleAgent().none ? 0 : 4, usual: 5,
     nightly: {
-      at: 'Tonight, 8 PM', forDay: 'Tue, Nov 3',
+      // P910: one paid day ahead. Today (Mon) and tomorrow (Tue) are paid; tonight charges the day after tomorrow
+      // (Wed). ?billing=failed: last night's charge for Tue was declined, so Tue runs no ads unless it's paid first.
+      at: 'Tonight, 8 PM', today: 'Mon, Nov 2', tomorrow: 'Tue, Nov 3', forDay: 'Wed, Nov 4',
       nights: [
         { day: 'Sat, Oct 31', spend: 100, delivered: 100, status: 'paid' },
         { day: 'Sun, Nov 1', spend: 100, delivered: 96, status: 'paid' },
-        { day: 'Mon, Nov 2', spend: 100, delivered: null, status: param('billing') === 'failed' ? 'failed' : 'paid' },
+        { day: 'Mon, Nov 2', spend: 100, delivered: null, status: 'paid' },
+        { day: 'Tue, Nov 3', spend: 100, delivered: null, status: param('billing') === 'failed' ? 'failed' : 'paid' },
       ],
     },
     card: { label: 'Visa ending 4242', onFile: param('card') !== 'none' },
@@ -280,8 +296,8 @@ const seed = {
     next_charge: 'Tonight, 8 PM', nextBill: 'Tue, Dec 1',
     servicing: { status: 'active', next: 'Tue, Dec 1' }, cancellations: null,
     history: param('plan') === 'paid'
-      ? [{ id: 'inv0', at: 'Sun, Nov 1, 8 PM', label: 'Lead spend for Mon, Nov 2 + 12%', amount: 112 }, { id: 'inv1', at: 'Sun, Nov 1', label: 'Plan, Growth, November', amount: GROWTH }, { id: 'inv2', at: 'Sat, Oct 31, 8 PM', label: 'Lead spend for Sun, Nov 1 + 12%', amount: 112 }, { id: 'inv3', at: 'Thu, Oct 1', label: 'Plan, Growth, October', amount: GROWTH }]
-      : [{ id: 'inv1', at: 'Sun, Nov 1, 8 PM', label: 'Lead spend for Mon, Nov 2', amount: 100 }, { id: 'inv2', at: 'Sat, Oct 31, 8 PM', label: 'Lead spend for Sun, Nov 1', amount: 100 }, { id: 'inv3', at: 'Fri, Oct 30, 8 PM', label: 'Lead spend for Sat, Oct 31', amount: 100 }],
+      ? [{ id: 'inv0', at: 'Sun, Nov 1, 8 PM', label: 'Lead spend for Tue, Nov 3 + 12%', amount: 112 }, { id: 'inv1', at: 'Sun, Nov 1', label: 'Plan, Growth, November', amount: GROWTH }, { id: 'inv2', at: 'Sat, Oct 31, 8 PM', label: 'Lead spend for Mon, Nov 2 + 12%', amount: 112 }, { id: 'inv3', at: 'Thu, Oct 1', label: 'Plan, Growth, October', amount: GROWTH }]
+      : [{ id: 'inv1', at: 'Sun, Nov 1, 8 PM', label: 'Lead spend for Tue, Nov 3', amount: 100 }, { id: 'inv2', at: 'Sat, Oct 31, 8 PM', label: 'Lead spend for Mon, Nov 2', amount: 100 }, { id: 'inv3', at: 'Fri, Oct 30, 8 PM', label: 'Lead spend for Sun, Nov 1', amount: 100 }],
   },
   submitted: 11,
 }
@@ -316,8 +332,8 @@ function billingView(b, submitted) {
 // Billing items that need the agent (N-K-01): a declined card (tomorrow's leads are off), no card on file.
 function billingNeeds(b) {
   const out = []
-  if (b.payment.failed || nightlyOf(b.nightly, b.spend, b.plan).failed) out.push({ key: 'failed', title: 'Card declined', name: 'Fix your card', what: 'Tomorrow’s leads are off until it goes through. We try again at 8 AM.', when: 'Now' })
-  if (b.card && !b.card.onFile && b.products !== 'servicing') out.push({ key: 'card', title: 'No card on file', name: 'Add a card', what: 'Your leads start once a card is on file. Lead spend is charged each night.', when: 'Now' })
+  if (b.payment.failed || nightlyOf(b.nightly, b.spend, b.plan).failed) out.push({ key: 'failed', title: 'Card declined', name: 'Fix your card', what: 'Tomorrow is paid and still runs. The day after brings no new leads unless it’s paid first. We try again at 8 AM.', when: 'Now' })
+  if (b.card && !b.card.onFile && b.products !== 'servicing') out.push({ key: 'card', title: 'No card on file', name: 'Add a card', what: 'Your leads start once a card is on file. We charge your first two days, then one day ahead each night.', when: 'Now' })
   return out
 }
 function useTalksSample() { const s = useStore(); return ok(s.talks) }
@@ -325,8 +341,8 @@ function useFeedbackSample() { const s = useStore(); return ok(s.feedback) }
 function useBlocksSample() { const s = useStore(); return ok(s.blocks) }
 function useSetupSample() { const s = useStore(); return ok(s.setup) }
 function useSettingsSample() { const s = useStore(); return ok(s.settings) }
-// P873: Needs you now (the six triggers, most urgent first) and the quiet FYI list, for the Overview and the bell.
-function useNeedsSample() { const s = useStore(); return ok(useMemo(() => ({ now: needsYouNow({ ...s, billingNeeds: billingNeeds(s.billing), servicing: s.billing.products !== 'leads' }, SAMPLE_NOW), fyi: forYourInfo(s) }), [s])) }
+// P910: Your to-dos (calls to mark, the monthly check) and, apart, billing notices (a declined card: Fix card).
+function useNeedsSample() { const s = useStore(); return ok(useMemo(() => ({ now: needsYouNow({ leads: s.leads, checks: checkLists(clientsOf(s), SAMPLE_NOW.slice(0, 10), CHECK_DEFAULTS) }, SAMPLE_NOW), fyi: forYourInfo(s), notices: billingNeeds(s.billing) }), [s])) }
 function useSignupSample() {
   return useMemo(() => ok({
     covers: ['Booked appointments and live calls, at a daily spend you set', 'A team that calls every lead right away and books them on your calendar', 'Servicing that keeps your policies on the books', 'Your own portal and phone app'],
@@ -402,12 +418,30 @@ const soldToClient = l => {
 }
 const log = (s, who, text, kind) => [{ id: `a${s.activity.length + 1}-${text.length}`, at: stamp, kind, who, text }, ...s.activity]
 
+// '2026-11-02T14:14' -> '2:14 PM'
+const clockOfWall = w => { const [h, m] = w.slice(11, 16).split(':').map(Number); return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}` }
+// P910: the agent's follow-up slot (agentView.js followUpPick) on the sample clock, hours and calendar.
+const followUpFor = (s, lead, { date = null, time = null } = {}) => followUpPick(lead, { appts: s.appointments, settings: s.settings, date, time, now: SAMPLE_NOW })
+
 function useActionsSample() {
   return useMemo(() => ({
     // P894: only the results the lead's status allows (agentView.js AGENT_RESULTS); anything else changes nothing.
+    // P910: Follow up books the agent's call: the day and time they picked (extra.date + extra.time), or the system's
+    // pick (the lead's best window, else afternoon, 30 minutes clear of other calls), on their calendar.
     moveLead: (id, stage, extra = {}) => set(s => {
       const lead = s.leads.find(l => l.id === id)
       if (!lead || !canMove(lead, stage)) return s
+      if (stage === 'follow_up') {
+        const slot = extra.slotIso ? { iso: extra.slotIso, picked: !extra.followAuto } : followUpFor(s, lead, extra)
+        if (!slot) return s
+        const tz = s.settings.timeZone || AGENT_TZ
+        const followAt = wallOf(slot.iso, tz)
+        const { day, date, time } = onAgentClock(slot.iso, tz)
+        const moved = applyMove(lead, 'follow_up', { follow: whenLabel(followAt), followAt, followAuto: !slot.picked }, SAMPLE_NOW)
+        const appt = { id: `fu-${id}-${Date.now()}`, day, date, time, iso: slot.iso, tz: zoneOf(lead.state, lead.city), who: `${lead.first_name} ${lead.last_name}`, label: 'Follow-up call', kind: 'lead', ref: id }
+        return { ...s, leads: s.leads.map(l => (l.id === id ? moved : l)), appointments: [...s.appointments.filter(a => !(a.ref === id && a.label === 'Follow-up call')), appt],
+          activity: log(s, appt.who, `Follow up${slot.picked ? '' : ' booked for you'}: ${whenLabel(followAt)}. They get a reminder the day before and that morning.`, 'moved') }
+      }
       return { ...s, leads: s.leads.map(l => (l.id === id ? applyMove(l, stage, extra, SAMPLE_NOW) : l)), activity: log(s, `${lead.first_name} ${lead.last_name}`, `Moved to ${STAGES[stage].label}.`, 'moved') }
     }),
     // P878: nobody texts a lead by hand. A call task from the automatic replier closes when the agent calls back.
@@ -419,14 +453,37 @@ function useActionsSample() {
       return { ...s, leads: s.leads.map(l => (l.id === id ? { ...l, events: [...l.events, row] } : l)), activity: log(s, `${lead.first_name} ${lead.last_name}`, 'You asked our team to call.', 'call') }
     }),
     // No-show with a short Undo (N-C-45): the lead keeps a copy of itself until the rebook text goes.
-    markNoShow: id => set(s => ({ ...s, leads: s.leads.map(l => (l.id === id && canMove(l, 'no_show') ? { ...applyMove(l, 'no_show', {}, SAMPLE_NOW), undo: { ...l, undo: null } } : l)) })),
+    // P910: and a VA re-engage call is booked on the VA Schedule (ful/data bookNoShowCall), next open slot in the lead's
+    // best window. Undo takes it off again; so does the lead rebooking first.
+    markNoShow: id => {
+      const lead = state.leads.find(l => l.id === id)
+      if (!lead || !canMove(lead, 'no_show')) return
+      const va = bookNoShowCall({ leadId: id, who: `${lead.first_name} ${lead.last_name}`, phone: lead.phone, state: lead.state, city: lead.city, window: lead.best_time })
+      set(s => {
+        const vaCall = va ? { at: wallOf(va.iso, s.settings.timeZone || AGENT_TZ), va: va.va?.name?.split(' ')[0] || null } : null
+        return { ...s, leads: s.leads.map(l => (l.id === id ? { ...applyMove(l, 'no_show', { vaCall }, SAMPLE_NOW), vaCall, undo: { ...l, undo: null } } : l)),
+          activity: log(s, `${lead.first_name} ${lead.last_name}`, `No show. Rebook link sent${vaCall ? `, and ${vaCall.va || 'our team'} calls ${whenLabel(vaCall.at)} to book them again` : ''}.`, 'moved') }
+      })
+    },
     // P894: they picked a new time from the one-tap link: back to Booked (the rebook page or the team does this, not the agent).
-    rebookLead: (id, apptAt) => set(s => {
-      const lead = s.leads.find(l => l.id === id)
-      if (!lead || !['no_show', 'rebooking'].includes(lead.stage)) return s
-      return { ...s, leads: s.leads.map(l => (l.id === id ? rebookLead(l, apptAt, SAMPLE_NOW) : l)), activity: log(s, `${lead.first_name} ${lead.last_name}`, `Picked a new time: ${whenLabel(apptAt)}. Back on Booked.`, 'moved') }
-    }),
-    undoNoShow: id => set(s => ({ ...s, leads: s.leads.map(l => (l.id === id && l.undo ? { ...l.undo, events: [...l.undo.events, { id: `${id}-u${l.events.length + 1}`, kind: 'outcome', at: SAMPLE_NOW, label: 'Undid the no-show. No text went out', state: 'done', by: 'You', role: 'you', audit: true }] } : l)) })),
+    // P910: back on the same agent's calendar; the VA re-engage call comes off the Schedule. apptAt = the agent's
+    // clock; none = the next open time in the lead's window (the sample "they picked a time" button).
+    rebookLead: (id, apptAt) => {
+      const lead = state.leads.find(l => l.id === id)
+      if (!lead || !['no_show', 'rebooking'].includes(lead.stage)) return
+      const tz = state.settings.timeZone || AGENT_TZ
+      const slot = apptAt ? { iso: instantOf(apptAt.slice(0, 10), clockOfWall(apptAt), tz) } : followUpFor(state, lead, {})
+      if (!slot?.iso) return
+      cancelNoShowCall(id)
+      set(s => {
+        const at = wallOf(slot.iso, tz)
+        const { day, date, time } = onAgentClock(slot.iso, tz)
+        const appt = { id: `rb-${id}-${Date.now()}`, day, date, time, iso: slot.iso, tz: zoneOf(lead.state, lead.city), who: `${lead.first_name} ${lead.last_name}`, label: 'Appointment', kind: 'lead', ref: id }
+        return { ...s, leads: s.leads.map(l => (l.id === id ? { ...rebookLead(l, at, SAMPLE_NOW), vaCall: null } : l)), appointments: [...s.appointments.filter(a => !(a.ref === id && a.label === 'Appointment')), appt],
+          activity: log(s, appt.who, `Picked a new time: ${whenLabel(at)}. Back on Booked.`, 'moved') }
+      })
+    },
+    undoNoShow: id => { cancelNoShowCall(id); set(s => ({ ...s, leads: s.leads.map(l => (l.id === id && l.undo ? { ...l.undo, events: [...l.undo.events, { id: `${id}-u${l.events.length + 1}`, kind: 'outcome', at: SAMPLE_NOW, label: 'Undid the no-show. No text went out', state: 'done', by: 'You', role: 'you', audit: true }] } : l)) })) },
     sendNoShowText: id => set(s => ({ ...s, leads: s.leads.map(l => (l.id === id && l.undo ? { ...l, undo: null, events: l.events.map(e => (e.step === 'no_show_link' && e.state === 'scheduled' ? { ...e, label: 'Text', state: 'done' } : e)) } : l)) })),
     // Follow up: an automatic text with a link to book on the agent's calendar (N-D-22).
     sendBookingLink: id => set(s => {
@@ -469,7 +526,7 @@ function useActionsSample() {
       threads: [{ id: `thread-fb-${s.feedback.length + 1}`, client_id: null, lead_id: fb.leadId, name: `Ohvara · feedback on ${fb.who}`, unread: 0, messages: [{ id: `fbm-${s.feedback.length + 1}`, from: 'me', text: `${fb.mood === 'good' ? 'Praise' : 'To fix'} · ${fb.about}: ${fb.text}`, at: stamp }, { id: `fbm-${s.feedback.length + 1}-r`, from: 'team', text: 'Thanks, we got it. An admin answers here, usually the same day.', at: stamp }] }, ...s.threads],
     })),
     // Lead spend (N-A-23): a change starts at midnight; a tier change starts with the next bill.
-    setSpend: spend => set(s => ({ ...s, billing: { ...s.billing, pending: { spend, starts: startsText('Tue, Nov 3') }, spend } })),
+    setSpend: spend => set(s => ({ ...s, billing: { ...s.billing, pending: { spend, starts: startsText('Wed, Nov 4') }, spend } })),
     // P889: how they take leads (mode + live-call hours). Starts at midnight like a spend change.
     setTake: take => set(s => ({ ...s, billing: { ...s.billing, take } })),
     addCard: () => set(s => ({ ...s, billing: { ...s.billing, card: { label: 'Visa ending 4242', onFile: true } } })),

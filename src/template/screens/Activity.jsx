@@ -31,6 +31,8 @@ const minutes = t => { const m = t.match(/(\d+):(\d+) ([AP])M/); return m ? ((Nu
 
 // P893: one box, one day at a time, newest first, scrolling inside itself; a day switcher steps through the days
 // (◀ day ▶, plus Today). The side tile counts that day by kind; tap a kind to see only that.
+// P910: both boxes the same height, filling the page to the bottom of the window (data-fold-fit); the day box keeps
+// its full size with a few rows (blank space below) and scrolls inside with many.
 // Results moved to Billing; the old ?view=results address goes there.
 export default function Activity() {
   const [params] = useSearchParams()
@@ -54,7 +56,7 @@ function Feed() {
   const go = n => { setDay(d => addDays(d, n)); setKind(null) }
   return (
     <div className="tp-page fx-page">
-      <div className="fx-grid fx-actgrid">
+      <div className="fx-grid fx-actgrid" data-fold data-fold-fit="420">
         <section className="fx-tile fx-s8 fx-act-day" style={{ '--i': 0 }} aria-label="Activity">
           <header>
             <button type="button" className="fx-act-nav" aria-label="Day before" disabled={day <= first} onClick={() => go(-1)}><ChevronLeft size={16} /></button>

@@ -1,23 +1,20 @@
 import { Link } from 'react-router-dom'
 import './leads873.css'
-import { PhoneIncoming, PhoneCall, ClipboardCheck, PhoneForwarded, FileCheck2, CalendarClock, TriangleAlert, Wallet, Info } from 'lucide-react'
+import { PhoneIncoming, ClipboardCheck, ShieldQuestion, Wallet, Info } from 'lucide-react'
 import { Avatar } from './kit'
 import { paths } from './paths'
 
-// P873 — Needs you now (P878: eight triggers, no text replies) (leadLifecycle.js TRIGGERS), most urgent first, each with its one action.
-// The Overview shows them as cards, the bell as rows. FYI items sit apart and quiet: the team is already on them.
+// P910 — Your to-dos (leadLifecycle.js TRIGGERS): only real agent jobs, calls to mark and the monthly "Still on the
+// books?" check, each with its one action. The Overview shows them as cards, the bell as rows. FYI items sit apart and
+// quiet: the team is already on them. Billing notices (a declined card) sit apart too: Fix card.
 const TRIGGER_LOOK = {
-  live: { tone: 'warn', Icon: PhoneIncoming },
-  starting: { tone: 'blue', Icon: PhoneCall },
-  outcome: { tone: 'violet', Icon: ClipboardCheck },
-  call: { tone: 'warn', Icon: PhoneForwarded },
-  finish: { tone: 'green', Icon: FileCheck2 },
-  follow: { tone: 'teal', Icon: CalendarClock },
-  servicing: { tone: 'green', Icon: TriangleAlert },
-  billing: { tone: 'blue', Icon: Wallet },
+  outcome: { tone: 'blue', Icon: ClipboardCheck },
+  live: { tone: 'violet', Icon: PhoneIncoming },
+  check: { tone: 'warn', Icon: ShieldQuestion },
+  billing: { tone: 'warn', Icon: Wallet },
 }
 
-const toOf = item => (item.kind === 'billing' ? paths.billing() : item.kind === 'client' ? paths.client(item.ref) : paths.lead(item.ref))
+const toOf = item => (item.kind === 'billing' ? paths.billing() : item.kind === 'check' ? paths.clients('needs_attention') : item.kind === 'client' ? paths.client(item.ref) : paths.lead(item.ref))
 
 export function NeedCard({ item, i, onAct }) {
   const { tone, Icon } = TRIGGER_LOOK[item.trigger]
@@ -45,6 +42,22 @@ export function NeedRows({ items, onAct }) {
           </li>
         )
       })}
+    </ul>
+  )
+}
+
+// Billing notices (a declined card, no card on file): one row each with its fix, never a to-do.
+export function NoticeRows({ items, onPick }) {
+  if (!items?.length) return null
+  return (
+    <ul className="tp-list lc-rows" aria-label="Billing">
+      {items.map(b => (
+        <li key={b.key} className="tp-li lc-row is-warn" data-notice={b.key}>
+          <span className="tp-av" aria-hidden="true"><Wallet size={14} /></span>
+          <span className="tp-grow"><b>{b.title}</b><small>{b.what}</small></span>
+          <Link to={paths.billing()} className="tp-primary sm fx-accent" onClick={onPick}>{b.name}</Link>
+        </li>
+      ))}
     </ul>
   )
 }

@@ -272,6 +272,54 @@ export function agentSlots({ date, clocks, clientTz, appts = [], length, buffer,
   })
 }
 
+// ── The agent's follow-up call (P910) ────────────────────────────────────────────────────────────────────────
+// A follow-up is the agent's own call, on the agent's calendar. Picked day and time: that slot. Otherwise the system
+// books the most likely good time: the lead's best window on the lead's clock (else afternoon), inside the agent's
+// working hours (week = Settings › Hours, { Mon: { on, start, end } } on the agent's zone), and never within 30
+// minutes of another booked call: 30 minutes clear before and after (start to start at least length + 30).
+export const FOLLOW_CLEAR_MIN = 30
+const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+// Inside the agent's week on their clock: a working day, starting at or after its start, ending by its end.
+export function inWeek(iso, week, tz, length = DEFAULT_APPT_MIN) {
+  if (!week) return true
+  const day = week[WD[new Date(`${dateOf(iso, tz)}T12:00:00Z`).getUTCDay()]]
+  if (!day?.on) return false
+  const m = minuteOf(iso, tz)
+  return m >= clockMin(day.start) && m + length <= clockMin(day.end)
+}
+// The follow-up's slot: { iso, clock, date, window, inWindow } or null.
+//   from      the earliest instant (now)
+//   window    the lead's best time ('Evenings', 'morning', …); none → afternoon
+//   date      a day the agent picked (YYYY-MM-DD on the lead's clock), optional; exact = a clock time on it, optional
+//   leadTz    the lead's zone (falls back to the agent's); agentTz, week: the agent's zone and hours
+//   appts     the agent's booked calls [{ id, iso }]; exceptId = the follow-up being moved
+export function followUpSlot({ from, window = null, date = null, exact = null, leadTz = null, agentTz, week = null, appts = [], exceptId = null, days = 14, step = 30, length = DEFAULT_APPT_MIN }) {
+  const tz = leadTz || agentTz
+  if (!tz || !from) return null
+  const ok = iso => iso >= from && inWeek(iso, week, agentTz || tz, length) && agentFree(iso, appts, { length, buffer: FOLLOW_CLEAR_MIN, exceptId })
+  if (date && exact) {
+    const iso = instantOf(date, exact, tz)
+    return iso ? { iso, clock: exact, date, window: windowOfMinute(clockMin(exact)), inWindow: true, picked: true, free: ok(iso) } : null
+  }
+  const win = WINDOWS[windowKey(window) || DEFAULT_WINDOW]
+  const first = date || dateOf(from, tz)
+  const scan = (fromMin, toMin, n) => {
+    for (let i = 0; i < n; i++) {
+      const d = addDay(first, i)
+      for (const clock of clocksBetween(fromMin, toMin - step, step)) {
+        const iso = instantOf(d, clock, tz)
+        if (iso && ok(iso)) return { iso, clock, date: d }
+      }
+    }
+    return null
+  }
+  // The picked day first (its window, then any open time that day), then the days after it.
+  const hit = scan(win.from, win.to, date ? 1 : days) || (date && scan(0, 24 * 60, 1)) || (date && scan(win.from, win.to, days)) || scan(0, 24 * 60, days)
+  if (!hit) return null
+  const inWindow = windowOfMinute(clockMin(hit.clock)) === win.key
+  return { ...hit, window: windowOfMinute(clockMin(hit.clock)), inWindow }
+}
+
 // A slot list as Select options: taken ones greyed out and not pickable.
 export const slotOptions = (slots, { mine = null } = {}) => slots.map(s => ({
   value: s.clock, label: s.clock, disabled: !s.open,

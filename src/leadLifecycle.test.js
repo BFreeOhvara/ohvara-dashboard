@@ -89,7 +89,8 @@ test('P878: nobody replies by hand: replies are answered automatically, with a c
   const asked = { ...booked, reply: { text: 'Does it cover my mortgage?', at: '2026-11-02T13:40' } }
   assert.equal(replyRows(booked, asked.reply.text, asked.reply.at).at(-1).task, 'you')
   assert.equal(agentCallTask(asked), true)
-  assert.equal(needsYouNow({ leads: [asked] })[0].trigger, 'call')
+  // P910: Your to-dos hold only calls to mark and the monthly check; the call task shows on the lead, not there.
+  assert.equal(needsYouNow({ leads: [asked] }).length, 0)
   // Calling back closes the task.
   const called = closeCallTask(asked)
   assert.equal(agentCallTask(called), false)
@@ -107,7 +108,7 @@ test('P878: changing an outcome already marked stays on the record', () => {
   assert.match(back.events.at(-1).label, /^Changed from Sold to Follow up Mon, Nov 9$/)
 })
 
-test('Needs you now: the triggers, most urgent first, each with its action', () => {
+test('P910 Your to-dos: only calls to mark (a booked call that passed, a live call left unmarked) and the check', () => {
   const leads = [
     mk('f', 'Follow', 'follow_up', { follow: 'Mon, Nov 2' }),
     mk('r', 'Reply', 'booked', { apptAt: '2026-11-04T15:00', reply: { text: 'Call me', at: '2026-11-02T13:50' } }),
@@ -115,31 +116,29 @@ test('Needs you now: the triggers, most urgent first, each with its action', () 
     mk('o', 'Ended', 'booked', { apptAt: '2026-11-02T13:00' }),
     mk('s', 'Starting', 'booked', { apptAt: '2026-11-02T14:00' }),
     mk('l', 'Live', 'ringing', { kind: 'live_call' }),
+    mk('t', 'Today', 'showed', { kind: 'live_call', came: '2026-11-02T10:00' }),
+    mk('y', 'Yesterday', 'showed', { kind: 'live_call', came: '2026-11-01T16:00' }),
     mk('m', 'Missed', 'missed', { kind: 'live_call' }),
     mk('n', 'NoShow', 'no_show', { apptAt: '2026-11-02T11:00' }),
-    mk('x', 'Later', 'booked', { apptAt: '2026-11-05T15:00', fresh: true }),
   ]
-  const clients = [{ id: 'c1', client_first_name: 'Gloria', client_last_name: 'Santos', client_phone: '(305) 555-0156', stage: 'needs_attention', attention: 'Confirm the number' }]
-  const billingNeeds = [{ key: 'low', title: 'Lead spend running out', name: 'About 1 day left', what: 'Top up', when: 'Today' }]
-  const now = needsYouNow({ leads, clients, billingNeeds })
-  assert.deepEqual(now.map(n => n.trigger), ['live', 'starting', 'outcome', 'call', 'finish', 'follow', 'servicing', 'billing'])
-  assert.deepEqual(now.map(n => n.action), TRIGGERS.map(t => t.action))
-  assert.deepEqual(TRIGGERS.map(t => t.action), ['Answer', 'Join call', 'Mark result', 'Call', 'Finish', 'Call back', 'Open', 'Open billing'])
-  assert.equal(TRIGGERS.some(t => t.action === 'Reply'), false)
-  // Servicing off (leads only): no Finish.
-  assert.equal(needsYouNow({ leads, servicing: false }).some(n => n.trigger === 'finish'), false)
+  const checks = [{ draft: '2026-11-01', clients: [{ client_first_name: 'Gloria', client_last_name: 'Santos' }] }]
+  const now = needsYouNow({ leads, checks }, SAMPLE_NOW)
+  assert.deepEqual(now.map(n => [n.trigger, n.ref]), [['outcome', 'o'], ['live', 'y'], ['check', '2026-11-01']])
+  assert.deepEqual(TRIGGERS.map(t => t.action), ['Mark result', 'Mark result', 'Answer'])
+  assert.equal(now[2].title, 'Still on the books?')
+  // Empty: nothing to mark, no check.
+  assert.deepEqual(needsYouNow({ leads: [leads[0], leads[1], leads[5], leads[6]] }, SAMPLE_NOW), [])
   // FYI: the team is on it.
-  assert.deepEqual(forYourInfo({ leads }).map(f => f.title), ['Missed transfer', 'No show', 'New booking'])
+  assert.deepEqual(forYourInfo({ leads }).map(f => f.title), ['Missed transfer', 'No show'])
   assert.deepEqual(forYourInfo({ leads: [mk('q', 'Q', 'rebooking')] }).map(f => f.title), ['Rebooking'])
 })
 
-test('an appointment needs you 15 minutes before; once 30 minutes have passed it needs an outcome', () => {
-  const at = t => needsYouNow({ leads: [mk('a', 'A', 'booked', { apptAt: t })] }).map(n => n.trigger)
-  assert.deepEqual(at(addMin(SAMPLE_NOW, 15)), ['starting'])
-  assert.deepEqual(at(addMin(SAMPLE_NOW, 16)), [])
-  assert.deepEqual(at(addMin(SAMPLE_NOW, -29)), ['starting'])
+test('a booked call becomes a to-do once 30 minutes have passed (P910: no "starting" item)', () => {
+  const at = t => needsYouNow({ leads: [mk('a', 'A', 'booked', { apptAt: t })] }, SAMPLE_NOW).map(n => n.trigger)
+  assert.deepEqual(at(addMin(SAMPLE_NOW, 15)), [])
+  assert.deepEqual(at(addMin(SAMPLE_NOW, -29)), [])
   assert.deepEqual(at(addMin(SAMPLE_NOW, -30)), ['outcome'])
-  assert.equal(needsOutcome(mk('b', 'B', 'showed')), true)
+  assert.equal(needsOutcome(mk('b', 'B', 'showed'), SAMPLE_NOW), false)
   assert.equal(atLabel('2026-11-02T13:00'), 'Today, 1:00 PM')
   assert.equal(atLabel('2026-11-01T09:05'), 'Yesterday, 9:05 AM')
 })

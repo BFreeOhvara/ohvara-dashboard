@@ -646,6 +646,22 @@ export function bookAfterSale({ who, phone = '', state = 'TX', city = '', carrie
   })
   return out
 }
+// P910 — the agent marked a lead No show: the system books a VA re-engage call (a callback, why no_show) at the next
+// open slot in the lead's best window on their clock (else afternoon), with a free VA on shift. If the lead rebooks
+// from the text link first, cancelNoShowCall takes it off the Schedule. Returns { id, iso, tz, va } or null.
+export function bookNoShowCall({ leadId, who, phone = '', state = 'TX', city = '', agent = 'ag-dana', window: win = null }) {
+  let out = null
+  set(s => {
+    const t0 = mkTask(`ns-${leadId}-${Date.now()}`, 'callback', null, { why: 'no_show', lead_id: leadId, agent_id: agent, who: { name: who, phone, city, state },
+      note: `Missed the booked call with ${agentName(agent)}. Book them again on ${agentName(agent).split(' ')[0]}'s calendar.` })
+    const t = bookTask(s, t0, { window: win })
+    out = t.iso ? { id: t.id, iso: t.iso, tz: t.tz, va: VAS.find(v => v.id === t.va_id) || null } : null
+    return { tasks: [...s.tasks, t], ...feedAdd(s, who || 'Lead', `Re-engage call booked: ${CALLBACK_WHY.no_show.toLowerCase()}`, 'call') }
+  })
+  return out
+}
+export const cancelNoShowCall = leadId => set(s => ({ tasks: s.tasks.filter(t => !(t.why === 'no_show' && t.lead_id === leadId && t.status !== 'done')) }))
+
 // P907: what Submit a policy shows before it's sent: the hand-off call the system would book for this window.
 export function useAfterSalePreview({ state, city, window: win }) {
   const s = useStore()

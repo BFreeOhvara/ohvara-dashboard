@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { Phone, MapPin, ChevronRight, Clock, ClipboardCheck, CalendarX2, Settings2, Ban } from 'lucide-react'
 import { CountUp } from '../motion'
 import { useSampleAppointments, useSampleLeads, useSampleClients, useSampleSettings, useSampleActions, useSampleBlocks, useWeek, AGENT_TZ, onAgentClock } from '../data'
-import { Drawer, Empty, Chip, Field, useNote } from '../kit'
+import { Drawer, Empty, Chip, Field, Seg, useNote } from '../kit'
 import { Select } from '../Select'
 import { HoursEditor, CalendarConnect, ClashList } from '../Hours'
 import { clashes } from '../hoursModel'
@@ -13,9 +13,10 @@ import '../p878.css'
 import { needsOutcome, clockNow } from '../leadLifecycle'
 import { stageChip } from '../LeadOutcome'
 import { paths } from '../paths'
-import { DayBox, WeekStrip, WeekList } from '../DayBox'
+import { DayBox, WeekList } from '../DayBox'
+import '../cal910.css'
 import { useOpenDay, useStickyDay } from '../useOpenDay'
-import { blockTime, clockOf, zoneAbbr } from '../../lib/callSlots'
+import { blockTime, clockOf, zoneAbbr, dateOf } from '../../lib/callSlots'
 
 // P848: the week shown comes from data useWeek (the sample week of Nov 2, or the real current week).
 const START = 9 // the grid runs 9:00 AM to 6:00 PM, your working hours
@@ -89,12 +90,32 @@ function minutesIn(time) {
   return ((Number(h) % 12) + (ap === 'PM' ? 12 : 0) - START) * 60 + Number(m)
 }
 
+// P910: no row of day buttons above the grid; a This week · Next week toggle instead (next week can be empty). Each
+// day header and each row is a real button: pointer, hover, pressed.
+const MONS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const plusDays = (iso, n) => new Date(Date.parse(`${iso}T12:00:00Z`) + n * 86400000).toISOString().slice(0, 10)
+const WEEKS = [{ key: 'this', label: 'This week' }, { key: 'next', label: 'Next week' }]
+
 // The week as a time grid at full width (desktop); click a day to open it (P854, the same as the VA Schedule: the
 // grid narrows to that day and its box slides in; ?day= in the URL). On a phone, the week as a list; a day opens full
 // screen. Each appointment is placed by its instant on your clock (Settings zone), with the client's time beside it
 // when theirs differs.
 export default function Calendar() {
-  const { days: DAYS, nums: NUMS, nameOf, today: TODAY, time: NOW_TIME, monOf, isoOf } = useWeek()
+  const week = useWeek()
+  const [wk, setWk] = useState('this')
+  // [weekday, day of month, month, iso] for the week on screen.
+  const WEEK_DAYS = week.days.map(([d, n]) => {
+    const iso = wk === 'next' ? plusDays(week.isoOf(n), 7) : week.isoOf(n)
+    return [d, Number(iso.slice(8, 10)), MONS[Number(iso.slice(5, 7)) - 1], iso]
+  })
+  const DAYS = WEEK_DAYS
+  const NUMS = WEEK_DAYS.map(d => d[1])
+  const nameOf = n => WEEK_DAYS.find(d => d[1] === n)?.[0] || ''
+  const monOf = n => WEEK_DAYS.find(d => d[1] === n)?.[2] || ''
+  const isoOf = n => WEEK_DAYS.find(d => d[1] === n)?.[3] || null
+  const TODAY = wk === 'this' ? week.today : null
+  const weekIsos = key => week.days.map(([, n]) => (key === 'next' ? plusDays(week.isoOf(n), 7) : week.isoOf(n)))
+  const NOW_TIME = week.time
   const { data: raw } = useSampleAppointments()
   const { data: leads } = useSampleLeads()
   const { data: clients } = useSampleClients()
@@ -105,7 +126,7 @@ export default function Calendar() {
   const [panel, setPanel] = useState(null)
   const [cant, setCant] = useState(null)
   const tz = settings.timeZone || AGENT_TZ
-  const events = raw.map(e => (e.iso ? { ...e, ...onAgentClock(e.iso, tz), when: blockTime(e.iso, tz, e.tz) } : { ...e, when: e.time }))
+  const events = raw.map(e => (e.iso ? { ...e, ...onAgentClock(e.iso, tz), on: dateOf(e.iso, tz), when: blockTime(e.iso, tz, e.tz) } : { ...e, on: week.isoOf(e.date), when: e.time }))
   const { day, open: openDay, close } = useOpenDay(NUMS, { esc: !open, isoOf })
   const { view, leaving } = useStickyDay(day)
   const ref = open && (open.kind === 'lead' ? leads.find(l => l.id === open.ref) : clients.find(c => c.id === open.ref))
@@ -115,7 +136,7 @@ export default function Calendar() {
   const leadRef = open?.kind === 'lead' ? ref : null
   const ask = leadRef && needsOutcome(leadRef, clockNow())
   const shown = view != null ? DAYS.filter(([, d]) => d === view) : DAYS
-  const ofDay = d => events.filter(e => e.date === d).sort((a, b) => minutesIn(a.time) - minutesIn(b.time))
+  const ofDay = d => events.filter(e => e.on === isoOf(d)).sort((a, b) => minutesIn(a.time) - minutesIn(b.time))
   const list = view != null ? ofDay(view) : []
   const headKey = n => e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDay(n) } }
   // Two at the same time sit side by side.
@@ -128,7 +149,7 @@ export default function Calendar() {
   return (
     <div className="tp-page fx-page">
       <div className="fx-tools">
-        <WeekStrip days={NUMS} day={view} today={TODAY} onOpen={openDay} has={n => ofDay(n).length > 0} name={nameOf} />
+        <Seg label="Week" className="cal-wk" value={wk} onChange={k => { if (view != null) close(); setWk(k) }} options={WEEKS.map(w => ({ ...w, count: events.filter(e => weekIsos(w.key).includes(e.on)).length }))} />
         <span className="tp-grow" />
         <p className="tp-sub">Your time ({zoneAbbr(tz)}) · client times beside theirs</p>
         <span className="cal-tools">
@@ -140,7 +161,7 @@ export default function Calendar() {
       <WeekList days={NUMS} today={TODAY} onOpen={openDay} name={nameOf} itemsOf={ofDay} line={e => `${e.time} ${e.who}`} />
 
       <div className="fx-grid" data-fold data-fold-fit="360">
-        <section className={`fx-tile ${view != null ? 'fx-s8 is-day' : 'fx-s12 is-week'} fx-week`} style={{ '--i': 0, '--days': shown.length }} aria-label={view != null ? `${nameOf(view)}, ${monOf(view)} ${view}` : 'This week'}>
+        <section className={`fx-tile ${view != null ? 'fx-s8 is-day' : 'fx-s12 is-week'} fx-week cal910`} data-week={wk} style={{ '--i': 0, '--days': shown.length }} aria-label={view != null ? `${nameOf(view)}, ${monOf(view)} ${view}` : wk === 'next' ? 'Next week' : 'This week'}>
           <div className="tp-tgrid-h"><span />{shown.map(([d, n]) => (
             <b key={d} role="button" tabIndex={0} aria-pressed={n === view} title={n === view ? 'Back to the week' : `Open ${d} ${n}`} className={`${n === TODAY ? 'today' : ''}${n === view ? ' is-on' : ''}`} onClick={() => openDay(n)} onKeyDown={headKey(n)}>
               {d} <span>{n}</span>{n === TODAY && <small>Today</small>}
@@ -166,7 +187,7 @@ export default function Calendar() {
             {list.length === 0 && <Empty title="A free day" sub="The team books new appointments inside your hours." />}
             <h3 className="fx-h3">Rest of the week</h3>
             <ul className="fx-rows">
-              {events.filter(e => e.date > view).slice(0, 4).map(e => <li key={e.id}><button type="button" className="fx-row" onClick={() => setOpen(e)}><span className={`tp-dot ${e.kind}`} /><span className="tp-grow"><b>{e.who}</b><small>{e.day} {e.when} · {e.label}</small></span></button></li>)}
+              {events.filter(e => e.on > isoOf(view) && e.on <= WEEK_DAYS[WEEK_DAYS.length - 1][3]).slice(0, 4).map(e => <li key={e.id}><button type="button" className="fx-row" onClick={() => setOpen(e)}><span className={`tp-dot ${e.kind}`} /><span className="tp-grow"><b>{e.who}</b><small>{e.day} {e.when} · {e.label}</small></span></button></li>)}
             </ul>
           </DayBox>
         )}

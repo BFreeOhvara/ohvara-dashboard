@@ -9,7 +9,8 @@ import { SpendSliders, TakeLeads } from '../PlanBuilder'
 import { takeOk } from '../../lib/leadSplit'
 import { LANES, CLOSED_LANE, laneOf } from '../stages'
 import { agentCallTask, confirmedByText, atLabel, clockNow } from '../leadLifecycle'
-import { agentStatusOf, agentEvents, closedReason, needsResult, resultsFor, canMove, isLiveCall, RESULT_LABEL } from '../agentView'
+import { agentStatusOf, agentEvents, closedReason, needsResult, resultsFor, canMove, isLiveCall, liveCalls, RESULT_LABEL } from '../agentView'
+import { LiveCalls } from '../LiveCall'
 import { dailyTotal, openSlotsPerWeek, spendOk } from '../spendPlan'
 import { usd } from '../motion'
 import { FeedbackDrawer } from '../Talk'
@@ -23,8 +24,9 @@ import { FilterPills } from '../FilterPills'
 
 // P898: Leads as a board of the agent's five statuses (agentView.js), left to right: Booked, No show, Follow up, Not
 // interested, Sold. Closed (Couldn't reach, opted out, wrong number) sits under "Show closed", with its reason on each
-// lead. A live transfer isn't a column: it waits on Booked tagged "Live call · Mark result" until the agent picks how it
-// went. Leads the team is still calling aren't on the board. A lead that needs the agent says so on its card ("Mark
+// lead. P910: a live transfer isn't a column: it's pinned above the board (LiveCall.jsx) until the agent picks how it
+// went, and there are no All / Appointments / Live calls tabs, only the status filters. Leads the team is still calling
+// aren't on the board. A lead that needs the agent says so on its card ("Mark
 // result"). Never call attempts, the text sequence or where a lead came from. A card opens the lead in a drawer at its
 // own URL (paths.lead); the board stays put behind it. On a desktop each lane scrolls inside itself.
 const shortWhen = l => {
@@ -41,7 +43,6 @@ const shortWhen = l => {
 const whenOf = l => (l.stage === 'ringing' ? 'Ringing now' : l.stage === 'showed' && !l.apptAt ? 'Live call' : l.stage === 'follow_up' && l.follow ? `Call back ${l.follow}` : l.appt || `Came in ${l.assigned_at}`)
 const tagOf = l => {
   if (l.stage === 'ringing') return ['warn', 'Ringing']
-  if (isLiveCall(l)) return ['violet', 'Live call · Mark result']
   if (needsResult(l, clockNow())) return ['violet', 'Mark result']
   if (agentCallTask(l)) return ['warn', 'Call them back']
   if (l.stage === 'sold' && !l.submitted) return ['warn', 'Finish details']
@@ -97,7 +98,8 @@ function Row({ e, lead, last }) {
 
 function LeadDrawer({ id, onClose }) {
   const { data: lead } = useSampleLead(id)
-  const { moveLead, addLeadNote, callBack, askTeamToCall, sendBookingLink } = useSampleActions()
+  const { moveLead, addLeadNote, callBack, askTeamToCall, sendBookingLink, rebookLead } = useSampleActions()
+  const source = useDataSource()
   const note = useNote()
   const [params, setParams] = useSearchParams()
   const [draft, setDraft] = useState('')
@@ -143,7 +145,8 @@ function LeadDrawer({ id, onClose }) {
       {lead.stage === 'sold' && !lead.submitted && <Link to={paths.submit(lead.id)} className="fx-nudge">Finish the servicing details. The team takes it from there.</Link>}
       {closed && <p className="lc-closed"><b>{closedReason(lead)}.</b> {lead.stage === 'opted_out' ? 'All calls and texts stopped.' : 'No more calls or texts.'} A reply from them brings them back as a new lead.</p>}
       {status === 'team' && <p className="lc-closed">Our team is calling {lead.first_name}. Nothing for you to do yet: they land on Booked.</p>}
-      {status === 'no_show' && !lead.undo && <p className="lc-closed"><b>No show{lead.appt ? ` at ${lead.appt}` : ''}.</b> We sent {lead.first_name} a one-tap link to rebook. When they pick a time, they go back to Booked.</p>}
+      {status === 'no_show' && !lead.undo && <div className="lc-closed"><p><b>No show{lead.appt ? ` at ${lead.appt}` : ''}.</b> We sent {lead.first_name} a one-tap link to rebook. {lead.vaCall ? `${lead.vaCall.va || 'Our team'} is booked to call ${atLabel(lead.vaCall.at, clockNow())} if they haven’t picked a time.` : 'If they don’t pick a time, our team calls to book them again.'} When they rebook, they go back to Booked on your calendar.</p>
+        {source === 'sample' && <button type="button" className="tp-btn ov-ghost sm" onClick={() => { rebookLead(lead.id); note(`${lead.first_name} picked a new time. Back on Booked`) }}>Sample: they pick a new time</button>}</div>}
       <Block title="What they told us">
         <dl className="fx-facts">{asks.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
         <Pending>Consent wording pending</Pending>
@@ -176,7 +179,6 @@ export default function Leads() {
   const { data: billing } = useSampleBilling()
   const { moveLead } = useSampleActions()
   const note = useNote()
-  const [kind, setKind] = useState('all')
   const [q, setQ] = useState('')
   const [spend, setSpend] = useState(false)
   const [params, setParams] = useSearchParams()
@@ -186,8 +188,8 @@ export default function Leads() {
   const setLane = k => setParams({ ...(k === 'all' ? {} : { lane: k }), ...(showClosed ? { closed: '1' } : {}) }, { replace: true })
   const setClosed = on => setParams(on ? { closed: '1', lane: 'closed' } : {}, { replace: true })
   const n = q.trim().toLowerCase()
-  const shown = leads.filter(l => (kind === 'all' || (kind === 'live' ? l.kind === 'live_call' : l.kind === 'appointment'))
-    && (!n || `${l.first_name} ${l.last_name} ${l.city} ${l.phone}`.toLowerCase().includes(n)))
+  const shown = leads.filter(l => !n || `${l.first_name} ${l.last_name} ${l.city} ${l.phone}`.toLowerCase().includes(n))
+  const live = liveCalls(shown)
   const inLane = (lane, l) => agentStatusOf(l) === lane.key
   const answer = l => { moveLead(l.id, 'showed'); note(`You took the call with ${l.first_name}. The team dropped off. Pick the result when you hang up`); navigate(paths.lead(l.id)) }
   const result = l => navigate(`${paths.lead(l.id)}?outcome=1`)
@@ -198,11 +200,13 @@ export default function Leads() {
     <div className="tp-page fx-page fx-leads">
       <div className="fx-tools">
         <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a lead" placeholder="Find by name, city or phone" value={q} onChange={e => setQ(e.target.value)} /></label>
-        <Seg label="Lead type" value={kind} onChange={setKind} options={[{ key: 'all', label: 'All', count: leads.length }, { key: 'appointments', label: 'Appointments', count: leads.filter(l => l.kind === 'appointment').length }, { key: 'live', label: 'Live calls', count: leads.filter(l => l.kind === 'live_call').length }]} />
         <span className="tp-grow" />
         <label className="lc-closedsw"><Archive size={15} aria-hidden="true" /><span>Show closed</span><Switch on={showClosed} label="Show closed leads" onChange={setClosed} /></label>
         <button type="button" className="fx-pillbtn" aria-label="Change your daily lead spend" onClick={() => setSpend(true)}><Wallet size={15} aria-hidden="true" /><b className="tp-money">{money(dailyTotal(billing.spend))}</b><small>a day</small></button>
       </div>
+
+      {/* P910: live calls pinned on top, ringing first, each with Sold · Follow up · Not interested */}
+      <LiveCalls calls={live} />
 
       {/* P893: each status pill in its own colour with its count, like the Clients page; the picked one goes darker */}
       <FilterPills label="Status" value={laneKey} onChange={setLane} items={[{ key: 'all', label: 'All', count: shown.filter(x => ALL.some(l => inLane(l, x))).length }, ...ALL.map(l => ({ key: l.key, label: l.label, tone: l.tone, count: shown.filter(x => inLane(l, x)).length }))]} />

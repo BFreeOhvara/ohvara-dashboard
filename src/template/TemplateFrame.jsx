@@ -9,7 +9,8 @@ import { useTheme } from '../hooks/useTheme'
 import {
   useSampleActivity, useSampleClients, useSampleLeads, useSampleThreads, useSampleBilling, useSampleAppointments, useSampleSettings, useSampleActions, useSampleNeeds, useDataStatus, useDataSource,
 } from './data'
-import { NeedRows, FyiList } from './NeedsNow'
+import { NeedRows, FyiList, NoticeRows } from './NeedsNow'
+import { liveCalls } from './agentView'
 import { useNeedAction } from './needAction'
 import { useClientStatusOf } from './checkSettings'
 import { Drawer, Avatar, Field, PillTabs, Seg, useAccount, useNote, initials } from './kit'
@@ -64,16 +65,18 @@ const TABS = [
 ]
 const PAGES = [...TABS, { to: paths.messages, label: 'Messages' }, { to: paths.submit, label: 'Submit a policy' }, { to: paths.requestService, label: 'Request a service' }, { to: paths.settings, label: 'Settings' }, { to: paths.more, label: 'More' }]
 
-// P873: the bell leads with Needs you now (each with its one action), then the quiet FYI list, then the latest activity.
+// P873: the bell leads with Your to-dos (P910; each with its one action), any billing notice (Fix card), then the
+// quiet FYI list, then the latest activity.
 function BellDrawer({ open, onClose }) {
   const { data: items } = useSampleActivity()
   const { data: needs } = useSampleNeeds()
   const act = useNeedAction(onClose)
   return (
-    <Drawer open={open} onClose={onClose} title="Notifications" sub={needs.now.length ? `${needs.now.length} need you now` : 'Nothing needs you right now'} footer={<Link to={paths.activity()} className="tp-btn ov-ghost" onClick={onClose}>See all activity</Link>}>
-      <section className="lc-bell" aria-label="Needs you now">
-        <h3 className="lc-h">Needs you now</h3>
-        {needs.now.length ? <NeedRows items={needs.now} onAct={act} /> : <p className="tp-sub">You are all caught up. New calls, replies and outcomes to mark show here first.</p>}
+    <Drawer open={open} onClose={onClose} title="Notifications" sub={needs.now.length ? `${needs.now.length} to-do${needs.now.length === 1 ? '' : 's'}` : 'You’re all caught up'} footer={<Link to={paths.activity()} className="tp-btn ov-ghost" onClick={onClose}>See all activity</Link>}>
+      <NoticeRows items={needs.notices} onPick={onClose} />
+      <section className="lc-bell" aria-label="Your to-dos">
+        <h3 className="lc-h">Your to-dos</h3>
+        {needs.now.length ? <NeedRows items={needs.now} onAct={act} /> : <p className="tp-sub">You{'’'}re all caught up.</p>}
       </section>
       <FyiList items={needs.fyi} onPick={onClose} />
       <section className="lc-bell" aria-label="Lately">
@@ -384,8 +387,10 @@ export default function TemplateFrame() {
   const source = useDataSource()
   const unread = threads.reduce((n, t) => n + t.unread, 0)
   const { data: needList } = useSampleNeeds()
-  const needs = needList.now.filter(n => n.kind === 'lead').length
-  const bell = needList.now.length
+  const { data: allLeads } = useSampleLeads()
+  // P910: the Leads count = leads waiting on the agent (calls to mark, live calls pinned), in its grey circle.
+  const needs = new Set([...needList.now.filter(n => n.kind === 'lead').map(n => n.ref), ...liveCalls(allLeads).map(l => l.id)]).size
+  const bell = needList.now.length + (needList.notices?.length || 0)
   const close = useCallback(() => setPanel(null), [])
   const open = which => e => { wig.onClick(e); setPanel(which) }
   // P893: the avatar toggles its menu (a second click closes it, with the menu's close animation)
@@ -444,7 +449,7 @@ export default function TemplateFrame() {
       <header className={`tp-top fx-top${menuOn ? ' is-menu' : ''}`}>
         <span className="fx-top-gap" aria-hidden="true" />
         <PillTabs as="nav" label="Pages" className="tp-tabs fx-tabs" itemClass="tp-tab fx-tab" value={active} persistKey="tpl-tabs"
-          items={TABS.map(t => ({ key: t.key, to: t.to(), label: t.label, extra: t.key === 'leads' && needs > 0 ? <span className="fx-tb">{needs}</span> : null }))} />
+          items={TABS.map(t => ({ key: t.key, to: t.to(), label: t.label, extra: t.key === 'leads' && needs > 0 ? <span className="fx-tb is-circle" aria-label={`${needs} waiting on you`}>{needs}</span> : null }))} />
         <div className="fx-tr">
           <Link to={paths.messages()} className="fx-ib tp-wig" aria-label="Messages" {...wig}><MessageSquare size={18} />{unread > 0 && <span className="fx-badge">{unread}</span>}</Link>
           <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} />{bell > 0 && <span className="fx-badge">{bell}</span>}</button>

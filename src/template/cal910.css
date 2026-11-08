@@ -1,0 +1,20 @@
+/* P910 — Calendar: each day header, each day column (week view) and each row is a real button: pointer, a clear hover
+   fill, a pressed state, a focus ring. The week toggle (This week · Next week) replaces the row of day buttons. */
+.fx-week.cal910 .tp-tgrid-h b[role="button"] {
+  cursor: pointer; user-select: none; border-radius: 12px; margin: 4px 3px;
+  background: color-mix(in srgb, var(--ov-hi) 4%, transparent); box-shadow: inset 0 0 0 1px var(--ov-line);
+  transition: background-color .15s var(--fx-ease), transform .12s var(--fx-ease), box-shadow .15s var(--fx-ease);
+}
+.fx-week.cal910 .tp-tgrid-h b[role="button"]:hover { background: color-mix(in srgb, var(--ov-data-a) 12%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ov-data-a) 40%, transparent); }
+.fx-week.cal910 .tp-tgrid-h b[role="button"]:active { transform: translateY(1px) scale(.98); background: color-mix(in srgb, var(--ov-data-a) 20%, transparent); }
+.fx-week.cal910 .tp-tgrid-h b[aria-pressed="true"] { background: color-mix(in srgb, var(--ov-data-a) 18%, transparent); box-shadow: inset 0 0 0 1.5px var(--ov-data-a); }
+.fx-week.cal910.is-week .tp-tcol:hover { background: color-mix(in srgb, var(--ov-data-a) 6%, transparent); }
+.fx-week.cal910.is-week .tp-tcol:active { background: color-mix(in srgb, var(--ov-data-a) 11%, transparent); }
+.fx-week.cal910 .tp-ev { cursor: pointer; transition: transform .12s var(--fx-ease), filter .15s; }
+.fx-week.cal910 .tp-ev:hover { filter: brightness(1.05) saturate(1.1); }
+.fx-week.cal910 .tp-ev:active { transform: scale(.98); }
+.fx-page .fx-weeklist .fx-wl-row, .fx-page .fx-daybox .fx-row:not(.is-flat) { cursor: pointer; transition: background-color .15s var(--fx-ease), transform .12s var(--fx-ease); }
+.fx-page .fx-weeklist .fx-wl-row:hover, .fx-page .fx-daybox .fx-row:not(.is-flat):hover { background: color-mix(in srgb, var(--ov-data-a) 10%, transparent); }
+.fx-page .fx-weeklist .fx-wl-row:active, .fx-page .fx-daybox .fx-row:not(.is-flat):active { transform: translateY(1px) scale(.99); background: color-mix(in srgb, var(--ov-data-a) 16%, transparent); }
+.fx-page .fx-weeklist .fx-wl-row:focus-visible, .fx-page .fx-daybox .fx-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .fx-week.cal910 .tp-tgrid-h b[role="button"], .fx-week.cal910 .tp-ev, .fx-page .fx-weeklist .fx-wl-row { transition: none; } }

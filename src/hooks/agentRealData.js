@@ -9,6 +9,7 @@ import { normalizeSettings } from '../lib/agentSettings'
 import { outcomeArgs } from '../lib/leadOutcomes'
 import { invokeBilling } from '../lib/billing'
 import { zoneOf } from '../lib/callSlots'
+import { checkLists } from '../lib/clientCheck'
 import { nightly as nightlyOf, expected } from '../template/spendPlan'
 import { DEFAULT_LIVE_HOURS } from '../lib/leadSplit'
 import { useNote } from '../template/kit'
@@ -305,15 +306,16 @@ function billingNeedsOf(b) {
   return b.payment.failed ? [{ key: 'failed', title: 'Payment failed', name: 'Update your card', what: 'Your leads are stopped until it goes through. Servicing keeps going for 3 days.', when: 'Now' }] : []
 }
 
-// ── Needs you now, Overview ──────────────────────────────────────────────────────────────────────────────────────
+// ── Your to-dos (P910), Overview ─────────────────────────────────────────────────────────────────────────────────
 export function useNeedsReal() {
   const leads = useLeadsReal()
   const clients = useClientsReal()
   const billing = useBillingReal()
   const now = useWallNow()
   const data = useMemo(() => ({
-    now: needsYouNow({ leads: leads.data, clients: clients.data, billingNeeds: billingNeedsOf(billing.data), servicing: billing.data.products !== 'leads' }, now),
+    now: needsYouNow({ leads: leads.data, checks: checkLists(clients.data, now.slice(0, 10)) }, now),
     fyi: forYourInfo({ leads: leads.data }),
+    notices: billingNeedsOf(billing.data),
   }), [leads.data, clients.data, billing.data, now])
   return { data, isLoading: leads.isLoading || clients.isLoading, error: leads.error || clients.error || null }
 }

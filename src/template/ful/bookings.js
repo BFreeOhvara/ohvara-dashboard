@@ -37,5 +37,6 @@ export const NEW_OUTCOMES = {
 // Kinds whose No answer books the next try by itself (3 tries in all), like P888's save call and P891's welcome call.
 export const RETRY_KINDS = ['lapse_save', 'welcome_call', 'handoff_call', 'cancel_request', 'callback']
 
-// Why a callback was booked (the missed incoming call, a text reply that needs a person, the client asked).
-export const CALLBACK_WHY = { missed_call: 'Missed their call', reply: 'Replied to a text', asked: 'Asked for a call back' }
+// Why a callback was booked (the missed incoming call, a text reply that needs a person, the client asked, a no-show).
+// P910: no_show = a lead missed their booked call with the agent; the VA calls to re-engage and book them again.
+export const CALLBACK_WHY = { missed_call: 'Missed their call', reply: 'Replied to a text', asked: 'Asked for a call back', no_show: 'No show: book them again' }

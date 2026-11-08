@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, Check, Clock, CalendarDays } from 'lucide-react'
 import { rangeWords } from '../spendPlan'
-import { countByStatus } from '../agentView'
+import { countByStatus, liveCalls } from '../agentView'
+import { LiveCalls } from '../LiveCall'
 import { useDataSource, useSampleOverview, useSampleClients, useSampleBilling, useSampleLeads, useSampleAppointments, useSampleNeeds } from '../data'
 import { Avatar, Empty } from '../kit'
 import { CountUp } from '../motion'
@@ -173,7 +174,7 @@ export default function Overview() {
   const chart = o.bookedChart
   const prev = chart.prev
   const status = bill.booked < wk.low ? ['Below range so far', 'mute'] : bill.booked > wk.high ? ['Above range', 'up'] : ['In range', 'up']
-  // P873: Needs you now, the six lifecycle triggers in order, each with its action; FYI apart and quiet.
+  // P910: Your to-dos (calls to mark, the monthly check), each with its action; live calls pinned above them.
   const { data: needs } = useSampleNeeds()
   const act = useNeedAction()
   const today = o.todayAppts[0]?.date ?? appts[0]?.date
@@ -226,15 +227,16 @@ export default function Overview() {
       </div>
 
       <div className="fx-ovl-side">
-        <section className="fx-tile is-deep fx-ovl-needs" style={{ '--i': 4 }} aria-label="Needs you now">
+        <LiveCalls calls={liveCalls(leads)} compact />
+        <section className="fx-tile is-deep fx-ovl-needs" style={{ '--i': 4 }} aria-label="Your to-dos">
           <div className="fx-ovl-needs-in">
             <header className="fx-tile-h">
-              <span className="tp-grow"><h2>Needs you now</h2><p>{needs.now.length ? `${needs.now.length} waiting on you, most urgent first` : 'All caught up'}</p></span>
+              <span className="tp-grow"><h2>Your to-dos</h2><p>{needs.now.length ? `${needs.now.length} for you` : 'Nothing waiting'}</p></span>
               <Link to={paths.leads()} className="fx-open" aria-label="Open Leads"><ArrowUpRight size={16} /></Link>
             </header>
             {needs.now.length > 0
               ? <div className="fx-ncards">{needs.now.map((r, i) => <NeedCard key={r.id} item={r} i={i} onAct={act} />)}</div>
-              : <p className="fx-calm"><Check size={16} aria-hidden="true" />No one is waiting on you. Live calls, people to call back and results to mark show here first.</p>}
+              : <p className="fx-calm" data-empty="todos"><Check size={16} aria-hidden="true" />You{'’'}re all caught up.</p>}
           </div>
         </section>
 

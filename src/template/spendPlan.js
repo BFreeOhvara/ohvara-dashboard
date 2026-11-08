@@ -135,11 +135,26 @@ export function bought(rows) {
 export const vaCost = va => (va?.on ? Math.round(va.hours * va.rate * 100) / 100 : 0)
 
 // P909: lead spend is charged night by night. nights = [{ day, spend, delivered, status }] the last few days; credit =
-// what was charged and not spent (comes off tonight's charge, with its 12%); tonight = tonight's charge for tomorrow.
+// what was charged and not spent (comes off tonight's charge, with its 12%).
+// P910: one paid day ahead. Today and tomorrow are paid; tonight charges the day after tomorrow (forDay). ahead = the
+// three days as the agent sees them: today, tomorrow (paid, or 'failed' = not paid, so no ads that day), tonight's.
+export const paidAhead = n => {
+  const st = day => (n?.nights || []).find(x => x.day === day)?.status || 'unpaid'
+  const today = st(n?.today) === 'paid' ? 'paid' : 'failed'
+  const tomorrow = st(n?.tomorrow) === 'paid' ? 'paid' : 'failed'
+  // While a declined day is open, no new day is charged (its retries come first): the day after waits ('held').
+  return [
+    { key: 'today', label: 'Today', day: n?.today, status: today },
+    { key: 'tomorrow', label: 'Tomorrow', day: n?.tomorrow, status: tomorrow },
+    { key: 'tonight', label: 'Day after', day: n?.forDay, status: tomorrow === 'failed' ? 'held' : 'tonight' },
+  ].filter(d => d.day)
+}
+// Ads run on a day only if that day is paid (P910, never on an unpaid day).
+export const adsRunOn = (n, day) => (n?.nights || []).some(x => x.day === day && x.status === 'paid')
 export function nightly(n, spend, plan) {
-  const credit = Math.max(0, (n?.nights || []).reduce((t, x) => t + (x.status === 'paid' ? x.spend - (x.delivered ?? x.spend) : 0), 0))
+  const credit = Math.max(0, (n?.nights || []).reduce((t, x) => t + (x.status === 'paid' && x.delivered != null ? x.spend - x.delivered : 0), 0))
   const tonight = nightlyFor(plan, dailyTotal(spend), credit)
-  return { ...n, credit, tonight, failed: (n?.nights || []).some(x => x.status === 'failed') }
+  return { ...n, credit, tonight, ahead: paidAhead(n), failed: (n?.nights || []).some(x => x.status === 'failed') }
 }
 
 // The agent's week against their usual week, in plain words (no talk of how leads are found).

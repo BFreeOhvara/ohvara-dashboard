@@ -1317,3 +1317,10 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 .tp .fx-pt.fx-pt .fx-tb.fx-tb.fx-tb, .tp .fx-pt.fx-pt.is-on.is-on .fx-tb.fx-tb.fx-tb, .tp .fx-mrow .fx-tb.fx-tb.fx-tb {
   color: inherit; background: transparent; box-shadow: none; min-width: 0; height: auto; padding: 0; border-radius: 0; opacity: .72; font-variant-numeric: tabular-nums;
 }
+
+/* P910 — the Leads count in the header nav gets its circle back (Brayden, Nov 8): a grey circle like the Messages
+   badge, selected or not. Only this count; other tab counts stay bare (P876). */
+.tp .fx-pt.fx-pt .fx-tb.fx-tb.fx-tb.is-circle, .tp .fx-pt.fx-pt.is-on.is-on .fx-tb.fx-tb.fx-tb.is-circle {
+  color: var(--ov-badge-fg); background: var(--ov-badge-bg); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; opacity: 1;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;
+}

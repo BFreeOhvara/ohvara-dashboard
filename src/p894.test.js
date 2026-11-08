@@ -26,8 +26,9 @@ test('the five statuses, left to right, and where every stage lands', () => {
   // P898: no Live transfer column; Not interested is on the board.
   assert.deepEqual(AGENT_STATUSES.map(s => s.key), ['booked', 'no_show', 'follow', 'not_interested', 'sold'])
   for (const [key, l] of Object.entries(BY_STATUS)) assert.equal(agentStatusOf(l), key, key)
-  assert.equal(agentStatusOf(mk('r', 'ringing', { kind: 'live_call' })), 'booked')
-  assert.equal(agentStatusOf(mk('l', 'showed', { kind: 'live_call' })), 'booked')
+  // P910: a live call gets no column; it is pinned at the top ('live') until the agent marks it.
+  assert.equal(agentStatusOf(mk('r', 'ringing', { kind: 'live_call' })), 'live')
+  assert.equal(agentStatusOf(mk('l', 'showed', { kind: 'live_call' })), 'live')
   assert.equal(agentStatusOf(mk('w', 'not_interested', { reason: 'Wrong number' })), 'closed')
   for (const st of ['new', 'calling', 'missed', 'rebooking']) assert.equal(agentStatusOf(mk(st, st)), 'team', st)
   // "Needs you" and "Our team is on it" are gone as statuses.
@@ -53,12 +54,12 @@ test('every allowed result moves, every other one is refused', () => {
       else assert.throws(() => agentMove(l, r, {}, SAMPLE_NOW), /can’t be moved/, `${key} -> ${r}`)
     }
   }
-  // Answering a ringing live transfer is taking the call (P898: it waits on Booked, asking for the result).
+  // Answering a ringing live transfer is taking the call (P910: it stays pinned as a live call, asking for the result).
   const ringing = mk('r', 'ringing', { kind: 'live_call' })
   assert.equal(canMove(ringing, 'showed'), true)
   assert.equal(canMove(BY_STATUS.booked, 'showed'), false)
   const took = agentMove(ringing, 'showed', {}, SAMPLE_NOW)
-  assert.equal(agentStatusOf(took), 'booked')
+  assert.equal(agentStatusOf(took), 'live')
   assert.equal(needsResult(took), true)
   assert.deepEqual(['sold', 'follow_up', 'not_interested'].map(r => canMove(took, r)), [true, true, true])
 })

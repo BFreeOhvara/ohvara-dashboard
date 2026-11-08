@@ -26,7 +26,7 @@ test('agents see five statuses, with Closed only under a filter (P894: live tran
     mk('j', 'follow_up', { follow: 'Mon, Nov 9' }),
     mk('k', 'opted_out'), mk('l', 'not_interested', { reason: 'Already covered' }),
   ]
-  assert.deepEqual(countByStatus(leads), { booked: 2, no_show: 1, follow: 1, not_interested: 1, sold: 2, closed: 1, team: 4 })
+  assert.deepEqual(countByStatus(leads), { live: 0, booked: 2, no_show: 1, follow: 1, not_interested: 1, sold: 2, closed: 1, team: 4 })
   assert.equal(agentStatusOf(leads[7]), 'sold')
   assert.deepEqual(agentChip(leads[6]), ['blue', 'Booked · mark result'])
   assert.deepEqual(agentChip(leads[7]), ['green', 'Sold · add the policy details'])

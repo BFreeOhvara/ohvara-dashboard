@@ -31,6 +31,9 @@ export const DRAFT_TEXTS = {
   cant_make_it: "Hi [Lead first name], [Agent first name] can't make your call on [Appointment time] and is sorry for the change. Pick a new time here: [Rebook link]",
   // Follow up: the agent sends a link so the client books on the agent's calendar.
   booking_link: 'Hi [Lead first name], [Agent first name] here from Deedstone. Pick a time that suits you for our next call: [Booking link]',
+  // P910 (Lead Text Workflows section 7): the agent's follow-up call, the day before and the morning of.
+  follow_day_before: '[Agent first name] will give you a call tomorrow at [Appointment time].',
+  follow_morning: 'Good morning [Lead first name]! [Agent first name] calls you today at [Appointment time]. Need a different time? [Reschedule link]',
   // The automatic replier: anything that needs a person gets a holding reply and a call task.
   holding_reply: "Thanks [Lead first name]! Someone will call you shortly.",
   holding_reply_after_hours: "Thanks [Lead first name]! We're closed for the night. Someone will call you after 8 AM tomorrow.",
