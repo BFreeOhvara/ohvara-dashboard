@@ -24,7 +24,7 @@ export function sampleSlots(day, tz, carrierName) {
   if (!tz) return []
   const c = carrierByName(carrierName)
   if (!c) return SHIFT_SLOTS
-  return carrierDaySlots(isoOf(day), tz, c)
+  return carrierDaySlots(typeof day === 'string' ? day : isoOf(day), tz, c) // P852: a 'YYYY-MM-DD' date (real days) or a sample day
 }
 export const hoursLine = carrierName => {
   const c = carrierByName(carrierName)

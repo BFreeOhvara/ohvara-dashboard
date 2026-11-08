@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Landmark, CircleCheck, ArrowUpRight, FileText, Info } from 'lucide-react'
-import { useFulPay } from '../data'
+import { useFulPay, useFulSource } from '../data'
+import { FirstRun } from '../../DataState'
 import { Chip, Drawer, PillTabs, SampleTag, useNote } from '../../kit'
 import { CountUp, usd } from '../../motion'
 import { fp } from '../paths'
@@ -13,6 +14,48 @@ import { MY_SHEET, MY_RATE, hoursOf, weekPay } from '../p879'
 // correction; it locks at the pay run), then payouts and tax forms. The next payout is the one filled tile (sage).
 // Sample amounts only; the per-cancellation pay is gone.
 export default function Pay() {
+  return useFulSource() === 'real' ? <PayReal /> : <PaySample />
+}
+
+// P852 — Pay on real data: payouts, the bank on file and the next payday are real (fulfillment_payouts, the payout
+// account). Hourly pay needs clock in and out, which has no tables yet (a door), so the hours part says so instead of
+// showing sample hours. Bank details are only ever entered in the payout service's own form.
+function PayReal() {
+  const { data: pay } = useFulPay()
+  const money = usd()
+  return (
+    <div className="tp-page fx-page fx-ovl fs-pay">
+      <div className="fx-ovl-main">
+        <FirstRun icon={Info} title="Hours start when time tracking goes live" sub="Pay is hourly, from your clock in and out. Once that's switched on, this week's hours and pay show here." />
+        <section className="fx-tile fs-pay-list" style={{ '--i': 1 }} aria-label="Payouts">
+          <header className="fx-tile-h"><span className="tp-grow"><h2>Payouts</h2><p>{pay.payouts.length ? 'Paid to your bank' : 'Nothing paid yet'}</p></span></header>
+          {pay.payouts.length ? (
+            <ul className="tp-list fs-rows">
+              {pay.payouts.map(p => (
+                <li key={p.id} className="fx-mrow">
+                  <CircleCheck size={17} aria-hidden="true" className="fs-ok" />
+                  <span className="tp-grow"><b>{p.week}</b><small>Paid {p.paid}</small></span>
+                  <Chip tone="green">Paid</Chip>
+                  <b className="tp-money">{money(p.amount)}</b>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="fx-calm">Your first payout shows here after an admin checks your first week.</p>}
+          {pay.pending.length > 0 && <ul className="tp-list fs-rows">{pay.pending.map(p => <li key={p.id} className="fx-mrow"><FileText size={17} aria-hidden="true" /><span className="tp-grow"><b>{p.week}</b><small>Being checked</small></span><b className="tp-money">{money(p.amount)}</b></li>)}</ul>}
+        </section>
+      </div>
+      <div className="fx-ovl-side fs-pay-side">
+        <section className="fx-tile is-fill is-green fs-payout" style={{ '--i': 2 }} aria-label="Next payout">
+          <header className="fx-tile-h"><span className="tp-grow"><h2>Next payday</h2><p>{pay.payday}, after an admin checks the week</p></span></header>
+          <span className="fx-next-who"><Landmark size={16} aria-hidden="true" /><span><b>{pay.account.last4 ? `${pay.account.bank} •••• ${pay.account.last4}` : pay.account.bank}</b><small>{pay.account.status}</small></span></span>
+          <Link to={fp('settings')} className="fx-pillbtn fx-self">Pay details<ArrowUpRight size={14} /></Link>
+        </section>
+      </div>
+    </div>
+  )
+}
+
+function PaySample() {
   const { data: pay } = useFulPay()
   const note = useNote()
   const money = usd()

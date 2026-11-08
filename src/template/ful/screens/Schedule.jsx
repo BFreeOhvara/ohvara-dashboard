@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Phone, MessageSquare, CalendarClock, MapPin, CircleCheck, PhoneMissed, Forward, ArrowRight, Users, Clock, ChevronRight, CalendarOff, Undo2, CalendarCheck } from 'lucide-react'
-import { useFulCalls, useFulActions, useFulSchedule, useFulBooked, useFulShift, useVaBooking, AGENTS, NOW_ISO, TODAY, WEEKS, dayName, minutesOf } from '../data'
+import { useFulCalls, useFulActions, useFulSchedule, useFulBooked, useFulShift, useVaBooking, useFulAgents, useFulClock, useFulSource, minutesOf } from '../data'
+import { FirstRun } from '../../DataState'
 import { Avatar, Chip, Drawer, Empty, Field, Seg, useNote } from '../../kit'
 import { DayBox, WeekStrip, WeekList } from '../../DayBox'
 import { SlotPick } from '../../SlotPick'
 import { useOpenDay, useStickyDay } from '../../useOpenDay'
 import { useClientZone } from '../../useClientZone'
-import { BOOK_DAYS, isoOf, sampleSlots, hoursLine } from '../../carriers'
+import { sampleSlots, hoursLine } from '../../carriers'
 import { vaSlots, freeVa, clockOf, zoneAbbr } from '../../../lib/callSlots'
 import { RecordDrawer, Block } from '../../Record'
 import { CountUp } from '../../motion'
@@ -38,7 +39,7 @@ const ROWS = 10
 const SLOT = 30 // minutes an event block covers (a block is time over name), so close times sit side by side
 const HOURS = Array.from({ length: ROWS }, (_, i) => START + i)
 const label12 = h => `${((h + 11) % 12) + 1} ${h < 12 ? 'AM' : 'PM'}`
-const NOW = '1:32 PM' // sample clock: the next call is 28 minutes after it
+const SAMPLE_NOW = '1:32 PM' // sample clock: the next call is 28 minutes after it
 const WEEK_LABEL = ['This week', 'Next week']
 const KIND_ICON = { call: Phone, callback: Clock, booked: CalendarCheck }
 
@@ -75,9 +76,10 @@ export function CallDrawer({ id, onClose }) {
   const book = useVaBooking()
   const found = useClientZone(k.client.state, k.client.city)
   const zone = k.tz ? { ...found, tz: k.tz, auto: true } : found
+  const { today: TODAY, nowIso: NOW_ISO, bookDays: BOOK_DAYS, dayName, dateText, isoOf } = useFulClock()
   const [mDay, setMDay] = useState(k.day > TODAY ? k.day : BOOK_DAYS[1][1])
   const [mTime, setMTime] = useState('')
-  const clocks = useMemo(() => sampleSlots(mDay, zone.tz, k.old_carrier), [mDay, zone.tz, k.old_carrier])
+  const clocks = useMemo(() => sampleSlots(isoOf(mDay), zone.tz, k.old_carrier), [mDay, zone.tz, k.old_carrier, isoOf])
   const slots = vaSlots({ date: isoOf(mDay), clocks, clientTz: zone.tz, team: book.team, calls: book.calls, load: book.load, prefer: book.me, exceptId: k.id })
   const mPick = slots.find(x => x.clock === mTime && x.open && x.iso >= NOW_ISO)
   // Pass on: to another VA on shift who is free at this call's time.
@@ -88,9 +90,9 @@ export function CallDrawer({ id, onClose }) {
   // P886: the old policy goes only after the new one is issued and its first payment clears.
   const gate = useGate(k.name)
   return (
-    <RecordDrawer label={`Call with ${k.name}`} kicker={<>Cancellation call · {dayName(k.day)}, Nov {k.day} <HelpDot lesson="schedule" inline /></>} tone={tone} onClose={onClose}
+    <RecordDrawer label={`Call with ${k.name}`} kicker={<>Cancellation call · {dayName(k.day)}, {dateText(k.day)} <HelpDot lesson="schedule" inline /></>} tone={tone} onClose={onClose}
       hero={<>
-        <div className="fx-hero-top"><span className="fx-when"><CalendarClock size={13} aria-hidden="true" />{k.day === TODAY ? 'Today' : `${dayName(k.day)}, Nov ${k.day}`} · {k.when}</span><Chip tone={tone}>{CALL_WORD[k.status]}</Chip></div>
+        <div className="fx-hero-top"><span className="fx-when"><CalendarClock size={13} aria-hidden="true" />{k.day === TODAY ? 'Today' : `${dayName(k.day)}, ${dateText(k.day)}`} · {k.when}</span><Chip tone={tone}>{CALL_WORD[k.status]}</Chip></div>
         <h2>{k.name}</h2>
         <p><MapPin size={13} aria-hidden="true" />{k.client.city}, {k.client.state} · {k.agent}'s client</p>
         <div className="fx-hero-bot"><span className="fs-swap is-hero"><span><small>Closing</small><b>{k.old_carrier}</b></span><ArrowRight size={16} aria-hidden="true" /><span><small>Keeping</small><b>{k.carrier}</b></span></span><Avatar name={k.name} tone={tone} /></div>
@@ -134,7 +136,7 @@ export function CallDrawer({ id, onClose }) {
         footer={<button type="button" className="tp-primary fx-accent" disabled={!mPick} onClick={() => {
           const mine = mPick.va.id === book.me
           moveCall(k.id, mPick.iso, mPick.va.id)
-          note(`Moved to ${dayName(mDay)}, Nov ${mDay}, ${mTime} ${zoneAbbr(zone.tz, mPick.iso)}, the client's time${mine ? '' : `. ${mPick.va.name} has it`}`)
+          note(`Moved to ${dayName(mDay)}, ${dateText(mDay)}, ${mTime} ${zoneAbbr(zone.tz, mPick.iso)}, the client's time${mine ? '' : `. ${mPick.va.name} has it`}`)
           setPanel(null)
         }}><CalendarClock size={16} />Move it</button>}>
         <SlotPick days={BOOK_DAYS} day={mDay} onDay={setMDay} slots={slots} value={mTime} onPick={setMTime} zone={zone} place={`${k.client.city}, ${k.client.state}`}
@@ -153,17 +155,19 @@ export function CallDrawer({ id, onClose }) {
 // An appointment the VA booked for an agent: it is on the agent's calendar; here are its details.
 function BookedDrawer({ id, onClose }) {
   const { data: booked } = useFulBooked()
+  const { data: agents } = useFulAgents()
+  const { today: TODAY, dayName, dateText } = useFulClock()
   const note = useNote()
   const b = booked.find(x => x.id === id)
   if (!b) return <RecordDrawer label="Not on your schedule" kicker="Schedule" onClose={onClose} hero={<h2>Already handled</h2>}><p className="fx-calm">This one is not on your schedule any more.</p></RecordDrawer>
   const first = b.agent.split(' ')[0]
-  const ag = AGENTS.find(a => a.id === b.agent_id)
+  const ag = agents.find(a => a.id === b.agent_id)
   const theirs = ag && b.iso ? `${clockOf(b.iso, ag.tz)} ${zoneAbbr(ag.tz, b.iso)}` : b.time
   const client = b.iso && b.tz ? `${clockOf(b.iso, b.tz)} ${zoneAbbr(b.tz, b.iso)}` : ''
   return (
     <RecordDrawer label={`Appointment for ${b.agent} with ${b.name}`} kicker={`Booked for ${first}`} tone="teal" onClose={onClose}
       hero={<>
-        <div className="fx-hero-top"><span className="fx-when"><CalendarClock size={13} aria-hidden="true" />{b.day === TODAY ? 'Today' : `${dayName(b.day)}, Nov ${b.day}`} · {b.when}</span><Chip tone="teal">Booked for {first}</Chip></div>
+        <div className="fx-hero-top"><span className="fx-when"><CalendarClock size={13} aria-hidden="true" />{b.day === TODAY ? 'Today' : `${dayName(b.day)}, ${dateText(b.day)}`} · {b.when}</span><Chip tone="teal">Booked for {first}</Chip></div>
         <h2>{b.name}</h2>
         <p><MapPin size={13} aria-hidden="true" />{b.city}, {b.state} · {b.type}</p>
         <div className="fx-hero-bot"><b className="fx-hero-big tp-num">{b.phone}</b><Avatar name={b.name} tone="teal" /></div>
@@ -174,7 +178,7 @@ function BookedDrawer({ id, onClose }) {
         <button type="button" className="tp-btn ov-ghost" onClick={() => { note(`Asked the team to move ${b.name}'s appointment`); onClose() }}><CalendarClock size={15} />Ask to move</button>
       </>}>
       <Block title="Appointment" sub="You booked this">
-        <dl className="fx-facts">{[['Agent', b.agent], ['When', `${dayName(b.day)}, Nov ${b.day}, ${b.time} your time`], [`${first}'s time`, theirs], ...(client ? [["Client's time", `${client} (${b.city}, ${b.state})`]] : []), ['About', b.type], ['Phone', b.phone]].map(([a, v]) => <div key={a}><dt>{a}</dt><dd>{v}</dd></div>)}</dl>
+        <dl className="fx-facts">{[['Agent', b.agent], ['When', `${dayName(b.day)}, ${dateText(b.day)}, ${b.time} your time`], [`${first}'s time`, theirs], ...(client ? [["Client's time", `${client} (${b.city}, ${b.state})`]] : []), ['About', b.type], ['Phone', b.phone]].map(([a, v]) => <div key={a}><dt>{a}</dt><dd>{v}</dd></div>)}</dl>
       </Block>
       <Block title="What happens next">
         <p className="tp-mid">It is on {first}'s calendar inside their hours. {first} calls {b.name.split(' ')[0]} at that time. If the client asks to change it, the team moves it and tells you.</p>
@@ -189,6 +193,7 @@ function Rota({ week, onAsk }) {
   const { data: s } = useFulShift()
   const { cancel } = useDayOffActions()
   const note = useNote()
+  if (s.notSet) return <FirstRun icon={CalendarOff} title="Your rota isn't set up yet" sub="Who is on shift each day shows here once the team's rota is built. Your calls and callbacks above are real." />
   const days = s.days[week] || []
   const people = [s.me, ...Array.from(new Map(days.flatMap(d => d.vas).filter(v => !v.me).map(v => [v.id, v])).values())]
   const mine = s.dayOffs.filter(o => days.some(d => d.date === o.date))
@@ -231,16 +236,21 @@ function Rota({ week, onAsk }) {
 }
 
 const TO_DO = i => !i.done
-const ALL_DAYS = WEEKS.flat()
 
 export default function Schedule() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { data: items } = useFulSchedule()
+  const clock = useFulClock()
+  const real = useFulSource() === 'real'
+  const { today: TODAY, weeks: WEEKS, dayName, dateText, dayNum } = clock
+  const ALL_DAYS = WEEKS.flat()
+  // The red now-line: the sample clock (1:32 PM), or the real minute on the viewer's clock.
+  const NOW = real ? new Date(clock.nowIso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: clock.tz }) : SAMPLE_NOW
   const [weekPick, setWeek] = useState(0)
   const [show, setShow] = useState('all')
   const [ask, setAsk] = useState(false)
-  const { day, open, close, search } = useOpenDay(ALL_DAYS, { esc: !id && !ask })
+  const { day, open, close, search } = useOpenDay(ALL_DAYS, { esc: !id && !ask, isoOf: clock.isoOf })
   const { view, leaving } = useStickyDay(day)
   // An open day (from a link) shows its own week.
   const week = view != null ? (WEEKS[1].includes(view) ? 1 : 0) : weekPick
@@ -272,7 +282,7 @@ export default function Schedule() {
     <div className="tp-page fx-page fs-sched">
       <div className="fx-tools">
         <Seg label="Week" value={week} onChange={pickWeek} options={WEEK_LABEL.map((label, key) => ({ key, label }))} />
-        <WeekStrip days={days} day={view} today={TODAY} onOpen={open} has={d => ofDay(d).length > 0} name={dayName} />
+        <WeekStrip days={days} day={view} today={TODAY} onOpen={open} has={d => ofDay(d).length > 0} name={dayName} num={dayNum} />
         <span className="tp-grow" />
         <Seg label="Show" value={show} onChange={setShow} options={[{ key: 'all', label: 'All', count: counts.all }, { key: 'todo', label: 'To do', count: counts.todo }, { key: 'done', label: 'Done', count: counts.done }]} />
         <HelpDot lesson="schedule" />
@@ -283,13 +293,13 @@ export default function Schedule() {
         <li className="is-teal"><i aria-hidden="true" />Booked for an agent</li>
       </ul>
 
-      <WeekList days={days} today={TODAY} onOpen={open} name={dayName} itemsOf={ofDay} line={e => `${e.time} ${e.name}`} />
+      <WeekList days={days} today={TODAY} onOpen={open} name={dayName} num={dayNum} itemsOf={ofDay} line={e => `${e.time} ${e.name}`} />
 
       <div className="fx-grid" data-fold data-fold-fit="360">
-        <section className={`fx-tile ${view != null ? 'fx-s8 is-day' : 'fx-s12 is-week'} fx-week`} style={{ '--i': 0, '--days': cols.length, '--rows': ROWS }} aria-label={view != null ? `${dayName(view)}, Nov ${view}` : WEEK_LABEL[week]}>
+        <section className={`fx-tile ${view != null ? 'fx-s8 is-day' : 'fx-s12 is-week'} fx-week`} style={{ '--i': 0, '--days': cols.length, '--rows': ROWS }} aria-label={view != null ? `${dayName(view)}, ${dateText(view)}` : WEEK_LABEL[week]}>
           <div className="tp-tgrid-h"><span />{cols.map(d => (
-            <b key={d} role="button" tabIndex={0} aria-pressed={d === view} title={d === view ? 'Back to the week' : `Open ${dayName(d)} ${d}`} className={`${d === TODAY ? 'today' : ''}${d === view ? ' is-on' : ''}`} onClick={() => open(d)} onKeyDown={headKey(d)}>
-              {dayName(d)} <span>{d}</span>{d === TODAY && <small>Today</small>}
+            <b key={d} role="button" tabIndex={0} aria-pressed={d === view} title={d === view ? 'Back to the week' : `Open ${dayName(d)} ${dayNum(d)}`} className={`${d === TODAY ? 'today' : ''}${d === view ? ' is-on' : ''}`} onClick={() => open(d)} onKeyDown={headKey(d)}>
+              {dayName(d)} <span>{dayNum(d)}</span>{d === TODAY && <small>Today</small>}
             </b>
           ))}</div>
           <div className="tp-tgrid-b">
@@ -308,7 +318,7 @@ export default function Schedule() {
         </section>
 
         {view != null && (
-          <DayBox title={`${dayName(view)}, Nov ${view}`} sub={list.length ? `${list.length} on your schedule` : 'Nothing scheduled'} leaving={leaving} onClose={close}>
+          <DayBox title={`${dayName(view)}, ${dateText(view)}`} sub={list.length ? `${list.length} on your schedule` : 'Nothing scheduled'} leaving={leaving} onClose={close}>
             <b className="tp-num fx-huge2"><CountUp value={list.length} /><small> {list.length === 1 ? 'item' : 'items'}</small></b>
             <ul className="fx-rows">
               {list.map(e => { const Icon = KIND_ICON[e.kind]; return (
@@ -327,7 +337,7 @@ export default function Schedule() {
       </div>
 
       <Rota week={week} onAsk={() => setAsk(true)} />
-      <SwapsHolidays />
+      {!real && <SwapsHolidays />}
       <DayOffDrawer open={ask} onClose={() => setAsk(false)} />
 
       {id && kind === 'call' && <CallDrawer key={id} id={id} onClose={closeDrawer} />}

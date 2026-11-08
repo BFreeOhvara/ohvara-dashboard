@@ -140,7 +140,7 @@ function TaskDrawer({ id, onClose }) {
       hero={<>
         <div className="fx-hero-top"><span className="fx-when"><CalendarClock size={13} aria-hidden="true" />{t.due_text}</span><Chip tone={tone}>{KIND[t.kind]}</Chip></div>
         <h2>{t.name}</h2>
-        <p><MapPin size={13} aria-hidden="true" />{t.client.city}, {t.client.state} · {t.carrier}</p>
+        <p><MapPin size={13} aria-hidden="true" />{[[t.client.city, t.client.state].filter(Boolean).join(', '), t.carrier].filter(Boolean).join(' · ')}</p>
         <div className="fx-hero-bot"><b className="fx-hero-big tp-num">{t.client.client_phone}</b><Avatar name={t.name} tone={tone} /></div>
       </>}
       stepper={<Stepper label="Where this step is" steps={STEPS} current={t.status} onPick={k => (k === 'in_progress' ? (startTask(t.id), note('Started')) : k === 'scheduled' ? setPanel('schedule') : k === 'done' ? setPanel('done') : null)} />}

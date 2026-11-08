@@ -6,7 +6,7 @@ import {
   Volume2, UserPlus, Merge, PhoneForwarded, NotebookPen, X, ArrowUpRight, Building2, ShieldCheck, ListTodo,
   Ban, LifeBuoy, Voicemail, ArrowRightLeft, Undo2, CircleSlash, Timer, Plus,
 } from 'lucide-react'
-import { useFulCalls, useFulActions, useFulDay, useFulQueue, useFulTasks, AGENTS, NOW_ISO } from './data'
+import { useFulCalls, useFulActions, useFulDay, useFulQueue, useFulTasks, useFulAgents, useFulClock } from './data'
 import { Avatar, Field, PillTabs, useNote } from '../kit'
 import { useClientZone } from '../useClientZone'
 import { clockOf, zoneAbbr } from '../../lib/callSlots'
@@ -89,6 +89,9 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
   const { data: queue } = useFulQueue()
   const { data: tasks } = useFulTasks()
   const { markCall, hideLive } = useFulActions()
+  const { data: AGENTS } = useFulAgents()
+  // P852: the sample clock on sample rows; the real minute on real rows (and on a real line).
+  const { nowIso: NOW_ISO } = useFulClock()
   const note = useNote()
   const navigate = useNavigate()
   const loc = useLocation()
@@ -550,6 +553,7 @@ function LineList({ call, onDrop, onMerge }) {
 function AddCaller({ who, on, onPick, onClose }) {
   const [q, setQ] = useState('')
   const has = id => on.some(p => p.id === id)
+  const { data: AGENTS } = useFulAgents()
   const agents = [...AGENTS].sort((a, b) => (a.id === who.agentId ? -1 : b.id === who.agentId ? 1 : 0))
   const carriers = useMemo(() => {
     const t = plain(q).trim()
@@ -581,8 +585,9 @@ function AddCaller({ who, on, onPick, onClose }) {
 // P880: an agent who can't get live calls (no app, notifications off, push test not passed, booking only) can't be
 // checked; the reason shows. On a real call the server checks the lead's own agent (the one the ad link routed to).
 function PickAgent({ who, real, onCheck, onClose }) {
+  const { data: AGENTS } = useFulAgents()
   const can = a => a.duty && !SAMPLE_REACH[a.id]
-  const [agent, setAgent] = useState((AGENTS.find(can) || AGENTS[0]).id)
+  const [agent, setAgent] = useState((AGENTS.find(can) || AGENTS[0])?.id)
   const why = a => (SAMPLE_REACH[a.id] ? REACH_WORDS[SAMPLE_REACH[a.id]] : a.duty ? 'Takes transfers' : REACH_WORDS.booking_only)
   const picked = AGENTS.find(a => a.id === agent)
   return (

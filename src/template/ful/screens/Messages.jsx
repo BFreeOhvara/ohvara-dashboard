@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, ArrowUpRight } from 'lucide-react'
+import { Search, ArrowUpRight, MessageSquare } from 'lucide-react'
+import { FirstRun } from '../../DataState'
 import { useFulThreads, useFulActions } from '../data'
 import { Avatar, Empty } from '../../kit'
 import { fp } from '../paths'
@@ -11,14 +12,16 @@ import { fp } from '../paths'
 export default function Messages() {
   const { data: threads } = useFulThreads()
   const { sendMessage, readThread } = useFulActions()
-  const [sel, setSel] = useState(threads[0].id)
+  const [sel, setSel] = useState(threads[0]?.id)
   const [text, setText] = useState('')
   const [q, setQ] = useState('')
-  const t = threads.find(x => x.id === sel)
+  const t = threads.find(x => x.id === sel) || threads[0]
   const n = q.trim().toLowerCase()
   const list = threads.filter(x => `${x.name} ${x.agent}`.toLowerCase().includes(n))
   const pick = id => { setSel(id); readThread(id) }
   const send = e => { e.preventDefault(); if (!text.trim()) return; sendMessage(t.id, text.trim()); setText('') }
+  // P852: a VA with no threads yet (real data) sees how one starts, not an empty pane.
+  if (!t) return <div className="tp-page fx-page"><FirstRun icon={MessageSquare} title="No messages yet" sub="When an agent writes to you about one of their clients, or you write from a client or a servicing step, the thread shows here. The client never sees it." /></div>
   const agentFirst = t.agent.split(' ')[0]
   return (
     <section className="ov-card tp-msgs" aria-label="Messages">
@@ -27,7 +30,7 @@ export default function Messages() {
         <div className="tp-threads-b">
           {list.map(x => (
             <button key={x.id} type="button" className={`tp-thread${x.id === sel ? ' on' : ''}`} onClick={() => pick(x.id)}>
-              <Avatar name={x.name} /><span className="tp-grow"><b>{x.name}</b><small className="ful-thread-agent">Agent: {x.agent}</small><small>{x.messages[x.messages.length - 1].text}</small></span>
+              <Avatar name={x.name} /><span className="tp-grow"><b>{x.name}</b><small className="ful-thread-agent">Agent: {x.agent}</small><small>{x.messages.at(-1)?.text || ''}</small></span>
               {x.unread > 0 && <span className="tp-tb is-msg">{x.unread}</span>}
             </button>
           ))}

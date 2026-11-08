@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Search, Phone, MessageSquare, CalendarClock, MapPin, TriangleAlert, LifeBuoy, PhoneCall } from 'lucide-react'
-import { useFulClients, useFulCalls, useFulTasks, useFulThreads, useFulAgents, useFulActions } from '../data'
+import { useFulClients, useFulCalls, useFulTasks, useFulThreads, useFulAgents, useFulActions, useFulClock } from '../data'
 import { Avatar, Chip, Money, SampleTag, Empty, PillTabs, useNote } from '../../kit'
 import { RecordDrawer, Block } from '../../Record'
 import { stageLabel } from '../../stages'
@@ -43,7 +43,9 @@ function ClientDrawer({ id, onClose }) {
   const { sendMessage, showLive } = useFulActions()
   const note = useNote()
   const [msg, setMsg] = useState('')
+  const { dateText } = useFulClock()
   const c = clients.find(x => x.id === id) || clients[0]
+  if (!c) return <RecordDrawer label="Not found" kicker="Clients" onClose={onClose} hero={<h2>Not one of your clients</h2>}><p className="fx-calm">This client isn't on your list.</p></RecordDrawer>
   const [tone, label] = stageLabel[c.stage]
   const myCalls = calls.filter(k => k.client_id === c.id)
   const myTasks = tasks.filter(t => t.client_id === c.id)
@@ -80,7 +82,7 @@ function ClientDrawer({ id, onClose }) {
       </Block>
       <Block title="Your work on this client" aside={<span className="fx-count">{myCalls.length + myTasks.length}</span>}>
         <ul className="tp-list">
-          {myCalls.map(k => <li key={k.id}><Link to={fp('schedule', k.id)} className="fx-mrow"><PhoneCall size={16} aria-hidden="true" /><span className="tp-grow"><b>Cancellation call</b><small>Nov {k.day}, {k.time}</small></span><Chip tone={CALL_TONE[k.status]}>{CALL_WORD[k.status]}</Chip></Link></li>)}
+          {myCalls.map(k => <li key={k.id}><Link to={fp('schedule', k.id)} className="fx-mrow"><PhoneCall size={16} aria-hidden="true" /><span className="tp-grow"><b>Cancellation call</b><small>{dateText(k.day)}, {k.time}</small></span><Chip tone={CALL_TONE[k.status]}>{CALL_WORD[k.status]}</Chip></Link></li>)}
           {myTasks.map(t => <li key={t.id}><Link to={fp('servicing', t.id)} className="fx-mrow"><LifeBuoy size={16} aria-hidden="true" /><span className="tp-grow"><b>{KIND[t.kind]}</b><small>{t.due_text}</small></span><Chip tone={kindTone(t.kind)}>{t.status === 'done' ? 'Done' : 'Open'}</Chip></Link></li>)}
         </ul>
         {myCalls.length + myTasks.length === 0 && <p className="fx-calm">Nothing for you on this client.</p>}

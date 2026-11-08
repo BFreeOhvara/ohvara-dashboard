@@ -17,10 +17,11 @@ import { LiveClock } from '../Clock'
 import { OhvaraMark } from '../../components/ui/OhvaraMark'
 import { isSearchKey } from '../../lib/searchKey'
 import { SUPPORT_EMAIL } from '../../components/auth/authUtils'
-import { useFulDay, useFulClients, useFulQueue, useFulFeed, useFulSettings, useFulPay, useFulTasks, useFulActions, useFulAgents, useFulShift, useFulSchedule, useAgentAppts, useVaBooking, useFulLive, AGENTS, NOW_ISO } from './data'
+import { useFulDay, useFulClients, useFulQueue, useFulFeed, useFulSettings, useFulPay, useFulTasks, useFulActions, useFulAgents, useFulShift, useFulSchedule, useAgentAppts, useVaBooking, useFulLive, useFulClock, useFulSource, useFulStatus } from './data'
+import ViewToggle from '../ViewToggle'
+import { DataLoading, DataError, FirstRun } from '../DataState'
 import { SlotPick } from '../SlotPick'
 import { useClientZone } from '../useClientZone'
-import { isoOf } from '../carriers'
 import { agentSlots, clocksBetween, zoneAbbr, DEFAULT_APPT_MIN } from '../../lib/callSlots'
 import FulPhone from './Phone'
 import { dockReducer, dockBadge, railState, initialDock, RING_MS } from './phoneDock'
@@ -54,6 +55,7 @@ function BellDrawer({ open, onClose }) {
   const { data: items } = useFulFeed()
   return (
     <Drawer open={open} onClose={onClose} title="Notifications" sub="What happened lately">
+      {!items.length && <FirstRun icon={Bell} title="Nothing yet" sub="New people in the queue, callbacks coming due, agents' requests and payouts show here." />}
       <ul className="tp-list">
         {items.slice(0, 6).map(a => <li key={a.id} className="tp-li"><Avatar name={a.who} /><span className="tp-grow"><b>{a.who}</b><small>{a.text}</small></span><small>{a.at}</small></li>)}
       </ul>
@@ -86,7 +88,6 @@ function LogCall({ open, onClose }) {
 // Book for an agent: someone from the queue, the agent, a day and a time. Lands on the agent's calendar (sample only).
 // P854: the time is the person's (their zone from state + city, or picked), inside the agent's hours on the agent's
 // clock, and never within the agent's appointment length + buffer of another appointment (lib/callSlots agentSlots).
-const BOOK_DAYS = [['Thu', 5], ['Fri', 6], ['Mon', 9], ['Tue', 10]]
 const APPT_CLOCKS = clocksBetween(8 * 60, 20 * 60) // the person's 8 AM to 8 PM; the agent's hours filter it
 export function BookForAgent({ open, onClose, leadId = null }) {
   const { data: queue } = useFulQueue()
@@ -94,27 +95,29 @@ export function BookForAgent({ open, onClose, leadId = null }) {
   const { bookLead } = useFulActions()
   const book = useVaBooking()
   const note = useNote()
+  const clock = useFulClock()
+  const BOOK_DAYS = clock.bookDays.slice(0, 4)
   const [ref, setRef] = useState(leadId || '')
   const [picked, setAgent] = useState(null)
-  const [date, setDate] = useState(5)
+  const [date, setDate] = useState(BOOK_DAYS[0][1])
   const [time, setTime] = useState('')
   const who = queue.find(l => l.id === (leadId || ref)) || queue[0]
   // P881 (N-C-22, N-A-12): only an agent licensed in the person's state can be booked; the database refuses the rest.
   const where = who?.checklist?.state || who?.state || null
-  const agent = picked || (agents.find(a => licensedIn(a, where)) || agents[0]).id
-  const ag = AGENTS.find(x => x.id === agent)
+  const agent = picked || (agents.find(a => licensedIn(a, where)) || agents[0])?.id
+  const ag = agents.find(x => x.id === agent)
   const licensed = licensedIn(ag, where)
   const zone = useClientZone(who?.checklist?.state || who?.state, who?.city)
   const appts = useAgentAppts(agent)
-  const slots = agentSlots({ date: isoOf(date), clocks: APPT_CLOCKS, clientTz: zone.tz, appts, length: ag.appt?.length, buffer: ag.appt?.buffer, hours: { tz: ag.tz, open: ag.open, close: ag.close, days: ag.days } })
-  const pick = licensed ? slots.find(x => x.clock === time && x.open && x.iso >= NOW_ISO) : null
+  const slots = ag ? agentSlots({ date: clock.isoOf(date), clocks: APPT_CLOCKS, clientTz: zone.tz, appts, length: ag.appt?.length, buffer: ag.appt?.buffer, hours: { tz: ag.tz, open: ag.open, close: ag.close, days: ag.days } }) : []
+  const pick = licensed ? slots.find(x => x.clock === time && x.open && x.iso >= clock.nowIso) : null
   if (!open) return null
-  if (!who) {
-    return <Drawer open center onClose={onClose} title="Book for an agent" sub="The queue is empty."><p className="fx-calm">No one is waiting to be booked.</p></Drawer>
+  if (!who || !ag) {
+    return <Drawer open center onClose={onClose} title="Book for an agent" sub={who ? 'No agents yet.' : 'The queue is empty.'}><p className="fx-calm">{who ? 'Agents you serve show here once they join.' : 'No one is waiting to be booked.'}</p></Drawer>
   }
   const gap = (ag.appt?.length || DEFAULT_APPT_MIN) + (ag.appt?.buffer || 0)
   const save = () => {
-    const when = `${BOOK_DAYS.find(d => d[1] === date)[0]}, Nov ${date}, ${time} ${zoneAbbr(zone.tz, pick.iso)} (their time)`
+    const when = `${clock.dayName(date)}, ${clock.dateText(date)}, ${time} ${zoneAbbr(zone.tz, pick.iso)} (their time)`
     bookLead(who.id, agent, when, pick.iso, zone.tz)
     note(`${who.name} booked with ${ag.name}, ${when}`)
     onClose()
@@ -126,11 +129,11 @@ export function BookForAgent({ open, onClose, leadId = null }) {
       <div className="tp-field"><span>Agent</span>
         <PillTabs role="radiogroup" label="Agent" className="fx-chips" itemClass="fx-chip fs-agent" value={agent} onChange={a => { setAgent(a); setTime('') }}
           items={agents.map(a => ({ key: a.id, label: <><Avatar name={a.name} /><b>{a.name.split(' ')[0]}</b>{!licensedIn(a, where) && <small className="fs-unlic">{where ? `not in ${where}` : 'state?'}</small>}</> }))} />
-        <small className="tp-sub">{ag.hours}, {zoneAbbr(ag.tz)} · licensed in {(ag.states || []).join(', ')}</small>
-        {!licensed && <p className="lic-va-warn" role="alert"><ShieldAlert size={13} aria-hidden="true" />{where ? `${ag.name.split(' ')[0]} isn't licensed in ${where}. Pick an agent who is, or leave it for the team.` : "Confirm the person's state on the call first."}</p>}
+        <small className="tp-sub">{ag.hours}, {zoneAbbr(ag.tz)} · {ag.states ? `licensed in ${ag.states.join(', ')}` : 'licence states not connected yet'}</small>
+        {!licensed && <p className="lic-va-warn" role="alert"><ShieldAlert size={13} aria-hidden="true" />{!ag.states ? `We can't see ${ag.name.split(' ')[0]}'s licence states yet, so booking stays off. Leave it for the team.` : where ? `${ag.name.split(' ')[0]} isn't licensed in ${where}. Pick an agent who is, or leave it for the team.` : "Confirm the person's state on the call first."}</p>}
       </div>
       <SlotPick days={BOOK_DAYS} day={date} onDay={setDate} slots={slots} value={time} onPick={setTime} zone={zone} place={`${who.city}, ${who.checklist?.state || who.state}`} viewerTz={book.viewerTz}
-        notBefore={NOW_ISO} hint={`Inside ${ag.name.split(' ')[0]}’s hours. Greyed-out times are within ${gap} minutes of another appointment.`} />
+        notBefore={clock.nowIso} hint={`Inside ${ag.name.split(' ')[0]}’s hours. Greyed-out times are within ${gap} minutes of another appointment.`} />
     </Drawer>
   )
 }
@@ -171,7 +174,7 @@ function AccountMenu({ open, onClose, theme, setTheme, onAsk, onApp }) {
       <section className="fx-menu" role="dialog" aria-label="Your account">
         <header className="fx-menu-h"><span className={`fx-av av-${avatarHue(account.name)}`}>{initials(account.name).toUpperCase()}</span><span className="tp-grow"><b>{account.name}</b><small>Fulfillment</small></span></header>
         <Link to={fp('schedule')} className="fx-mrow" onClick={onClose}>
-          <Clock3 size={17} aria-hidden="true" /><span className="tp-grow"><b>{shift.onToday ? `Your shift today ${shift.shift.text}` : 'You are off today'}</b><small>See the Schedule and who is on</small></span><ChevronRight size={15} aria-hidden="true" />
+          <Clock3 size={17} aria-hidden="true" /><span className="tp-grow"><b>{shift.notSet ? 'Your rota isn’t set up yet' : shift.onToday ? `Your shift today ${shift.shift.text}` : 'You are off today'}</b><small>See the Schedule and who is on</small></span><ChevronRight size={15} aria-hidden="true" />
         </Link>
         <button type="button" className="fx-mrow" onClick={() => { onClose(); onAsk() }}><CalendarOff size={17} aria-hidden="true" /><b className="tp-grow">Request a day off</b></button>
         <button type="button" className="fx-mrow" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}<b className="tp-grow">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</b></button>
@@ -179,6 +182,7 @@ function AccountMenu({ open, onClose, theme, setTheme, onAsk, onApp }) {
         <i className="fx-mline" />
         {links.map(([k, label, Icon]) => <Link key={k} to={fp(k)} className="fx-mrow" onClick={onClose}><Icon size={17} aria-hidden="true" /><b className="tp-grow">{label}</b><ChevronRight size={15} aria-hidden="true" /></Link>)}
         <i className="fx-mline" />
+        <ViewToggle />
         <button type="button" className="fx-mrow is-danger" onClick={() => (account.live ? account.signOut() : note('Sign out works once you sign in for real'))}><LogOut size={17} aria-hidden="true" /><b className="tp-grow">Sign out</b></button>
       </section>
     </div>
@@ -241,6 +245,7 @@ function useHeadStats(page) {
   const { data: settings } = useFulSettings()
   const { data: shift } = useFulShift()
   const { data: sched } = useFulSchedule()
+  const { weeks } = useFulClock()
   const account = useAccount()
   const { sum: tr } = useTraining(account.name)
   const S = (icon, n, label, extra = {}) => ({ icon, n, label, ...extra })
@@ -253,7 +258,7 @@ function useHeadStats(page) {
   return {
     overview: [S(PhoneCall, day.today.length, 'calls today', { chip: [`${doneToday} done`, 'up'] }), S(PhoneIncoming, inQueue, 'in your queue', { chip: cb ? [`${cb} callbacks due`, 'warn'] : null }), S(Wallet, pay.earned, 'earned this week', { fmt: money })],
     queue: [S(Clock3, cb, 'callbacks due', { chip: cb ? ['Call first', 'warn'] : null }), S(PhoneIncoming, day.queue.new.length, 'new today'), S(Hourglass, day.queue.not_reached.length, 'not reached yet')],
-    schedule: [S(PhoneCall, todayLeft, 'calls left today', { chip: day.next ? [`next ${day.next.time}`, 'blue'] : null }), S(CalendarCheck, sched.filter(i => i.day <= 6).length, 'on your schedule this week'), S(CheckCircle2, weekCancelled, 'cancelled this week', { chip: ['Confirmed', 'up'] })],
+    schedule: [S(PhoneCall, todayLeft, 'calls left today', { chip: day.next ? [`next ${day.next.time}`, 'blue'] : null }), S(CalendarCheck, sched.filter(i => weeks[0].includes(i.day)).length, 'on your schedule this week'), S(CheckCircle2, weekCancelled, 'cancelled this week', { chip: ['Confirmed', 'up'] })],
     clients: [S(Users, clients.length, 'clients'), S(ShieldCheck, agents.length, 'agents you serve'), S(TriangleAlert, att, 'need attention', { chip: att ? ['See who', 'warn'] : null })],
     servicing: [S(TriangleAlert, day.tasks.overdue.length, 'overdue', { chip: day.tasks.overdue.length ? ['Do first', 'warn'] : null }), S(LifeBuoy, day.tasks.today.length, 'due today'), S(CheckCircle2, day.tasks.done.length, 'done this week')],
     pay: [S(Wallet, pay.earned, 'earned this week', { fmt: money, chip: [`${money(pay.lastWeek)} last week`, 'blue'] }), S(CheckCircle2, pay.verified, 'verified', { fmt: money }), S(CalendarCheck, pay.rows.length, 'cancellations this week')],
@@ -281,6 +286,8 @@ export default function FulFrame() {
   const { data: queue } = useFulQueue()
   const { data: tasks } = useFulTasks()
   const live = useFulLive()
+  const source = useFulSource()
+  const status = useFulStatus()
   const { sum: trainSum } = useTraining(account.name)
   const trainLeft = trainSum.left
   const close = useCallback(() => setPanel(null), [])
@@ -382,14 +389,14 @@ export default function FulFrame() {
   // Automated browsers skip it (they use the rail button), so a test click is never covered.
   const nextId = day.next?.id
   useEffect(() => {
-    if (!nextId || navigator.webdriver) return undefined
+    if (!nextId || navigator.webdriver || source === 'real') return undefined
     try { if (sessionStorage.getItem('ful-live-pop') === '1') return undefined } catch { /* no storage: it pops once per load */ }
     const t = setTimeout(() => {
       try { sessionStorage.setItem('ful-live-pop', '1') } catch { /* private window: it can pop again */ }
       if (!document.hidden) ring(nextId)
     }, 20000)
     return () => clearTimeout(t)
-  }, [nextId, ring])
+  }, [nextId, ring, source])
 
   const tops = (
     <>
@@ -462,8 +469,8 @@ export default function FulFrame() {
         </div>
 
         <main className={`tp-main fx-main fs-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>
-          {page.el}
-          <p className="tp-foot">Sample info. Changes reset when you reload.</p>
+          {status.error ? <DataError onRetry={status.retry} /> : status.loading ? <DataLoading /> : page.el}
+          {source !== 'real' && <p className="tp-foot">Sample info. Changes reset when you reload.</p>}
         </main>
       </div>
 
