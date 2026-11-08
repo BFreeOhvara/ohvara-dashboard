@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { pickChannel, addressFor, faxDigits, validEmail, MAX_ATTEMPTS } from '../../lib/documents.js'
+import { replacementGate, cancelDueBy, shortDate } from '../../lib/clientCheck.js'
 
 // P886 — documents on a policy, sample only (the sample day is Thu, Nov 5). One store shared by the VA side, the agent
 // side and the /sign page, keyed by the client's name so both sides see the same papers. Nothing leaves the browser:
@@ -55,14 +56,17 @@ const seedDocs = {
   ],
 }
 
-// The replacement gate per client who is replacing an old policy (replacement_gate_state).
+// The replacement gate per client who is replacing an old policy (replacement_gate_state). P899: it opens once the
+// new policy is issued (no wait for its first payment), and the cancel is due before the old policy's next draft.
 const seedGates = {
-  'Gloria Santos': { applies: true, issued_on: 'Nov 2', first_payment_on: null },
-  'Harold Nguyen': { applies: true, issued_on: 'Oct 20', first_payment_on: 'Nov 1' },
-  'Walter Price': { applies: true, issued_on: null, first_payment_on: null },
-  'Denise Walker': { applies: true, issued_on: 'Oct 14', first_payment_on: 'Oct 28' },
-  'Luis Ortega': { applies: true, issued_on: 'Oct 9', first_payment_on: 'Oct 23' },
+  'Gloria Santos': { applies: true, issued_on: 'Nov 2', old_draft_day: 9 },
+  'Harold Nguyen': { applies: true, issued_on: 'Oct 20', old_draft_day: 14 },
+  'Walter Price': { applies: true, issued_on: null, old_draft_day: 18 },
+  'Denise Walker': { applies: true, issued_on: 'Oct 14', old_draft_day: 1 },
+  'Luis Ortega': { applies: true, issued_on: 'Oct 9', old_draft_day: 27 },
 }
+const MON = { Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6, Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12 }
+const isoOf = d => { const m = /^([A-Z][a-z]{2}) (\d{1,2})$/.exec(d || ''); return m ? `2026-${String(MON[m[1]]).padStart(2, '0')}-${m[2].padStart(2, '0')}` : null }
 
 let state = { carriers: seedCarriers, docs: seedDocs, gates: seedGates, sendLive: false }
 const listeners = new Set()
@@ -71,10 +75,10 @@ const subscribe = fn => { listeners.add(fn); return () => listeners.delete(fn) }
 const useStore = () => useSyncExternalStore(subscribe, () => state)
 
 const gateOf = (s, who) => {
-  const g = s.gates[who]
-  if (!g?.applies) return { applies: false, open: true, waiting_for: [] }
-  const waiting_for = [!g.issued_on && 'issued', !g.first_payment_on && 'first_payment'].filter(Boolean)
-  return { ...g, open: waiting_for.length === 0 || !!g.override, waiting_for: g.override ? [] : waiting_for }
+  const g = replacementGate(s.gates[who])
+  if (!g.applies) return g
+  const due = g.issued_on ? cancelDueBy(g.old_draft_day, isoOf(g.issued_on)) : null
+  return { ...g, cancel_by: due ? shortDate(due.due) : null, old_draft: due ? shortDate(due.draft) : null }
 }
 const carrierOf = (s, name) => ({ name, docs_channels: [], ...(s.carriers[name] || {}) })
 
@@ -120,7 +124,7 @@ export const docActions = {
     const d = (s.docs[who] || []).find(x => x.id === docId)
     if (!d) return 'Document not found'
     if (!['signed', 'on_file'].includes(d.status)) return 'Only a signed form or a file on the policy can be sent'
-    if (d.doc_type === 'cancellation_request' && !gateOf(s, who).open) return 'Not yet: the old policy is cancelled only after the new one is issued and its first payment clears.'
+    if (d.doc_type === 'cancellation_request' && !gateOf(s, who).open) return 'Not yet: the old policy is cancelled once the new one is issued.'
     if (d.sends.length >= MAX_ATTEMPTS) return `Tried ${MAX_ATTEMPTS} times. Call ${d.carrier} to check the address, or ask an admin.`
     const dest = channel === 'fax' ? faxDigits(destination) : channel === 'email' ? (validEmail(destination) ? destination.trim().toLowerCase() : null) : channel === 'upload' ? destination : null
     if (channel !== 'agent_portal' && !dest) return channel === 'fax' ? 'That fax number needs 10 digits' : channel === 'email' ? 'That email address doesn’t look right' : 'Add the upload address'
@@ -136,7 +140,7 @@ export const docActions = {
   markSent: (who, docId, sendId) => set(s => patchDoc(s, who, docId, d => ({ ...d, sends: d.sends.map(x => (x.id === sendId ? { ...x, status: 'delivered', confirm_due: 'Tue by 5 PM' } : x)) }))),
   confirm: (who, docId, sendId, received) => set(s => patchDoc(s, who, docId, d => ({ ...d, sends: d.sends.map(x => (x.id === sendId ? { ...x, status: received ? 'received' : 'not_received' } : x)) }))),
   saveCarrier: (name, patch) => set(s => ({ carriers: { ...s.carriers, [name]: { ...carrierOf(s, name), ...patch } } })),
-  markGate: (who, what, on) => set(s => ({ gates: { ...s.gates, [who]: { ...s.gates[who], [what === 'issued' ? 'issued_on' : 'first_payment_on']: on } } })),
+  markGate: (who, what, on) => set(s => ({ gates: { ...s.gates, [who]: { ...s.gates[who], [what === 'issued' ? 'issued_on' : what]: on } } })),
 }
 
 export { pickChannel, addressFor }

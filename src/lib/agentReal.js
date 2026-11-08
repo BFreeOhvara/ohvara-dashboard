@@ -138,6 +138,11 @@ export function toClient(p, st, tasks = [], tz = DEFAULT_TZ) {
     monthly_premium: Number(p.monthly_premium) || 0, annual_premium: Number(p.annual_premium) || 0, status: p.status || '', stage, is_sample_price: false,
     note: stage === 'needs_attention' ? (next || 'The team needs you on this client') : next || 'Nothing needed from you', next_step: next, attention: stage === 'needs_attention' ? next : null,
     submitted: shortDay(sold), steps, calls: [], real: true,
+    // P899: what the agent's status and the monthly check read (lib/clientCheck.js). The policies read doesn't ask
+    // for these columns yet (p899_clients_simple.sql isn't applied): until it does they're null, and the client shows
+    // Working / Protected from its servicing stage with no check.
+    draft_day: p.draft_day ?? null, notes: p.notes || null, check_from: p.check_from || p.effective_date || null, checked_through: p.checked_through || null,
+    fixing: p.fixing_reason ? { why: p.fixing_reason, since: p.fixing_since || null } : null, closed: !!p.closed_at,
   }
 }
 

@@ -1,0 +1,150 @@
+[
+ {
+  "w": 1440,
+  "sideways": false,
+  "pills": [
+   "All12",
+   "Needs attention3",
+   "Working6",
+   "Protected3"
+  ],
+  "lists": [
+   "These policies drafted on the 27th. Are they still on the books?",
+   "This policy drafted on the 30th. Is it still on the books?"
+  ],
+  "tags": [
+   "Address change in progress"
+  ],
+  "cards": [
+   "Nina Shah:Working",
+   "Gloria Santos:Working",
+   "Luis Ortega:Needs attention",
+   "Robert Chen:Working",
+   "Denise Walker:Working",
+   "Renee Ortiz:Protected",
+   "Carla Jones:Needs attention",
+   "Ann Lee:Working",
+   "Maria Lopez:Working",
+   "Tom Reyes:Protected",
+   "Lena Brooks:Protected",
+   "Irene Moss:Needs attention"
+  ],
+  "drawer": {
+   "facts": [
+    "Name",
+    "Phone",
+    "City",
+    "State",
+    "Carrier",
+    "Draft date",
+    "Monthly premium",
+    "Notes"
+   ],
+   "blocks": [
+    "Details",
+    "Messages"
+   ],
+   "tag": "Address change in progress",
+   "callBtn": false,
+   "number": true,
+   "stepper": false,
+   "policyNo": false
+  },
+  "afterAnswers": [
+   "Nina Shah:Working",
+   "Gloria Santos:Working",
+   "Luis Ortega:Protected",
+   "Robert Chen:Working",
+   "Denise Walker:Working",
+   "Renee Ortiz:Protected",
+   "Carla Jones:Protected",
+   "Ann Lee:Working",
+   "Maria Lopez:Working",
+   "Tom Reyes:Protected",
+   "Lena Brooks:Protected",
+   "Irene Moss:Working"
+  ],
+  "listsLeft": 0,
+  "tomAfterLapsed": "Tom Reyes:Working",
+  "submitClientFields": [
+   "Full name",
+   "Phone",
+   "City",
+   "State"
+  ]
+ },
+ {
+  "w": 390,
+  "sideways": false,
+  "pills": [
+   "All12",
+   "Needs attention3",
+   "Working6",
+   "Protected3"
+  ],
+  "lists": [
+   "These policies drafted on the 27th. Are they still on the books?",
+   "This policy drafted on the 30th. Is it still on the books?"
+  ],
+  "tags": [
+   "Address change in progress"
+  ],
+  "cards": [
+   "Nina Shah:Working",
+   "Gloria Santos:Working",
+   "Luis Ortega:Needs attention",
+   "Robert Chen:Working",
+   "Denise Walker:Working",
+   "Renee Ortiz:Protected",
+   "Carla Jones:Needs attention",
+   "Ann Lee:Working",
+   "Maria Lopez:Working",
+   "Tom Reyes:Protected",
+   "Lena Brooks:Protected",
+   "Irene Moss:Needs attention"
+  ],
+  "drawer": {
+   "facts": [
+    "Name",
+    "Phone",
+    "City",
+    "State",
+    "Carrier",
+    "Draft date",
+    "Monthly premium",
+    "Notes"
+   ],
+   "blocks": [
+    "Details",
+    "Messages"
+   ],
+   "tag": "Address change in progress",
+   "callBtn": true,
+   "number": false,
+   "stepper": false,
+   "policyNo": false
+  },
+  "afterAnswers": [
+   "Nina Shah:Working",
+   "Gloria Santos:Working",
+   "Luis Ortega:Protected",
+   "Robert Chen:Working",
+   "Denise Walker:Working",
+   "Renee Ortiz:Protected",
+   "Carla Jones:Protected",
+   "Ann Lee:Working",
+   "Maria Lopez:Working",
+   "Tom Reyes:Protected",
+   "Lena Brooks:Protected",
+   "Irene Moss:Working"
+  ],
+  "listsLeft": 0,
+  "tomAfterLapsed": "Tom Reyes:Working",
+  "submitClientFields": [
+   "Full name",
+   "Phone",
+   "City",
+   "State"
+  ]
+ }
+]

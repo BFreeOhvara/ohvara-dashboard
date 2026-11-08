@@ -1,124 +1,162 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Search, Plus, Phone, MessageSquare, TriangleAlert, CalendarClock, MapPin, Users, UserPlus } from 'lucide-react'
+import { Search, Plus, MessageSquare, MapPin, Users, UserPlus, Archive, CalendarCheck, Check, ShieldCheck, ShieldAlert, Wrench } from 'lucide-react'
 import { useDataSource, useSampleClients, useSampleClient, useSampleThreads, useSampleActions } from '../data'
-import { Avatar, Chip, Drawer, Money, SampleTag, Empty, useNote } from '../kit'
-import { RecordDrawer, Stepper, Block } from '../Record'
-import { stageLabel, CLIENT_STEPS } from '../stages'
+import { Avatar, Chip, Drawer, Money, Empty, Switch, useNote } from '../kit'
+import { RecordDrawer, Block } from '../Record'
 import { paths } from '../paths'
-import { MissedPaymentBlock } from '../PaymentIntake'
-import { AgentDocsBlock } from '../docs886/Docs886'
 import { FirstRun } from '../DataState'
 import { AddClients } from '../AddClients891'
 import { FilterPills } from '../FilterPills'
-import { BOOK_STATUS, BOOK_STEPS, ordinal } from '../../lib/bookImport.js'
+import { CallOrCopy } from '../CallOrCopy'
+import { agentOpensSaveCall } from '../ful/data'
+import { useCheckSettings, todayFor } from '../checkSettings'
+import { CLIENT_STATUS, STATUS_ORDER, clientStatusOf, clientStatus, requestTag, workingWhy, dueCheck, nextCheck, checkLists, listQuestion, answerList, shortDate, ordinal } from '../../lib/clientCheck.js'
+import '../p899.css'
 
-// Your book: one big card per client, filled with its stage colour. A card opens the client in a drawer at its
-// own URL (paths.client); the grid stays put behind it.
-function ClientCard({ c, i }) {
+// P899 — Clients, simplified. Agents don't work clients, the team does: the agent sees whether a policy is safe
+// (Working, Needs attention, Protected; Closed behind a switch) and once a month confirms it's still on the books.
+// One "Still on the books?" list per draft date sits on top; each card and drawer can answer it too, and any
+// client can be marked Lapsed. Rules: lib/clientCheck.js.
+const fullName = c => `${c.client_first_name} ${c.client_last_name}`
+const where = c => [c.carrier_name, [c.city, c.state].filter(Boolean).join(', ')].filter(Boolean).join(' · ')
+
+// Yes / No on one client's check. No hands it to the team: Working, and the VA gets a save call.
+function useAnswer() {
+  const { answerChecks } = useSampleActions()
   const note = useNote()
-  const [tone, label] = stageLabel[c.stage]
-  const name = `${c.client_first_name} ${c.client_last_name}`
-  // P893: no "% set up" meter; only the fields that have a value
-  const where = [c.carrier_name, [c.city, c.state].filter(Boolean).join(', ')].filter(Boolean).join(' · ')
+  return (clients, draft, fellOff = []) => {
+    const { yes, no } = answerList({ clients }, fellOff)
+    answerChecks?.({ yes, no, draft })
+    no.forEach(id => { const c = clients.find(x => x.id === id); agentOpensSaveCall({ who: fullName(c), why: 'off_books', draft, state: c.state, city: c.city }) })
+    note(no.length ? `${no.length === 1 ? fullName(clients.find(x => x.id === no[0])) : `${no.length} clients`}: our team is calling to save ${no.length === 1 ? 'it' : 'them'}${yes.length ? `. ${yes.length} still on the books` : ''}` : yes.length === 1 ? `${fullName(clients[0])}: still on the books` : `All ${yes.length} still on the books`)
+  }
+}
+
+// One list per draft date: "These policies drafted on the 7th. Are they still on the books?" One tap for all, or
+// tick only the ones that fell off.
+function CheckList({ list, i }) {
+  const answer = useAnswer()
+  const [off, setOff] = useState([])
+  const flip = id => setOff(o => (o.includes(id) ? o.filter(x => x !== id) : [...o, id]))
+  const many = list.clients.length > 1
+  return (
+    <section className="fx-tile ck-list" style={{ '--i': i }} aria-label={`Still on the books? Drafted on the ${ordinal(list.day)}`}>
+      <header className="ck-h">
+        <span className="ck-ic"><CalendarCheck size={18} aria-hidden="true" /></span>
+        <span className="tp-grow"><h2>Still on the books?</h2><p>{listQuestion(list)}</p><small>Drafted {shortDate(list.draft)} · asked {shortDate(list.askOn)}</small></span>
+      </header>
+      <ul className="ck-rows">
+        {list.clients.map(c => {
+          const gone = off.includes(c.id)
+          return (
+            <li key={c.id} className={gone ? 'is-off' : ''}>
+              <Avatar name={fullName(c)} tone={gone ? 'mute' : 'warn'} />
+              <span className="tp-grow"><Link to={paths.client(c.id)}><b>{fullName(c)}</b></Link><small>{c.carrier_name}{Number(c.monthly_premium) > 0 ? <> · <Money v={c.monthly_premium} /> a month</> : null}</small></span>
+              <label className="ck-off"><input type="checkbox" checked={gone} onChange={() => flip(c.id)} /><span>{gone ? 'Fell off' : many ? 'Fell off?' : 'No longer on the books'}</span></label>
+            </li>
+          )
+        })}
+      </ul>
+      <footer className="ck-f">
+        {off.length === 0
+          ? <button type="button" className="tp-primary fx-accent" onClick={() => answer(list.clients, list.draft)}><Check size={16} aria-hidden="true" />{many ? 'All still on the books' : 'Still on the books'}</button>
+          : <button type="button" className="tp-primary fx-accent" onClick={() => { answer(list.clients, list.draft, off); setOff([]) }}><Check size={16} aria-hidden="true" />Save: {off.length} fell off{list.clients.length - off.length ? `, ${list.clients.length - off.length} still on` : ''}</button>}
+        <small>{off.length ? 'Our team calls each one that fell off to save it.' : 'Tick only the ones that fell off.'}</small>
+      </footer>
+    </section>
+  )
+}
+
+function ClientCard({ c, i, today, settings, onLapsed }) {
+  const answer = useAnswer()
+  const st = clientStatusOf(c, today, settings)
+  const { tone, label } = clientStatus(st)
+  const name = fullName(c)
+  const tag = requestTag(c)
+  const due = st === 'needs_attention' ? dueCheck(c, today, settings) : null
   const premium = Number(c.monthly_premium) > 0
   return (
     <article className={`fx-card fx-ccard is-${tone}`} style={{ '--i': i }}>
       <Link to={paths.client(c.id)} className="fx-cover" aria-label={`Open ${name}`} />
-      <div className="fx-ccard-top"><Avatar name={name} tone={tone} />{c.added && <span className="tp-tag bi-by">Added by you</span>}<span className="fx-tag">{c.added ? BOOK_STATUS[c.book][1] : label}</span></div>
+      <div className="fx-ccard-top"><Avatar name={name} tone={tone} /><span className="fx-tag">{label}</span></div>
       <h3>{name}</h3>
-      {where && <p>{where}</p>}
-      {(premium || c.next_step) && <div className="fx-ccard-mid">
-        {premium && <span><small>Premium <SampleTag>Sample</SampleTag></small><Money v={c.monthly_premium} /></span>}
-        {c.next_step && <span><small>Next step</small><b>{c.next_step}</b></span>}
+      {where(c) && <p>{where(c)}</p>}
+      {tag && <span className="tp-tag ck-req"><Wrench size={11} aria-hidden="true" />{tag}</span>}
+      {(premium || c.draft_day) && <div className="fx-ccard-mid">
+        {premium && <span><small>Premium</small><Money v={c.monthly_premium} /></span>}
+        {c.draft_day && <span><small>Drafts</small><b>The {ordinal(Number(c.draft_day))}</b></span>}
       </div>}
+      {st === 'working' && <p className="ck-why">{workingWhy(c)}</p>}
+      {due && <p className="ck-why ck-q">Still on the books? It drafted {shortDate(due.draft)}.</p>}
       <div className="fx-ccard-bot">
-        <span className="tp-grow" />
-        <button type="button" className="fx-mini fx-over" aria-label={`Call ${name}`} onClick={() => note(`Calling ${c.client_phone}`)}><Phone size={14} /></button>
+        {due ? <>
+          <button type="button" className="tp-primary sm fx-accent fx-over" onClick={() => answer([c], due.draft)}>Yes</button>
+          <button type="button" className="tp-btn ov-ghost sm fx-over" onClick={() => answer([c], due.draft, [c.id])}>No</button>
+          <span className="tp-grow" />
+        </> : <>
+          {st !== 'closed' && !c.fixing && <button type="button" className="tp-btn ov-ghost sm fx-over ck-lapse" onClick={() => onLapsed(c)}>Lapsed</button>}
+          <span className="tp-grow" />
+        </>}
         <Link to={paths.messages()} className="fx-mini fx-over" aria-label={`Message the team about ${name}`}><MessageSquare size={14} /></Link>
       </div>
     </article>
   )
 }
 
-// P891: a client the agent brought in. Added (welcome call coming) → Welcomed → Serviced, like any client after that.
-function BookBlock({ c }) {
-  const [tone, word, sub] = BOOK_STATUS[c.book]
-  const at = BOOK_STEPS.findIndex(s => s.key === c.book)
-  return (
-    <Block title="Added by you" sub={c.book === 'added' ? `${sub}: ${c.next_step?.replace(/^Welcome call /, '') || 'soon'}. They introduce your client care team and check these details.` : sub} aside={<Chip tone={tone}>{word}</Chip>}>
-      <div className="bi-steps" role="list" aria-label="Where this client is">
-        {BOOK_STEPS.map((s, i) => <span key={s.key} role="listitem" className={`${i < at ? 'is-done' : ''}${s.key === c.book ? ` is-on is-${tone}` : ''}`}>{s.label}</span>)}
-      </div>
-    </Block>
-  )
-}
-
-function ClientDrawer({ id, onClose }) {
+function ClientDrawer({ id, onClose, today, settings, onLapsed }) {
   const { data: c } = useSampleClient(id)
   const { data: threads } = useSampleThreads()
-  const { clientAction, sendMessage } = useSampleActions()
+  const { sendMessage } = useSampleActions()
+  const answer = useAnswer()
   const note = useNote()
-  const [panel, setPanel] = useState(null)
   const [msg, setMsg] = useState('')
-  const name = `${c.client_first_name} ${c.client_last_name}`
-  const [tone, label] = stageLabel[c.stage]
-  const thread = threads.find(t => t.client_id === c.id) || threads[0]
-  const send = () => { sendMessage(thread.id, msg.trim()); setMsg(''); note('Message sent to the team') }
-  const pick = k => { clientAction(c.id, `Asked the team to move ${c.client_first_name} to ${CLIENT_STEPS.find(s => s.key === k).label}`); note('Sent to the team. They make the change') }
+  const name = fullName(c)
+  const st = clientStatusOf(c, today, settings)
+  const { tone, label, sub } = clientStatus(st)
+  const tag = requestTag(c)
+  const due = st === 'needs_attention' ? dueCheck(c, today, settings) : null
+  const next = st === 'protected' ? nextCheck(c, today, settings) : null
+  const thread = threads.find(t => t.client_id === c.id)
+  const send = () => { if (thread) sendMessage(thread.id, msg.trim()); setMsg(''); note('Message sent to the team') }
+  const facts = [['Name', name], ['Phone', c.client_phone], ['City', c.city || 'Not given'], ['State', c.state || 'Not given'], ['Carrier', c.carrier_name || 'Not given'],
+    ['Draft date', c.draft_day ? `The ${ordinal(Number(c.draft_day))} of each month` : 'Not given'], ['Monthly premium', Number(c.monthly_premium) > 0 ? <Money v={c.monthly_premium} /> : 'Not given'], ['Notes', c.notes || 'None']]
   return (
-    <RecordDrawer label={name} kicker={`Client · submitted ${c.submitted}`} tone={tone} onClose={onClose}
+    <RecordDrawer label={name} kicker={`Client · since ${c.submitted}`} tone={tone} onClose={onClose}
       hero={<>
-        <div className="fx-hero-top"><span className="fx-when"><CalendarClock size={13} aria-hidden="true" />{c.next_step || 'Nothing needed from you'}</span><Chip tone={tone}>{label}</Chip></div>
+        <div className="fx-hero-top"><span className="fx-when">{st === 'protected' ? <ShieldCheck size={13} aria-hidden="true" /> : <ShieldAlert size={13} aria-hidden="true" />}{sub}</span><Chip tone={tone}>{label}</Chip></div>
         <h2>{name}</h2>
-        <p><MapPin size={13} aria-hidden="true" />{c.carrier_name} · {c.city}, {c.state}</p>
-        <div className="fx-hero-bot"><span><Money v={c.monthly_premium} size="fx-hero-big" /><small> / month · sample</small></span><Avatar name={name} tone={tone} /></div>
+        <p><MapPin size={13} aria-hidden="true" />{where(c) || 'No details yet'}</p>
+        {tag && <p className="ck-req-hero"><Wrench size={13} aria-hidden="true" />{tag}</p>}
       </>}
-      stepper={<Stepper label="Servicing stage" steps={CLIENT_STEPS} current={c.stage} onPick={pick} />}
       actions={<>
-        <button type="button" className="tp-primary fx-accent" onClick={() => note(`Calling ${c.client_phone}`)}><Phone size={16} />Call</button>
-        <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('move')}>Move call</button>
+        <CallOrCopy phone={c.client_phone} closed={st === 'closed'} />
         <span className="tp-grow" />
-        <Link to={paths.messages()} className="tp-btn ov-ghost"><MessageSquare size={14} />Messages</Link>
+        {st !== 'closed' && !c.fixing && !due && <button type="button" className="tp-btn ov-ghost" onClick={() => onLapsed(c)}>Lapsed</button>}
       </>}>
-      {c.missed ? <MissedPaymentBlock c={c} /> : c.attention && (
-        <section className="fx-blk fx-attn">
-          <header><h3><TriangleAlert size={16} aria-hidden="true" />What you can do</h3></header>
-          <p className="tp-mid">We could not reach {c.client_first_name} after two tries. Is {c.client_phone} still right? Confirm and we text tomorrow morning and evening.</p>
+      {due && (
+        <section className="fx-blk fx-attn ck-ask">
+          <header><h3><CalendarCheck size={16} aria-hidden="true" />Still on the books?</h3></header>
+          <p className="tp-mid">{c.client_first_name}{'’'}s policy drafted on {shortDate(due.draft)}. Is it still on the books?</p>
           <div className="tp-row tp-wrap">
-            <button type="button" className="tp-primary sm fx-accent" onClick={() => { clientAction(c.id, 'confirm'); note('Number confirmed. The team will text her tomorrow') }}>Yes, the number is right</button>
-            <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('number')}>Change number</button>
+            <button type="button" className="tp-primary sm fx-accent" onClick={() => answer([c], due.draft)}>Yes, still on the books</button>
+            <button type="button" className="tp-btn ov-ghost" onClick={() => answer([c], due.draft, [c.id])}>No</button>
+            <button type="button" className="tp-btn ov-ghost" onClick={() => onLapsed(c)}>Lapsed</button>
           </div>
         </section>
       )}
-      {c.added && <BookBlock c={c} />}
-      <Block title="Policy">
-        <dl className="fx-facts">{[['Carrier', c.carrier_name], ['Product', c.product_name], ['Policy', c.policy_number], ['Phone', c.client_phone],
-          ...(c.added ? [['Face amount', c.face_amount ? `$${Number(c.face_amount).toLocaleString('en-US')}` : 'Not given'], ['Draft day', c.draft_day ? `The ${ordinal(c.draft_day)}` : 'Not given'], ['Effective', c.effective || 'Not given']] : [])].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
-        <p className="tp-sub">{c.note}</p>
+      {st === 'working' && <Block title="Our team is on it" sub={c.next_step || undefined}><p className="tp-mid">{workingWhy(c)}</p></Block>}
+      {st === 'closed' && <Block title="Closed"><p className="tp-mid">{c.note || 'Gone for good. Nothing more from the team.'}</p></Block>}
+      <Block title="Details" aside={next ? <span className="ck-next">Next check {shortDate(next.askOn)}</span> : null}>
+        <dl className="fx-facts">{facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       </Block>
-      <Block title="Steps">
-        <ol className="tp-tl fx-tl">{c.steps.map((s, i) => <li key={s.label} className={s.done ? 'done' : i === c.steps.findIndex(x => !x.done) ? 'now' : ''}><i /><div><b>{s.label}</b><span>{s.at}</span></div></li>)}</ol>
-      </Block>
-      <Block title="Calls so far" aside={<span className="fx-count">{c.calls.length}</span>}>
-        <ul className="tp-list">{c.calls.map(k => <li key={k.at} className="tp-li"><span className="tp-grow"><b>{k.result}</b><small>{k.at} · {k.by}</small></span></li>)}</ul>
-      </Block>
-      <AgentDocsBlock who={name} />
-      <Block title="Message Fulfillment" sub="The team on this client">
-        <ul className="tp-list">{thread.messages.slice(-2).map(m => <li key={m.id} className="tp-li fx-msg"><span className="tp-grow"><b>{m.from === 'me' ? 'You' : 'Fulfillment'}</b><small>{m.text}</small></span></li>)}</ul>
+      <Block title="Messages" sub="You and the team on this client">
+        {thread?.messages?.length
+          ? <ol className="tp-tl fx-tl ck-tl">{thread.messages.map(m => <li key={m.id} className="done"><i /><div><b>{m.from === 'me' ? 'You' : 'Our team'}</b><span>{m.text}</span><small>{m.at}</small></div></li>)}</ol>
+          : <p className="tp-sub">No messages yet.</p>}
         <textarea className="tp-input fx-ta" aria-label="Message the team" placeholder="Write a message" value={msg} onChange={e => setMsg(e.target.value)} />
         {msg.trim() && <button type="button" className="tp-primary sm fx-accent fx-self" onClick={send}>Send</button>}
       </Block>
-
-      <Drawer open={panel === 'move'} center onClose={() => setPanel(null)} title="Move this call" sub={name}
-        footer={<button type="button" className="tp-primary fx-accent" onClick={() => { clientAction(c.id, 'Review call moved to Mon, Nov 9, 2:00 PM'); note('Call moved to Mon, Nov 9, 2:00 PM'); setPanel(null) }}>Move to Mon, Nov 9, 2:00 PM</button>}>
-        <p className="tp-mid">Pick a new time. Times are the client's local time.</p>
-        <p className="tp-sub">Carrier hours 9:00 AM to 5:00 PM</p>
-      </Drawer>
-      <Drawer open={panel === 'number'} center onClose={() => setPanel(null)} title="Change number" sub={name}
-        footer={<button type="button" className="tp-primary fx-accent" onClick={() => { clientAction(c.id, 'Number changed'); note('Number updated'); setPanel(null) }}>Save number</button>}>
-        <input className="tp-input" aria-label="New phone number" defaultValue="(305) 555-0199" />
-      </Drawer>
     </RecordDrawer>
   )
 }
@@ -127,33 +165,60 @@ export default function Clients() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { data: clients } = useSampleClients()
+  const { markLapsed } = useSampleActions()
   const source = useDataSource()
+  const settings = useCheckSettings()
+  const today = todayFor(source)
+  const note = useNote()
   const [params, setParams] = useSearchParams()
   const [q, setQ] = useState('')
   const [adding, setAdding] = useState(params.get('add') === '1')
+  const [lapsing, setLapsing] = useState(null)
+  const showClosed = params.get('closed') === '1'
   const stage = params.get('stage') || 'all'
-  const counts = useMemo(() => Object.fromEntries(Object.keys(stageLabel).map(s => [s, clients.filter(c => c.stage === s).length])), [clients])
-  const rows = clients.filter(c => (stage === 'all' || c.stage === stage) && `${c.client_first_name} ${c.client_last_name} ${c.policy_number} ${c.client_phone}`.toLowerCase().includes(q.trim().toLowerCase()))
-  const options = [{ key: 'all', label: 'All', count: clients.length }, { key: 'needs_attention', label: 'Needs attention', count: counts.needs_attention }, { key: 'setting_up', label: 'Setting up', count: counts.setting_up }, { key: 'protected', label: 'Protected', count: counts.protected }, { key: 'requests', label: 'Requests', count: counts.requests }]
-  // P893: each status pill carries its stage colour (FilterPills); All stays neutral.
+  const statusOf = useMemo(() => new Map(clients.map(c => [c.id, clientStatusOf(c, today, settings)])), [clients, today, settings])
+  const counts = useMemo(() => Object.fromEntries(Object.keys(CLIENT_STATUS).map(s => [s, clients.filter(c => statusOf.get(c.id) === s).length])), [clients, statusOf])
+  const lists = useMemo(() => checkLists(clients, today, settings), [clients, today, settings])
+  const open = clients.filter(c => showClosed || statusOf.get(c.id) !== 'closed')
+  const rows = open.filter(c => (stage === 'all' || statusOf.get(c.id) === stage) && `${fullName(c)} ${c.client_phone} ${c.carrier_name || ''}`.toLowerCase().includes(q.trim().toLowerCase()))
+  const keys = showClosed ? [...STATUS_ORDER, 'closed'] : STATUS_ORDER
+  const options = [{ key: 'all', label: 'All', count: open.length }, ...keys.map(k => ({ key: k, label: CLIENT_STATUS[k].label, count: counts[k], tone: CLIENT_STATUS[k].tone, title: CLIENT_STATUS[k].sub }))]
+  const keep = extra => ({ ...(showClosed ? { closed: '1' } : {}), ...extra })
+  const setStage = k => setParams(keep(k === 'all' ? {} : { stage: k }), { replace: true })
+  const setClosed = on => setParams(on ? { closed: '1', stage: 'closed' } : {}, { replace: true })
+  const lapse = () => {
+    const c = lapsing
+    markLapsed?.(c.id, today)
+    agentOpensSaveCall({ who: fullName(c), why: 'lapsed', state: c.state, city: c.city })
+    note(`${fullName(c)} marked lapsed. Our team is calling to get it back on`)
+    setLapsing(null)
+  }
+  const showLists = lists.length > 0 && (stage === 'all' || stage === 'needs_attention') && !q.trim()
   return (
     <div className="tp-page fx-page">
       <div className="fx-tools">
-        <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a client" placeholder="Find a client, phone or policy" value={q} onChange={e => setQ(e.target.value)} /></label>
-        <FilterPills label="Status" value={stage} onChange={k => setParams(k === 'all' ? {} : { stage: k })} items={options.map(o => ({ ...o, tone: stageLabel[o.key]?.[0] }))} />
+        <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a client" placeholder="Find a client, phone or carrier" value={q} onChange={e => setQ(e.target.value)} /></label>
+        <FilterPills label="Status" value={stage} onChange={setStage} items={options} />
+        <label className="lc-closedsw"><Archive size={15} aria-hidden="true" /><span>Show closed</span><Switch on={showClosed} label="Show closed clients" onChange={setClosed} /></label>
         <span className="tp-grow" />
         <button type="button" className="tp-btn ov-ghost" onClick={() => setAdding(true)}><UserPlus size={16} />Add clients</button>
         <Link to={paths.submit()} className="tp-primary fx-accent"><Plus size={16} />Submit a policy</Link>
       </div>
 
+      {showLists && <div className="ck-lists" aria-label="Monthly check">{lists.map((l, i) => <CheckList key={l.draft} list={l} i={i} />)}</div>}
+
       <div className="fx-cgrid" aria-label="Clients">
-        {rows.map((c, i) => <ClientCard key={c.id} c={c} i={i} />)}
-        {rows.length === 0 && clients.length > 0 && <section className="fx-tile"><Empty title="No clients match" sub="Check the spelling, or show every status." /></section>}
-        {clients.length === 0 && <FirstRun icon={Users} title="Your clients show here" sub="Submit a sale and it shows here with every servicing step: packet check, review call, and the old policy cancelled. The team keeps each one on the books."><Link to={paths.submit()} className="tp-primary fx-accent"><Plus size={16} />Submit your first policy</Link><button type="button" className="tp-btn ov-ghost" onClick={() => setAdding(true)}><UserPlus size={16} />Add clients you already have</button></FirstRun>}
+        {rows.map((c, i) => <ClientCard key={c.id} c={c} i={i} today={today} settings={settings} onLapsed={setLapsing} />)}
+        {rows.length === 0 && clients.length > 0 && <section className="fx-tile"><Empty title={stage === 'needs_attention' ? 'Nothing to check' : 'No clients match'} sub={stage === 'needs_attention' ? 'Every policy is confirmed on the books. The next check comes 3 days after each draft.' : 'Check the spelling, or show every status.'} /></section>}
+        {clients.length === 0 && <FirstRun icon={Users} title="Your clients show here" sub="Submit a sale and our team takes it from there. You just see whether each policy is safe, and once a month confirm it’s still on the books."><Link to={paths.submit()} className="tp-primary fx-accent"><Plus size={16} />Submit your first policy</Link><button type="button" className="tp-btn ov-ghost" onClick={() => setAdding(true)}><UserPlus size={16} />Add clients you already have</button></FirstRun>}
       </div>
 
       <AddClients open={adding} onClose={() => setAdding(false)} />
-      {id && (source === 'sample' || clients.some(c => c.id === id)) && <ClientDrawer id={id} onClose={() => navigate(paths.clients(stage === 'all' ? undefined : stage))} />}
+      <Drawer open={!!lapsing} center onClose={() => setLapsing(null)} title="Mark lapsed?" sub={lapsing ? fullName(lapsing) : ''}
+        footer={<button type="button" className="tp-primary fx-accent" onClick={lapse}>Yes, it lapsed</button>}>
+        <p className="tp-mid">It moves to Working and our team calls {lapsing?.client_first_name} to get it back on. Nothing else for you to do.</p>
+      </Drawer>
+      {id && (source === 'sample' || clients.some(c => c.id === id)) && <ClientDrawer id={id} today={today} settings={settings} onLapsed={setLapsing} onClose={() => navigate(paths.clients(stage === 'all' ? undefined : stage))} />}
     </div>
   )
 }

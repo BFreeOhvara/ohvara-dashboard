@@ -2,12 +2,14 @@ import { Link } from 'react-router-dom'
 import { ArrowUpRight, Check, Clock, CalendarDays } from 'lucide-react'
 import { rangeWords } from '../spendPlan'
 import { countByStatus } from '../agentView'
-import { useSampleOverview, useSampleClients, useSampleBilling, useSampleLeads, useSampleAppointments, useSampleNeeds } from '../data'
+import { useDataSource, useSampleOverview, useSampleClients, useSampleBilling, useSampleLeads, useSampleAppointments, useSampleNeeds } from '../data'
 import { Avatar, Empty } from '../kit'
 import { CountUp } from '../motion'
 import { NeedCard } from '../NeedsNow'
 import { useNeedAction } from '../needAction'
-import { laneOf, LANES, stageLabel } from '../stages'
+import { laneOf, LANES } from '../stages'
+import { clientStatusOf, clientStatus } from '../../lib/clientCheck.js'
+import { useCheckSettings, todayFor } from '../checkSettings'
 import { paths } from '../paths'
 import '../p893.css'
 
@@ -19,7 +21,8 @@ import '../p893.css'
 // full-height Needs you column of stage-coloured cards, 2-up, scrolling inside itself. The page head carries
 // clients, booked this week and the weekly budget. Sample data only.
 const apptTo = a => (a.kind === 'client' ? paths.client(a.ref) : paths.lead(a.ref))
-const BOOK = [['setting_up', 'Setting up'], ['needs_attention', 'Needs you'], ['requests', 'Requests']]
+// P899: the agent's client statuses (lib/clientCheck.js); Closed clients are left out of the book.
+const BOOK = [['working', 'Working'], ['needs_attention', 'Needs attention'], ['protected', 'Protected']]
 
 function Tile({ className = '', i, title, sub, to, label, children, ...rest }) {
   return (
@@ -150,17 +153,22 @@ function LeadMix({ leads }) {
 
 export default function Overview() {
   const { data: o } = useSampleOverview()
-  const { data: clients } = useSampleClients()
+  const { data: all } = useSampleClients()
+  const source = useDataSource()
+  const checks = useCheckSettings()
+  const checkDay = todayFor(source)
+  const stOf = c => clientStatusOf(c, checkDay, checks)
+  const clients = all.filter(c => stOf(c) !== 'closed')
   const { data: bill } = useSampleBilling()
   const { data: leads } = useSampleLeads()
   const { data: appts } = useSampleAppointments()
   const wk = bill.expected.appts.booked
   const next = o.nextAppt
   // P843: the person's avatar takes their current stage colour (a client's stage, or a lead's lane).
-  const toneOfAppt = a => (a.kind === 'client' ? stageLabel[clients.find(c => c.id === a.ref)?.stage]?.[0] : laneOf(leads.find(l => l.id === a.ref)).tone)
+  const toneOfAppt = a => (a.kind === 'client' ? clientStatus(stOf(clients.find(c => c.id === a.ref))).tone : laneOf(leads.find(l => l.id === a.ref)).tone)
   const later = o.todayAppts.filter(a => a.id !== next?.id)
   const soon = o.upNext.filter(a => a.date > o.todayAppts[0]?.date).slice(0, 2)
-  const nBy = k => clients.filter(c => c.stage === k).length
+  const nBy = k => clients.filter(c => stOf(c) === k).length
   const prot = nBy('protected')
   const chart = o.bookedChart
   const prev = chart.prev

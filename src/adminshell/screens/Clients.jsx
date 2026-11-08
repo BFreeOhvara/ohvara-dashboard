@@ -9,6 +9,7 @@ import { Dropdown, DField } from '../kit'
 import { ap } from '../paths'
 import { CLIENT_STAGE } from '../words'
 import { WelcomeLoad } from './WelcomeLoad891'
+import { BookCheck } from './BookCheck899'
 
 // P849 — Clients and Servicing: everyone's clients (view only, as Pipeline is today: the database refuses admin stage
 // changes) with search, an agent filter and stage tabs, a client drawer at /admin/pipeline/:id with Message agent;
@@ -91,7 +92,7 @@ export default function Clients() {
       <PillTabs label="Clients and servicing" className="fx-ptabs adm-pagetabs" itemClass="fx-ptab" value={tab} onChange={v => put('tab', v)}
         items={[{ key: 'clients', label: 'Clients', count: clients.length }, { key: 'servicing', label: 'Servicing' }]} />
       <div className="adm-tabpane" key={tab} role="tabpanel">
-        {tab === 'servicing' ? <><WelcomeLoad /><Servicing /></> : <>
+        {tab === 'servicing' ? <><BookCheck /><WelcomeLoad /><Servicing /></> : <>
           <div className="fx-tools">
             <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a client" placeholder="Find by name, phone, agent, carrier or policy" value={q} onChange={e => setQ(e.target.value)} /></label>
             <Seg label="Stage" value={stage} onChange={setStage} options={[{ key: 'all', label: 'All', count: clients.length }, ...STAGE_ORDER.map(k => ({ key: k, label: CLIENT_STAGE[k][1], count: clients.filter(c => c.stage === k).length }))]} />

@@ -105,26 +105,26 @@ test('appointments need room on the calendar; a slow week is said plainly', () =
 })
 
 const base = { ...EMPTY_SUBMIT, name: 'Ruth Ellison', phone: '5125550188', city: 'Austin', state: 'TX', carrier: 'Globe Life' }
-const policy = { ...base, dob: '1968-04-02', number: 'GL-551203', face: '$250,000', premium: '86.40', draftDay: '3' }
+const policy = { ...base, premium: '86.40', draftDay: '3' }
 
 test('Submit: the policy details, a licensed state, a replacement and a spouse', () => {
   clearUnknownCarriers()
   // The old call (no policy step) still asks only for name, phone and carrier.
   assert.deepEqual(missingFields(EMPTY_SUBMIT), ['name', 'phone', 'carrier'])
-  // P893: date of birth, policy number and face amount are optional; city, state, premium and draft day are not.
-  assert.deepEqual(missingFields(base, { policy: true }), ['premium', 'draftDay'])
-  assert.deepEqual(missingFields({ ...base, city: '', state: '' }, { policy: true }), ['city', 'state', 'premium', 'draftDay'])
+  // P899: city, state and draft day are needed; the premium is optional; no date of birth, policy number or face amount.
+  assert.deepEqual(missingFields(base, { policy: true }), ['draftDay'])
+  assert.deepEqual(missingFields({ ...base, city: '', state: '' }, { policy: true }), ['city', 'state', 'draftDay'])
   const lean = buildSubmission({ ...base, premium: '52', draftDay: '15', notes: ' Wants a call after 5 ' }, 'agent', { policy: true })
-  assert.deepEqual(lean.policy, { kind: 'policy', number: null, face: null, premium: 52, draftDay: 15, beneficiary: null, relation: null })
-  assert.equal(lean.dob, null)
+  assert.deepEqual(lean.policy, { premium: 52, draftDay: 15 })
+  assert.equal('dob' in lean, false)
   assert.equal(lean.notes, 'Wants a call after 5')
   assert.deepEqual(missingFields(policy, { policy: true, licensed: ['TX'] }), [])
   assert.deepEqual(missingFields(policy, { policy: true, licensed: ['FL'] }), ['licence'])
-  assert.deepEqual(missingFields({ ...policy, replacing: true }, { policy: true }), ['oldCarrier'])
-  assert.deepEqual(missingFields({ ...policy, spouse: { ...EMPTY_SPOUSE, name: 'Tom Ellison' } }, { policy: true }), ['spouse'])
-  const s = buildSubmission({ ...policy, replacing: true, oldCarrier: 'Mutual of Omaha', spouse: { name: 'Tom Ellison', dob: '1966-01-09', number: 'GL-551204', face: '100000', premium: '41' } }, 'agent', { policy: true, licensed: ['TX'] })
-  assert.deepEqual(s.policy, { kind: 'policy', number: 'GL-551203', face: 250000, premium: 86.4, draftDay: 3, beneficiary: null, relation: null })
-  assert.equal(s.replaces.cancelWhen, 'after_new_issued_and_first_payment')
+  assert.deepEqual(missingFields({ ...policy, replacing: true }, { policy: true }), ['oldCarrier', 'oldDraftDay'])
+  assert.deepEqual(missingFields({ ...policy, spouse: { ...EMPTY_SPOUSE } }, { policy: true }), ['spouse'])
+  const s = buildSubmission({ ...policy, replacing: true, oldCarrier: 'Mutual of Omaha', oldDraftDay: '3', spouse: { name: 'Tom Ellison', premium: '41' } }, 'agent', { policy: true, licensed: ['TX'] })
+  assert.deepEqual(s.policy, { premium: 86.4, draftDay: 3 })
+  assert.equal(s.replaces.cancelWhen, 'after_new_issued_before_old_draft')
   assert.equal(s.household.length, 1)
   assert.equal(s.household[0].carrier, 'Globe Life')
   assert.equal(buildSubmission(policy, 'agent', { policy: true, licensed: ['FL'] }), null)

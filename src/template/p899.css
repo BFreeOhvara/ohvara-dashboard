@@ -1,0 +1,42 @@
+/* P899 — Clients, simplified: the "Still on the books?" lists (one per draft date), the request tag on a card, the
+   Working line, Yes / No / Lapsed on cards. Apricot = Needs attention (flow.css tone vars). Tokens only. */
+.ck-lists { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 16px; margin-bottom: 18px; }
+.ck-list { --cf: var(--sh-cf-apricot); --cs: var(--sh-cs-apricot); --csi: var(--sh-csi-apricot);
+  display: flex; flex-direction: column; gap: 14px; padding: 18px; border-radius: 24px;
+  background: color-mix(in srgb, var(--cf) 70%, var(--bg-surface)); border: 1px solid color-mix(in srgb, var(--cs) 28%, transparent); }
+.ck-h { display: flex; align-items: flex-start; gap: 12px; }
+.ck-h h2 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -.01em; color: var(--ov-hi); }
+.ck-h p { margin: 2px 0 0; font-size: 14px; line-height: 1.4; color: var(--ov-hi); }
+.ck-h small { display: block; margin-top: 4px; font-size: 12px; color: var(--ov-mid); }
+.ck-ic { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: var(--csi); background: var(--cs); }
+.ck-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ck-rows li { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 12px; border-radius: 16px; background: var(--bg-surface); border: 1px solid var(--ov-line); transition: opacity .18s, border-color .18s; }
+.ck-rows li > .tp-grow { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ck-rows li a { color: var(--ov-hi); text-decoration: none; }
+.ck-rows li a:hover b { text-decoration: underline; }
+.ck-rows li small { font-size: 12px; color: var(--ov-mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ck-rows li.is-off { border-color: color-mix(in srgb, var(--cs) 60%, transparent); }
+.ck-rows li.is-off b { text-decoration: line-through; color: var(--ov-mid); }
+.ck-off { flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border-radius: 999px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ov-mid); border: 1px solid var(--ov-line); }
+.ck-off input { width: 18px; height: 18px; margin: 0; accent-color: var(--cs); cursor: pointer; }
+.ck-off:has(input:checked) { color: var(--csi); background: var(--cs); border-color: transparent; }
+.ck-off:has(input:focus-visible) { outline: 2px solid var(--cs); outline-offset: 2px; }
+.ck-f { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.ck-f small { font-size: 12px; color: var(--ov-mid); }
+
+/* Cards */
+.fx-ccard .ck-req { position: relative; align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; max-width: 100%; height: auto; min-height: 22px; padding: 2px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ck-why { position: relative; margin: 0; font-size: 13px; line-height: 1.4; color: var(--ov-mid); }
+.ck-why.ck-q { font-weight: 650; color: var(--ov-hi); }
+.fx-ccard-bot .ck-lapse { min-height: 32px; }
+.ck-req-hero { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 13px; font-weight: 600; }
+.ck-next { font-size: 12px; color: var(--ov-mid); }
+.ck-tl small { display: block; font-size: 12px; color: var(--ov-lo, var(--ov-mid)); }
+
+@media (max-width: 767px) {
+  .ck-list { padding: 14px; border-radius: 20px; }
+  .ck-rows li { flex-wrap: wrap; }
+  .ck-rows li > .tp-grow { flex: 1 1 calc(100% - 60px); }
+  .ck-off { margin-left: 52px; }
+  .ck-f .tp-primary { width: 100%; justify-content: center; }
+}

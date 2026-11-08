@@ -35,9 +35,10 @@ test('a document’s next step', () => {
 
 test('the replacement gate in words', () => {
   assert.equal(gateWords({ applies: false }), null)
-  assert.match(gateWords({ applies: true, open: false, waiting_for: ['issued', 'first_payment'] }), /issued and its first payment clears/)
-  assert.match(gateWords({ applies: true, open: false, waiting_for: ['first_payment'] }), /^Waiting until its first payment clears/)
-  assert.match(gateWords({ applies: true, open: true }), /Cancel the old one now/)
+  // P899: the gate waits only for "issued", then the cancel is timed before the old policy's next draft.
+  assert.match(gateWords({ applies: true, open: false, waiting_for: ['issued'] }), /^Waiting until the new policy is issued\./)
+  assert.match(gateWords({ applies: true, open: true }), /Cancel the old one before its next draft/)
+  assert.match(gateWords({ applies: true, open: true, cancel_by: 'Nov 6', old_draft: 'Nov 9' }), /by Nov 6, before its Nov 9 draft/)
   assert.match(gateWords({ applies: true, open: true, override: 'Client insists' }), /admin: Client insists/)
 })
 

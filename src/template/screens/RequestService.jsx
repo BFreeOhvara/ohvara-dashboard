@@ -4,7 +4,8 @@ import { Check } from 'lucide-react'
 import { useSampleClients, useSampleActions, useSampleSettings } from '../data'
 import { Avatar, Field, useNote } from '../kit'
 import { paths } from '../paths'
-import { stageLabel } from '../stages'
+import { clientStatus } from '../../lib/clientCheck.js'
+import { useClientStatusOf } from '../checkSettings'
 import { CallTime } from '../CallTime'
 import { EMPTY_CALL_TIME, callTimeReady, callTimeText } from '../callTimeModel'
 import { BOOK_DAYS } from '../carriers'
@@ -15,6 +16,7 @@ const KINDS = ['Change address', 'Update phone', 'Change beneficiary', 'Change b
 
 export default function RequestService() {
   const { data: clients } = useSampleClients()
+  const statusOf = useClientStatusOf()
   const { submitRequest, bookFulfillmentCall } = useSampleActions()
   const { data: settings } = useSampleSettings()
   const note = useNote()
@@ -55,7 +57,7 @@ export default function RequestService() {
           <ul className="tp-list tp-rs-list" data-fold data-fold-fit="112" data-fold-next=".fx-calltime">
             {rows.map(c => (
               <li key={c.id}><button type="button" className="tp-li" aria-pressed={pick?.id === c.id} onClick={() => setPick(c)}>
-                <Avatar name={`${c.client_first_name} ${c.client_last_name}`} tone={stageLabel[c.stage]?.[0]} /><span className="tp-grow"><b>{c.client_first_name} {c.client_last_name}</b><small>{c.policy_number}</small></span>
+                <Avatar name={`${c.client_first_name} ${c.client_last_name}`} tone={clientStatus(statusOf(c)).tone} /><span className="tp-grow"><b>{c.client_first_name} {c.client_last_name}</b><small>{[c.carrier_name, c.state].filter(Boolean).join(' · ')}</small></span>
                 <span className="tp-chip is-blue" style={{ opacity: pick?.id === c.id ? 1 : 0 }}>Picked</span></button></li>
             ))}
             {rows.length === 0 && <li className="tp-li"><span className="tp-sub">No client matches. Check the spelling, or search by phone number.</span></li>}

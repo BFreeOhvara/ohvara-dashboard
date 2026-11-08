@@ -11,7 +11,7 @@ import '../p886.css'
 // doc_request_upload, doc_send_request, doc_send_result, doc_send_confirm, carrier_docs_update, replacement_mark).
 //   DocsBlock      VA: every paper on the client; send a carrier form to sign (prefilled, 1-4 signers), ask for a
 //                  file, send to the carrier the way it takes them, see the receipt or the failure, retry, confirm.
-//   GateStep       VA, on the old-policy cancel call: issued + first payment, or the call waits (a step, P888).
+//   GateStep       VA, on the old-policy cancel call: issued (P899), cancel by the day before the old draft (a step, P888).
 //   AgentDocsBlock (../docs886/Docs886.jsx) is the agent's side; it never names engines or ads.
 
 const PREFILL = [['Owner', 'name'], ['Policy', 'policy'], ['Phone', 'phone'], ['Address', 'from intake'], ['Date of birth', 'from intake']]
@@ -180,7 +180,7 @@ export function DocsBlock({ who, carrier, task, kinds, title = 'Documents', bare
 }
 
 const TODAY = 'Nov 5'
-// VA, on the cancel call: the old policy goes only after the new one is issued and its first payment clears.
+// VA, on the cancel call: P899, the old policy goes once the new one is issued, before the old one's next draft.
 // P888: a step in the call's step list (an <li> for .tp-tl), not a box of its own.
 export function GateStep({ who }) {
   const g = useGate(who)
@@ -195,7 +195,7 @@ export function GateStep({ who }) {
         <span>{gateWords(g)}</span>
         <dl className="fx-facts dc-gate-facts">
           <div><dt>New policy issued</dt><dd>{g.issued_on || <button type="button" className="tp-btn ov-ghost sm" onClick={() => mark('issued', 'Issued')}>Mark issued today</button>}</dd></div>
-          <div><dt>First payment cleared</dt><dd>{g.first_payment_on || <button type="button" className="tp-btn ov-ghost sm" disabled={!g.issued_on} onClick={() => mark('first_payment', 'First payment cleared')}>Mark cleared today</button>}</dd></div>
+          <div><dt>Cancel by</dt><dd>{g.cancel_by ? `${g.cancel_by} (old draft ${g.old_draft})` : 'Once it’s issued'}</dd></div>
         </dl>
       </div>
     </li>

@@ -2,8 +2,10 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { parseRows, checkRows, checkRow, spreadWelcomes, isoDate, normPolicy, TEMPLATE_CSV, fieldOfHeader, NEEDED } from './bookImport.js'
 
-const book = [{ policy_number: 'AM-2209184', client_phone: '(305) 555-0156' }]
+const book = [{ client_phone: '(305) 555-0156' }]
 
+// P899: the fields are name, phone, city, state, carrier and draft day (premium and notes optional). Policy number,
+// email, face amount, product and dates aren't read; duplicates are the same phone.
 test('the template reads back as one good row', () => {
   const { rows, ignored, error } = parseRows(TEMPLATE_CSV)
   assert.equal(error, null)
@@ -12,44 +14,43 @@ test('the template reads back as one good row', () => {
   const { checked } = checkRows(rows, book)
   assert.equal(checked[0].status, 'ok')
   assert.equal(checked[0].row.phone, '+15125550199')
-  assert.equal(checked[0].row.face_amount, 250000)
+  assert.equal(checked[0].row.city, 'Austin')
   assert.equal(checked[0].row.draft_day, 3)
-  assert.equal(checked[0].row.effective_date, '2025-06-01')
+  assert.equal(checked[0].row.monthly_premium, 84.2)
+  assert.equal('policy_number' in checked[0].row, false)
 })
 
 test('good, missing and duplicate rows are each flagged', () => {
   const csv = [
-    'Name,Phone,State,Carrier,Policy #,Premium,Effective',
-    'Ana Ruiz,512-555-0101,tx,Americo,AM-1,$61.50,6/1/2025',
-    'Bo Lee,,TX,Americo,AM-2,40,',
-    'Cy Day,512 555 0103,TX,Americo,am 2209184,40,',
-    'Di Fox,(305) 555-0156,FL,Foresters,FF-9,40,',
-    'Ed Moe,512-555-0105,TX,Americo,AM-1,40,',
-    'Flo Ng,512-555-0101,TX,Americo,AM-6,40,',
-    'Gus Oh,512-555-0107,ZZ,Americo,AM-7,abc,13/40/2025',
+    'Name,Phone,City,State,Carrier,Draft day,Premium,Policy #',
+    'Ana Ruiz,512-555-0101,Austin,tx,Americo,3,$61.50,AM-1',
+    'Bo Lee,,Austin,TX,Americo,3,40,',
+    'Di Fox,(305) 555-0156,Miami,FL,Foresters,9,40,',
+    'Flo Ng,512-555-0101,Austin,TX,Americo,3,40,',
+    'Gus Oh,512-555-0107,Austin,ZZ,Americo,45,abc,',
+    'Hal Ito,512-555-0108,,TX,Americo,,,',
   ].join('\n')
-  const { rows } = parseRows(csv)
+  const { rows, ignored } = parseRows(csv)
+  assert.deepEqual(ignored, ['Policy #'])
   const r = checkRows(rows, book)
-  const st = r.checked.map(c => c.status)
-  assert.deepEqual(st, ['ok', 'missing', 'duplicate', 'duplicate', 'duplicate', 'duplicate', 'missing'])
+  assert.deepEqual(r.checked.map(c => c.status), ['ok', 'missing', 'duplicate', 'duplicate', 'missing', 'missing'])
   assert.equal(r.checked[0].row.first_name, 'Ana')
   assert.equal(r.checked[0].row.state, 'TX')
   assert.equal(r.checked[0].row.monthly_premium, 61.5)
   assert.equal(r.checked[0].row.time_zone, null) // TX is split: the VA confirms the zone on the welcome call
   assert.equal(checkRow({ state: 'GA' }).row.time_zone, 'America/New_York')
   assert.deepEqual(r.checked[1].missing, ['Phone'])
-  assert.match(r.checked[2].dup, /policy number is already on your book/)
-  assert.match(r.checked[3].dup, /phone as a client on your book/)
-  assert.match(r.checked[4].dup, /policy number as a row above/)
-  assert.match(r.checked[5].dup, /phone as a row above/)
-  assert.ok(r.checked[6].odd.length >= 3)
+  assert.match(r.checked[2].dup, /phone as a client on your book/)
+  assert.match(r.checked[3].dup, /phone as a row above/)
+  assert.ok(r.checked[4].odd.length >= 3)
+  assert.deepEqual(r.checked[5].missing, ['City', 'Draft day'])
   assert.equal(r.ok, 1)
-  assert.equal(r.missing, 2)
-  assert.equal(r.duplicate, 4)
+  assert.equal(r.missing, 3)
+  assert.equal(r.duplicate, 2)
 })
 
 test('a paste from a sheet (tabs) and quoted cells read', () => {
-  const { rows } = parseRows('First\tLast\tPhone\tState\tCarrier\tPolicy number\nJo\tKim\t5125550111\tTX\tAmerico\tAM-11')
+  const { rows } = parseRows('First\tLast\tPhone\tCity\tState\tCarrier\tDraft day\nJo\tKim\t5125550111\tAustin\tTX\tAmerico\t12')
   assert.equal(checkRows(rows).checked[0].status, 'ok')
   const q = parseRows('First name,Last name,Notes\n"Al","Bo","Likes calls, after 6"')
   assert.equal(q.rows[0].notes, 'Likes calls, after 6')
@@ -58,7 +59,8 @@ test('a paste from a sheet (tabs) and quoted cells read', () => {
 test('headers that mean nothing are refused, unknown ones listed', () => {
   assert.ok(parseRows('a,b\n1,2').error)
   assert.deepEqual(parseRows('First,Favourite colour\nA,red').ignored, ['Favourite colour'])
-  assert.equal(fieldOfHeader('Policy No.'), 'policy_number')
+  assert.equal(fieldOfHeader('Policy No.'), null) // P899: no longer read
+  assert.equal(fieldOfHeader('Draft date'), 'draft_day')
 })
 
 test('policy numbers and dates normalise like the server', () => {
@@ -68,9 +70,9 @@ test('policy numbers and dates normalise like the server', () => {
 })
 
 test('a one-client form row with everything needed is ok', () => {
-  const c = checkRow({ first_name: 'Ivy', last_name: 'Tran', phone: '(214) 555-0123', state: 'TX', carrier: 'Americo', policy_number: 'AM-77' })
+  const c = checkRow({ first_name: 'Ivy', last_name: 'Tran', phone: '(214) 555-0123', city: 'Dallas', state: 'TX', carrier: 'Americo', draft_day: '3' })
   assert.equal(c.status, 'ok')
-  assert.deepEqual(NEEDED, ['first_name', 'last_name', 'phone', 'state', 'carrier', 'policy_number'])
+  assert.deepEqual(NEEDED, ['first_name', 'last_name', 'phone', 'city', 'state', 'carrier', 'draft_day'])
 })
 
 test('welcome calls spread over days, counting the ones waiting', () => {

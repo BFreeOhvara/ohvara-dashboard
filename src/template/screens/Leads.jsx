@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { PhoneIncoming, CalendarDays, Phone, Search, Wallet, Clock, MapPin, Check, X, ClipboardCheck, Users, Link2, MessageSquareWarning, Archive, PhoneForwarded, Inbox, Copy } from 'lucide-react'
+import { PhoneIncoming, CalendarDays, Phone, Search, Wallet, Clock, MapPin, Check, X, ClipboardCheck, Users, Link2, MessageSquareWarning, Archive, PhoneForwarded, Inbox } from 'lucide-react'
 import { useDataSource, useSampleLeads, useSampleLead, useSampleBilling, useSampleActions, useSampleSettings } from '../data'
 import { Avatar, Chip, Seg, Drawer, Empty, Pending, Switch, useNote } from '../kit'
 import { stageChip, OutcomeDrawer, OutcomePrompt, NoShowUndo } from '../LeadOutcome'
@@ -13,6 +13,8 @@ import { agentStatusOf, agentEvents, closedReason, needsResult, resultsFor, canM
 import { dailyTotal, openSlotsPerWeek, spendOk } from '../spendPlan'
 import { usd } from '../motion'
 import { FeedbackDrawer } from '../Talk'
+import { CallOrCopy as CallOr } from '../CallOrCopy'
+import { telOf } from '../phoneMask'
 import { paths } from '../paths'
 import { FirstRun } from '../DataState'
 import '../leads873.css'
@@ -70,21 +72,8 @@ function LeadCard({ l, i, onAnswer, onResult }) {
   )
 }
 
-// P898: agents call from their own phone. On a phone, Call is a tap-to-call link; on desktop and tablet there's no Call
-// button, just the number with a copy button (leads873.css .lc-tel / .lc-num swap at 768 px).
-const telOf = l => `tel:+1${String(l.rawPhone || l.phone || '').replace(/\D/g, '').slice(-10)}`
-function CallOrCopy({ lead, closed, onCall }) {
-  const note = useNote()
-  const copy = async () => {
-    try { await navigator.clipboard.writeText(lead.phone); note(`${lead.phone} copied`) } catch { note(`Couldn’t copy. The number is ${lead.phone}`) }
-  }
-  return (
-    <>
-      {!closed && <a href={telOf(lead)} className="tp-primary fx-accent lc-tel" onClick={onCall}><Phone size={16} aria-hidden="true" />Call</a>}
-      <span className="lc-num"><Phone size={15} aria-hidden="true" /><b className="tp-num">{lead.phone}</b><button type="button" className="tp-btn ov-ghost sm lc-copy" aria-label={`Copy ${lead.phone}`} onClick={copy}><Copy size={14} aria-hidden="true" />Copy</button></span>
-    </>
-  )
-}
+// P898: Call on phones only, the number with copy elsewhere (CallOrCopy.jsx, shared with the client drawer).
+const CallOrCopy = ({ lead, closed, onCall }) => <CallOr phone={lead.phone} rawPhone={lead.rawPhone} closed={closed} onCall={onCall} />
 
 // One timeline row, shaped like a lead-events row. Texts show as bubbles; what the system or the agent sends is a
 // preview until texting is switched on.
@@ -149,7 +138,7 @@ function LeadDrawer({ id, onClose }) {
         {canMove(lead, 'not_interested') && <button type="button" className="tp-btn ov-ghost" onClick={() => setOutcome('not_interested')}><X size={14} />Not interested</button>}
       </>}>
       <NoShowUndo lead={lead} />
-      {task && <div className="lc-nudge is-static"><PhoneForwarded size={16} aria-hidden="true" /><span className="tp-grow"><b>{lead.first_name} asked you to call</b><small>{'“'}{lead.reply.text}{'”'} We told them someone calls shortly.</small></span><a href={telOf(lead)} className="lc-nudge-go lc-tel" onClick={called}>Call</a><span className="lc-nudge-go lc-num tp-num">{lead.phone}</span></div>}
+      {task && <div className="lc-nudge is-static"><PhoneForwarded size={16} aria-hidden="true" /><span className="tp-grow"><b>{lead.first_name} asked you to call</b><small>{'“'}{lead.reply.text}{'”'} We told them someone calls shortly.</small></span><a href={telOf(lead.rawPhone || lead.phone)} className="lc-nudge-go lc-tel" onClick={called}>Call</a><span className="lc-nudge-go lc-num tp-num">{lead.phone}</span></div>}
       {needsResult(lead, clockNow()) && <button type="button" className="lc-nudge" onClick={() => setPrompt(true)}><ClipboardCheck size={16} aria-hidden="true" /><span className="tp-grow"><b>How did it go?</b><small>{isLiveCall(lead) ? 'You took the live call. Pick the result' : `The appointment at ${lead.appt} has passed`}</small></span><span className="lc-nudge-go">Mark result</span></button>}
       {lead.stage === 'sold' && !lead.submitted && <Link to={paths.submit(lead.id)} className="fx-nudge">Finish the servicing details. The team takes it from there.</Link>}
       {closed && <p className="lc-closed"><b>{closedReason(lead)}.</b> {lead.stage === 'opted_out' ? 'All calls and texts stopped.' : 'No more calls or texts.'} A reply from them brings them back as a new lead.</p>}

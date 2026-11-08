@@ -57,14 +57,12 @@ export function nextStep(doc) {
   return last.status === 'received' ? 'none' : 'wait'
 }
 
-// The replacement gate (replacement_gate_state): what it still waits for, in words.
+// The replacement gate (replacement_gate_state): what it still waits for, in words. P899: the old policy can go once
+// the new one is issued (no wait for its first payment), timed to stop the old policy's next draft (cancel_by).
 export function gateWords(g) {
   if (!g?.applies) return null
-  if (g.open) return g.override ? `Opened by an admin: ${g.override}` : 'New policy issued and first payment cleared. Cancel the old one now.'
-  const w = []
-  if ((g.waiting_for || []).includes('issued')) w.push('the new policy is issued')
-  if ((g.waiting_for || []).includes('first_payment')) w.push('its first payment clears')
-  return `Waiting until ${w.join(' and ')}. The old policy stays until then, so they’re never without cover.`
+  if (g.open) return g.override ? `Opened by an admin: ${g.override}` : g.cancel_by ? `New policy issued. Cancel the old one by ${g.cancel_by}, before its ${g.old_draft} draft, so they never pay twice.` : 'New policy issued. Cancel the old one before its next draft.'
+  return 'Waiting until the new policy is issued. The old policy stays until then, so they’re never without cover.'
 }
 
 export const signLink = (token, origin = typeof window !== 'undefined' ? window.location.origin : '') => `${origin}/sign/${token}`

@@ -11,6 +11,7 @@ import {
 } from './data'
 import { NeedRows, FyiList } from './NeedsNow'
 import { useNeedAction } from './needAction'
+import { useClientStatusOf } from './checkSettings'
 import { Drawer, Avatar, Field, PillTabs, Seg, useAccount, useNote, initials } from './kit'
 import { ReportBug } from './ReportBug'
 import { avatarHue } from './avatarHue'
@@ -343,20 +344,22 @@ function useHeadStats(page) {
   const booked = S0 => S0(CalendarCheck, billing.booked, 'booked this week', { chip: [`about ${rangeWords(wk)}`, 'blue'] })
   // P898: on Leads, the booked calls (and live calls) whose time has passed and still need the agent's result.
   const waiting = leads.filter(l => needsResult(l)).length
-  const by = st => clients.filter(c => c.stage === st).length
+  // P899: the agent's client statuses (Working / Needs attention / Protected).
+  const statusOf = useClientStatusOf()
+  const by = st => clients.filter(c => statusOf(c) === st).length
   const money = usd()
   const S = (icon, n, label, extra = {}) => ({ icon, n, label, ...extra })
   return {
     overview: [S(Users, clients.length, 'clients in your book', { chip: [`${by('protected')} protected`, 'up'] }), booked(S), S(Wallet, daily, 'lead spend a day', { fmt: money })],
     leads: [S(TriangleAlert, waiting, waiting === 1 ? 'call waiting for a result' : 'calls waiting for a result', { chip: waiting ? ['Mark result', 'warn'] : null }), S(CalendarCheck, leads.filter(l => l.stage === 'booked').length, 'booked'), S(Wallet, daily, 'lead spend a day', { fmt: money })],
-    clients: [S(Users, clients.length, 'clients'), S(TriangleAlert, by('needs_attention'), 'need attention', { chip: by('needs_attention') ? ['See who', 'warn'] : null }), S(ShieldCheck, by('protected'), 'protected', { chip: ['On time', 'up'] })],
+    clients: [S(Users, clients.length - by('closed'), 'clients'), S(TriangleAlert, by('needs_attention'), 'to check', { chip: by('needs_attention') ? ['See who', 'warn'] : null }), S(ShieldCheck, by('protected'), 'protected', { chip: ['On time', 'up'] })],
     calendar: [S(CalendarDays, events.length, 'this week'), S(Clock3, events.filter(e => e.date === 2).length, 'today'), S(PhoneCall, events.filter(e => /call/i.test(e.label)).length, 'client calls')],
     activity: [S(History, activity.filter(a => a.at.startsWith('Today')).length, 'today'), S(CalendarDays, activity.length, 'this week'), S(MessageSquare, activity.filter(a => a.kind === 'text').length, 'texts sent for you')],
     billing: billing.plan === 'pilot'
       ? [S(Wallet, billing.walletNow.left, 'left this week', { fmt: money, chip: ['Pilot', 'blue'] }), S(Wallet, daily, 'lead spend a day', { fmt: money }), booked(S)]
       : [S(Wallet, daily, 'lead spend a day', { fmt: money }), S(ShieldCheck, tierOf(daily).monthly || 0, `${tierOf(daily).label} a month`, { fmt: money }), booked(S)],
     // P843: no weekly submit count or 'no weekly limit' (old plan language): what is in servicing now
-    submit: [S(ShieldCheck, clients.length, 'clients in servicing'), S(FileUp, by('setting_up'), 'setting up', { chip: by('setting_up') ? ['Team on it', 'blue'] : null }), S(Users, by('protected'), 'protected', { chip: ['On time', 'up'] })],
+    submit: [S(ShieldCheck, clients.length - by('closed'), 'clients in servicing'), S(FileUp, by('working'), 'working', { chip: by('working') ? ['Team on it', 'blue'] : null }), S(Users, by('protected'), 'protected', { chip: ['On time', 'up'] })],
     settings: [S(Bell, settings.notifications.filter(n => n.push).length, 'alerts switched on'), S(CalendarDays, settings.hours.days.length, 'working days'), S(Users, clients.length, 'clients in your book')],
     messages: [S(MessageSquare, threads.reduce((n, t) => n + t.unread, 0), 'unread'), S(Users, threads.length, 'threads')],
   }[page] || []

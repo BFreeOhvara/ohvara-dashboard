@@ -5,6 +5,10 @@
 // A row is read from a CSV file, a paste from a sheet (tabs), or the one-client form. Each row is checked before
 // anything is saved: missing details and duplicates are flagged (duplicate = same policy number, then same phone,
 // against the agent's book and the rows above it). Only rows marked ok are saved.
+//
+// P899: the fields are name, phone, city, state, carrier and draft day; monthly premium and notes are optional. Policy
+// number, date of birth, email, face amount, product, time zone and effective date are no longer read (a column with
+// one of those headers is listed as "Not read"). Duplicates are the same phone (policy numbers aren't asked any more).
 
 import { phoneDigits, formatPhone, toE164 } from '../template/phoneMask.js'
 import { zoneOf } from './callSlots.js'
@@ -14,16 +18,11 @@ export const FIELDS = [
   { key: 'first_name', label: 'First name', need: true },
   { key: 'last_name', label: 'Last name', need: true },
   { key: 'phone', label: 'Phone', need: true },
-  { key: 'email', label: 'Email' },
+  { key: 'city', label: 'City', need: true },
   { key: 'state', label: 'State', need: true },
-  { key: 'time_zone', label: 'Time zone' },
   { key: 'carrier', label: 'Carrier', need: true },
-  { key: 'policy_number', label: 'Policy number', need: true },
-  { key: 'product', label: 'Product' },
-  { key: 'face_amount', label: 'Face amount' },
+  { key: 'draft_day', label: 'Draft day', need: true },
   { key: 'monthly_premium', label: 'Monthly premium' },
-  { key: 'draft_day', label: 'Draft day' },
-  { key: 'effective_date', label: 'Effective date' },
   { key: 'notes', label: 'Notes' },
 ]
 export const NEEDED = FIELDS.filter(f => f.need).map(f => f.key)
@@ -36,6 +35,7 @@ const ALIAS = {
   name: 'name', fullname: 'name', client: 'name', clientname: 'name', insured: 'name', insuredname: 'name',
   phone: 'phone', phonenumber: 'phone', cell: 'phone', mobile: 'phone', tel: 'phone',
   email: 'email', emailaddress: 'email',
+  city: 'city', town: 'city',
   state: 'state', st: 'state',
   timezone: 'time_zone', tz: 'time_zone', zone: 'time_zone',
   carrier: 'carrier', carriername: 'carrier', company: 'carrier', insurer: 'carrier',
@@ -47,12 +47,14 @@ const ALIAS = {
   effectivedate: 'effective_date', effective: 'effective_date', issuedate: 'effective_date', startdate: 'effective_date',
   notes: 'notes', note: 'notes', comments: 'notes',
 }
-export const fieldOfHeader = h => ALIAS[String(h || '').toLowerCase().replace(/[^a-z]/g, '')] || null
+const KEYS = new Set(['name', ...FIELDS.map(f => f.key)])
+// Headers for fields we no longer ask for (policy number, email...) map to nothing: listed as "Not read".
+export const fieldOfHeader = h => { const k = ALIAS[String(h || '').toLowerCase().replace(/[^a-z]/g, '')]; return k && KEYS.has(k) ? k : null }
 
 // The file the agent downloads: our headers and one made-up example row.
 export const TEMPLATE_CSV = [
   FIELDS.map(f => f.label).join(','),
-  'Maria,Lopez,(512) 555-0199,maria@example.com,TX,America/Chicago,Americo,AM-1234567,Mortgage Protection 25,250000,84.20,3,2025-06-01,Prefers evenings',
+  'Maria,Lopez,(512) 555-0199,Austin,TX,Americo,3,84.20,Prefers evenings',
 ].join('\r\n') + '\r\n'
 
 // Splits one CSV or tab line, honouring "quoted, cells" and "" inside quotes.
@@ -111,41 +113,32 @@ export function isoDate(v) {
   return dt.getUTCMonth() === +mo - 1 && dt.getUTCDate() === +d ? `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}` : null
 }
 
-// One raw row to the clean row the server takes, with what's wrong. book = the agent's clients ({ policy_number,
-// client_phone }); seen = { policies:Set, phones:Set } of rows above this one (filled as rows are checked).
+// One raw row to the clean row the server takes, with what's wrong. book = the agent's clients ({ client_phone });
+// seen = { phones:Set } of rows above this one (filled as rows are checked).
 export function checkRow(raw, book = [], seen = { policies: new Set(), phones: new Set() }) {
   const st = String(raw.state || '').trim().toUpperCase()
   const row = {
     line: raw.line,
     first_name: String(raw.first_name || '').trim(), last_name: String(raw.last_name || '').trim(),
-    phone: toE164(raw.phone), email: String(raw.email || '').trim().toLowerCase() || null,
-    state: STATES.has(st) ? st : '', time_zone: String(raw.time_zone || '').trim() || null,
-    carrier: String(raw.carrier || '').trim(), policy_number: String(raw.policy_number || '').trim(),
-    product: String(raw.product || '').trim() || null, face_amount: money(raw.face_amount), monthly_premium: money(raw.monthly_premium),
-    draft_day: null, effective_date: isoDate(raw.effective_date), notes: String(raw.notes || '').trim() || null,
+    phone: toE164(raw.phone), city: String(raw.city || '').trim(), state: STATES.has(st) ? st : '', time_zone: null,
+    carrier: String(raw.carrier || '').trim(), monthly_premium: money(raw.monthly_premium), draft_day: null,
+    notes: String(raw.notes || '').trim() || null,
   }
   const dd = parseInt(String(raw.draft_day || '').replace(/\D/g, ''), 10)
   if (dd >= 1 && dd <= 31) row.draft_day = dd
-  if (!row.time_zone && row.state) row.time_zone = zoneOf(row.state) || null
+  if (row.state) row.time_zone = zoneOf(row.state) || null
 
   const missing = NEEDED.filter(k => !row[k])
   const odd = []
   if (raw.phone && !row.phone) odd.push('Phone needs 10 digits')
   if (raw.state && !row.state) odd.push('State needs its two letters')
-  if (raw.email && row.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(row.email)) odd.push('Email looks wrong')
-  if (raw.effective_date && !row.effective_date) odd.push('Effective date: use 6/1/2025')
   if (raw.draft_day && !row.draft_day) odd.push('Draft day: 1 to 31')
   if (raw.monthly_premium && row.monthly_premium == null) odd.push('Premium: a number')
-  if (raw.face_amount && row.face_amount == null) odd.push('Face amount: a number')
 
-  const pn = normPolicy(row.policy_number)
   const ph = phoneDigits(row.phone)
   let dup = null
-  if (pn && (book.some(c => normPolicy(c.policy_number) === pn))) dup = 'Same policy number is already on your book'
-  else if (pn && seen.policies.has(pn)) dup = 'Same policy number as a row above'
-  else if (ph.length === 10 && book.some(c => phoneDigits(c.client_phone) === ph)) dup = 'Same phone as a client on your book'
+  if (ph.length === 10 && book.some(c => phoneDigits(c.client_phone) === ph)) dup = 'Same phone as a client on your book'
   else if (ph.length === 10 && seen.phones.has(ph)) dup = 'Same phone as a row above'
-  if (pn) seen.policies.add(pn)
   if (ph.length === 10) seen.phones.add(ph)
 
   const status = missing.length || odd.length ? 'missing' : dup ? 'duplicate' : 'ok'

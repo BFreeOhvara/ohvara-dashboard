@@ -37,3 +37,6 @@ export function digitsBefore(raw, caret) {
   const before = String(raw).slice(0, caret).replace(/\D/g, '').length
   return Math.min(MAX_DIGITS, Math.max(0, before - lead))
 }
+
+// P899: a tap-to-call link for a US number (CallOrCopy.jsx, the lead nudge).
+export const telOf = phone => `tel:+1${String(phone || '').replace(/\D/g, '').slice(-10)}`

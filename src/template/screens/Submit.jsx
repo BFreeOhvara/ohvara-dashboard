@@ -17,7 +17,8 @@ import { CarrierSelect } from '../CarrierSelect'
 import { BookTime } from '../CallTime'
 import { agentBooksCall } from '../ful/data'
 import { formatPhone } from '../phoneMask'
-import { EMPTY_SUBMIT, EMPTY_SPOUSE, NEEDED, TIMES, PRODUCTS, DRAFT_DAYS, missingFields, buildSubmission, reachText, livesIn } from '../submitModel'
+import { EMPTY_SUBMIT, EMPTY_SPOUSE, NEEDED, TIMES, DRAFT_DAYS, missingFields, buildSubmission, reachText, livesIn } from '../submitModel'
+import { ordinal } from '../../lib/clientCheck.js'
 
 // P843: Submit a policy, built out in the shell design. Three clear steps (the client, the policy, review) with a
 // live summary beside them. P868: the phone formats itself and saves as E.164, the state is a dropdown, the carrier
@@ -32,13 +33,13 @@ const REACH = [
 ]
 const STEPS = [
   { key: 'client', label: 'The client', sub: 'Who you sold to', Icon: User, needs: ['name', 'phone', 'city', 'state', 'licence', 'booking'] },
-  { key: 'policy', label: 'The policy', sub: 'Carrier and policy details', Icon: ShieldCheck, needs: ['carrier', 'product', 'premium', 'draftDay', 'oldCarrier', 'spouse'] },
+  { key: 'policy', label: 'The policy', sub: 'Carrier and draft day', Icon: ShieldCheck, needs: ['carrier', 'draftDay', 'oldCarrier', 'oldDraftDay', 'spouse'] },
   { key: 'review', label: 'Review', sub: 'Check and submit', Icon: ClipboardCheck, needs: [] },
 ]
 const NEXT = [
-  [PhoneCall, 'We set the review call', 'The team calls the client to confirm the policy details.'],
-  [ShieldCheck, 'Servicing starts', 'Billing checks, carrier follow-ups and any changes are handled for you.'],
-  [ActivityIcon, 'You see every step', 'Updates land in Activity and on the client in Clients.'],
+  [PhoneCall, 'Our team takes it from here', 'They set it up with the client and the carrier. It shows as Working.'],
+  [ShieldCheck, 'Protected', 'Once it’s in force it turns green. Nothing needed from you.'],
+  [ActivityIcon, 'Once a month: still on the books?', 'A few days after each draft we ask. One tap to confirm.'],
 ]
 
 function Steps({ at, done, onPick }) {
@@ -59,8 +60,8 @@ function Steps({ at, done, onPick }) {
 
 function Review({ f, onEdit }) {
   const rows = [
-    ['client', 'The client', [['Name', f.name], ['Phone', formatPhone(f.phone)], ['Date of birth', f.dob || 'Not given'], ['Email', f.email || 'Not given'], ['Lives in', livesIn(f) || 'Not given'], [f.reach === 'book' ? 'Call booked' : 'Best time', f.reach === 'book' ? reachText(f) : f.best]]],
-    ['policy', 'The policy', [['Product', f.product], ['Carrier', f.carrier], [f.numberKind === 'policy' ? 'Policy number' : 'Application number', f.number || 'Not given'], ['Face amount', money0(f.face)], ['Monthly premium', money0(f.premium)], ['Draft day', f.draftDay ? `The ${f.draftDay}${['1', '21'].includes(f.draftDay) ? 'st' : ['2', '22'].includes(f.draftDay) ? 'nd' : ['3', '23'].includes(f.draftDay) ? 'rd' : 'th'} of each month` : 'Not given'], ['Notes', f.notes?.trim() || 'Not given'], ['Beneficiary', f.beneficiary ? `${f.beneficiary}${f.relation ? ` (${f.relation})` : ''}` : 'Not given'], ['Replaces', f.replacing ? `${f.oldCarrier || 'Not given'}${f.oldNumber ? `, ${f.oldNumber}` : ''}` : 'Nothing'], ...(f.spouse ? [['Second insured', `${f.spouse.name || 'Not given'} · ${money0(f.spouse.face)}`]] : [])]],
+    ['client', 'The client', [['Name', f.name], ['Phone', formatPhone(f.phone)], ['Lives in', livesIn(f) || 'Not given'], [f.reach === 'book' ? 'Call booked' : 'Best time', f.reach === 'book' ? reachText(f) : f.best]]],
+    ['policy', 'The policy', [['Carrier', f.carrier], ['Draft day', f.draftDay ? `The ${ordinal(Number(f.draftDay))} of each month` : 'Not given'], ['Monthly premium', money0(f.premium)], ['Notes', f.notes?.trim() || 'Not given'], ['Replaces', f.replacing ? `${f.oldCarrier || 'Not given'}${f.oldDraftDay ? `, drafts the ${ordinal(Number(f.oldDraftDay))}` : ''}` : 'Nothing'], ...(f.spouse ? [['Second insured', f.spouse.name || 'Not given']] : [])]],
   ]
   return (
     <div className="fx-sub-review">
@@ -162,7 +163,7 @@ export default function Submit() {
         <section className="fx-tile fx-sub-ok" style={{ '--i': 0 }}>
           <span className="fx-sub-okic"><Check size={26} aria-hidden="true" /></span>
           <h2>Submitted</h2>
-          <p>{done.name}{done.spouse ? ` and ${done.spouse} are` : ' is'} on your books{done.spouse ? ', each with their own policy in one household' : ''}. {done.call ? `Their call is booked for ${done.call}.` : 'The team sets the review call.'} You{'’'}ll see every step in Activity.</p>
+          <p>{done.name}{done.spouse ? ` and ${done.spouse} are` : ' is'} on your books{done.spouse ? ', each with their own policy in one household' : ''}. {done.call ? `Their call is booked for ${done.call}.` : 'Our team takes it from here.'} It shows on Clients as Working until it{'’'}s Protected.</p>
           <ol className="fx-sub-next">{NEXT.map(([Icon, t, s]) => <li key={t}><span className="fx-sub-nic"><Icon size={16} aria-hidden="true" /></span><span><b>{t}</b><small>{s}</small></span></li>)}</ol>
           <div className="tp-row tp-wrap fx-sub-okacts">
             <Link to={paths.clients()} className="tp-primary fx-accent">See your clients</Link>
@@ -185,7 +186,7 @@ export default function Submit() {
 
         <div className="fx-sub-body" key={S.key}>
           {S.key === 'client' && <>
-            <p className="tp-sub">Name, phone, city and state are needed. Fields marked optional can wait.</p>
+            <p className="tp-sub">Name, phone, city and state. That’s all our team needs to reach them.</p>
             <div className="fx-form-grid">
               <Field label="Full name" hint="Type a name or number to find your lead."><input className={bad('name') ? 'tp-danger' : ''} value={f.name} onChange={e => { setF({ ...f, name: e.target.value, linked: null }); setTyped('name'); setActive(0) }} onKeyDown={onMatchKey} onBlur={() => setTyped(null)} placeholder="First and last name" autoComplete="off" {...(typed === 'name' ? combo : {})} /></Field>
               <Field label="Phone"><PhoneInput invalid={bad('phone')} value={f.phone} onChange={d => { setF({ ...f, phone: d, linked: null }); setTyped('phone'); setActive(0) }} onKeyDown={onMatchKey} onBlur={() => setTyped(null)} {...(typed === 'phone' ? combo : {})} /></Field>
@@ -193,10 +194,8 @@ export default function Submit() {
             <Suggestions matches={matches} active={Math.min(active, Math.max(matches.length - 1, 0))} onPick={pickMatch} query={shownQuery} />
             {f.linked && <p className="lc-linked"><Check size={15} aria-hidden="true" /><span>{f.linked.kind === 'lead' ? `Your lead · ${f.linked.stage}. Submitting makes them a client.` : 'Your client. This adds a policy to their record.'}</span><button type="button" onClick={() => setF({ ...f, linked: null })}>Not them</button></p>}
             <div className="fx-form-grid">
-              <Field label="Email, optional"><input value={f.email} onChange={set('email')} placeholder="name@example.com" inputMode="email" autoComplete="off" /></Field>
               <Field label="City"><input className={bad('city') ? 'tp-danger' : ''} value={f.city} onChange={set('city')} autoComplete="off" /></Field>
               <Field label="State"><StateSelect invalid={bad('licence') || bad('state')} value={f.state} onChange={v => setF({ ...f, state: v })} /></Field>
-              <Field label="Date of birth, optional"><input type="date" value={f.dob} max="2008-11-02" onChange={set('dob')} /></Field>
             </div>
             {missing.includes('licence') && <p className="fx-sub-err" role="alert">Your verified licence doesn{'’'}t cover {stateName(f.state)}. Only submit sales you wrote in a state you{'’'}re licensed in. Just licensed there? Check your licence again in Settings, Licence.</p>}
             <div className="fx-sub-field"><b>Reaching the client</b><small>Their local time.</small><Seg label="Reaching the client" value={f.reach} onChange={v => setF({ ...f, reach: v })} options={REACH} /></div>
@@ -208,35 +207,24 @@ export default function Submit() {
           </>}
 
           {S.key === 'policy' && <>
-            <p className="tp-sub">What you sold and who it is with.</p>
+            <p className="tp-sub">Who it’s with and when it drafts. Our team gets the rest from the carrier.</p>
             <div className="fx-form-grid">
-              <Field label="Product" hint="Any life policy: the team services them all."><Select label="Product" value={f.product} onChange={v => setF({ ...f, product: v })} options={PRODUCTS} /></Field>
               <Field label="Carrier" hint="Start typing: every US life carrier is listed. Not there? Type its name."><CarrierSelect invalid={bad('carrier')} value={f.carrier} onChange={v => setF({ ...f, carrier: v })} by="agent" /></Field>
-            </div>
-            <div className="fx-sub-field"><b>Number</b><small>The application number is fine until the policy is issued.</small><Seg label="Number type" value={f.numberKind} onChange={v => setF({ ...f, numberKind: v })} options={[{ key: 'policy', label: 'Policy number' }, { key: 'application', label: 'Application number' }]} /></div>
-            <div className="fx-form-grid">
-              <Field label={`${f.numberKind === 'policy' ? 'Policy number' : 'Application number'}, optional`} hint="Often not known yet. Add it later."><input value={f.number} onChange={set('number')} autoComplete="off" /></Field>
-              <Field label="Face amount, optional"><input value={f.face} onChange={set('face')} inputMode="decimal" placeholder="$250,000" /></Field>
-              <Field label="Monthly premium"><input className={bad('premium') ? 'tp-danger' : ''} value={f.premium} onChange={set('premium')} inputMode="decimal" placeholder="$86.40" /></Field>
               <Field label="Draft day" hint="The day of the month the premium comes out."><Select label="Draft day" invalid={bad('draftDay')} placeholder="Pick a day" value={f.draftDay} onChange={v => setF({ ...f, draftDay: v })} options={DRAFT_DAYS} /></Field>
-              <Field label="Beneficiary, optional"><input value={f.beneficiary} onChange={set('beneficiary')} placeholder="Full name" autoComplete="off" /></Field>
-              <Field label="Relationship, optional"><input value={f.relation} onChange={set('relation')} placeholder="Spouse, child…" autoComplete="off" /></Field>
+              <Field label="Monthly premium, optional"><input value={f.premium} onChange={set('premium')} inputMode="decimal" placeholder="$86.40" /></Field>
               <Field label="Notes, optional"><textarea className="tp-input fx-ta" value={f.notes} onChange={set('notes')} placeholder="Anything the team should know" /></Field>
             </div>
-            <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Does it replace a policy they have now?</b><p className="tp-sub">We cancel the old one only after the new one is issued and its first payment goes through, so they{'’'}re never without cover.</p></div><Switch on={f.replacing} label="Replaces a policy" onChange={v => setF({ ...f, replacing: v })} /></div>
+            <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Replacing a policy?</b><p className="tp-sub">Most clients set the new one to draft on the old one{'’'}s draft day. We cancel the old one once the new one is issued, before its next draft, so they never pay twice.</p></div><Switch on={f.replacing} label="Replacing a policy" onChange={v => setF({ ...f, replacing: v })} /></div>
             {f.replacing && <div className="fx-form-grid">
-              <Field label="Carrier being replaced"><CarrierSelect label="Carrier being replaced" invalid={bad('oldCarrier')} value={f.oldCarrier} onChange={v => setF({ ...f, oldCarrier: v })} by="agent" /></Field>
-              <Field label="Old policy number, if known"><input value={f.oldNumber} onChange={set('oldNumber')} autoComplete="off" /></Field>
+              <Field label="Old carrier"><CarrierSelect label="Old carrier" invalid={bad('oldCarrier')} value={f.oldCarrier} onChange={v => setF({ ...f, oldCarrier: v })} by="agent" /></Field>
+              <Field label="Old draft day" hint="When the old policy drafts. We cancel it before then."><Select label="Old draft day" invalid={bad('oldDraftDay')} placeholder="Pick a day" value={f.oldDraftDay} onChange={v => setF({ ...f, oldDraftDay: v })} options={DRAFT_DAYS} /></Field>
             </div>}
             {f.spouse ? <div className={`fx-sub-field${bad('spouse') ? ' is-bad' : ''}`}>
               <span className="tp-row tp-between"><b>Second insured</b><button type="button" className="tp-btn ov-ghost sm" onClick={() => setF({ ...f, spouse: null })}><Trash2 size={14} />Remove</button></span>
               <small>Their own client and policy, in the same household as {f.name.trim() || 'this client'}.</small>
               <div className="fx-form-grid">
                 <Field label="Full name"><input value={f.spouse.name} onChange={e => setSpouse({ name: e.target.value })} autoComplete="off" /></Field>
-                <Field label="Date of birth, optional"><input type="date" value={f.spouse.dob} max="2008-11-02" onChange={e => setSpouse({ dob: e.target.value })} /></Field>
-                <Field label="Policy or application number, optional"><input value={f.spouse.number} onChange={e => setSpouse({ number: e.target.value })} autoComplete="off" /></Field>
-                <Field label="Face amount, optional"><input value={f.spouse.face} onChange={e => setSpouse({ face: e.target.value })} inputMode="decimal" /></Field>
-                <Field label="Monthly premium"><input value={f.spouse.premium} onChange={e => setSpouse({ premium: e.target.value })} inputMode="decimal" /></Field>
+                <Field label="Monthly premium, optional"><input value={f.spouse.premium} onChange={e => setSpouse({ premium: e.target.value })} inputMode="decimal" /></Field>
               </div>
             </div> : <button type="button" className="tp-btn ov-ghost fx-self" onClick={() => setF({ ...f, spouse: { ...EMPTY_SPOUSE } })}><UserPlus size={15} />Add a second insured (a spouse)</button>}
             <Pending>Texting consent wording pending</Pending>
@@ -265,12 +253,12 @@ export default function Submit() {
             <span className="tp-grow"><b>{f.name.trim() || 'New client'}</b><small>{f.phone ? formatPhone(f.phone) : 'No number yet'}</small></span>
           </div>
           <dl className="fx-sub-mini">
-            <div><dt>Product</dt><dd>{f.product}</dd></div>
+            <div><dt>Draft day</dt><dd>{f.draftDay ? `The ${ordinal(Number(f.draftDay))}` : 'Not picked'}</dd></div>
             <div><dt>Carrier</dt><dd>{f.carrier.trim() || 'Not picked'}</dd></div>
             <div><dt>{f.reach === 'book' ? 'Call' : 'Best time'}</dt><dd>{f.reach === 'book' ? (f.booking.iso ? reachText(f) : 'Not picked') : f.best}</dd></div>
           </dl>
           <ul className="fx-sub-check" aria-label="Needed to submit">
-            {Object.entries(NEEDED).filter(([k]) => k !== 'booking' || f.reach === 'book').map(([k, label]) => <li key={k} className={missing.includes(k) ? '' : 'is-ok'}><span>{missing.includes(k) ? '' : <Check size={12} aria-hidden="true" />}</span>{label}</li>)}
+            {Object.entries(NEEDED).filter(([k]) => (k !== 'booking' || f.reach === 'book') && (!['oldCarrier', 'oldDraftDay'].includes(k) || f.replacing) && (k !== 'spouse' || f.spouse)).map(([k, label]) => <li key={k} className={missing.includes(k) ? '' : 'is-ok'}><span>{missing.includes(k) ? '' : <Check size={12} aria-hidden="true" />}</span>{label}</li>)}
           </ul>
         </section>
         <section className="fx-tile fx-sub-after" style={{ '--i': 2 }} aria-label="What happens next">

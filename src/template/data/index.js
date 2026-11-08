@@ -9,6 +9,7 @@ import { wallet as walletOf, expected, startsText, TIERS } from '../spendPlan.js
 const GROWTH = TIERS.find(t => t.key === 'growth').monthly
 import { DEFAULT_LIVE_HOURS } from '../../lib/leadSplit.js'
 import { formatPhone } from '../phoneMask.js'
+import { answerCheck, markLapsed } from '../../lib/clientCheck.js'
 
 // The one door to sample info for the clickable template. Screens read only through the named functions below.
 // Every read returns { data, isLoading: false, error: null }, the shape react-query hooks give, and record fields
@@ -108,15 +109,15 @@ const mkAdded = (id, p, book, o) => mkClient(id, p, {
 })
 
 const seedClients = [
-  mkClient('sample-client-1', people.gloria, { policy_number: 'SAMPLE-1001', carrier_name: 'Harborline Life', stage: 'needs_attention', status: 'needs_attention', note: 'We could not reach Gloria after two tries.', attention: 'Confirm the number', next_step: 'Confirm the number', calls: [{ at: 'Thu, Oct 29, 10:02 AM', result: 'No answer', by: 'Fulfillment' }, { at: 'Fri, Oct 30, 5:40 PM', result: 'No answer', by: 'Fulfillment' }] }),
-  mkClient('sample-client-2', people.luis, { policy_number: 'SAMPLE-1002', carrier_name: 'Pinecrest Assurance', stage: 'protected', status: 'effective', monthly_premium: 112, annual_premium: 1344, next_step: null }),
-  mkClient('sample-client-3', people.robert, { policy_number: 'SAMPLE-1003', stage: 'setting_up', next_step: 'Review call Thu, Nov 5, 3:00 PM' }),
-  mkClient('sample-client-4', people.denise, { policy_number: 'SAMPLE-1004', carrier_name: 'Harborline Life', stage: 'setting_up', next_step: 'Packet check Fri, Nov 6' }),
-  mkClient('sample-client-5', people.renee, { policy_number: 'SAMPLE-1005', carrier_name: 'Pinecrest Assurance', stage: 'requests', status: 'request_open', note: 'A change on the policy is open', next_step: 'Address change in progress' }),
-  mkClient('sample-client-6', people.carla, { policy_number: 'SAMPLE-1006', stage: 'protected', status: 'effective', monthly_premium: 74.25, annual_premium: 891, next_step: null }),
+  mkClient('sample-client-1', people.gloria, { policy_number: 'SAMPLE-1001', carrier_name: 'Harborline Life', draft_day: 12, note: 'Setting up the new policy. Review call Fri, Nov 6.', next_step: 'Review call Fri, Nov 6, 4:15 PM' }),
+  mkClient('sample-client-2', people.luis, { policy_number: 'SAMPLE-1002', carrier_name: 'Pinecrest Assurance', stage: 'protected', status: 'effective', monthly_premium: 112, annual_premium: 1344, next_step: null, draft_day: 27, check_from: '2026-06-01', checked_through: '2026-09-27' }),
+  mkClient('sample-client-3', people.robert, { policy_number: 'SAMPLE-1003', stage: 'setting_up', draft_day: 5, next_step: 'Review call Thu, Nov 5, 3:00 PM' }),
+  mkClient('sample-client-4', people.denise, { policy_number: 'SAMPLE-1004', carrier_name: 'Harborline Life', stage: 'setting_up', draft_day: 20, next_step: 'Packet check Fri, Nov 6' }),
+  mkClient('sample-client-5', people.renee, { policy_number: 'SAMPLE-1005', carrier_name: 'Pinecrest Assurance', stage: 'requests', status: 'request_open', note: 'A change on the policy is open', next_step: 'Address change in progress', request: 'Address change in progress', draft_day: 15, check_from: '2026-04-01', checked_through: '2026-10-15' }),
+  mkClient('sample-client-6', people.carla, { policy_number: 'SAMPLE-1006', stage: 'protected', status: 'effective', monthly_premium: 74.25, annual_premium: 891, next_step: null, draft_day: 27, check_from: '2026-08-03', checked_through: '2026-09-27' }),
   // P885: a missed payment in year one. The agent was warned at the first miss (Q42); the save call is the team's.
   mkClient('sample-client-7', { first: 'Ann', last: 'Lee', phone: '(512) 555-0164', city: 'Round Rock', state: 'TX' }, {
-    policy_number: 'SAMPLE-1007', carrier_name: 'Harborline Life', stage: 'needs_attention', status: 'needs_attention', monthly_premium: 64.1, annual_premium: 769.2,
+    policy_number: 'SAMPLE-1007', carrier_name: 'Harborline Life', stage: 'needs_attention', status: 'needs_attention', draft_day: 3, check_from: '2026-07-06', checked_through: '2026-10-03', monthly_premium: 64.1, annual_premium: 769.2,
     note: 'The payment due Nov 3 didn’t go through. The team is calling Ann to save it.', next_step: 'Save call by Tue 5 PM', submitted: 'Mon, Jul 6',
     missed: { due: 'Nov 3', how: 'from your forwarded carrier email', grace: 'about Dec 4', saveBy: 'Tue 5 PM Central', chargeback: true, month: 4, of: 12, repeat: false,
       progress: 'Save call opened, not reached yet', done: false, portalAction: 'The draft was returned. If Ann gives a new card, update it in the portal (the team can’t change it).' },
@@ -131,15 +132,18 @@ const seedClients = [
   // P891: the sample import. Dana brought three of her own clients from a file on Tue, Nov 3: one waiting for the
   // welcome call, one welcomed (said yes to texts), one already serviced since.
   mkAdded('sample-client-8', { first: 'Maria', last: 'Lopez', phone: '(512) 555-0199', city: 'Austin', state: 'TX' }, 'added', { carrier_name: 'Americo', product_name: 'Mortgage Protection 25', policy_number: 'AM-1234567', monthly_premium: 84.2, face_amount: 250000, draft_day: 3, effective: 'Jun 1, 2025' }),
-  mkAdded('sample-client-9', { first: 'Tom', last: 'Reyes', phone: '(512) 555-0122', city: 'Pflugerville', state: 'TX' }, 'welcomed', { carrier_name: 'Foresters', product_name: 'Strong Foundation', policy_number: 'FF-5521904', monthly_premium: 58.75, face_amount: 150000, draft_day: 15, effective: 'Mar 1, 2024', texts: true }),
-  mkAdded('sample-client-10', { first: 'Lena', last: 'Brooks', phone: '(737) 555-0181', city: 'Georgetown', state: 'TX' }, 'serviced', { carrier_name: 'Mutual of Omaha', product_name: 'Term Life Express', policy_number: 'MO-3390217', monthly_premium: 41.3, face_amount: 100000, draft_day: 1, effective: 'Sep 1, 2023', texts: false }),
+  mkAdded('sample-client-9', { first: 'Tom', last: 'Reyes', phone: '(512) 555-0122', city: 'Pflugerville', state: 'TX' }, 'welcomed', { carrier_name: 'Foresters', product_name: 'Strong Foundation', policy_number: 'FF-5521904', monthly_premium: 58.75, face_amount: 150000, draft_day: 15, effective: 'Mar 1, 2024', texts: true, check_from: '2024-03-01', checked_through: '2026-10-15' }),
+  mkAdded('sample-client-10', { first: 'Lena', last: 'Brooks', phone: '(737) 555-0181', city: 'Georgetown', state: 'TX' }, 'serviced', { carrier_name: 'Mutual of Omaha', product_name: 'Term Life Express', policy_number: 'MO-3390217', monthly_premium: 41.3, face_amount: 100000, draft_day: 1, effective: 'Sep 1, 2023', texts: false, check_from: '2023-09-01', checked_through: '2026-10-01' }),
+  // P899: a check due today (drafted Oct 30, asked 3 days later), and a closed client (hidden unless turned on).
+  mkClient('sample-client-11', { first: 'Irene', last: 'Moss', phone: '(919) 555-0148', city: 'Cary', state: 'NC' }, { policy_number: 'SAMPLE-1011', carrier_name: 'Mutual of Omaha', stage: 'protected', status: 'effective', monthly_premium: 92.6, annual_premium: 1111.2, draft_day: 30, check_from: '2026-05-01', checked_through: '2026-09-30', submitted: 'Mon, Apr 27' }),
+  mkClient('sample-client-12', { first: 'Frank', last: 'Dale', phone: '(615) 555-0177', city: 'Franklin', state: 'TN' }, { policy_number: 'SAMPLE-1012', carrier_name: 'Americo', stage: 'closed', status: 'cancelled', closed: true, monthly_premium: 0, draft_day: 9, note: 'Cancelled by the client in September. Gone for good.', submitted: 'Thu, Mar 12' }),
 ]
 
 const seedThreads = [
   { id: 'thread-1', client_id: 'sample-client-1', name: 'Gloria Santos', unread: 1, messages: [
-    { id: 'm1', from: 'team', text: 'We tried Gloria twice and got no answer. Can you confirm the number?', at: 'Fri, Oct 30, 5:44 PM' },
-    { id: 'm2', from: 'me', text: 'Checking with her today.', at: 'Fri, Oct 30, 6:02 PM' },
-    { id: 'm3', from: 'team', text: 'Thank you. We will text her tomorrow morning and evening.', at: 'Mon, Nov 2, 9:15 AM' }] },
+    { id: 'm1', from: 'team', text: 'Gloria’s packet is in. Her review call is Fri, Nov 6 at 4:15 PM your time.', at: 'Fri, Oct 30, 5:44 PM' },
+    { id: 'm2', from: 'me', text: 'Great, thank you.', at: 'Fri, Oct 30, 6:02 PM' },
+    { id: 'm3', from: 'team', text: 'We texted her a reminder for Friday.', at: 'Mon, Nov 2, 9:15 AM' }] },
   { id: 'thread-2', client_id: 'sample-client-3', name: 'Robert Chen', unread: 0, messages: [
     { id: 'm4', from: 'team', text: 'Robert is booked for his review call on Thursday at 3:00 PM your time.', at: 'Wed, Oct 28, 3:00 PM' }] },
   { id: 'thread-3', client_id: 'sample-client-5', name: 'Renee Ortiz', unread: 2, messages: [
@@ -149,18 +153,18 @@ const seedThreads = [
 
 const seedActivity = [
   { id: 'a0', at: 'Today, 9:40 AM', kind: 'client', who: 'Ann Lee', text: 'Chargeback risk: the Harborline payment due Nov 3 didn’t go through. Save call opened, due Tue 5 PM.' },
-  { id: 'a1', at: 'Today, 2:06 PM', kind: 'text', who: 'Gloria Santos', text: 'The team texted Gloria to confirm her number.' },
+  { id: 'a1', at: 'Today, 2:06 PM', kind: 'text', who: 'Gloria Santos', text: 'The team texted Gloria a reminder for her review call.' },
   { id: 'a2', at: 'Today, 1:05 PM', kind: 'client', who: 'Renee Ortiz', text: 'Address change request sent to the carrier.' },
   { id: 'a3', at: 'Today, 11:30 AM', kind: 'lead', who: 'Dana Example', text: 'New lead assigned to you. Appointment booked for Thu, Nov 5.' },
   { id: 'a4', at: 'Today, 9:12 AM', kind: 'call', who: 'Carla Jones', text: 'Missed live call. The team is booking her a time right away.' },
   { id: 'a5', at: 'Fri, Oct 30', kind: 'moved', who: 'Robert Chen', text: 'Moved to Follow up for Mon, Nov 2.' },
   { id: 'a6', at: 'Yesterday, 11:02 AM', kind: 'client', who: 'Luis Ortega', text: 'Policy is now protected.' },
-  { id: 'a7', at: 'Fri, Oct 30', kind: 'call', who: 'Gloria Santos', text: 'Fulfillment called. No answer, second try.' },
+  { id: 'a7', at: 'Fri, Oct 30', kind: 'call', who: 'Gloria Santos', text: 'Packet check done. Review call set for Fri, Nov 6.' },
   { id: 'a8', at: 'Fri, Oct 30', kind: 'lead', who: 'Denise Walker', text: 'Sold. Ready to submit for servicing.' },
 ]
 
 const seedAppointments = [
-  { id: 'ap1', day: 'Mon', date: 2, time: '3:30 PM', who: 'Gloria Santos', label: 'Confirm number, call her', kind: 'client', ref: 'sample-client-1' },
+  { id: 'ap1', day: 'Mon', date: 2, time: '3:30 PM', who: 'Gloria Santos', label: 'Packet check call', kind: 'client', ref: 'sample-client-1' },
   { id: 'ap2', day: 'Mon', date: 2, time: '1:00 PM', who: 'Ellen Park', label: 'Appointment', kind: 'lead', ref: 'sample-lead-8' },
   { id: 'ap3', day: 'Mon', date: 2, time: '11:00 AM', who: 'Renee Ortiz', label: 'Appointment', kind: 'lead', ref: 'sample-lead-4' },
   { id: 'ap8', day: 'Mon', date: 2, time: '2:00 PM', who: 'Owen Price', label: 'Appointment', kind: 'lead', ref: 'sample-lead-7' },
@@ -458,8 +462,18 @@ function useActionsSample() {
     doneTask: id => set(s => ({ ...s, tasks: { ...s.tasks, [id]: true } })),
     clientAction: (id, action) => set(s => {
       const c = s.clients.find(x => x.id === id)
-      const patch = action === 'confirm' ? { stage: 'setting_up', status: 'booked', attention: null, note: 'Number confirmed. We text her tomorrow morning and evening.' } : { note: action }
-      return { ...s, clients: s.clients.map(x => (x.id === id ? { ...x, ...patch } : x)), activity: log(s, fullName(c), action === 'confirm' ? 'Number confirmed.' : action, 'client') }
+      return { ...s, clients: s.clients.map(x => (x.id === id ? { ...x, note: action } : x)), activity: log(s, fullName(c), action, 'client') }
+    }),
+    // P899: the monthly "Still on the books?" check. yes/no = client ids, draft = the draft date asked about. No and
+    // Lapsed go to Working (the screen opens the VA's save call, ful/data agentOpensSaveCall).
+    answerChecks: ({ yes = [], no = [], draft }) => set(s => {
+      const names = ids => ids.map(id => s.clients.find(c => c.id === id)).filter(Boolean).map(fullName)
+      const said = [yes.length && `${names(yes).join(', ')}: still on the books`, no.length && `${names(no).join(', ')}: no longer on the books. Our team is calling to save ${no.length === 1 ? 'it' : 'them'}`].filter(Boolean).join('. ')
+      return { ...s, clients: s.clients.map(c => (yes.includes(c.id) ? answerCheck(c, draft, true) : no.includes(c.id) ? answerCheck(c, draft, false) : c)), activity: log(s, yes.length + no.length === 1 ? names([...yes, ...no])[0] : `${yes.length + no.length} clients`, `${said}.`, 'client') }
+    }),
+    markLapsed: (id, today) => set(s => {
+      const c = s.clients.find(x => x.id === id)
+      return c ? { ...s, clients: s.clients.map(x => (x.id === id ? markLapsed(x, today) : x)), activity: log(s, fullName(c), 'Marked lapsed. Our team is calling to get it back on.', 'client') } : s
     }),
     sendMessage: (threadId, text) => set(s => ({ ...s, threads: s.threads.map(t => (t.id === threadId ? { ...t, unread: 0, messages: [...t.messages, { id: `m${t.messages.length + 10}-${text.length}`, from: 'me', text, at: stamp }] } : t)) })),
     readThread: threadId => set(s => ({ ...s, threads: s.threads.map(t => (t.id === threadId ? { ...t, unread: 0 } : t)) })),
@@ -472,9 +486,10 @@ function useActionsSample() {
       const days = ['Thu, Nov 5', 'Fri, Nov 6', 'Mon, Nov 9', 'Tue, Nov 10', 'Wed, Nov 11']
       const made = rows.map((r, i) => {
         const welcomeAt = days[Math.min(days.length - 1, Math.floor(i / 25))]
-        return mkAdded(`added-${Date.now()}-${i}`, { first: r.first_name, last: r.last_name, phone: formatPhone(r.phone), city: '', state: r.state }, 'added', {
-          carrier_name: r.carrier, product_name: r.product || 'Life insurance', policy_number: r.policy_number, monthly_premium: r.monthly_premium || 0,
-          face_amount: r.face_amount, draft_day: r.draft_day, effective: r.effective_date, email: r.email, notes: r.notes,
+        // P899: only name, phone, city, state, carrier, draft day (+ premium, notes) are asked for now.
+        return mkAdded(`added-${Date.now()}-${i}`, { first: r.first_name, last: r.last_name, phone: formatPhone(r.phone), city: r.city || '', state: r.state }, 'added', {
+          carrier_name: r.carrier, product_name: null, policy_number: null, monthly_premium: r.monthly_premium || 0,
+          face_amount: null, draft_day: r.draft_day, effective: null, email: null, notes: r.notes,
           submitted: 'Today', next_step: `Welcome call ${welcomeAt}`, steps: welcomeSteps('added', { addedAt: 'Today', welcomeAt }),
         })
       })

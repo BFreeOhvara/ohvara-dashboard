@@ -14,7 +14,9 @@ import './p891.css'
 
 const BLANK = Object.fromEntries(FIELDS.map(f => [f.key, '']))
 const FORM = FIELDS.filter(f => !['first_name', 'last_name', 'phone', 'state', 'notes'].includes(f.key))
-const HINT = { time_zone: 'Leave blank: we use their state', face_amount: 'e.g. 250000', monthly_premium: 'e.g. 84.20', draft_day: '1 to 31', effective_date: '6/1/2025' }
+// P899: city, carrier, draft day, and the monthly premium (optional). No policy number, email, face amount or product.
+const HINT = { monthly_premium: 'e.g. 84.20', draft_day: 'The day of the month it drafts, 1 to 31' }
+const LABEL = { monthly_premium: 'Monthly premium, optional' }
 const WORD = { ok: ['ok', 'Ready'], missing: ['warn', 'Missing details'], duplicate: ['mute', 'Already on your book'] }
 
 function Review({ result, only, setOnly }) {
@@ -35,7 +37,7 @@ function Review({ result, only, setOnly }) {
           return (
             <li key={c.row.line ?? name} className={`bi-row is-${tone}`}>
               <span className="bi-l">{c.row.line ? `Row ${c.row.line}` : 'Client'}</span>
-              <span className="tp-grow bi-who"><b>{name}</b><small>{[c.row.phone && showPhone(c.row.phone), c.row.carrier, c.row.policy_number].filter(Boolean).join(' · ') || 'Nothing read'}</small>
+              <span className="tp-grow bi-who"><b>{name}</b><small>{[c.row.phone && showPhone(c.row.phone), c.row.city, c.row.carrier].filter(Boolean).join(' · ') || 'Nothing read'}</small>
                 {c.status !== 'ok' && <em>{[c.missing.length ? `Missing: ${c.missing.join(', ')}` : null, ...c.odd, c.dup].filter(Boolean).join('. ')}</em>}
               </span>
               <span className={`tp-chip is-${tone === 'ok' ? 'green' : tone}`}><i />{word}</span>
@@ -60,7 +62,7 @@ export function AddClients({ open, onClose }) {
   const [only, setOnly] = useState(false)
   const [busy, setBusy] = useState(false)
   const file = useRef(null)
-  const book = useMemo(() => clients.map(c => ({ policy_number: c.policy_number, client_phone: c.client_phone })), [clients])
+  const book = useMemo(() => clients.map(c => ({ client_phone: c.client_phone })), [clients])
 
   const oneCheck = useMemo(() => {
     const c = checkRow(one, book)
@@ -68,7 +70,7 @@ export function AddClients({ open, onClose }) {
   }, [one, book])
   const fileCheck = useMemo(() => (read && !read.error ? checkRows(read.rows, book) : null), [read, book])
   const result = mode === 'one' ? oneCheck : fileCheck
-  const typed = mode === 'one' && ['first_name', 'last_name', 'phone', 'policy_number'].some(k => String(one[k]).trim())
+  const typed = mode === 'one' && ['first_name', 'last_name', 'phone', 'carrier'].some(k => String(one[k]).trim())
   const showReview = mode === 'one' ? typed : !!fileCheck
   const ready = result?.ok || 0
 
@@ -107,8 +109,8 @@ export function AddClients({ open, onClose }) {
           <Field label="Last name"><input value={one.last_name} onChange={set('last_name')} autoComplete="off" /></Field>
           <Field label="Phone"><PhoneInput value={one.phone} onChange={d => setOne(o => ({ ...o, phone: d }))} aria-label="Phone" /></Field>
           <div className="tp-field"><span>State</span><StateSelect value={one.state} onChange={v => setOne(o => ({ ...o, state: v }))} /></div>
-          {FORM.map(f => <Field key={f.key} label={f.label} hint={HINT[f.key]}><input value={one[f.key]} onChange={set(f.key)} type={f.key === 'email' ? 'email' : 'text'} inputMode={['face_amount', 'monthly_premium', 'draft_day'].includes(f.key) ? 'decimal' : undefined} autoComplete="off" /></Field>)}
-          <Field label="Notes"><textarea value={one.notes} onChange={set('notes')} placeholder="Anything the team should know before they call" /></Field>
+          {FORM.map(f => <Field key={f.key} label={LABEL[f.key] || f.label} hint={HINT[f.key]}><input value={one[f.key]} onChange={set(f.key)} inputMode={['monthly_premium', 'draft_day'].includes(f.key) ? 'decimal' : undefined} autoComplete="off" /></Field>)}
+          <Field label="Notes, optional"><textarea value={one.notes} onChange={set('notes')} placeholder="Anything the team should know before they call" /></Field>
         </div>
       ) : (
         <div className="bi-import">
@@ -118,7 +120,7 @@ export function AddClients({ open, onClose }) {
             <input ref={file} type="file" accept=".csv,text/csv,.txt" className="bi-file" aria-label="CSV file" onChange={pick} />
           </div>
           <Field label="Or paste from a sheet" hint="Copy the rows with the header row on top, then paste here.">
-            <textarea value={paste} onChange={e => setPaste(e.target.value)} placeholder={'First name\tLast name\tPhone\tState\tCarrier\tPolicy number\n…'} />
+            <textarea value={paste} onChange={e => setPaste(e.target.value)} placeholder={'First name\tLast name\tPhone\tCity\tState\tCarrier\tDraft day\n…'} />
           </Field>
           {paste.trim() && <button type="button" className="tp-btn ov-ghost fx-self" onClick={readPaste}><ClipboardPaste size={15} />Read the paste</button>}
           {read?.error && <p className="bi-err" role="alert"><TriangleAlert size={15} aria-hidden="true" />{read.error}</p>}

@@ -92,8 +92,11 @@ test('Follow up asks for a day: the next ten weekdays, the reminder on that day'
 test('Leads page: no team bar, no "Five statuses" line; Call is a phone-only tap-to-call link', () => {
   const leads = readFileSync(new URL('./template/screens/Leads.jsx', import.meta.url), 'utf8')
   assert.equal(/TeamLine|teamLine|Five statuses/.test(leads), false)
-  assert.match(leads, /href=\{telOf\(lead\)\}/)
-  assert.match(leads, /navigator\.clipboard\.writeText/)
+  // P899: Call or copy is one component, shared with the client drawer.
+  assert.match(leads, /<CallOr phone=\{lead\.phone\}/)
+  const call = readFileSync(new URL('./template/CallOrCopy.jsx', import.meta.url), 'utf8')
+  assert.match(call, /href=\{telOf\(rawPhone \|\| phone\)\}/)
+  assert.match(call, /navigator\.clipboard\.writeText/)
   const css = readFileSync(new URL('./template/leads873.css', import.meta.url), 'utf8')
   assert.match(css, /\.lc-tel \{ display: none !important;/)
   assert.match(css, /@media \(max-width: 767\.98px\) \{\s*\.lc-tel \{ display: inline-flex !important; \}\s*\.lc-num \{ display: none !important; \}/)

@@ -1,5 +1,6 @@
 import { useSyncExternalStore, createContext, useContext, createElement } from 'react'
 import { CALL_WORD, CALL_TONE } from './words.js'
+import { shortDate } from '../../lib/clientCheck.js'
 import { instantOf, clockOf, dateOf, zoneOf, freeVa, blockTime } from '../../lib/callSlots.js'
 
 // P845 — the one door to the Fulfillment (VA) side's sample info, like ../data for the agent side. Screens read only
@@ -510,6 +511,24 @@ export function agentBooksCall({ who, state = 'TX', city = '', oldCarrier = 'Glo
     return out
   })
   return va
+}
+
+// P899 — the agent said a policy is no longer on the books (the monthly check) or marked it Lapsed: the client goes
+// to Working on the agent side and the VA gets a save call (lapse_save), due by the end of the next business day.
+// Sample: the client is matched by name among this VA's clients, or added. Server: p899 agent_books_check /
+// agent_mark_lapsed insert the same servicing task.
+export function agentOpensSaveCall({ who, why, draft = null, state = 'TX', city = '', agent = 'ag-dana' }) {
+  const [first, ...rest] = String(who || 'Client').split(' ')
+  set(s => {
+    const have = s.clients.find(c => `${c.client_first_name} ${c.client_last_name}` === who && c.agent_id === agent)
+    const id = have?.id || `fc-${Date.now()}`
+    const client = have || mkClient(id, first, rest.join(' ') || '', agent, { state, city, stage: 'needs_attention', next_step: 'Save call' })
+    const note = why === 'lapsed'
+      ? `${agentName(agent)} marked ${first}’s policy lapsed. Call ${first} and get it back on.`
+      : `${agentName(agent)} says ${first}’s policy is no longer on the books${draft ? ` (the ${shortDate(draft)} draft)` : ''}. Call ${first} and save it.`
+    const task = mkTask(`st-${Date.now()}-${id}`, 'lapse_save', id, { due: 'later', due_text: 'Next business day by 5:00 PM', note, fromCheck: why })
+    return { clients: have ? s.clients.map(c => (c.id === id ? { ...c, stage: 'needs_attention', next_step: 'Save call' } : c)) : [...s.clients, client], tasks: [...s.tasks, task], ...feedAdd(s, agentName(agent), why === 'lapsed' ? `Marked ${who} lapsed` : `Said ${who} is no longer on the books`, 'servicing') }
+  })
 }
 
 // P852 — the switch between sample and real, like ../data (P848). Screens keep calling the hooks above; inside the VA
