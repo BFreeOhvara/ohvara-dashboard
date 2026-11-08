@@ -14,7 +14,9 @@ export function resolveMode({ show, view, canPreview }) {
   return show === false ? 'real' : 'sample'
 }
 
-export const canPreviewReal = profile => !!profile && (profile.role === 'admin' || isTestAccount(profile.id))
+// P852: the test VA (tesfulfill11, "Test Fulfill") can preview real data too, for the VA side's checks.
+export const PREVIEW_IDS = new Set(['402a7a07-c9b0-428f-9b9d-ff2b6480bed0'])
+export const canPreviewReal = profile => !!profile && (profile.role === 'admin' || isTestAccount(profile.id) || PREVIEW_IDS.has(profile.id))
 
 // The switch can only be flipped once the column is there; a missing column reads as "on" and can't be saved.
 export const switchReady = settings => !!settings && Object.prototype.hasOwnProperty.call(settings, 'show_sample_data')

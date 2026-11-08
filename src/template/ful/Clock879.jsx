@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Clock3, LogIn, LogOut, Mic, Volume2, BellRing, Wifi, Check, X, Coffee, Repeat, CalendarX, Star, Scale, ShieldCheck, Lock } from 'lucide-react'
 import { Chip, Drawer, Field, PillTabs, SampleTag, useNote } from '../kit'
+import { useFulSource } from './data'
 import {
   clockInCheck, DEVICE_CHECKS, deviceOk, STATUSES, statusOf, PICKABLE, breakState, mmss, MY_SHEET, hoursOf, weekPay,
   MY_SWAPS, OPEN_FOR_ME, HOLIDAYS, MY_QA, canDispute, verifyOk,
@@ -16,7 +17,7 @@ const clk = { in: false, at: null, status: 'offline', breakAt: null, breakKind: 
 // N-F-02, N-F-04, N-F-05: clock in only within 15 minutes of the shift (else an admin approves); clock-in runs the
 // device check and routing stays off if any part fails; statuses (only Available is rung); Break/Lunch with a timer,
 // "break after this call", paid or unpaid, and the admin alerted at 5 minutes over.
-export function ClockTile({ className = '' }) {
+function ClockTileSample({ className = '' }) {
   const note = useNote()
   const [s, setS] = useState({ ...clk })
   const [checking, setChecking] = useState(false)
@@ -76,7 +77,7 @@ export function ClockTile({ className = '' }) {
 }
 
 // N-F-23, N-G-24: this week's hours from clock in and out, breaks, flags, and hours × rate; ask for a correction.
-export function TimesheetRows() {
+function TimesheetRowsSample() {
   const note = useNote()
   const [ask, setAsk] = useState(null)
   const [why, setWhy] = useState('')
@@ -124,7 +125,7 @@ export function SwapsHolidays() {
 }
 
 // N-F-20 (VA view), N-F-21: my scored calls, and a dispute once per score (another admin re-reviews).
-export function MyQuality({ className = '' }) {
+function MyQualitySample({ className = '' }) {
   const note = useNote()
   const [rows, setRows] = useState(MY_QA)
   const [ask, setAsk] = useState(null)
@@ -168,4 +169,23 @@ export function VerifyCaller({ client }) {
       <p className="tp-sub"><Clock3 size={12} aria-hidden="true" /> A number we don't know? Match it to the client by name and date of birth before anything else.</p>
     </section>
   )
+}
+
+// P852 — clock in/out, the timesheet and call reviews have no tables yet (time tracking and QA are doors), so on real
+// data each says so plainly instead of showing the sample.
+function NotYet({ className = '', title, sub }) {
+  return (
+    <section className={`fx-tile ${className}`.trim()} aria-label={title}>
+      <header className="fx-tile-h"><span className="tp-grow"><h2>{title}</h2><p>{sub}</p></span><Chip tone="mute">Not connected yet</Chip></header>
+    </section>
+  )
+}
+export function ClockTile(props) {
+  return useFulSource() === 'real' ? <NotYet className={props.className} title="Clock in and out" sub="Starts when time tracking goes live. Until then your shift is on the rota." /> : <ClockTileSample {...props} />
+}
+export function TimesheetRows() {
+  return useFulSource() === 'real' ? <p className="fx-calm">Your timesheet fills in from clock in and out once time tracking goes live.</p> : <TimesheetRowsSample />
+}
+export function MyQuality(props) {
+  return useFulSource() === 'real' ? null : <MyQualitySample {...props} />
 }

@@ -9,6 +9,7 @@ import {
 } from './p879'
 import { liveHoursText } from '../../lib/leadSplit'
 import { zoneAbbr } from '../../lib/callSlots'
+import { useFulSource, useFulActions, useFulCallTasks } from './data'
 import './p879.css'
 
 // P879 — the lead drawer's new blocks (Queue › a lead), sample only until 852 wires calls, pushes and texts. Calling
@@ -40,7 +41,17 @@ export function LeadFlags({ l }) {
 
 // N-B-50, N-B-02: "how we got your number", from the consent proof.
 export function HowWeGotYou({ l }) {
+  const source = useFulSource()
   const s = sourceOf(l)
+  // P852: the consent record (time, wording, page, certificate) isn't stored with real leads yet (a door, N-B-02).
+  if (source === 'real') {
+    return (
+      <Block title="How we got your number" sub="Say this if they ask">
+        <p className="tp-mid">"You asked about {String(l.type || 'coverage').toLowerCase()} on our Deedstone page."</p>
+        <p className="tp-sub">{l.source ? `Came in from ${l.source}. ` : ''}The saved consent record shows here once the landing page stores it.</p>
+      </Block>
+    )
+  }
   return (
     <Block title="How we got your number" sub="Say this if they ask">
       <p className="tp-mid">"{s.said}."</p>
@@ -55,7 +66,20 @@ export function HowWeGotYou({ l }) {
 // N-C-01, N-C-03, N-C-22, N-C-26, N-B-72: from a reached lead, Check agent or Book. Check agent is on only when the
 // agent can take it, else the reason shows. Then Sent → Seen → Yes / No / No answer on a 30 s timer; Yes is a cold
 // transfer (you drop off), and if the agent doesn't pick up in about 20 s it comes back to you to book.
-export function CheckAgent({ l, held, onBook }) {
+export function CheckAgent(props) {
+  return useFulSource() === 'real' ? <BookOnly {...props} /> : <CheckAgentSample {...props} />
+}
+// P852: real leads. Live transfers need calling on (voice_live) and the agent's live-call status, which a VA can't
+// read yet, so a reached lead is booked. Booking checks the agent's licence (BookForAgent).
+function BookOnly({ held, onBook }) {
+  return (
+    <Block title="Reached them? Book them" sub="On the agent's calendar">
+      <p className="tp-sub">Live transfers start when calling is switched on. Until then, book every reached person.</p>
+      <div className="tp-row tp-wrap"><button type="button" className="tp-btn ov-ghost" disabled={!held} onClick={onBook}><CalendarCheck size={16} />Book</button></div>
+    </Block>
+  )
+}
+function CheckAgentSample({ l, held, onBook }) {
   const state = l.checklist?.state || l.state
   const agent = agentForState(state)
   const elig = agentCheck(agent, state)
@@ -128,8 +152,15 @@ export function Script({ l }) {
 // N-B-28, N-B-47, N-B-48, N-B-39, N-J-15, N-B-27: the outcome (every one, saved before you're Available again, with a
 // reminder at 60 s), age, "spoke to someone else" (a spouse can set a callback but can't book or consent), one-tap
 // Do not call (synced like STOP, every agent and queue), and the approved voicemail.
+// P852: on a real lead the outcome is saved with va_set_lead_outcome: No answer and a voicemail are a try (not reached);
+// the closing outcomes close the lead (not interested). Do not call and wrong number close it too; the shared
+// do-not-call list isn't on the database yet, so the note says to tell an admin.
+const REAL_TRY = ['no_answer', 'voicemail']
+const REAL_CLOSE = ['not_interested', 'wrong_number', 'do_not_call', 'not_eligible', 'upset_legal']
 export function Outcome({ l, held, onDone }) {
   const note = useNote()
+  const real = useFulSource() === 'real'
+  const { notReached, closeLead } = useFulActions()
   const [pick, setPick] = useLeadState(l.id, 'outcome', null)
   const [age, setAge] = useLeadState(l.id, 'age', '')
   const [saved, setSaved] = useLeadState(l.id, 'saved', false)
@@ -140,6 +171,12 @@ export function Outcome({ l, held, onDone }) {
   const a = ageRule(age)
   const save = o => {
     setPick(o); setSaved(true)
+    if (real) {
+      if (REAL_TRY.includes(o)) { notReached(l.id); note(o === 'voicemail' ? 'Voicemail logged. It counts as a try.' : `${l.name} marked not reached`); return onDone?.(o) }
+      if (REAL_CLOSE.includes(o)) { if (o !== 'do_not_call') closeLead(l.id); // the Queue closes a do-not-call itself (onDone)
+        note(o === 'do_not_call' || o === 'upset_legal' ? `${l.name} is closed. Tell an admin: the shared do-not-call list isn't connected yet.` : `${l.name} closed out`); return onDone?.(o) }
+      note('Use Book or Call back for that one.'); setSaved(false); return undefined
+    }
     note(o === 'do_not_call' ? `${l.name} is on the do-not-call list for every agent` : o === 'voicemail' ? 'Voicemail left. It counts as a try.' : ALERTS_ADMIN.includes(o) ? 'Saved. The admins have been alerted with the timeline.' : `Saved: ${OUTCOMES.find(x => x[0] === o)[1]}. You're Available again.`)
     onDone?.(o)
   }
@@ -192,16 +229,17 @@ export function Recuse({ l, onDone }) {
 // The Queue's call tasks from incoming texts: the automatic reply already went out; the VA calls (no reply box).
 export function CallTasksStrip() {
   const note = useNote()
+  const real = useFulCallTasks()
   const [done, setDone] = useState([])
-  const rows = myCallTasks().filter(t => !done.includes(t.id))
+  const rows = (real ? real.rows : myCallTasks()).filter(t => !done.includes(t.id))
   if (!rows.length) return null
   return (
     <section className="fx-tile v879-tasks" aria-label="Call tasks from texts">
-      <header className="fx-tile-h"><span className="tp-grow"><h2>Call tasks from texts</h2><p>The automatic reply already went. Call them back; there's no reply box.</p></span><SampleTag>Sample</SampleTag></header>
+      <header className="fx-tile-h"><span className="tp-grow"><h2>Call tasks from texts</h2><p>The automatic reply already went. Call them back; there's no reply box.</p></span>{!real && <SampleTag>Sample</SampleTag>}</header>
       <ul className="tp-list">{rows.map(t => (
         <li key={t.id} className="fx-mrow"><MessageSquareText size={16} aria-hidden="true" />
-          <span className="tp-grow"><b>{t.who} · {t.kind}</b><small>"{t.text}" · {t.at} · replied: "{t.reply}"</small></span>
-          <button type="button" className="tp-primary sm fx-accent" onClick={() => { setDone([...done, t.id]); note(`Calling ${t.who}`) }}><Phone size={14} />Call</button>
+          <span className="tp-grow"><b>{t.who} · {t.kind}</b><small>"{t.text}" · {t.at}{t.reply ? ` · replied: "${t.reply}"` : ''}</small></span>
+          <button type="button" className="tp-primary sm fx-accent" onClick={() => { setDone([...done, t.id]); real?.done(t.id); note(real ? `${t.who} marked handled. Call them from your phone line.` : `Calling ${t.who}`) }}><Phone size={14} />Call</button>
         </li>
       ))}</ul>
     </section>

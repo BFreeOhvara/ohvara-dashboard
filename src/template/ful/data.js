@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { useSyncExternalStore, createContext, useContext, createElement } from 'react'
 import { CALL_WORD, CALL_TONE } from './words.js'
 import { instantOf, clockOf, dateOf, zoneOf, freeVa, blockTime } from '../../lib/callSlots.js'
 
@@ -274,17 +274,17 @@ export const NOW_ISO = atVa(TODAY, '2:00 PM')
 export const dayName = d => DAY[d] || ''
 export const RATE_PER_CANCEL = RATE
 
-export function useFulClients() { const s = useStore(); return ok(s.clients.map(c => ({ ...c, name: fullName(c), agent: agentName(c.agent_id) }))) }
-export function useFulCalls() { const s = useStore(); return ok(s.calls.map(k => callRow(s, k))) }
-export function useFulQueue() { const s = useStore(); return ok(s.queue) }
-export function useFulTasks() { const s = useStore(); return ok(s.tasks.map(t => taskRow(s, t))) }
-export function useFulThreads() {
+function useFulClientsSample() { const s = useStore(); return ok(s.clients.map(c => ({ ...c, name: fullName(c), agent: agentName(c.agent_id) }))) }
+function useFulCallsSample() { const s = useStore(); return ok(s.calls.map(k => callRow(s, k))) }
+function useFulQueueSample() { const s = useStore(); return ok(s.queue) }
+function useFulTasksSample() { const s = useStore(); return ok(s.tasks.map(t => taskRow(s, t))) }
+function useFulThreadsSample() {
   const s = useStore()
   return ok(s.threads.map(t => { const c = clientOf(s, t.client_id); return { ...t, name: fullName(c), agent: agentName(t.agent_id) } }))
 }
-export function useFulFeed() { const s = useStore(); return ok(s.feed) }
-export function useFulSettings() { const s = useStore(); return ok(s.settings) }
-export function useFulAgents() {
+function useFulFeedSample() { const s = useStore(); return ok(s.feed) }
+function useFulSettingsSample() { const s = useStore(); return ok(s.settings) }
+function useFulAgentsSample() {
   const s = useStore()
   return ok(AGENTS.map(a => ({ ...a, clients: s.clients.filter(c => c.agent_id === a.id).length })))
 }
@@ -307,7 +307,9 @@ export function minutesOf(time) {
 // node tests) wins once migration 231 is applied and a VA is signed in; until then this sample. live = real.
 let useRealShift = () => null
 export const plugRealShift = hook => { useRealShift = hook }
-export function useFulShift() {
+// P852: the real data door reads the same plug, so a real VA sees the rota once 231 is applied, "not set" until then.
+export const usePluggedShift = () => useRealShift()
+function useFulShiftSample() {
   const sample = useSampleShift()
   const real = useRealShift()
   return real ? ok(real) : sample
@@ -333,7 +335,7 @@ function useSampleShift() {
 
 // Everything the VA has to do at a time, in one list: cancellation calls, booked callbacks (people from the queue)
 // and appointments they booked for agents. ref = the id in the item's own address (/fulfillment/schedule/<ref>).
-export function useFulSchedule() {
+function useFulScheduleSample() {
   const s = useStore()
   const items = []
   const vt = viewTz(s)
@@ -354,21 +356,21 @@ export function useFulSchedule() {
   return ok(items.sort((a, b) => a.day - b.day || minutesOf(a.time) - minutesOf(b.time)))
 }
 // P847: who an agent's exact-time booking would go to right now (the same pick agentBooksCall makes).
-export function useVaFor(day, time) { const s = useStore(); return time ? pickVa(day, time, s.calls, s.others) : null }
+function useVaForSample(day, time) { const s = useStore(); return time ? pickVa(day, time, s.calls, s.others) : null }
 // P854: what a VA-call picker needs for lib/callSlots vaSlots: the rota at an instant (with days off), every VA's
 // call starts (calls, the ones passed to others, callbacks), the load order, the viewer's zone and who "me" is.
 export function bookingTeam(s) {
   const busy = busyOf(s.calls, [...s.others, ...s.queue.filter(l => l.cb_iso).map(l => ({ id: l.id, va_id: l.va_id || 'va-maya', iso: l.cb_iso }))])
   return { team: iso => teamOn(iso, s.dayOffs.map(o => o.day), viewTz(s)), calls: busy, load: loadOf(busy), viewerTz: viewTz(s), me: 'va-maya' }
 }
-export function useVaBooking() { const s = useStore(); return bookingTeam(s) }
+function useVaBookingSample() { const s = useStore(); return bookingTeam(s) }
 // P854: an agent's appointments for lib/callSlots agentSlots: the ones the team booked on their calendar.
-export function useAgentAppts(agentId) { const s = useStore(); return s.booked.filter(b => b.agent_id === agentId).map(b => ({ id: b.id, iso: b.iso })) }
-export function useFulBooked() { const s = useStore(); const vt = viewTz(s); return ok(s.booked.map(b => ({ ...b, ...placed(b.iso, vt), when: blockTime(b.iso, vt, b.tz), agent: agentName(b.agent_id) }))) }
+function useAgentApptsSample(agentId) { const s = useStore(); return s.booked.filter(b => b.agent_id === agentId).map(b => ({ id: b.id, iso: b.iso })) }
+function useFulBookedSample() { const s = useStore(); const vt = viewTz(s); return ok(s.booked.map(b => ({ ...b, ...placed(b.iso, vt), when: blockTime(b.iso, vt, b.tz), agent: agentName(b.agent_id) }))) }
 export const useFulLive = () => { const s = useStore(); return s.live }
 
 // This week's pay: each cancel with its call, the totals, by day, and the payouts so far.
-export function useFulPay() {
+function useFulPaySample() {
   const s = useStore()
   const rows = s.cancels.map(p => { const k = s.calls.find(x => x.id === p.call); return { ...p, amount: RATE, call: callRow(s, k) } })
   const sum = st => rows.filter(r => st.includes(r.status)).reduce((t, r) => t + r.amount, 0)
@@ -380,7 +382,7 @@ export function useFulPay() {
 }
 
 // The page head and the Overview read these: the day in one place.
-export function useFulDay() {
+function useFulDaySample() {
   const s = useStore()
   const calls = s.calls.map(k => callRow(s, k))
   const today = calls.filter(k => k.day === TODAY)
@@ -399,7 +401,7 @@ export function useFulDay() {
 const stamp = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 const feedAdd = (s, who, text, kind) => ({ feed: [{ id: `f${Date.now()}`, who, text, at: stamp(), kind }, ...s.feed] })
 
-export function useFulActions() {
+function useFulActionsSample() {
   return {
     // Queue
     holdLead: id => set(s => ({ queue: s.queue.map(l => (l.id === id ? { ...l, held_until: Date.now() + 15 * MIN } : l)) })),
@@ -509,3 +511,51 @@ export function agentBooksCall({ who, state = 'TX', city = '', oldCarrier = 'Glo
   })
   return va
 }
+
+// P852 — the switch between sample and real, like ../data (P848). Screens keep calling the hooks above; inside the VA
+// portal, when the viewer's data mode is real (lib/dataMode.js), FulDataProvider hands them the real ones
+// (hooks/fulRealData.js). The provider is keyed on the mode by its caller, so a page never swaps hooks mid-mount.
+// Outside a provider (the /template previews, the agent shell's call pickers) everything stays sample.
+const SAMPLE_STATUS = { loading: false, error: null, retry: () => {} }
+// The sample calendar: Thursday, Nov 5, its two weeks (Nov 2 to 13) and the days a VA can book on.
+export const SAMPLE_CLOCK = {
+  real: false, tz: VA_TZ, today: TODAY, weeks: WEEKS, nowIso: NOW_ISO, bookDays: [['Thu', 5], ['Fri', 6], ['Mon', 9], ['Tue', 10], ['Wed', 11]],
+  dayName, dateText: d => `Nov ${d}`, dayNum: d => d, isoOf: novDate,
+}
+const SAMPLE = {
+  source: 'sample', useStatus: () => SAMPLE_STATUS, useClock: () => SAMPLE_CLOCK,
+  useClients: useFulClientsSample, useCalls: useFulCallsSample, useQueue: useFulQueueSample, useTasks: useFulTasksSample, useThreads: useFulThreadsSample,
+  useFeed: useFulFeedSample, useSettings: useFulSettingsSample, useAgents: useFulAgentsSample, useShift: useFulShiftSample, useSchedule: useFulScheduleSample,
+  useBooked: useFulBookedSample, usePay: useFulPaySample, useDay: useFulDaySample, useActions: useFulActionsSample,
+  useVaFor: useVaForSample, useVaBooking: useVaBookingSample, useAgentAppts: useAgentApptsSample,
+}
+const ImplCtx = createContext(SAMPLE)
+export function FulDataProvider({ impl, children }) { return createElement(ImplCtx.Provider, { value: impl || SAMPLE }, children) }
+const useImpl = () => useContext(ImplCtx)
+// 'sample' or 'real': screens use it only to pick the right empty-state words and to hide the sample tags.
+export const useFulSource = () => useImpl().source
+export const useFulStatus = () => useImpl().useStatus()
+export const useFulClock = () => useImpl().useClock()
+export function useFulClients(...a) { return useImpl().useClients(...a) }
+export function useFulCalls(...a) { return useImpl().useCalls(...a) }
+export function useFulQueue(...a) { return useImpl().useQueue(...a) }
+export function useFulTasks(...a) { return useImpl().useTasks(...a) }
+export function useFulThreads(...a) { return useImpl().useThreads(...a) }
+export function useFulFeed(...a) { return useImpl().useFeed(...a) }
+export function useFulSettings(...a) { return useImpl().useSettings(...a) }
+export function useFulAgents(...a) { return useImpl().useAgents(...a) }
+export function useFulShift(...a) { return useImpl().useShift(...a) }
+export function useFulSchedule(...a) { return useImpl().useSchedule(...a) }
+export function useFulBooked(...a) { return useImpl().useBooked(...a) }
+export function useFulPay(...a) { return useImpl().usePay(...a) }
+export function useFulDay(...a) { return useImpl().useDay(...a) }
+export function useFulActions(...a) { return useImpl().useActions(...a) }
+export function useVaFor(...a) { return useImpl().useVaFor(...a) }
+export function useVaBooking(...a) { return useImpl().useVaBooking(...a) }
+export function useAgentAppts(...a) { return useImpl().useAgentAppts(...a) }
+// Call tasks from incoming texts (va_lead_replies). null in sample mode: the strip keeps its own sample rows.
+export const useFulCallTasks = () => { const i = useImpl(); return i.useCallTasks ? i.useCallTasks() : null }
+// The live-call overlay and the real checklist drafts are screen state, not data: both modes keep them here.
+const LIVE_UI = { showLive: id => set(() => ({ live: id })), hideLive: () => set(() => ({ live: null })), bump: () => set(s => ({ uiTick: (s.uiTick || 0) + 1 })) }
+export const useFulSampleLive = () => LIVE_UI
+export const useFulSampleUi = () => useStore().uiTick || 0

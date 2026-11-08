@@ -41,7 +41,7 @@ function ProfileCard({ name, email }) {
     <aside className="fx-tile fx-prof" aria-label="Your profile">
       <div className={`fx-prof-av av-${avatarHue(name)}`} aria-hidden="true">{initials(name).toUpperCase()}<i className={shift.onToday ? 'on' : ''} /></div>
       <h2>{name}</h2>
-      <p>Fulfillment · {shift.onToday ? `On shift ${shift.shift.text}` : 'Off today'}</p>
+      <p>Fulfillment · {shift.notSet ? 'Rota not set up yet' : shift.onToday ? `On shift ${shift.shift.text}` : 'Off today'}</p>
       <span className="fx-prof-mail"><Mail size={13} aria-hidden="true" />{email}</span>
       <div className="fx-usage is-green">
         <div className="tp-row tp-between"><b>This week</b><b className="fx-usage-n tp-money"><CountUp value={pay.earned} format={money} /></b></div>

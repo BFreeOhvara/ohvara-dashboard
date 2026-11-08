@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, Check, Clock, PhoneCall, PhoneIncoming, LifeBuoy, MessageSquare, CalendarClock } from 'lucide-react'
-import { useFulDay, useFulPay, useFulAgents, minutesOf } from '../data'
+import { useFulDay, useFulPay, useFulAgents, useFulSource, minutesOf } from '../data'
 import { Avatar } from '../../kit'
 import { CountUp, usd } from '../../motion'
 import { fp } from '../paths'
@@ -101,6 +101,7 @@ export default function Overview() {
   const { data: day } = useFulDay()
   const { data: pay } = useFulPay()
   const { data: agents } = useFulAgents()
+  const real = useFulSource() === 'real'
   const next = day.next
   const cd = useCountdown(next?.at)
   const queue = [...day.queue.callback_due, ...day.queue.new]
@@ -148,7 +149,7 @@ export default function Overview() {
               </ol>
               </div>
             </div>
-          ) : <p className="fx-calm"><Check size={16} aria-hidden="true" />Every call today is done. Tomorrow has {day.tomorrow.length}.</p>}
+          ) : <p className="fx-calm"><Check size={16} aria-hidden="true" />{day.today.length ? `Every call today is done. ${day.tomorrow.length ? `Next day has ${day.tomorrow.length}.` : ''}` : real ? 'No cancellation calls today. Calls agents book for you land here.' : `Every call today is done. Tomorrow has ${day.tomorrow.length}.`}</p>}
         </Tile>
 
         <div className="fx-ovl-pair">
@@ -160,6 +161,12 @@ export default function Overview() {
           </Tile>
 
           {/* P879 (Q76): pay is hourly, from clock in and out. */}
+          {real ? (
+            <Tile className="is-fill is-green fs-ov-pay" i={2} title="Pay" sub={`Next payday ${pay.payday}`} to={fp('pay')} label="Open Pay">
+              <b className="fx-huge tp-money"><CountUp value={pay.lastWeek} format={cents} /></b>
+              <small className="fs-paynote">{pay.payouts.length ? 'Your last payout' : 'No payouts yet'}. Hours from clock in and out show here once time tracking goes live.</small>
+            </Tile>
+          ) : (
           <Tile className="is-fill is-green fs-ov-pay" i={2} title="This week's pay" sub={`Paid ${pay.payday} · ${cents(MY_RATE)} an hour`} to={fp('pay')} label="Open Pay">
             <b className="fx-huge tp-money"><CountUp value={hrs.pay} format={cents} /></b>
             <div className="fs-minibars" role="img" aria-label={hourDays.map(d => `${d.name} ${d.h.toFixed(1)} hours`).join(', ')}>
@@ -172,6 +179,7 @@ export default function Overview() {
             </div>
             <small className="fs-paynote">{hrs.hours.toFixed(1)} hours so far this week</small>
           </Tile>
+          )}
         </div>
         <MyQuality />
       </div>
@@ -195,9 +203,9 @@ export default function Overview() {
           {agents.map(a => (
             <li key={a.id}>
               <Avatar name={a.name} />
-              <span className="tp-grow"><b>{a.name}</b><small>{a.city} · {a.hours}</small></span>
+              <span className="tp-grow"><b>{a.name}</b><small>{[a.city, a.hours].filter(Boolean).join(' · ')}</small></span>
               <span className="fs-agent-n"><b className="tp-num">{a.clients}</b><small>clients</small></span>
-              <span className={`fx-delta is-${a.duty ? 'up' : 'mute'}`}>{a.duty ? 'Taking live calls' : 'Booking only'}</span>
+              {!a.real && <span className={`fx-delta is-${a.duty ? 'up' : 'mute'}`}>{a.duty ? 'Taking live calls' : 'Booking only'}</span>}
             </li>
           ))}
         </ul>

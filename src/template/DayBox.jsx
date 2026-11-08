@@ -8,12 +8,13 @@ import './daybox.css'
 // the link reopens it. On a phone the day opens full screen (a bottom sheet) with Back to the week.
 
 // The week strip: one chip per day; the open day is lit; a dot marks days with something on.
-export function WeekStrip({ days, day, today, onOpen, has, name, label = 'Open a day' }) {
+// P852: num = the date shown for a day key (the VA side's real days are keyed yyyymmdd); the sample keys are the date.
+export function WeekStrip({ days, day, today, onOpen, has, name, num = d => d, label = 'Open a day' }) {
   return (
     <div className="fx-chips fx-daystrip" role="group" aria-label={label}>
       {days.map(d => (
-        <button key={d} type="button" className={`fx-pt fx-chip${day === d ? ' is-on on' : ''}`} aria-pressed={day === d} aria-label={`${name(d)} ${d}${d === today ? ', today' : ''}`} onClick={() => onOpen(d)}>
-          <small>{name(d)}</small><b>{d}</b>
+        <button key={d} type="button" className={`fx-pt fx-chip${day === d ? ' is-on on' : ''}`} aria-pressed={day === d} aria-label={`${name(d)} ${num(d)}${d === today ? ', today' : ''}`} onClick={() => onOpen(d)}>
+          <small>{name(d)}</small><b>{num(d)}</b>
           {d === today ? <i className="fs-today" aria-hidden="true" /> : has(d) ? <i aria-hidden="true" /> : null}
         </button>
       ))}
@@ -22,7 +23,7 @@ export function WeekStrip({ days, day, today, onOpen, has, name, label = 'Open a
 }
 
 // The phone's week: one row per day with what's on; a tap opens the day full screen.
-export function WeekList({ days, today, onOpen, name, itemsOf, line }) {
+export function WeekList({ days, today, onOpen, name, num = d => d, itemsOf, line }) {
   return (
     <ul className="fx-weeklist" aria-label="The week">
       {days.map(d => {
@@ -30,7 +31,7 @@ export function WeekList({ days, today, onOpen, name, itemsOf, line }) {
         return (
           <li key={d}>
             <button type="button" className={`fx-wl-row${d === today ? ' is-today' : ''}`} onClick={() => onOpen(d)}>
-              <span className="fx-wl-d"><small>{name(d)}</small><b>{d}</b></span>
+              <span className="fx-wl-d"><small>{name(d)}</small><b>{num(d)}</b></span>
               <span className="tp-grow">{list.length ? list.slice(0, 2).map(line).join(' · ') : 'Nothing on'}{list.length > 2 ? ` · ${list.length - 2} more` : ''}</span>
               <b className="tp-num fx-wl-n">{list.length}</b>
             </button>

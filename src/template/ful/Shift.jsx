@@ -35,7 +35,7 @@ export function DayOffDrawer({ open, onClose }) {
   return (
     <Drawer open center onClose={onClose} title="Request a day off" sub="The team sees it right away and covers your shift."
       footer={pick == null ? null : <><button type="button" className="tp-primary fx-accent" onClick={send} disabled={busy}><CalendarOff size={16} />Tell the team</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
-      {pick == null ? <p className="fx-calm">You have no more shifts to ask off in the next two weeks.</p> : <>
+      {pick == null ? <p className="fx-calm">{shift.notSet ? 'Day-off requests open once your rota is set up.' : 'You have no more shifts to ask off in the next two weeks.'}</p> : <>
         <div className="tp-field"><span>Which day</span>
           <PillTabs role="radiogroup" label="Day off" className="fx-chips fs-wrap" itemClass="fx-chip" value={pick} onChange={setDay}
             items={shift.askable.map(d => ({ key: d.day, label: <><small>{d.name}</small><b>{d.day}</b></> }))} />
@@ -56,8 +56,8 @@ export function ShiftLine({ onAsk, className = '' }) {
     <section className={`fx-tile fs-shift ${className}`.trim()} aria-label="Your shift">
       <span className="fs-shift-ic" aria-hidden="true"><Clock3 size={18} /></span>
       <span className="tp-grow">
-        <b>{s.onToday ? <>Your shift today <span className="tp-num">{s.shift.text}</span></> : 'You are off today'}</b>
-        <small><Users size={12} aria-hidden="true" />{s.onToday ? `${withWho} · the carriers' hours` : 'Your next shift is on the rota'}</small>
+        <b>{s.notSet ? 'Your rota isn’t set up yet' : s.onToday ? <>Your shift today <span className="tp-num">{s.shift.text}</span></> : 'You are off today'}</b>
+        <small><Users size={12} aria-hidden="true" />{s.notSet ? 'Shifts are 8 AM to 6 PM Central, the carriers’ hours' : s.onToday ? `${withWho} · the carriers' hours` : 'Your next shift is on the rota'}</small>
       </span>
       <button type="button" className="tp-btn ov-ghost fs-shift-btn" onClick={onAsk}><CalendarOff size={15} />Request a day off</button>
     </section>
