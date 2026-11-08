@@ -134,6 +134,15 @@ const seedQueue = [
   mkLead('vq-7', 'Brenda Cole', { bucket: 'not_reached', tries: 2, came: 'Wed, 4:05 PM', phone: '(817) 555-0174', city: 'Fort Worth' }),
   mkLead('vq-8', 'Frank Ellis', { bucket: 'not_reached', tries: 1, came: 'Wed, 2:30 PM', phone: '(480) 555-0105', city: 'Chandler', state: 'AZ' }),
   mkLead('vq-9', 'Joyce Turner', { bucket: 'not_reached', tries: 3, came: 'Tue, 6:12 PM', phone: '(352) 555-0191', city: 'Ocala', state: 'FL' }),
+  // P892: two leads the AI handed over. Gloria asked about price mid-call (warm, on the line); Owen asked for a person
+  // and no VA was free in 60 s, so he became a callback task.
+  mkLead('vq-10', 'Gloria Price', { came: 'Today, 1:20 PM', phone: '(214) 555-0172', city: 'Dallas', type: 'Mortgage protection', tries: 1,
+    checklist: { question_type: '', carrier: '', state: 'TX', urgency: 'Today' },
+    fromAi: { reason: 'coverage_or_price', secs: 8, talked: '1:36', agent: 'Dana Walker (takes live transfers now)', asked: ['Age and state (61, TX)', 'What to protect (the mortgage, $240k left)'],
+      summary: 'Gloria, 61, in Dallas wants to protect her mortgage ($240k left). She asked what it would cost each month, so the AI handed her to a person before checking Dana.' } }),
+  mkLead('vq-11', 'Owen Price', { bucket: 'callback_due', callback: 'Today, now', came: 'Today, 8:31 AM', phone: '(702) 555-0119', city: 'Henderson', state: 'NV', type: 'Mortgage protection', tries: 1,
+    fromAi: { reason: 'asked_person', secs: 7, talked: '2:12', agent: 'Marcus Reed (Appointments only)', asked: ['Age and state (47, NV)'], callbackTask: true,
+      summary: 'Owen asked to talk to a real person after the first question. No VA was free within 60 seconds; he was told someone would call back shortly.' } }),
 ]
 
 // Servicing steps the agents asked for. kind = lib/vaServicing KIND_LABEL keys; due = overdue | today | later | none.

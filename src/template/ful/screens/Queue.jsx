@@ -17,6 +17,8 @@ import { BUCKETS, QUESTION_TYPES, URGENCIES, checklistDone } from '../words'
 import { HelpDot } from '../../../fulshell/training/HelpDot'
 import { flagsOf } from '../p879'
 import { LeadFlags, HowWeGotYou, CheckAgent, Script, Outcome, BestNumberNotes, Recuse, CallTasksStrip } from '../LeadDesk879'
+import { FromAi } from '../Ai892'
+import '../../ai892.css'
 
 // P845 — the Queue, built like the agent's Leads board: one lane per bucket (callbacks due first, then new, then not
 // reached), cards filled with the lane colour. A card opens the person in a drawer at its own URL. In the drawer the
@@ -32,7 +34,7 @@ function LeadCard({ l, i }) {
   return (
     <article className={`fx-card fx-lcard is-${tone}`} style={{ '--i': i }}>
       <Link to={fp('queue', l.id)} className="fx-cover" aria-label={`Open ${l.name}`} />
-      <div className="fx-lcard-top"><span className="fx-kind"><Icon size={13} aria-hidden="true" />{l.type}</span>{l.held_until && <span className="fx-tag">Yours</span>}</div>
+      <div className="fx-lcard-top"><span className="fx-kind"><Icon size={13} aria-hidden="true" />{l.type}</span>{l.fromAi && <span className="fx-tag">From the AI</span>}{l.held_until && <span className="fx-tag">Yours</span>}</div>
       <h3>{l.name}</h3>
       <p>{l.city}, {l.state}{l.tries ? ` · ${l.tries} ${l.tries === 1 ? 'try' : 'tries'}` : ''}</p>
       <div className="fx-lcard-bot"><span className="fx-big">{when}</span><Avatar name={l.name} tone={tone} /></div>
@@ -102,6 +104,8 @@ export function LeadDrawer({ id, onClose }) {
       </>}>
       {/* P879: banners for opted-out or closed leads, and the verbal consent line for call-ins. */}
       <LeadFlags l={l} />
+      {/* P892: a lead the AI handed over: what it already knows, so the VA carries on. */}
+      <FromAi l={l} />
       {held && (
         <section className="fx-blk fs-hold">
           <header><h3><Phone size={16} aria-hidden="true" />Yours for {left}</h3></header>

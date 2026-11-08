@@ -8,6 +8,7 @@ import { Dropdown, DField } from '../kit'
 import { ap } from '../paths'
 import { LEAD_LANES, STAGE_WORD, KIND_WORD, stageTone } from '../words'
 import { ConsentProof, UnassignedBlock } from './Compliance879'
+import { AiCallsView } from './AiCalls892'
 
 // P849 — Leads (the inbounds page, on screen as Leads): every lead across every agent this week on one board, in
 // stage colours: Needs routing (no agent yet, missed transfers), Booked, Transferred, Sold, Not sold. A card opens the
@@ -84,6 +85,18 @@ export default function Leads() {
   const [when, setWhen] = useState('week')
   const agent = sp.get('agent') || 'all'
   const setAgent = v => setSp(v === 'all' ? {} : { agent: v }, { replace: true })
+  // P892: Board (every lead by stage) or AI calls (the AI caller's numbers and calls), kept in the address.
+  const view = sp.get('view') === 'ai' ? 'ai' : 'board'
+  const setView = v => setSp(v === 'ai' ? { view: 'ai' } : {}, { replace: true })
+  const viewSeg = <Seg label="View" value={view} onChange={setView} options={[{ key: 'board', label: 'Board' }, { key: 'ai', label: 'AI calls' }]} />
+  if (view === 'ai') {
+    return (
+      <div className="tp-page fx-page fx-leads adm-leads">
+        <div className="fx-tools">{viewSeg}</div>
+        <AiCallsView />
+      </div>
+    )
+  }
   const n = q.trim().toLowerCase()
   const shown = leads.filter(l => (kind === 'all' || l.kind === kind) && (agent === 'all' || l.agent_id === agent) && (when === 'week' || l.day === 5)
     && (!n || `${l.name} ${l.city} ${l.phone} ${l.agent || ''}`.toLowerCase().includes(n)))
@@ -91,6 +104,7 @@ export default function Leads() {
   return (
     <div className="tp-page fx-page fx-leads adm-leads">
       <div className="fx-tools">
+        {viewSeg}
         <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a lead" placeholder="Find by name, city, phone or agent" value={q} onChange={e => setQ(e.target.value)} /></label>
         <Seg label="Type" value={kind} onChange={setKind} options={[{ key: 'all', label: 'All', count: leads.length }, { key: 'appointment', label: 'Appointments', count: leads.filter(l => l.kind === 'appointment').length }, { key: 'live', label: 'Live calls', count: leads.filter(l => l.kind === 'live').length }]} />
         <Seg label="When" value={when} onChange={setWhen} options={[{ key: 'week', label: 'This week' }, { key: 'today', label: 'Today' }]} />

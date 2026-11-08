@@ -273,6 +273,7 @@ const seedFeed = [
 export const SWITCHES = [
   { key: 'sms_live', label: 'Texting live', sub: 'Off means no text is sent by any flow. Stays off until the A2P campaign is approved.', group: 'Calling and texting' },
   { key: 'voice_live', label: 'Calling in the portal', sub: 'Off opens the portal phone as a preview.', group: 'Calling and texting' },
+  { key: 'ai_caller_live', label: 'AI calls new form leads', sub: 'Off means every form lead goes to a VA. Settings › AI caller has the rest.', group: 'Calling and texting' },
   { key: 'recording_live', label: 'Record calls', sub: 'Records cancellation calls and plays the notice first.', group: 'Calling and texting' },
   { key: 'invite_sms_live', label: 'Invite by text', sub: 'Lets Add someone send the invite as a text.', group: 'Calling and texting' },
   { key: 'payouts_live', label: 'Payouts send real money', sub: 'On means the Monday run pays VAs through Stripe.', group: 'Money' },
@@ -284,7 +285,7 @@ export const SWITCHES = [
 const seedSettings = {
   profile: { name: ME.name, email: ME.email, phone: ME.phone },
   tz: 'America/Chicago',
-  switches: { sms_live: false, voice_live: false, recording_live: false, invite_sms_live: false, payouts_live: false, billing_enforced: false, submit_live: true, carrier_lookup_live: false, signup_open: false },
+  switches: { sms_live: false, voice_live: false, ai_caller_live: false, recording_live: false, invite_sms_live: false, payouts_live: false, billing_enforced: false, submit_live: true, carrier_lookup_live: false, signup_open: false },
   payRules: { perCancel: 18, weeklyMin: 0, holdCap: 40 },
   payoutsPaused: false,
   split: { brayden: 50, changed: null },

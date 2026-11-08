@@ -57,7 +57,8 @@ const seedLeads = [
   mkLead('sample-lead-4', people.renee, { stage: 'no_show', came: '2026-10-29T17:40', apptAt: '2026-11-02T11:00' }),
   mkLead('sample-lead-5', people.denise, { stage: 'sold', status: 'closed', outcome: 'sold', submitted: true, came: '2026-10-24T16:05', apptAt: '2026-10-27T11:00' }),
   mkLead('sample-lead-6', people.robert, { stage: 'follow_up', status: 'contacted', outcome: 'follow_up', came: '2026-10-27T18:12', apptAt: '2026-10-30T15:00', follow: 'Mon, Nov 2', followAt: '2026-11-02T16:00' }),
-  mkLead('sample-lead-7', people.owen, { stage: 'booked', came: '2026-10-30T12:20', apptAt: '2026-11-02T14:00', age_band: '35 to 44' }),
+  // P892: Owen was called seconds after his form came in (the agent sees the speed only).
+  mkLead('sample-lead-7', people.owen, { stage: 'booked', came: '2026-10-30T12:20', apptAt: '2026-11-02T14:00', age_band: '35 to 44', speed: 9 }),
   mkLead('sample-lead-8', people.ellen, { stage: 'booked', came: '2026-10-31T09:15', apptAt: '2026-11-02T13:00', firstReply: 'Monday at 1 is good' }),
   mkLead('sample-lead-9', people.tanya, { stage: 'calling', tries: 2, came: '2026-11-01T10:30', reply: { text: 'Can you call after 6? I am at work until then.', at: '2026-11-02T13:52', seen: false } }),
   mkLead('sample-lead-10', people.paul, { stage: 'new', came: '2026-11-02T14:10', mortgage_balance_band: '$300,000 to $400,000' }),
