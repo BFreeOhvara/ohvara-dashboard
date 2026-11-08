@@ -617,4 +617,5 @@ export const HELP = {
   servicing: 'packets', packet_check: 'packets', review_call: 'packets', chargeback_watch: 'payments', payment_change: 'payments',
   draft_date_change: 'changes', beneficiary_change: 'changes', address_change: 'changes', lapse_save: 'saves', conversion: 'escalate',
   annual_review: 'changes', claim_help: 'escalate', carrier_call: 'carrier',
+  ai_handoff: 'fromai', welcome_call: 'welcome', // P897
 }
