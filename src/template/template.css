@@ -72,10 +72,10 @@
 .tp-main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
 .tp-foot { font-size: 12px; color: var(--ov-faint); padding: 8px 2px 0; }
 
-/* Card lift: desktop mouse hover only, never under reduced motion. */
-@media (hover: hover) and (pointer: fine) and (min-width: 1000px) and (prefers-reduced-motion: no-preference) {
-  .tp-app .ov-card, .tp-app .ov-attn { transition: transform .18s ease; }
-  .tp-app .ov-card:hover, .tp-app .ov-attn:hover { transform: translateY(-2px); }
+/* P912: no card lift. Every .ov-card is a frosted (backdrop-filter) panel; lifting it on hover painted a light grey
+   "film" in dark mode (Chromium), and most cards aren't clickable. Clickable cards get a contained edge instead. */
+@media (hover: hover) and (pointer: fine) {
+  .tp-app a.ov-card.ov-card:hover, .tp-app .ov-card.ov-link.ov-link:hover { border-color: color-mix(in srgb, var(--ov-hi) 24%, transparent); }
 }
 
 /* Shared pieces ---------------------------------------------------------- */

@@ -171,7 +171,7 @@
 .fx-rows { display: flex; flex-direction: column; gap: 6px; }
 .fx-row { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 50px; padding: 8px 12px; border-radius: 14px; text-align: left; background: color-mix(in srgb, var(--c, var(--ov-hi)) 9%, transparent); border: 1px solid color-mix(in srgb, var(--c, var(--ov-hi)) 16%, transparent); transition: transform .25s var(--fx-ease), background-color .2s; }
 .fx-row.is-flat { background: none; border-color: var(--ov-line); }
-a.fx-row:hover, button.fx-row:hover { transform: translateX(3px); background: color-mix(in srgb, var(--c, var(--ov-hi)) 15%, transparent); }
+a.fx-row:hover, button.fx-row:hover { background: color-mix(in srgb, var(--c, var(--ov-hi)) 15%, transparent); }
 .fx-row b { display: block; font-size: 13.5px; font-weight: 600; color: var(--ov-hi); }
 .fx-row small { display: block; font-size: 12px; color: var(--ov-mute); }
 .fx-row-ic { width: 28px; height: 28px; border-radius: 9px; flex: none; display: flex; align-items: center; justify-content: center; color: var(--c, var(--ov-mid)); background: color-mix(in srgb, var(--c, var(--ov-hi)) 16%, transparent); }
@@ -182,7 +182,7 @@ a.fx-row:hover, button.fx-row:hover { transform: translateX(3px); background: co
 .fx-date { width: 38px; height: 38px; border-radius: 11px; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; background: var(--ov-data-a-tint); color: var(--ov-data-a); }
 .fx-date small { font-size: 10px; font-weight: 600; } .fx-date b { font-family: var(--font-display); font-size: 15px; margin-top: 2px; }
 .fx-check { width: 30px; height: 30px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; color: var(--ov-faint); border: 1.5px solid var(--ov-line); transition: all .25s var(--fx-spring); }
-.fx-check:hover { color: var(--ov-up); border-color: var(--ov-up); transform: scale(1.08); }
+.fx-check:hover { color: var(--ov-up); border-color: var(--ov-up); }
 .fx-check.is-on { color: var(--ov-on-kind); background: var(--ov-up); border-color: var(--ov-up); animation: fx-pop .4s var(--fx-spring); }
 
 /* Toolbars ---------------------------------------------------------------------------------------------------- */
@@ -245,7 +245,7 @@ a.fx-row:hover, button.fx-row:hover { transform: translateX(3px); background: co
 .fx-ccard-mid b, .fx-ccard-mid .tp-money { display: block; margin-top: 4px; font-size: 13px; font-weight: 600; }
 .fx-ccard-bot { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 11.5px; font-weight: 500; color: var(--ov-mid); }
 .fx-mini { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--ov-hi); background: color-mix(in srgb, var(--c, var(--ov-hi)) 20%, transparent); transition: transform .25s var(--fx-spring); }
-.fx-mini:hover { transform: scale(1.1); }
+.fx-mini:hover { filter: brightness(1.25); } /* P912: was scale(1.1), painted outside its box */
 .fx-meter { position: relative; display: block; height: 5px; border-radius: 999px; background: color-mix(in srgb, var(--ov-hi) 10%, transparent); overflow: hidden; }
 .fx-meter i { display: block; height: 100%; width: calc(var(--w, 0) * 100%); border-radius: inherit; background: var(--c, var(--ov-data-a)); transform-origin: 0 50%; animation: fx-grow 1s var(--fx-ease) both; animation-delay: calc(.3s + var(--d, var(--i, 0)) * 70ms); }
 .fx-ccard .fx-meter i { background: color-mix(in srgb, var(--c) 80%, var(--ov-hi)); }
@@ -255,7 +255,7 @@ a.fx-row:hover, button.fx-row:hover { transform: translateX(3px); background: co
 .fx-chip { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 46px; height: 48px; border-radius: 15px; border: 1px solid var(--fx-edge); background: var(--fx-fill); color: var(--ov-mid); line-height: 1.1; transition: transform .25s var(--fx-spring), background-color .2s; }
 .fx-chip small { font-size: 10.5px; font-weight: 600; } .fx-chip b { font-family: var(--font-display); font-size: 15px; color: var(--ov-hi); }
 .fx-chip i { position: absolute; bottom: 6px; width: 5px; height: 5px; border-radius: 50%; background: var(--ov-data-a); }
-.fx-chip:hover { transform: translateY(-2px); }
+.fx-chip:hover { border-color: color-mix(in srgb, var(--ov-hi) 26%, transparent); }
 .fx-chip.is-on { color: var(--sh-on-accent); background: var(--accent); border-color: transparent; }
 .fx-chip.is-on b { color: var(--sh-on-accent); }
 .fx-week { padding: 12px 14px 16px; overflow: hidden; }
@@ -263,7 +263,7 @@ a.fx-row:hover, button.fx-row:hover { transform: translateX(3px); background: co
 .fx-week .tp-tgrid-b { height: 560px; }
 .fx-week .tp-ev { border-left: 0; border-radius: 10px; color: var(--ov-hi); background: color-mix(in srgb, var(--c) var(--fx-mix), var(--bg-surface)); border: 1px solid color-mix(in srgb, var(--c) 32%, transparent); --c: var(--ov-st-booked); animation: fx-pop .45s var(--fx-spring) both; animation-delay: .3s; transition: transform .25s var(--fx-ease); }
 .fx-week .tp-ev.client { --c: var(--ov-data-b); }
-.fx-week .tp-ev:hover { filter: none; transform: translateY(-2px); z-index: 2; }
+.fx-week .tp-ev:hover { filter: brightness(1.08); z-index: 2; }
 .fx-agenda .fx-h3 { margin-top: 6px; }
 
 /* Activity */
@@ -275,11 +275,11 @@ a.fx-row:hover, button.fx-row:hover { transform: translateX(3px); background: co
 .fx-feed-r { position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 8px 8px 8px 0; border-radius: 14px; transition: transform .25s var(--fx-ease); }
 .fx-feed-r b { display: block; font-size: 13.5px; } .fx-feed-r small { display: block; font-size: 12px; color: var(--ov-mid); }
 .fx-feed-r time { font-size: 11.5px; font-weight: 500; color: var(--ov-mute); white-space: nowrap; }
-a.fx-feed-r:hover { transform: translateX(3px); } a.fx-feed-r:hover b { color: var(--ov-data-a); }
+a.fx-feed-r:hover b { color: var(--ov-data-a); }
 .fx-feed-ic { position: relative; z-index: 1; width: 30px; height: 30px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; color: var(--c); background: color-mix(in srgb, var(--c) 16%, var(--bg-surface)); box-shadow: 0 0 0 4px var(--bg-surface); }
 .fx-kind-l { display: flex; flex-direction: column; gap: 6px; }
 .fx-kind { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 5px 10px; width: 100%; padding: 8px 10px; border-radius: 14px; border: 1px solid transparent; transition: background-color .2s, border-color .2s; }
-.fx-kind:hover { background: color-mix(in srgb, var(--ov-hi) 5%, transparent); }
+button.fx-kind:hover { background: color-mix(in srgb, var(--ov-hi) 5%, transparent); }
 .fx-kind.is-on { background: color-mix(in srgb, var(--ov-hi) 8%, transparent); border-color: var(--ov-line); }
 .fx-kind b { font-size: 13.5px; } .fx-kind .tp-num { font-size: 17px; }
 .fx-kind .fx-meter { grid-column: 2 / -1; height: 5px; }
@@ -297,11 +297,13 @@ a.fx-feed-r:hover { transform: translateX(3px); } a.fx-feed-r:hover b { color: v
 .fx-acts { margin-top: auto; }
 .fx-hist { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
 
-/* Hover lift: desktop mouse only */
+/* Hover: desktop mouse only, clickable things only, and it stays inside the thing's own box (P912). No lift: a frosted
+   (backdrop-filter) panel that moves on hover repaints as a light grey "film" in dark mode in Chromium, and a plain
+   section that reacts looks clickable when it isn't. A tile is clickable when it is itself a link/button or carries a
+   full-face cover link; its corner arrow has its own hover. */
 @media (hover: hover) and (pointer: fine) {
-  .fx-tile:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--ov-hi) 14%, transparent); }
-  .fx-card:hover { transform: translateY(-4px); box-shadow: inset 0 1px 0 var(--sh-hl), 0 24px 34px -22px color-mix(in srgb, var(--c) 50%, transparent); border-color: color-mix(in srgb, var(--c) 45%, transparent); }
-  .fx-tile.fx-week:hover, .fx-tile.fx-feed:hover { transform: none; }
+  :is(a, button).fx-tile:hover, .fx-tile:has(> .fx-cover):hover { border-color: color-mix(in srgb, var(--ov-hi) 22%, transparent); }
+  .fx-card:has(.fx-cover):hover { border-color: color-mix(in srgb, var(--c) 45%, transparent); }
 }
 
 /* Overlays: scrim, record drawer, palette, menu ---------------------------------------------------------------- */
@@ -386,7 +388,7 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 .fx-av { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--ov-hi); background: color-mix(in srgb, var(--accent) 24%, var(--bg-surface)); flex: none; }
 .fx-mrow { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 42px; padding: 6px 10px; border-radius: 12px; text-align: left; color: var(--ov-mid); transition: background-color .2s; }
 .fx-mrow b { display: block; font-size: 13.5px; font-weight: 600; color: var(--ov-hi); } .fx-mrow small { display: block; font-size: 11.5px; color: var(--ov-mute); }
-.fx-mrow:hover { background: color-mix(in srgb, var(--ov-hi) 8%, transparent); }
+:is(a, button, label).fx-mrow:hover { background: color-mix(in srgb, var(--ov-hi) 8%, transparent); }
 .fx-mline { display: block; height: 1px; margin: 6px 10px; background: var(--ov-line); }
 .fx-sw { position: relative; width: 40px; height: 22px; border-radius: 999px; background: var(--ov-stub); flex: none; transition: background-color .25s; }
 .fx-sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--tp-white); transition: transform .3s var(--fx-spring); }
@@ -577,7 +579,7 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 .fx-ccard .fx-meter i { background: var(--ci); }
 .fx-mini { color: var(--ci); background: color-mix(in srgb, var(--ci) 13%, transparent); }
 @media (hover: hover) and (pointer: fine) {
-  .fx-card:hover { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 24px 34px -22px rgba(0, 0, 0, .7); border-color: color-mix(in srgb, var(--ci) 30%, transparent); }
+  .fx-card:has(.fx-cover):hover { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 18px 30px -24px rgba(0, 0, 0, .6); border-color: color-mix(in srgb, var(--ci) 30%, transparent); }
 }
 .tp .tp-chip:is(.is-blue, .is-teal, .is-warn, .is-green, .is-mute, .is-violet) { color: var(--ci); background: var(--cf); }
 .fx-delta { color: var(--ci, var(--ov-hi)); background: var(--cf, var(--ov-stub)); font-weight: 600; }
@@ -650,7 +652,7 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 .fx-pstats small { font-size: 12px; font-weight: 500; color: var(--ov-mid); }
 .fx-pstats b { font-family: var(--font-display); font-size: 21px; font-weight: 600; color: var(--ov-hi); }
 .fx-pnext { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; text-align: left; color: var(--ov-hi); border: 1px solid var(--sh-edge); background: color-mix(in srgb, var(--ov-hi) 5%, transparent); transition: background-color .2s, transform .25s var(--fx-ease); }
-.fx-pnext:hover { background: color-mix(in srgb, var(--ov-hi) 9%, transparent); transform: translateY(-2px); }
+.fx-pnext:hover { background: color-mix(in srgb, var(--ov-hi) 9%, transparent); }
 .fx-pnext > i { width: 6px; align-self: stretch; border-radius: 999px; background: var(--sh-f-sky); }
 .fx-pnext small { display: block; font-size: 12px; color: var(--ov-mid); } .fx-pnext b { display: block; font-size: 13.5px; margin: 2px 0; }
 
@@ -723,8 +725,8 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 .fx-card { box-shadow: inset 0 1px 0 var(--sh-card-hl), 0 18px 30px -24px rgba(0, 0, 0, .6); }
 [data-theme="light"] .fx-card { box-shadow: inset 0 1px 0 var(--sh-card-hl), 0 16px 28px -24px rgba(0, 0, 0, .28); }
 @media (hover: hover) and (pointer: fine) {
-  .fx-card:hover { border-color: color-mix(in srgb, var(--ci) 22%, transparent); }
-  [data-theme="light"] .fx-card:hover { border-color: transparent; box-shadow: inset 0 1px 0 var(--sh-card-hl), 0 22px 32px -22px rgba(0, 0, 0, .34); }
+  .fx-card:has(.fx-cover):hover { border-color: color-mix(in srgb, var(--ci) 22%, transparent); }
+  [data-theme="light"] .fx-card:has(.fx-cover):hover { border-color: transparent; box-shadow: inset 0 1px 0 var(--sh-card-hl), 0 16px 28px -24px rgba(0, 0, 0, .28); }
 }
 .tp .tp-chip:is(.is-blue, .is-teal, .is-warn, .is-green, .is-mute, .is-violet), .fx-delta { box-shadow: inset 0 0 0 1px var(--sh-card-edge); }
 
@@ -1212,7 +1214,7 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 .fx .fx-signout:active { transform: scale(.98); }
 /* Sign out in the avatar menus is red too */
 .fx-mrow.is-danger, .fx-mrow.is-danger b, .fx-mrow.is-danger svg { color: var(--danger); }
-.fx-mrow.is-danger:hover { background: color-mix(in srgb, var(--danger) 10%, transparent); }
+:is(a, button).fx-mrow.is-danger:hover { background: color-mix(in srgb, var(--danger) 10%, transparent); }
 
 /* Closing: drawers slide back out the way they came in, the avatar menu shrinks away */
 .tp-layer.is-leaving { pointer-events: none; }

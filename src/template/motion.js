@@ -4,7 +4,8 @@ import { createElement, useEffect, useRef, useState } from 'react'
 // Easing everywhere: cubic-bezier(0.2, 0.8, 0.2, 1). CSS side lives in flow.css.
 export const still = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-// Icon buttons: a small spring wiggle on click, and on a desktop mouse a slight pull toward the pointer.
+// Icon buttons: a small spring wiggle on click. P912: the pull toward the pointer is gone — it moved the icon outside its
+// own box inside the frosted rail/bar, the hover-moves-glass pattern behind the dark-mode "film".
 function wiggle(e) {
   const el = e.currentTarget
   if (!el || still()) return
@@ -13,20 +14,7 @@ function wiggle(e) {
   el.classList.add('is-wig')
 }
 
-function pull(e) {
-  const el = e.currentTarget
-  if (!el || still() || e.pointerType !== 'mouse') return
-  const r = el.getBoundingClientRect()
-  el.style.setProperty('--tp-px', `${((e.clientX - r.left) / r.width - 0.5) * 6}px`)
-  el.style.setProperty('--tp-py', `${((e.clientY - r.top) / r.height - 0.5) * 6}px`)
-}
-
-function release(e) {
-  e.currentTarget?.style.removeProperty('--tp-px')
-  e.currentTarget?.style.removeProperty('--tp-py')
-}
-
-export const wig = { onClick: wiggle, onPointerMove: pull, onPointerLeave: release, onAnimationEnd: e => e.currentTarget.classList.remove('is-wig') }
+export const wig = { onClick: wiggle, onAnimationEnd: e => e.currentTarget.classList.remove('is-wig') }
 
 // A number that counts up from 0 when it first shows (and eases to a new value when it changes).
 // format: n => string. Under reduced motion it renders the final value straight away.

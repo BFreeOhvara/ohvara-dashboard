@@ -12,7 +12,7 @@
   background: color-mix(in srgb, var(--cf) 55%, transparent); border: 1px solid color-mix(in srgb, var(--cs) 30%, transparent);
   transition: background-color .18s, border-color .18s, transform .18s, box-shadow .18s;
 }
-.rs-opt:hover { border-color: color-mix(in srgb, var(--cs) 70%, transparent); transform: translateY(-1px); }
+.rs-opt:hover { border-color: color-mix(in srgb, var(--cs) 70%, transparent); }
 .rs-opt:focus-visible { outline: 2px solid var(--cs); outline-offset: 2px; }
 .rs-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: var(--csi); background: var(--cs); }
 .rs-t { min-width: 0; display: flex; flex-direction: column; gap: 2px; }

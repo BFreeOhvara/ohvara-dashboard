@@ -32,7 +32,7 @@
   border: 1px solid color-mix(in srgb, var(--cbi) 22%, transparent); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35);
   transition: transform .15s var(--fx-ease), filter .15s;
 }
-.lv-res:hover { filter: brightness(1.04) saturate(1.08); transform: translateY(-1px); }
+.lv-res:hover { filter: brightness(1.04) saturate(1.08); }
 .lv-res:active { transform: translateY(1px) scale(.98); }
 .lv-res:focus-visible { outline: 2px solid var(--li); outline-offset: 2px; }
 .lv-card.is-compact .lv-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }

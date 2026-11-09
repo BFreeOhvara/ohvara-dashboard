@@ -91,7 +91,7 @@
 .adm-agents { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
 .adm-agent { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 11px 12px; border-radius: 16px; border: 1px solid var(--fx-edge); background: color-mix(in srgb, var(--ov-hi) 4%, transparent);
   flex-wrap: wrap; transition: transform .25s var(--fx-spring), background-color .2s; }
-.adm-agent:hover { transform: translateY(-2px); background: color-mix(in srgb, var(--ov-hi) 7%, transparent); }
+.adm-agent:hover { background: color-mix(in srgb, var(--ov-hi) 7%, transparent); }
 .adm-agent b { display: block; font-size: 13.5px; font-weight: 600; color: var(--ov-hi); }
 .adm-agent small { display: block; font-size: 11.5px; color: var(--ov-mid); }
 .adm-agent .tp-grow { min-width: 0; }
@@ -104,7 +104,7 @@
 .adm-tr { display: grid; grid-template-columns: minmax(200px, 1.5fr) minmax(150px, 1fr) minmax(130px, .8fr) minmax(190px, 1.1fr) minmax(130px, .9fr); gap: 14px; align-items: center;
   padding: 10px 8px; border-radius: 14px; animation: fx-up .45s var(--fx-ease) both; animation-delay: calc(var(--i, 0) * 40ms); }
 .adm-tr + .adm-tr { border-top: 1px solid var(--ov-line); }
-.adm-tr:not(.adm-th):hover { background: color-mix(in srgb, var(--ov-hi) 4%, transparent); }
+:is(a, button).adm-tr:not(.adm-th):hover, .adm-tr:has(> .fx-cover):hover { background: color-mix(in srgb, var(--ov-hi) 4%, transparent); }
 .adm-th { padding-block: 8px; font-size: 11.5px; font-weight: 600; letter-spacing: .02em; color: var(--ov-mute); text-transform: uppercase; animation: none; }
 .adm-who { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--ov-hi); }
 .adm-who b { display: block; font-size: 14px; font-weight: 600; } .adm-who small { display: block; font-size: 11.5px; color: var(--ov-mid); }

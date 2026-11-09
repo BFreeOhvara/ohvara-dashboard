@@ -8,7 +8,7 @@
 .fx-ctmode svg { flex: none; margin-top: 1px; }
 .fx-ctmode b { display: block; font-size: 13px; font-weight: 600; line-height: 1.25; color: var(--ov-hi); }
 .fx-ctmode small { display: block; margin-top: 2px; font-size: 11.5px; color: var(--ov-mute); }
-.fx-ctmode:hover:not(:disabled) { transform: translateY(-2px); }
+.fx-ctmode:hover:not(:disabled) { border-color: color-mix(in srgb, var(--ov-hi) 26%, transparent); }
 .fx-ctmode:disabled { cursor: default; opacity: 1; }
 .fx-ctmode:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .fx-ctmode.is-on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--tp-input)); color: var(--accent); }
