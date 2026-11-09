@@ -20,6 +20,12 @@ import Deedstone from './client/Deedstone'
 import FulFrame from './ful/FulFrame'
 import { fulRoutes } from './ful/routes'
 import { ME } from './ful/data'
+import MobileFrame from './m/MobileFrame'
+import MOverview from './m/MOverview'
+import MLeads from './m/MLeads'
+import MClients from './m/MClients'
+import MCalendar from './m/MCalendar'
+import MMore, { MBilling, MActivity, MSettings } from './m/MMore'
 
 // The sample VA signed in to the Fulfillment preview (nothing leaves the browser).
 const VA = { live: false, name: ME.name, signOut: null, DeleteDialog: null }
@@ -41,6 +47,19 @@ export default function TemplateApp() {
           <Route path="signup" element={<Signup />} />
           <Route path="welcome" element={<Welcome />} />
           <Route path="d/:page" element={<Deedstone />} />
+          {/* P908: the agent side rebuilt for phones (mockup for Brayden's OK), sample data */}
+          <Route path="m" element={<MobileFrame />}>
+            <Route index element={<MOverview />} />
+            <Route path="leads" element={<MLeads />} />
+            <Route path="leads/:id" element={<MLeads />} />
+            <Route path="clients" element={<MClients />} />
+            <Route path="clients/:id" element={<MClients />} />
+            <Route path="calendar" element={<MCalendar />} />
+            <Route path="more" element={<MMore />} />
+            <Route path="billing" element={<MBilling />} />
+            <Route path="activity" element={<MActivity />} />
+            <Route path="settings" element={<MSettings />} />
+          </Route>
           <Route element={<TemplateFrame />}>
             <Route index element={<Overview />} />
             <Route path="leads" element={<Leads />} />
