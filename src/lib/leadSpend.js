@@ -12,7 +12,7 @@
 //         setSpend(db, { appts, live })      P884 lead-spend set_spend (per type). Superseded by setLeadProduct.
 //         payNow(db) / pauseSpend(db, bool)  lead-spend pay_now / pause
 // Admin:  adminBilling(db, agentId), setupSet, adjustBalance, savePriceBook. P914: no pilot, so the pilot switch,
-//         the VA cost line and pilot → paid are gone (their functions refuse, migration p914_no_pilot.sql).
+//         the VA cost line and pilot → paid are gone (their functions refuse, migration 252_no_pilot.sql).
 // Shape:  toSampleBilling(view) maps the server view onto the sample billing shape the P878 Billing page draws.
 
 import { pricesOf, BOOK, hourText } from './priceBook.js'

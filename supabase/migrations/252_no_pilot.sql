@@ -1,5 +1,5 @@
--- P914 — No pilot: every agent pays from day one. Unnumbered and NOT applied (P904 already switched billing on):
--- Brayden says yes before it runs. Runs after 237 (billing engine), 249 (final pricing) and 250 (paid day ahead).
+-- P914 — No pilot: every agent pays from day one. Applied to live Nov 9 on Brayden's yes (was p914_no_pilot.sql).
+-- Runs after 237 (billing engine), 249 (final pricing) and 250 (paid day ahead).
 --
 --   1. Any agent still on plan 'pilot' moves to 'paid' from today (logged in agent_billing_events, before and after).
 --      The optional VA cost line is switched off for everyone and any pending pilot → paid notice is cleared.
@@ -9,7 +9,6 @@
 -- Everything that branches on plan = 'pilot' (billing_status_of, the nightly fee rate, membership due, the weekly VA
 -- cost charge, my_billing) is left as is: with no pilot rows those branches never run.
 
-begin;
 
 -- 1. Move every pilot agent to paid, logged.
 do $$
@@ -58,4 +57,3 @@ begin
   raise exception 'No pilot: every agent is already on a paid plan (P914)';
 end; $$;
 
-commit;

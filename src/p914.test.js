@@ -97,7 +97,7 @@ test('no pilot: every agent pays from day one; no pilot wording or team-time lin
     assert.doesNotMatch(s, /'pilot'|Pilot ·|During the pilot|PilotBlock|PilotResults|Team time on your leads/, p)
   }
   assert.doesNotMatch(read('./lib/leadSpend.js'), /admin_billing_pilot_set|admin_billing_va_cost_set|admin_billing_to_paid/)
-  const sql = read('../supabase/migrations/p914_no_pilot.sql')
+  const sql = read('../supabase/migrations/252_no_pilot.sql')
   assert.match(sql, /set plan = 'paid'/)
   assert.match(sql, /check \(plan = 'paid'\)/)
   assert.match(sql, /check \(not va_cost_on\)/)
