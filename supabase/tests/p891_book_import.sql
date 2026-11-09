@@ -47,25 +47,25 @@ select throws_ok($$ select public.agent_add_clients('[{"first_name":"A"}]'::json
 select pg_temp.as_user('a8910000-0000-4000-8000-00000000000a');
 create temp table t_res as
 select public.agent_add_clients(jsonb_build_array(
-  jsonb_build_object('line', 2, 'first_name', 'Maria', 'last_name', 'Lopez', 'phone', '+15125550199', 'state', 'TX', 'carrier', 'Americo',
-                     'policy_number', 'AM-77', 'face_amount', 250000, 'monthly_premium', 84.2, 'draft_day', 3, 'effective_date', '2025-06-01', 'email', 'Maria@Example.com'),
-  jsonb_build_object('line', 3, 'first_name', 'Tom', 'last_name', 'Reyes', 'phone', '+15125550122', 'state', 'TX', 'carrier', 'Foresters', 'policy_number', 'FF-1'),
-  jsonb_build_object('line', 4, 'first_name', 'Gene', 'last_name', 'Wall', 'phone', '+15125550131', 'state', 'TX', 'carrier', 'Foresters', 'policy_number', 'FF-2'),
-  jsonb_build_object('line', 5, 'first_name', 'No', 'last_name', 'Phone', 'state', 'TX', 'carrier', 'Americo', 'policy_number', 'AM-90'),
-  jsonb_build_object('line', 6, 'first_name', 'Dup', 'last_name', 'Book', 'phone', '+15125550111', 'state', 'TX', 'carrier', 'Americo', 'policy_number', 'am 1'),
-  jsonb_build_object('line', 7, 'first_name', 'Dup', 'last_name', 'Row', 'phone', '+15125550112', 'state', 'TX', 'carrier', 'Americo', 'policy_number', 'AM-77'),
-  jsonb_build_object('line', 8, 'first_name', 'Dup', 'last_name', 'Phone', 'phone', '(512) 555-0100', 'state', 'TX', 'carrier', 'Americo', 'policy_number', 'AM-91'),
-  jsonb_build_object('line', 9, 'first_name', 'Bad', 'last_name', 'Phone', 'phone', '555-01', 'state', 'TX', 'carrier', 'Americo', 'policy_number', 'AM-92')
+  jsonb_build_object('line', 2, 'first_name', 'Maria', 'last_name', 'Lopez', 'phone', '+15125550199', 'city', 'Austin', 'state', 'TX', 'carrier', 'Americo',
+                     'monthly_premium', 84.2, 'draft_day', 3),
+  jsonb_build_object('line', 3, 'first_name', 'Tom', 'last_name', 'Reyes', 'phone', '+15125550122', 'city', 'Austin', 'state', 'TX', 'carrier', 'Foresters', 'draft_day', 10),
+  jsonb_build_object('line', 4, 'first_name', 'Gene', 'last_name', 'Wall', 'phone', '+15125550131', 'city', 'Austin', 'state', 'TX', 'carrier', 'Foresters', 'draft_day', 15),
+  jsonb_build_object('line', 5, 'first_name', 'No', 'last_name', 'Phone', 'city', 'Austin', 'state', 'TX', 'carrier', 'Americo', 'draft_day', 1),
+  jsonb_build_object('line', 6, 'first_name', 'Dup', 'last_name', 'Book', 'phone', '+15125550100', 'city', 'Austin', 'state', 'TX', 'carrier', 'Americo', 'draft_day', 1),
+  jsonb_build_object('line', 7, 'first_name', 'Dup', 'last_name', 'Row', 'phone', '+15125550199', 'city', 'Austin', 'state', 'TX', 'carrier', 'Americo', 'draft_day', 1),
+  jsonb_build_object('line', 8, 'first_name', 'Dup', 'last_name', 'Phone', 'phone', '(512) 555-0100', 'city', 'Austin', 'state', 'TX', 'carrier', 'Americo', 'draft_day', 1),
+  jsonb_build_object('line', 9, 'first_name', 'Bad', 'last_name', 'Phone', 'phone', '555-01', 'city', 'Austin', 'state', 'TX', 'carrier', 'Americo', 'draft_day', 1)
 ), true) as r;
 select is((select (r->>'added')::int from t_res), 3, 'three good rows added');
 select is((select r->'skipped' from t_res),
-          '[{"line":5,"why":"missing"},{"line":6,"why":"duplicate_policy"},{"line":7,"why":"duplicate_policy"},{"line":8,"why":"duplicate_phone"},{"line":9,"why":"bad_phone"}]'::jsonb,
-          'missing, duplicate (book, row above, phone) and bad rows skipped with why');
+          '[{"line":5,"why":"missing"},{"line":6,"why":"duplicate_phone"},{"line":7,"why":"duplicate_phone"},{"line":8,"why":"duplicate_phone"},{"line":9,"why":"bad_phone"}]'::jsonb,
+          'missing, duplicate (phone in the book, phone in a row above) and bad rows skipped with why');
 
 select pg_temp.as_owner();
-select results_eq($$ select source, status::text, face_amount, draft_day, effective_date, client_email, coalesce(fulfillment_assigned, false), sms_consent
-                       from public.policies where policy_number = 'AM-77' and agent_id = 'a8910000-0000-4000-8000-00000000000a' $$,
-                  $$ values ('agent_added'::text, 'In Effect'::text, 250000.00::numeric(12,2), 3::smallint, '2025-06-01'::date, 'maria@example.com'::text, false, false) $$,
+select results_eq($$ select source, status::text, monthly_premium, draft_day, client_city, coalesce(fulfillment_assigned, false), sms_consent
+                       from public.policies where client_first_name = 'Maria' and agent_id = 'a8910000-0000-4000-8000-00000000000a' $$,
+                  $$ values ('agent_added'::text, 'In Effect'::text, 84.20::numeric, 3::smallint, 'Austin'::text, false, false) $$,
                   'the added policy keeps every detail, never enters the cancellation flow, no text consent yet');
 select is((select count(*)::int from public.servicing_tasks t join public.policies p on p.id = t.policy_id
             where p.source = 'agent_added' and t.kind = 'welcome_call' and t.status = 'requested' and t.requested_by = 'agent'), 3,
@@ -80,7 +80,7 @@ select is((select count(*)::int from public.policies where client_first_name = '
 
 -- Agent B can add the same policy number: duplicates are per agent's book.
 select pg_temp.as_user('a8910000-0000-4000-8000-00000000000b');
-select is((public.agent_add_clients('[{"first_name":"Sue","last_name":"Ng","phone":"+15125550177","state":"TX","carrier":"Americo","policy_number":"AM-77"}]'::jsonb, true)->>'added')::int, 1,
+select is((public.agent_add_clients('[{"first_name":"Sue","last_name":"Ng","phone":"+15125550177","state":"TX","carrier":"Americo","city":"Austin","draft_day":5}]'::jsonb, true)->>'added')::int, 1,
           'another agent''s book does not count as a duplicate');
 
 -- ── The agent's status ──────────────────────────────────────────────────────
@@ -92,65 +92,65 @@ select is((select count(*)::int from public.agent_added_clients()), 3, 'only the
 -- ── The VA works the welcome calls ──────────────────────────────────────────
 select pg_temp.as_owner();
 create temp table t_w as
-select p.policy_number, t.id as task_id from public.servicing_tasks t join public.policies p on p.id = t.policy_id
+select p.client_first_name, t.id as task_id from public.servicing_tasks t join public.policies p on p.id = t.policy_id
  where t.kind = 'welcome_call' and p.agent_id = 'a8910000-0000-4000-8000-00000000000a';
 grant select on t_w to authenticated;
 
 select pg_temp.as_user('a8910000-0000-4000-8000-0000000000f1');
-select throws_ok($$ select public.va_welcome_text_consent((select task_id from t_w where policy_number = 'AM-77'), true) $$, '42501', null,
+select throws_ok($$ select public.va_welcome_text_consent((select task_id from t_w where client_first_name = 'Maria'), true) $$, '42501', null,
                  'text answer needs the step held');
-select lives_ok($$ select public.va_servicing_claim((select task_id from t_w where policy_number = 'AM-77')) $$, 'VA takes Maria''s welcome call');
-select is(public.va_welcome_text_consent((select task_id from t_w where policy_number = 'AM-77'), true), true, 'Maria says yes to texts');
-select throws_ok($$ select public.va_welcome_text_consent((select task_id from t_w where policy_number = 'AM-77'), false) $$, '22023', null,
+select lives_ok($$ select public.va_servicing_claim((select task_id from t_w where client_first_name = 'Maria')) $$, 'VA takes Maria''s welcome call');
+select is(public.va_welcome_text_consent((select task_id from t_w where client_first_name = 'Maria'), true), true, 'Maria says yes to texts');
+select throws_ok($$ select public.va_welcome_text_consent((select task_id from t_w where client_first_name = 'Maria'), false) $$, '22023', null,
                  'answered once per call');
-select throws_ok($$ select public.va_servicing_outcome((select task_id from t_w where policy_number = 'AM-77'), 'saved') $$, '22023', null,
+select throws_ok($$ select public.va_servicing_outcome((select task_id from t_w where client_first_name = 'Maria'), 'saved') $$, '22023', null,
                  'a save-call result doesn''t fit a welcome call');
-select is(public.va_servicing_outcome((select task_id from t_w where policy_number = 'AM-77'), 'welcomed'), 'welcomed', 'Welcomed recorded');
+select is(public.va_servicing_outcome((select task_id from t_w where client_first_name = 'Maria'), 'welcomed'), 'welcomed', 'Welcomed recorded');
 
-select lives_ok($$ select public.va_servicing_claim((select task_id from t_w where policy_number = 'FF-1')) $$, 'VA takes Tom''s welcome call');
-select is(public.va_welcome_text_consent((select task_id from t_w where policy_number = 'FF-1'), false), false, 'Tom says no to texts');
-select is(public.va_servicing_outcome((select task_id from t_w where policy_number = 'FF-1'), 'details_fixed'), 'details_fixed', 'Details fixed recorded');
+select lives_ok($$ select public.va_servicing_claim((select task_id from t_w where client_first_name = 'Tom')) $$, 'VA takes Tom''s welcome call');
+select is(public.va_welcome_text_consent((select task_id from t_w where client_first_name = 'Tom'), false), false, 'Tom says no to texts');
+select is(public.va_servicing_outcome((select task_id from t_w where client_first_name = 'Tom'), 'details_fixed'), 'details_fixed', 'Details fixed recorded');
 
 select pg_temp.as_owner();
 select results_eq($$ select p.sms_consent, p.sms_consent_at is not null, c.script_version, c.said_by
-                       from public.policies p join public.client_text_consents c on c.policy_id = p.id where p.policy_number = 'AM-77' $$,
+                       from public.policies p join public.client_text_consents c on c.policy_id = p.id where p.client_first_name = 'Maria' $$,
                   $$ values (true, true, 'welcome-v1'::text, 'a8910000-0000-4000-8000-0000000000f1'::uuid) $$,
                   'a yes is logged: consent on the policy and a row with the script, who and when');
-select results_eq($$ select p.sms_consent, (select count(*)::int from public.client_text_consents c where c.policy_id = p.id) from public.policies p where p.policy_number = 'FF-1' $$,
+select results_eq($$ select p.sms_consent, (select count(*)::int from public.client_text_consents c where c.policy_id = p.id) from public.policies p where p.client_first_name = 'Tom' $$,
                   $$ values (false, 0) $$, 'a no writes nothing');
-select is((select count(*)::int from public.policies where policy_number in ('AM-77', 'FF-1') and welcomed_at is not null), 2,
+select is((select count(*)::int from public.policies where client_first_name in ('Maria', 'Tom') and welcomed_at is not null), 2,
           'Welcomed and Details fixed both mark the client welcomed');
 
 -- Problem → agent: the VA's note is what the agent sees.
 update public.servicing_tasks set outcome_note = 'Says the policy lapsed in August', outcome = 'problem', status = 'done', done_at = now()
- where id = (select task_id from t_w where policy_number = 'FF-2');
-select is((select welcome_problem from public.policies where policy_number = 'FF-2'), 'Says the policy lapsed in August', 'Problem carries the VA''s note to the agent');
+ where id = (select task_id from t_w where client_first_name = 'Gene');
+select is((select welcome_problem from public.policies where client_first_name = 'Gene'), 'Says the policy lapsed in August', 'Problem carries the VA''s note to the agent');
 
 -- No answer: tomorrow again, three tries in all.
-update public.policies set welcome_problem = null where policy_number = 'FF-2';
+update public.policies set welcome_problem = null where client_first_name = 'Gene';
 insert into public.servicing_tasks (agent_id, policy_id, kind, status, due_at, requested_by)
-select agent_id, id, 'welcome_call', 'requested', now(), 'system' from public.policies where policy_number = 'FF-2';
+select agent_id, id, 'welcome_call', 'requested', now(), 'system' from public.policies where client_first_name = 'Gene';
 update public.servicing_tasks set outcome = 'no_answer', status = 'done', done_at = now()
- where kind = 'welcome_call' and status <> 'done' and policy_id = (select id from public.policies where policy_number = 'FF-2');
+ where kind = 'welcome_call' and status <> 'done' and policy_id = (select id from public.policies where client_first_name = 'Gene');
 select results_eq($$ select count(*)::int, bool_or(t.status = 'requested' and t.due_at = public.payment_save_deadline(now()) and t.note like 'Try again%')
-                       from public.servicing_tasks t where t.kind = 'welcome_call' and t.policy_id = (select id from public.policies where policy_number = 'FF-2') $$,
+                       from public.servicing_tasks t where t.kind = 'welcome_call' and t.policy_id = (select id from public.policies where client_first_name = 'Gene') $$,
                   $$ values (3, true) $$, 'no answer puts the welcome call back on the next business day');
 update public.servicing_tasks set outcome = 'no_answer', status = 'done', done_at = now()
- where kind = 'welcome_call' and status <> 'done' and policy_id = (select id from public.policies where policy_number = 'FF-2');
+ where kind = 'welcome_call' and status <> 'done' and policy_id = (select id from public.policies where client_first_name = 'Gene');
 update public.servicing_tasks set outcome = 'no_answer', status = 'done', done_at = now()
- where kind = 'welcome_call' and status <> 'done' and policy_id = (select id from public.policies where policy_number = 'FF-2');
+ where kind = 'welcome_call' and status <> 'done' and policy_id = (select id from public.policies where client_first_name = 'Gene');
 select is((select count(*)::int from public.servicing_tasks where kind = 'welcome_call' and status <> 'done'
-             and policy_id = (select id from public.policies where policy_number = 'FF-2')), 0, 'after three no-answers, no more calls');
-select is((select welcome_problem from public.policies where policy_number = 'FF-2'), 'No answer after 3 tries', 'and the agent is told');
+             and policy_id = (select id from public.policies where client_first_name = 'Gene')), 0, 'after three no-answers, no more calls');
+select is((select welcome_problem from public.policies where client_first_name = 'Gene'), 'No answer after 3 tries', 'and the agent is told');
 
 -- Serviced: a servicing step done after the welcome.
 insert into public.servicing_tasks (agent_id, policy_id, kind, status, requested_by)
-select agent_id, id, 'annual_review', 'requested', 'system' from public.policies where policy_number = 'AM-77' and agent_id = 'a8910000-0000-4000-8000-00000000000a';
+select agent_id, id, 'annual_review', 'requested', 'system' from public.policies where client_first_name = 'Maria' and agent_id = 'a8910000-0000-4000-8000-00000000000a';
 update public.servicing_tasks set outcome = 'completed', status = 'done', done_at = now() + interval '1 minute'
- where kind = 'annual_review' and policy_id = (select id from public.policies where policy_number = 'AM-77' and agent_id = 'a8910000-0000-4000-8000-00000000000a');
+ where kind = 'annual_review' and policy_id = (select id from public.policies where client_first_name = 'Maria' and agent_id = 'a8910000-0000-4000-8000-00000000000a');
 select pg_temp.as_user('a8910000-0000-4000-8000-00000000000a');
-select results_eq($$ select p.policy_number, a.book_status from public.agent_added_clients() a join public.policies p on p.id = a.policy_id order by 1 $$,
-                  $$ values ('AM-77'::text, 'serviced'::text), ('FF-1', 'welcomed'), ('FF-2', 'problem') $$,
+select results_eq($$ select p.client_first_name, a.book_status from public.agent_added_clients() a join public.policies p on p.id = a.policy_id order by 1 $$,
+                  $$ values ('Gene'::text, 'problem'::text), ('Maria', 'serviced'), ('Tom', 'welcomed') $$,
                   'Added → Welcomed → Serviced, problem wins');
 
 -- ── Admin backlog and the per-day setting ───────────────────────────────────

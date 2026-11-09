@@ -80,8 +80,6 @@ select ok(has_function_privilege('authenticated', 'public.billing_added_clients_
 
 -- ── c. cards, plans, the max and the min ────────────────────────────────────
 select public.billing_card_saved(id, 'Visa ending 4242') from public.profiles where id::text like 'a9090000-%' and id::text not like '%c' and role = 'agent';
-select pg_temp.as_user('a9090000-0000-4000-8000-000000000001');
-select public.admin_billing_pilot_set('a9090000-0000-4000-8000-00000000000b', true);
 select pg_temp.as_owner();
 update public.agent_billing_plans set products = 'servicing' where agent_id = 'a9090000-0000-4000-8000-00000000000d';
 select pg_temp.as_user('a9090000-0000-4000-8000-00000000000a');
@@ -101,10 +99,10 @@ select public.lead_spend_set(10000, 0, 'a9090000-0000-4000-8000-00000000000b');
 select public.lead_spend_set(10000, 0, 'a9090000-0000-4000-8000-00000000000f');
 
 -- ── d. the nightly charge ───────────────────────────────────────────────────
-select is(public.lead_spend_nightly(), 3, 'd1 tonight: one charge each for the paid, pilot and late agents');
+select is(public.lead_spend_nightly(), 3, 'd1 tonight: one charge each for the three agents with a card and a spend');
 select is((pg_temp.ch('a9090000-0000-4000-8000-00000000000a', 1)).amount_cents, 11200, 'd2 $100 a day is charged $112');
 select is(((pg_temp.ch('a9090000-0000-4000-8000-00000000000a', 1)).spend_cents, (pg_temp.ch('a9090000-0000-4000-8000-00000000000a', 1)).fee_cents), (10000, 1200), 'd3 $100 spend + $12 (12%)');
-select is((pg_temp.ch('a9090000-0000-4000-8000-00000000000b', 1)).amount_cents, 10000, 'd4 a pilot agent pays only their spend');
+select is((pg_temp.ch('a9090000-0000-4000-8000-00000000000b', 1)).amount_cents, 11200, 'd4 agent B has no pilot (252): spend plus the 12% like everyone');
 select is((select count(*)::int from public.lead_spend_charges where agent_id = 'a9090000-0000-4000-8000-00000000000c'), 0, 'd5 no card: nothing charged');
 select is(public.lead_spend_nightly(), 0, 'd6 running it again makes no second charge');
 select is((pg_temp.pay('a9090000-0000-4000-8000-00000000000a', 1, 'paid'))->>'status', 'paid', 'd7 approved');
@@ -190,7 +188,7 @@ select is((public.agent_membership_due('a9090000-0000-4000-8000-00000000000e')->
 -- ── i. founding agents ──────────────────────────────────────────────────────
 select is((select founding_no from public.agent_billing_plans where agent_id = 'a9090000-0000-4000-8000-00000000000a'), 1, 'i1 the first paying agent is founding agent 1');
 select is((select founding_until from public.agent_billing_plans where agent_id = 'a9090000-0000-4000-8000-00000000000a'), (pg_temp.e(0) + interval '12 months')::date, 'i2 for 12 months from their first payment');
-select is((select founding_no from public.agent_billing_plans where agent_id = 'a9090000-0000-4000-8000-00000000000b'), null::int, 'i3 a pilot agent isn''t paying yet');
+select is((select founding_no from public.agent_billing_plans where agent_id = 'a9090000-0000-4000-8000-00000000000b'), 2::int, 'i3 B (no pilot, 252) is the second paying agent: founding agent 2');
 select pg_temp.as_user('a9090000-0000-4000-8000-000000000001');
 select is((public.admin_billing_settings_save('{"founding_count": 1}'::jsonb)->>'founding_count')::int, 1, 'i4 admin sets the founding count');
 select pg_temp.as_owner();
@@ -217,7 +215,7 @@ select pg_temp.as_user('a9090000-0000-4000-8000-000000000001');
 select is((select (r->>'lead_fee_cents')::int from jsonb_array_elements(public.admin_billing_revenue(pg_temp.e(0), pg_temp.e(10))->'agents') r where r->>'agent_id' = 'a9090000-0000-4000-8000-00000000000a'),
           (select sum(fee_cents)::int from public.lead_spend_charges where agent_id = 'a9090000-0000-4000-8000-00000000000a' and kind = 'nightly' and status = 'paid'), 'j5 admin revenue: the 12% on its own');
 select is((select (r->>'lead_fee_cents')::int from jsonb_array_elements(public.admin_billing_revenue(pg_temp.e(0), pg_temp.e(10))->'agents') r where r->>'agent_id' = 'a9090000-0000-4000-8000-00000000000b'),
-          0, 'j6 a pilot agent paid no 12%');
+          (select sum(fee_cents)::int from public.lead_spend_charges where agent_id = 'a9090000-0000-4000-8000-00000000000b' and kind = 'nightly' and status = 'paid'), 'j6 B (no pilot, 252) pays the 12% like everyone');
 select ok((select (r->>'plan_fee_cents')::int from jsonb_array_elements(public.admin_billing_revenue(pg_temp.e(0), pg_temp.e(10))->'agents') r where r->>'agent_id' = 'a9090000-0000-4000-8000-00000000000a') > 0,
           'j7 and the plan fee apart');
 select pg_temp.as_user('a9090000-0000-4000-8000-00000000000a');

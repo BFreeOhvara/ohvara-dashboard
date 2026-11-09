@@ -614,7 +614,7 @@ select is((select count(*) from public.inbound_events e where e.lead_id = public
 insert into public.leads (id, business_name, contact_name, phone, state, lead_type, lead_source, transfer_status, transferred_at)
 values ('eeeeeeee-eeee-4eee-8202-000000000006', 'Cal Cancel', 'Cal Cancel', '+15125550306', 'TX', 'cancellation', 'google', 'requested', now());
 update public.leads set va_attempts = va_attempts + 1, va_outcome = 'not_reached', transfer_status = 'dropped' where id = 'eeeeeeee-eeee-4eee-8202-000000000006';
-select is((select count(*) from public.inbound_events e where e.lead_id = 'eeeeeeee-eeee-4eee-8202-000000000006'), 0::bigint, 'j15 a cancellation lead writes no event');
+select is((select count(*) from public.inbound_events e where e.lead_id = 'eeeeeeee-eeee-4eee-8202-000000000006' and e.kind in ('va_call', 'transferred')), 0::bigint, 'j15 a cancellation lead writes no call or transfer event (248 adds a first-call outcome row to every lead)');
 
 select ok((select p.prosecdef from pg_proc p where p.oid = 'public.log_lead_call_events()'::regprocedure), 'j16 the trigger function is security definer');
 select is((select p.proconfig from pg_proc p where p.oid = 'public.log_lead_call_events()'::regprocedure), array['search_path=public'], 'j17 with its search_path pinned');

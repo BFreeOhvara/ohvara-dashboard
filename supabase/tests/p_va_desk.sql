@@ -30,7 +30,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(161);
+select plan(163);
 
 -- ── seed (as the table owner) ───────────────────────────────────────────────
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -87,8 +87,8 @@ select is(
         'va_off_at', 'va_on_shift_at', 'va_overtime_request', 'va_payment_intake_dismiss', 'va_payment_intake_match', 'va_portal_check_done', 'va_queue', 'va_release', 'va_request_day_off', 'va_save_policy_help_lead',
         'va_servicing_cancel', 'va_servicing_claim', 'va_servicing_done', 'va_servicing_outcome', 'va_servicing_queue', 'va_servicing_release',
         'va_servicing_schedule', 'va_servicing_send_to_agent', 'va_set_lead_outcome',
-        'va_shift_week', 'va_shifts_guard', 'va_shifts_today', 'va_today', 'va_wrap_done', 'va_wrap_more'],
-  'a0 the va_* functions are exactly these thirty-eight (a new one needs new cases; the va_servicing_* ones are in p_va_servicing, the three from 211 in p_transfer_missed, the ten shift/day-off ones from 231 in p_va_shifts, the five calling-engine ones in p882_calling_engine, the four missed-payment ones in p885_missed_payments)');
+        'va_shift_week', 'va_shifts_guard', 'va_shifts_today', 'va_today', 'va_welcome_text_consent', 'va_wrap_done', 'va_wrap_more'],
+  'a0 the va_* functions are exactly these thirty-nine (a new one needs new cases; the va_servicing_* ones are in p_va_servicing, the three from 211 in p_transfer_missed, the ten shift/day-off ones from 231 in p_va_shifts, the five calling-engine ones in p882_calling_engine, the four missed-payment ones in p885_missed_payments, va_welcome_text_consent from 243 in p891_book_import)');
 
 select ok(not has_function_privilege('anon', p.oid, 'execute'),
           format('a1 anon has no execute on %s', p.proname))

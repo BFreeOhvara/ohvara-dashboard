@@ -255,7 +255,7 @@ select is((select count(*) from pg_indexes where schemaname = 'public' and table
             and indexname = 'servicing_tasks_open_due_idx' and indexdef ~ '\(due_at\) WHERE'), 1::bigint, 'a10 open tasks have a partial index by due_at');
 select is((select string_agg(t.tgname::text, ',' order by t.tgname) from pg_trigger t
             where t.tgrelid = 'public.servicing_tasks'::regclass and t.tgname like 'servicing_tasks_%'),
-          'servicing_tasks_status_order,servicing_tasks_touch', 'a11 the status trigger is separate from servicing_tasks_touch');
+          'servicing_tasks_book_welcome,servicing_tasks_status_order,servicing_tasks_touch', 'a11 the status trigger is separate from servicing_tasks_touch (243 adds servicing_tasks_book_welcome)');
 select is((select array_agg(a.attname::text order by a.attnum) from pg_attribute a
             where a.attrelid = 'public.policy_servicing_status'::regclass and a.attnum > 0 and not a.attisdropped),
           array['policy_id', 'agent_id', 'client_key', 'client_first_name', 'client_last_name', 'client_phone', 'carrier', 'stage',

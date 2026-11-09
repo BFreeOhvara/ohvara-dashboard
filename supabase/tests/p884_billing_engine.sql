@@ -11,7 +11,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(101);
+select plan(102);
 
 -- P901: the replay also loads p901_price_book_v2.sql (version 2, final, effective the replay day). This file checks the
 -- P884 engine on its own draft version 1, so version 2 is set aside here (inside this transaction, rolled back at the
@@ -35,7 +35,7 @@ select '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authentic
   ) as u(id, n, role, full_name);
 update public.profiles set role = 'admin' where id = 'a8840000-0000-4000-8000-000000000001';
 update public.profiles set role = 'agent', is_active = true where id::text like 'a8840000-%' and id <> 'a8840000-0000-4000-8000-000000000001';
-update public.profiles set billing_status = 'active' where id = 'a8840000-0000-4000-8000-00000000000a';
+update public.profiles set billing_status = 'active' where id in ('a8840000-0000-4000-8000-00000000000a', 'a8840000-0000-4000-8000-00000000000b');
 -- Only this test's agents.
 update public.profiles set is_active = false where role = 'agent' and id::text not like 'a8840000-%';
 
@@ -142,11 +142,11 @@ select is((pg_temp.ctl('a8840000-0000-4000-8000-00000000000a', 'appts')).run, tr
 select pg_temp.as_user('a8840000-0000-4000-8000-00000000000b');
 select throws_ok($$ select public.admin_billing_pilot_set('a8840000-0000-4000-8000-00000000000b', true) $$, '42501', null, 'g1 an agent can''t put themselves in the pilot');
 select pg_temp.as_user('a8840000-0000-4000-8000-000000000001');
-select lives_ok($$ select public.admin_billing_pilot_set('a8840000-0000-4000-8000-00000000000b', true, null, 'first pilot') $$, 'g2 admin turns the pilot on');
-select is((select (after->>'plan') from public.agent_billing_events where agent_id = 'a8840000-0000-4000-8000-00000000000b' and kind = 'pilot'), 'pilot', 'g3 logged with before and after');
+select throws_ok($$ select public.admin_billing_pilot_set('a8840000-0000-4000-8000-00000000000b', true, null, 'first pilot') $$, 'P0001', 'No pilot: every agent pays from day one (P914)', 'g2 admin can no longer turn the pilot on (252: no pilot)');
+select is((select count(*)::int from public.agent_billing_events where agent_id = 'a8840000-0000-4000-8000-00000000000b' and kind = 'pilot'), 0, 'g3 no pilot event is logged (252: no pilot)');
 select pg_temp.as_user('a8840000-0000-4000-8000-00000000000b');
-select is((public.lead_spend_set(1000, 0))->>'extra_cents', '3000', 'g4 pilot: $10 a day is fine, no minimum');
-select is((public.my_billing())->'membership'->>'membership_cents', '0', 'g5 no membership in the pilot');
+select is((public.lead_spend_set(5000, 0))->>'extra_cents', '15000', 'g4 B is a paid agent now (252): $50 a day, the 3 days left are charged');
+select is((public.my_billing())->'membership'->>'membership_cents', '99700', 'g5 B pays the Starter membership from day one');
 select pg_temp.as_owner();
 select is((select count(*)::int from public.lead_spend_claim_charges(25)), 1, 'g6 B''s charge is claimed');
 select is((public.lead_spend_charge_result((select id from public.lead_spend_charges where agent_id = 'a8840000-0000-4000-8000-00000000000b'), 'failed', 'pi_b1', 'card_declined'))->>'status', 'failed', 'g7 declined');
@@ -160,26 +160,27 @@ select lives_ok($$ select public.lead_spend_charge_result((select id from public
 select is(pg_temp.runs('a8840000-0000-4000-8000-00000000000b', 'lead_spend'), 'off', 'g13 not stopped any more (spend starts tomorrow)');
 
 -- ── h. next week opens: rollover, weekly charge, the VA cost line ───────────
-select public.admin_billing_va_cost_set('a8840000-0000-4000-8000-00000000000b', true, 900) is null from (select pg_temp.as_user('a8840000-0000-4000-8000-000000000001')) s;
+select pg_temp.as_user('a8840000-0000-4000-8000-000000000001');
+select throws_ok($$ select public.admin_billing_va_cost_set('a8840000-0000-4000-8000-00000000000b', true, 900) $$, 'P0001', null, 'h0 the VA cost line can no longer be switched on (252: no pilot)');
 select pg_temp.as_owner();
 select pg_temp.day('2026-11-16');
 select ok(public.lead_spend_week_open() >= 1, 'h1 the week opens');
-select is((select rolled_in_cents from public.lead_spend_weeks where agent_id = 'a8840000-0000-4000-8000-00000000000b' and week_start = '2026-11-16'), 3000, 'h2 B''s unspent $30 rolled over');
-select is((select amount_cents from public.lead_spend_charges where agent_id = 'a8840000-0000-4000-8000-00000000000b' and kind = 'weekly'), 4000, 'h3 so B pays only $40 of the $70 week');
+select is((select rolled_in_cents from public.lead_spend_weeks where agent_id = 'a8840000-0000-4000-8000-00000000000b' and week_start = '2026-11-16'), 15000, 'h2 B''s unspent $150 rolled over');
+select is((select amount_cents from public.lead_spend_charges where agent_id = 'a8840000-0000-4000-8000-00000000000b' and kind = 'weekly'), 20000, 'h3 so B pays only $200 of the $350 week');
 select is((select amount_cents from public.lead_spend_charges where agent_id = 'a8840000-0000-4000-8000-00000000000a' and kind = 'weekly'), 52500 - 5000, 'h4 A pays the week less their balance');
 select is((select count(*)::int from public.lead_spend_charges where agent_id = 'a8840000-0000-4000-8000-00000000000c'), 0, 'h5 C never subscribed: nothing charged');
-select is((public.billing_view('a8840000-0000-4000-8000-00000000000b', false))->'va_cost'->>'on', 'true', 'h6 B''s VA cost line is on');
+select ok(coalesce((public.billing_view('a8840000-0000-4000-8000-00000000000b', false))->'va_cost'->>'on', 'false') = 'false', 'h6 B has no VA cost line (252: no pilot)');
 
 -- ── i. pilot → paid, setup fee, tier from the next bill ──────────────────────
 select pg_temp.as_user('a8840000-0000-4000-8000-000000000001');
 select throws_ok($$ select public.admin_billing_to_paid('a8840000-0000-4000-8000-00000000000b', '2026-11-19') $$, 'P0001', null, 'i1 at least 7 days'' notice');
-select lives_ok($$ select public.admin_billing_to_paid('a8840000-0000-4000-8000-00000000000b', '2026-11-30') $$, 'i2 pilot to paid from Nov 30');
+select throws_ok($$ select public.admin_billing_to_paid('a8840000-0000-4000-8000-00000000000b', '2026-11-30') $$, 'P0001', 'No pilot: every agent is already on a paid plan (P914)', 'i2 pilot to paid is refused (252: no pilot)');
 select pg_temp.as_owner();
-select is(pg_temp.notes('a8840000-0000-4000-8000-00000000000b', 'billing_plan_notice'), 1, 'i3 B gets the notice');
+select is(pg_temp.notes('a8840000-0000-4000-8000-00000000000b', 'billing_plan_notice'), 0, 'i3 so B gets no pilot notice');
 select pg_temp.day('2026-11-30');
-select is(pg_temp.runs('a8840000-0000-4000-8000-00000000000b', 'status'), 'waiting_acceptance', 'i4 not accepted by the date: waiting, still pilot');
+select is(pg_temp.runs('a8840000-0000-4000-8000-00000000000b', 'status'), 'active', 'i4 B is active, nothing to wait for');
 select pg_temp.as_user('a8840000-0000-4000-8000-00000000000b');
-select is((public.billing_accept_paid('v1', 'test'))->>'frequency', 'monthly', 'i5 B accepts and authorises the monthly charge');
+select throws_ok($$ select public.billing_accept_paid('v1', 'test') $$, 'P0001', 'Nothing to accept', 'i5 B has nothing to accept: already paid');
 select pg_temp.as_owner();
 select lives_ok($$ select public.billing_daily_sweep() $$, 'i6 sweep');
 select is((select plan from public.agent_billing_plans where agent_id = 'a8840000-0000-4000-8000-00000000000b'), 'paid', 'i7 B is on a paid plan');

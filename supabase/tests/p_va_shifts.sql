@@ -108,14 +108,14 @@ select throws_ok($$ insert into public.va_day_off_requests (va_id, off_date) val
                  '42501', null, 'd6 a VA cannot ask off for someone else');
 update public.va_day_off_requests set status = 'approved' where off_date = public.va_today() + 2;
 reset role;
-select is((select status from public.va_day_off_requests where off_date = public.va_today() + 2), 'pending', 'd7 a VA cannot approve their own request');
+select is((select status from public.va_day_off_requests where off_date = public.va_today() + 2), 'approved', 'd7 P915: the VA''s own booking is booked at once (no approval since P913)');
 select is((select reason from public.va_day_off_requests where off_date = public.va_today() + 2), 'Doctor''s appointment', 'd8 the reason is trimmed');
 select is((select count(*)::int from public.notifications where profile_id = 'dddddddd-dddd-4ddd-8ddd-000000000001' and type = 'va_day_off_requested'),
           1, 'd9 the admin is told (one in-app notification, the RPC ask only)');
 
 select pg_temp.as_user('eeeeeeee-eeee-4eee-8eee-000000000001');
 select is((select count(*)::int from public.va_day_off_requests), 0, 'd10 V1 cannot see V2''s requests');
-select is((select count(*)::int from public.va_shift_week(public.va_today() + 2, 1) where off_status is not null), 0, 'd11 nor V2''s pending ask on the rota');
+select is((select count(*)::int from public.va_shift_week(public.va_today() + 2, 1) where off_status is not null), 1, 'd11 P915: V2''s booked day shows on the rota');
 select throws_ok($$ select public.va_decide_day_off((select id from public.va_day_off_requests limit 1), true) $$,
                  '42501', 'Only the Ohvara team can decide a day off', 'd12 a VA cannot decide a day off');
 reset role;
@@ -132,13 +132,13 @@ select pg_temp.as_user('dddddddd-dddd-4ddd-8ddd-000000000001');
 select is((select count(*)::int from public.va_day_off_requests), 2, 'e1 the admin sees every request');
 select is(public.va_decide_day_off((select id from public.va_day_off_requests where off_date = public.va_today() + 2), true), 'approved', 'e2 approve D2');
 select is(public.va_decide_day_off((select id from public.va_day_off_requests where off_date = public.va_today() + 7), false), 'declined', 'e3 decline D7');
-select is((select decided_by from public.va_day_off_requests where off_date = public.va_today() + 2), 'dddddddd-dddd-4ddd-8ddd-000000000001'::uuid, 'e4 decided_by is the admin');
+select is((select decided_by from public.va_day_off_requests where off_date = public.va_today() + 2), null, 'e4 P915: a booked day needed no deciding (approving it again changes nothing)');
 select throws_ok($$ select public.va_decide_day_off('99999999-9999-4999-8999-999999999999', true) $$, 'P0002', 'Request not found', 'e5 an unknown request');
 select is((select count(*)::int from public.va_shifts_today(public.va_today() + 2)), 1, 'e6 D2 on shift: V1 only (V2 is off)');
 select is((select off_status from public.va_shift_week(public.va_today() + 2, 1) where va_id = 'eeeeeeee-eeee-4eee-8eee-000000000002'), 'approved', 'e7 the rota shows V2 off');
 reset role;
 select is((select count(*)::int from public.notifications where profile_id = 'eeeeeeee-eeee-4eee-8eee-000000000002' and type = 'va_day_off_decided'),
-          2, 'e8 V2 is told both decisions');
+          1, 'e8 V2 is told the one real decision (the decline)');
 select is((select count(*)::int from public.notification_emails where type in ('va_day_off_requested', 'va_day_off_decided')),
           0, 'e8b no email is queued for either');
 
@@ -151,7 +151,7 @@ reset role;
 -- ── f. asking again, taking it back ─────────────────────────────────────────
 select pg_temp.as_user('eeeeeeee-eeee-4eee-8eee-000000000002');
 select lives_ok($$ select public.va_request_day_off(public.va_today() + 7, 'Moving house') $$, 'f1 V2 asks again for the declined day');
-select is((select status from public.va_day_off_requests where off_date = public.va_today() + 7), 'pending', 'f2 it is pending again');
+select is((select status from public.va_day_off_requests where off_date = public.va_today() + 7), 'approved', 'f2 P915: asking again books it');
 select is(public.va_cancel_day_off(public.va_today() + 7), true, 'f3 V2 takes it back');
 select is((select count(*)::int from public.va_day_off_requests where off_date = public.va_today() + 7), 0, 'f4 the request is gone');
 select is(public.va_request_day_off(public.va_today() + 2, 'again'), (select id from public.va_day_off_requests where off_date = public.va_today() + 2), 'f5 asking again for an approved day keeps it');

@@ -19,7 +19,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(224);
+select plan(225);
 
 -- ── helpers ─────────────────────────────────────────────────────────────────
 -- Ids come from a name, so a helper needs no table the signed-in roles can't read.
@@ -469,7 +469,8 @@ select lives_ok(format($$ select public.p_arr_work('callback', 'callback', null,
                 'd4 the VA reaches the lead and sets a callback for tomorrow');
 select is(public.p_arr_bucket('callback'), null, 'd5 a callback not due is hidden');
 select public.p_arr_as('owner');
-select is(public.p_arr_steps('callback'), 'retry_d1:1:1,retry_d3:1:1,retry_d7:1:1,retry_monthly:1:1', 'd6 the callback used the due step and planned nothing');
+select is(public.p_arr_steps('callback'), null, 'd6 the callback plans nothing, and no retry step is left scheduled (248: a callback with a time counts as booked)');
+select is(public.p_arr_steps('callback', 'skipped'), 'retry_d0:1:1,retry_d1:1:1,retry_d3:1:1,retry_d7:1:1,retry_monthly:1:1', 'd6b every retry step was skipped');
 select public.p_arr_due('callback', 'retry_d1');
 select public.p_arr_as('V1');
 select is(public.p_arr_bucket('callback'), null, 'd7 a due step does not pull a callback forward');

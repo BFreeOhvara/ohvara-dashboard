@@ -564,12 +564,10 @@ select is((select count(*) from seen where who = 'a' and channel = 'text' and te
 select is((select count(*) from seen where who = 'a' and channel = 'text' and direction = 'in' and text_status <> 'received'), 0::bigint,
           'k17 an inbound text is received');
 
--- Words: 198 is not in this replay, so the same call that gave null above gets the words
--- once its two columns exist. Rolled back with the file. inbound_events needs no column.
+-- Words: 219_text_words.sql (the 198 columns, now numbered) is in this replay, so both body columns exist. inbound_events
+-- needs no column.
 select is((select count(*) from information_schema.columns where table_schema = 'public' and column_name = 'body'
-            and table_name in ('lead_followup_sms_log', 'recovery_sms_log')), 0::bigint, 'k18 this replay has no 198 columns: i2 ran without them');
-alter table public.lead_followup_sms_log add column body text;
-alter table public.recovery_sms_log add column body text;
+            and table_name in ('lead_followup_sms_log', 'recovery_sms_log')), 2::bigint, 'k18 this replay has the 219 columns (was 198)');
 update public.lead_followup_sms_log set body = 'Exact follow-up words' where id = public.p_cl_id('r_followup');
 update public.lead_followup_sms_log set body = 'Failed words' where id = public.p_cl_id('h_fu_fail');
 update public.recovery_sms_log set body = 'Exact recovery words' where id = public.p_cl_id('r_recovery');
