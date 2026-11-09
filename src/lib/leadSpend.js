@@ -1,5 +1,5 @@
 // P884 — the real billing calls the agent side (P848) and admin side (P858) wire when Show sample data is off. The
-// money rules live in the database (supabase/migrations/p884_billing_engine.sql); Stripe charges go through the
+// money rules live in the database (supabase/migrations/237_billing_engine.sql); Stripe charges go through the
 // lead-spend edge function (test mode only until Brayden's live switch). Bank and card numbers never pass through here.
 //
 // Agent:  loadBilling(db)                    my_billing(): plan, status, what runs, balance, spend, week, membership

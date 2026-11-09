@@ -9,7 +9,7 @@ import { tierOf, monthlyBill, spendOk, nightlyFor, addedQuote, MAX_DAILY, SLIDER
 import { PLANS, moneyFor, admSnapshot, PERIODS } from './adminshell/data.js'
 import { pilotTotals, PILOT_ROWS } from './adminshell/p879.js'
 
-const SQL = readFileSync('supabase/migrations/p909_final_pricing.sql', 'utf8')
+const SQL = readFileSync('supabase/migrations/249_final_pricing.sql', 'utf8')
 
 test('the client price book is the migration\'s version 3, number for number, and final', () => {
   assert.equal(BOOK.version, 3)
@@ -133,7 +133,7 @@ test('no old price, weekly prepay, rollover or bank transfer is left on a screen
   assert.match(agent, /setup fee isn/)
 })
 
-test('the migration is one unnumbered file, not applied', () => {
-  assert.equal(globSync('supabase/migrations/*p909*').length, 1)
-  assert.match(globSync('supabase/migrations/*p909*')[0].replaceAll('\\', '/'), /migrations\/p909_final_pricing\.sql$/)
+test('the migration is one file, numbered 249 by P904', () => {
+  assert.equal(globSync('supabase/migrations/*_final_pricing*').length, 1)
+  assert.match(globSync('supabase/migrations/*_final_pricing*')[0].replaceAll('\\', '/'), /migrations\/249_final_pricing\.sql$/)
 })

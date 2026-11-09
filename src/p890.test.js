@@ -52,7 +52,7 @@ test('Pause leads: spend and new leads stop, membership and servicing keep going
   const real = src('src/hooks/agentRealData.js')
   assert.match(real, /rpcOrSoon\('lead_pause_set', \{ p_resume_on:/)
   assert.match(real, /rpcOrSoon\('lead_pause_resume'/)
-  const mig = src('supabase/migrations/p890_cleanup.sql')
+  const mig = src('supabase/migrations/242_cleanup.sql')
   for (const fn of ['lead_pause_set', 'lead_pause_resume', 'lead_pause_daily', 'admin_lead_pauses', 'agent_live_now']) assert.match(mig, new RegExp(`function public\\.${fn}\\(`))
   assert.match(mig, /'paused by agent'/)
 })

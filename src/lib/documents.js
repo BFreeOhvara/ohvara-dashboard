@@ -1,5 +1,5 @@
 // P886 — documents on a policy: words, the carrier's send channel, the replacement gate, and the real calls (the RPCs in
-// supabase/migrations/p886_documents.sql). The screens run on sample data (src/template/docs886) until 848/852 wire
+// supabase/migrations/239_documents.sql). The screens run on sample data (src/template/docs886) until 848/852 wire
 // these in; the words and rules here are shared by both, so sample and real read the same.
 
 export const DOC_TYPE = {

@@ -10,7 +10,7 @@ import { SPLIT_REASON, LEAD_MODES, effectiveSplit, nextSplit, liveHoursText, DEF
 // P889 — the split behind one lead product, admin only (agents never see it). Settings › Lead split holds the splitStore.rules;
 // the agent drawer shows each transfer agent's split (form ads vs call ads), what runs today, next Monday's move with
 // the numbers behind it, a lock, and the change log. Sample only until 858 wires admin_lead_split_view /
-// admin_lead_split_lock / admin_lead_split_rules_save (supabase/migrations/p889_one_lead_product.sql).
+// admin_lead_split_lock / admin_lead_split_rules_save (supabase/migrations/241_one_lead_product.sql).
 // P901 (Meta only at launch): Settings › Lead split has the Call ads (Google) switch, off by default. While it's off
 // every agent runs all form ads, the Monday move waits, and the agent block says so (p901_price_book_v2.sql).
 const money = usd()

@@ -9,7 +9,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const MIGRATIONS = fileURLToPath(new URL('../../supabase/migrations/', import.meta.url))
-const files = readdirSync(MIGRATIONS).filter(f => /^\d+_lead_outcomes\.sql$/.test(f))
+const files = readdirSync(MIGRATIONS).filter(f => /^215_lead_outcomes\.sql$/.test(f)) // P904: 248_lead_outcomes (from P902) is a different file
 const path = process.env.LEAD_OUTCOMES_SQL || `${MIGRATIONS}${files[0]}`
 
 const raw = readFileSync(path, 'utf8').replaceAll('\r\n', '\n')

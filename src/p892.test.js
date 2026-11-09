@@ -240,7 +240,7 @@ test('core: no answer → result no_answer (the SQL schedules try 2); stop → o
 
 // ── The migration ────────────────────────────────────────────────────────────────────────────────────────────────
 test('the migration: off by default, not applied, the same timers and words', () => {
-  const sql = readFileSync('supabase/migrations/p892_ai_caller.sql', 'utf8')
+  const sql = readFileSync('supabase/migrations/244_ai_caller.sql', 'utf8')
   assert.match(sql, /NOT NUMBERED, NOT APPLIED/)
   assert.match(sql, /ai_caller_live boolean not null default false/)
   assert.match(sql, /insert into public\.ai_consent_versions \(version, covers_ai\) values \('mp-v1', false\)/)

@@ -4,7 +4,7 @@
 // and the tests can share it.
 //
 // P901 (Brayden, Nov 7): version 2 was FINAL — three packages by daily lead spend, servicing only $499, a $299 setup
-// fee once, month to month (no minimum term). supabase/migrations/p901_price_book_v2.sql adds it (effective the day
+// fee once, month to month (no minimum term). supabase/migrations/247_price_book_v2.sql adds it (effective the day
 // it's applied); src/p901.test.js checks this file matches it number for number. Version 1 (the P884 draft) stays
 // in the database, append-only, and here only so its parity test keeps holding.
 
@@ -42,7 +42,7 @@ export const BOOK_V2 = {
 
 // P909 (Brayden, Nov 8, model B): version 3 is FINAL and the prices in effect. Plans by daily spend band, plus 12% of
 // lead spend (charged nightly with the spend), servicing only by book size, $299 setup once (not refunded).
-// supabase/migrations/p909_final_pricing.sql adds it; src/p909.test.js checks this file matches it number for number.
+// supabase/migrations/249_final_pricing.sql adds it; src/p909.test.js checks this file matches it number for number.
 // card_fee_rate is what Stripe costs Ohvara (the admin Money page); agents pay no card fee.
 export const BOOK = {
   version: 3, status: 'final', effective_from: null,

@@ -109,7 +109,7 @@ test('one paid day ahead: today and tomorrow paid, tonight charges the day after
 })
 
 test('the P910 migration (not applied): two days ahead, never run an unpaid day, a payment settles only its day', () => {
-  const sql = read('../supabase/migrations/p910_paid_day_ahead.sql')
+  const sql = read('../supabase/migrations/250_paid_day_ahead.sql')
   assert.match(sql, /create or replace function public\.lead_spend_nightly/)
   assert.match(sql, /create or replace function public\.billing_runs/)
   assert.match(sql, /when nightly and not lead_spend_day_paid\(p_agent, today\) then 'unpaid_day'/)

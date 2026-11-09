@@ -9,7 +9,7 @@ import { TIERS, SERVICING_ONLY, PAID_MIN_DAILY, tierOf, monthlyBill } from './te
 import { SETUP_FEE, CARD_FEE } from './adminshell/data.js'
 import { toSampleBilling, setSpend, loadBilling, pilotSet, adjustBalance } from './lib/leadSpend.js'
 
-const SQL = readFileSync('supabase/migrations/p884_billing_engine.sql', 'utf8')
+const SQL = readFileSync('supabase/migrations/237_billing_engine.sql', 'utf8')
 
 test('the client price book is the migration\'s version 1, number for number', () => {
   for (const t of DRAFT_BOOK.tiers) {

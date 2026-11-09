@@ -117,7 +117,7 @@ test('one daily spend: the bill and the estimates read one number', () => {
 })
 
 test('the migration matches the rules and keeps the split from agents', () => {
-  const sql = readFileSync('supabase/migrations/p889_one_lead_product.sql', 'utf8')
+  const sql = readFileSync('supabase/migrations/241_one_lead_product.sql', 'utf8')
   assert.match(sql, /NOT NUMBERED, NOT APPLIED/)
   for (const [k, v] of [['start_form_pct', 70], ['max_step', 10], ['floor_pct', 20], ['min_sales', 5], ['call_min_daily_cents', 2000], ['lookback_weeks', 4]]) {
     assert.match(sql, new RegExp(`${k}\\s+int not null default ${v}\\b`), k)

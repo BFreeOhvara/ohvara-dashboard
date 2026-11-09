@@ -1,7 +1,7 @@
 // lead-spend (Prompt 884; P909 nightly) — charges lead spend to the card on file. index.ts wires Deno; all the logic is here, free
 // of Deno globals, so it runs against a mocked Stripe and an in-memory store in core.test.ts.
 //
-// The money rules live in the database (supabase/migrations/p884_billing_engine.sql): what a week needs, rollover,
+// The money rules live in the database (supabase/migrations/237_billing_engine.sql): what a week needs, rollover,
 // delivered spend capped at the balance, what stops when. This function only moves money for charges the database
 // has already made (lead_spend_charges), and reports each result back (lead_spend_charge_result).
 //

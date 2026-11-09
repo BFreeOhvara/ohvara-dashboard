@@ -134,7 +134,7 @@ test('the 30-minute gap: nothing bookable within 30 minutes of another booked ca
 })
 
 test('the server refuses a booking inside the gap (migration p894, not applied)', () => {
-  const sql = readFileSync('supabase/migrations/p894_booking_gap.sql', 'utf8')
+  const sql = readFileSync('supabase/migrations/245_booking_gap.sql', 'utf8')
   assert.match(sql, /create trigger inbound_events_booking_gap\s+before insert on public\.inbound_events/)
   assert.match(sql, /abs\(extract\(epoch from \(t\.at - p_at\)\)\) < 30 \* 60/)
   assert.match(sql, /hint = 'booking_gap'/)

@@ -3,7 +3,7 @@
 //   2. the Meta campaign ID the lead came from (one campaign per agent, saved on the agent when GoHighLevel creates it).
 // Only if both are missing, or neither points at an agent, does the lead need a person: it raises the admin alert
 // "1 lead couldn't be matched to an agent. Pick one." It should almost never happen. Pure, so node --test reads it;
-// the database twin is ghl_intake_lead in supabase/migrations/p913_campaign_match.sql.
+// the database twin is ghl_intake_lead in supabase/migrations/251_campaign_match.sql.
 const clean = v => (v == null ? '' : String(v).trim())
 
 export function matchAgent(lead = {}, agents = []) {

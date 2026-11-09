@@ -1,5 +1,5 @@
 // P889 — one lead product (brain/ohvara/How Ohvara Works.md "One lead product"). Plain rules, no imports, so the
-// agent screens, the VA desk, the admin screens, the tests and the migration (supabase/migrations/p889_one_lead_product.sql,
+// agent screens, the VA desk, the admin screens, the tests and the migration (supabase/migrations/241_one_lead_product.sql,
 // same numbers) all say the same thing.
 //
 // The agent sets ONE daily spend and one setting, How you take leads:

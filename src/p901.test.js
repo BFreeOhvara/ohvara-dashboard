@@ -9,8 +9,8 @@ import { TIERS, SERVICING_ONLY, SETUP_FEE, tierOf, monthlyBill, expected } from 
 import { PAID_PLANS } from './adminshell/p879.js'
 import { PLANS } from './adminshell/data.js'
 
-const SQL = readFileSync('supabase/migrations/p901_price_book_v2.sql', 'utf8')
-const SQL_V1 = readFileSync('supabase/migrations/p884_billing_engine.sql', 'utf8')
+const SQL = readFileSync('supabase/migrations/247_price_book_v2.sql', 'utf8')
+const SQL_V1 = readFileSync('supabase/migrations/237_billing_engine.sql', 'utf8')
 
 test('the client price book is the migration\'s version 2, number for number, and final', () => {
   assert.equal(BOOK.version, 2)

@@ -14,7 +14,7 @@ import '../../template/ai892.css'
 // P892 — AI speed to lead, admin only. Settings › AI caller holds the switch (ai_caller_live, off), which agents it
 // calls for, the longest call, and the provider (an engine slot: nothing is connected or paid for). Leads › AI calls
 // shows the numbers. Sample only until 858 wires admin_ai_caller_save / admin_ai_calls_view
-// (supabase/migrations/p892_ai_caller.sql). Agents never see any of this.
+// (supabase/migrations/244_ai_caller.sql). Agents never see any of this.
 const money = usd(true)
 let saved = { ...SAMPLE_AI_SETTINGS } // this visit's saved settings (sample)
 
@@ -113,7 +113,7 @@ export function AiCallsView() {
 }
 
 // P902: wrong numbers (AI or VA first call) close the lead as a bad lead and land here, per agent, for a spend check.
-// Real rows: admin_lead_quality_view() (supabase/migrations/p902_lead_outcomes.sql); sample until 904 applies it.
+// Real rows: admin_lead_quality_view() (supabase/migrations/248_lead_outcomes.sql); sample until 904 applies it.
 export function LeadQuality({ rows = SAMPLE_BAD_LEADS }) {
   const byAgent = rows.reduce((m, r) => ({ ...m, [r.agent]: (m[r.agent] || 0) + 1 }), {})
   return (

@@ -15,7 +15,7 @@ import { LEAD_TEXTS } from './template/leadTexts.js'
 import { tagsFor, workflowFor, customFieldsFor, run } from '../supabase/functions/ghl-push/core.ts'
 import { ghlClient, GHL_BASE } from '../supabase/functions/ghl-push/api.ts'
 
-const SQL = readFileSync('supabase/migrations/p902_lead_outcomes.sql', 'utf8')
+const SQL = readFileSync('supabase/migrations/248_lead_outcomes.sql', 'utf8')
 const DEFAULT_DATE = '2026-11-02T14:14'
 
 // ── Each outcome → the right workflow ───────────────────────────────────────────────────────────────────────────
