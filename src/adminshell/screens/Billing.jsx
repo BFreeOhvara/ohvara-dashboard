@@ -36,7 +36,7 @@ function Grow({ children }) {
     return () => ro.disconnect()
   }, [])
   // And after every render (a view change swaps the content in the same commit), so it never waits on the observer.
-  useLayoutEffect(() => { const el = inner.current; if (el && el.offsetHeight !== h) setH(el.offsetHeight) })
+  useLayoutEffect(() => { const el = inner.current; if (el && el.offsetHeight !== h) setH(el.offsetHeight) }, [children, h])
   return <div className="adm-rev-grow" style={h == null ? undefined : { height: h }}><div ref={inner}>{children}</div></div>
 }
 
