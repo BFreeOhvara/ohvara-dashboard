@@ -9,7 +9,7 @@ import { LIVE_STATUS, resultsFor } from './template/agentView.js'
 
 const read = p => readFileSync(new URL(p, import.meta.url), 'utf8')
 
-test('live calls: no cards on either Overview; the card says Live call, no Answer, in the live call lilac', () => {
+test('live calls: no cards on either Overview; the card says Live call, no Answer, in Booked blue (P920)', () => {
   assert.doesNotMatch(read('./template/screens/Overview.jsx'), /<LiveCalls/)
   assert.doesNotMatch(read('./template/m/MOverview.jsx'), /LiveStrip/)
   const card = read('./template/LiveCall.jsx')
@@ -17,9 +17,9 @@ test('live calls: no cards on either Overview; the card says Live call, no Answe
   assert.doesNotMatch(read('./template/m/MLeads.jsx').split('export function LiveStrip')[1].split('function LeadCard')[0], /Answer|Live transfer/)
   assert.doesNotMatch(read('./template/screens/Leads.jsx'), /onAnswer|>Answer</)
   const css = read('./template/live910.css')
-  assert.match(css, /--lf: var\(--sh-f-lilac\); --li: var\(--sh-fi-lilac\)/)
+  assert.match(css, /--lf: var\(--sh-f-sky\); --li: var\(--sh-fi-sky\)/)
   assert.doesNotMatch(css, /--sh-f-butter|--sh-f-apricot/)
-  assert.equal(LIVE_STATUS.tone, 'violet') // lilac: Follow up is butter, Not interested apricot
+  assert.equal(LIVE_STATUS.tone, 'blue') // P920: Booked's blue (a live call is a booking that happened right now)
   assert.deepEqual(resultsFor({ stage: 'ringing', kind: 'live_call' }), ['sold', 'follow_up', 'not_interested'])
 })
 

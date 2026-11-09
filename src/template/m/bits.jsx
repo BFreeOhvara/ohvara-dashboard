@@ -7,7 +7,7 @@ import { mp } from './mpaths'
 // P908 — small pieces the phone screens share.
 const LOOK = {
   outcome: { tone: 'blue', Icon: ClipboardCheck },
-  live: { tone: 'violet', Icon: PhoneIncoming },
+  live: { tone: 'blue', Icon: PhoneIncoming },
   check: { tone: 'warn', Icon: ShieldQuestion },
 }
 // Where a to-do's one button goes on the phone.

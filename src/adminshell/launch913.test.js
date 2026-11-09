@@ -16,11 +16,12 @@ test('colours: No show is grey, Not interested took its apricot, and no two stat
   assert.equal(admin.no_show, 'mute')
   assert.equal(admin.not_interested, 'warn')
   assert.equal(new Set(Object.values(admin)).size, LEAD_LANES.length)
-  const agent = [...AGENT_STATUSES, CLOSED_STATUS, LIVE_STATUS]
+  const agent = [...AGENT_STATUSES, CLOSED_STATUS]
   assert.equal(agent.find(s => s.key === 'no_show').tone, 'mute')
   assert.equal(agent.find(s => s.key === 'not_interested').tone, 'warn')
-  assert.equal(new Set(agent.map(s => s.tone)).size, agent.length, 'board, Closed and the live call: all different')
-  // violet (the live call) is lilac now, not butter like Follow up's teal; rose is Closed's coral
+  assert.equal(new Set(agent.map(s => s.tone)).size, agent.length, 'board and Closed: all different')
+  assert.equal(LIVE_STATUS.tone, 'blue') // P920: a live call is a booking that happened right now, Booked's blue on purpose
+  // violet is lilac (Our team is calling), not butter like Follow up's teal; rose is Closed's coral
   const css = src('../template/flow.css')
   assert.match(css, /\.fx \.is-violet, \.fx-layer \.is-violet \{ --c: var\(--sh-lilac\); \}/)
   assert.match(css, /\.tp \.is-rose \{ --cb: var\(--sh-f-coral\)/)

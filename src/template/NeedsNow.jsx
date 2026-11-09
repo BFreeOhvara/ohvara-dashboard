@@ -9,7 +9,7 @@ import { paths } from './paths'
 // quiet: the team is already on them. Billing notices (a declined card) sit apart too: Fix card.
 const TRIGGER_LOOK = {
   outcome: { tone: 'blue', Icon: ClipboardCheck },
-  live: { tone: 'violet', Icon: PhoneIncoming },
+  live: { tone: 'blue', Icon: PhoneIncoming },
   check: { tone: 'warn', Icon: ShieldQuestion },
   billing: { tone: 'warn', Icon: Wallet },
 }

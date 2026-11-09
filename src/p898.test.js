@@ -64,12 +64,12 @@ test('Not interested back to Follow up stays on the record', () => {
 test('P910: a live call gets no column: it is pinned (live) until marked, then moves to that status', () => {
   const ringing = CASES.ringing[0]
   assert.equal(agentStatusOf(ringing), 'live')
-  assert.deepEqual(agentChip(ringing), ['violet', 'Live call · ringing now'])
+  assert.deepEqual(agentChip(ringing), ['blue', 'Live call · ringing now'])
   const took = agentMove(ringing, 'showed', {}, SAMPLE_NOW)
   assert.equal(isLiveCall(took), true)
   assert.equal(agentStatusOf(took), 'live')
   assert.equal(needsResult(took), true)
-  assert.deepEqual(agentChip(took), ['violet', 'Live call · pick the result'])
+  assert.deepEqual(agentChip(took), ['blue', 'Live call · pick the result'])
   assert.deepEqual(resultsFor(took), ['sold', 'follow_up', 'not_interested'])
   // Picking a result unpins it.
   assert.equal(agentStatusOf(agentMove(took, 'sold', {}, SAMPLE_NOW)), 'sold')

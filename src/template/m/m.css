@@ -136,7 +136,7 @@
 
 /* Live calls --------------------------------------------------------------------------------------------------- */
 .mx-live { display: flex; flex-direction: column; gap: 10px; }
-.mx-livecard { --cs: var(--sh-cs-lilac); --csi: var(--sh-csi-lilac); display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: var(--mx-r); color: var(--sh-ci); background: var(--sh-cf-lilac); border: var(--mx-edge); }
+.mx-livecard { --cs: var(--sh-cs-sky); --csi: var(--sh-csi-sky); display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: var(--mx-r); color: var(--sh-ci); background: var(--sh-cf-sky); border: var(--mx-edge); }
 .mx-live-k { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: var(--sh-ci); }
 .mx-livecard.is-ringing .mx-live-k svg { animation: mx-ring 1s ease-in-out infinite; }
 .mx-live-n b { display: block; font-family: var(--font-display); font-size: 20px; font-weight: 700; }

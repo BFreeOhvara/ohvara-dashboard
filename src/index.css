@@ -5414,3 +5414,18 @@ html.is-native a, html.is-native img { -webkit-touch-callout: none; }
   --sh-glass-edge: rgba(255, 255, 255, 0.62);
   --sh-glass-hl: rgba(255, 255, 255, 0.7);
 }
+
+/* P920 — ONE count-badge style for every shell and role (nav tabs, Messages, the bell, rail icons, the phone tab bar,
+   sidebar counts). The number sits on the exact middle of its circle, both ways: a block container whose text is trimmed
+   to the digit height (text-box) and centred with align-content, so the font's baseline gap can't push it up or down.
+   Older WebViews without text-box fall back to flex centring with a small lift. Each badge keeps its own size, colour and
+   side padding; only the centring lives here (`html body` outranks them). */
+html body :is(.fx-tb, .fx-badge, .tp-tb, .tp-ovcount, .mx-badge, .mx-count, .ov-sb-badge, .ph-tab-badge, .pv-tb-badge, .pv-badge, .pl-seg-att, .ag-badge) {
+  display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
+  padding-top: .05em !important; padding-bottom: 0; line-height: 1; text-align: center; font-variant-numeric: lining-nums;
+}
+@supports (text-box: trim-both cap alphabetic) {
+  html body :is(.fx-tb, .fx-badge, .tp-tb, .tp-ovcount, .mx-badge, .mx-count, .ov-sb-badge, .ph-tab-badge, .pv-tb-badge, .pv-badge, .pl-seg-att, .ag-badge) {
+    display: inline-block !important; align-content: center; padding-top: 0 !important; text-box: trim-both cap alphabetic;
+  }
+}
