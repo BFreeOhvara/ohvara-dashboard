@@ -15,6 +15,14 @@
   .fx .lc-board.is-one { grid-template-columns: minmax(0, 1fr); margin: 0; padding: 0; }
 }
 
+/* P917: live-call cards sit above the board without shrinking it. The page holds still at the window's height on a
+   desktop (flow.css); with cards it grows by their height (--lc-live-h, Leads.jsx useLiveRoom) and the window scrolls. */
+.fx-leads > .lc-live { flex: none; }
+.fx-leads > .lc-live:empty { display: none; }
+@media (min-width: 1000px) and (min-height: 620px) {
+  html .fx.tp-app.is-leads { height: calc(100vh + var(--lc-live-h, 0px)); } /* beats flow.css whatever the load order */
+}
+
 /* Timeline rows. Done rows fill their dot; what comes next is faint, with a Scheduled / Next tag. */
 .lc-tl li > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .lc-ev-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

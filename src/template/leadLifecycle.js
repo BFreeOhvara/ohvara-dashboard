@@ -318,9 +318,10 @@ export function closeCallTask(lead, now = clockNow()) {
 }
 
 // ── Your to-dos (P910; was "Needs you now") ────────────────────────────────────────────────────────────────────
-// Only real agent jobs (Brayden, Nov 8): calls to mark (a booked call whose time has passed, a live call left unmarked
-// after its day) and the monthly "Still on the books?" check. A live call on its own day is pinned at the top of Leads
-// and the Overview instead (agentView.js liveCalls); call tasks, unfinished sales and billing show on their own pages.
+// Only real agent jobs (Brayden, Nov 8): calls to mark (a booked call whose time has passed, every live call still
+// waiting for its result) and the monthly "Still on the books?" check. P917: a live call that needs a result shows here
+// on the Overview (no live cards there any more) and pinned on Leads (agentView.js liveCalls); call tasks, unfinished
+// sales and billing show on their own pages.
 export const TRIGGERS = [
   { key: 'outcome', title: 'How did it go?', action: 'Mark result' },
   { key: 'live', title: 'Live call to mark', action: 'Mark result' },
@@ -333,15 +334,26 @@ export const APPT_LENGTH = 30
 // A booked call whose time has passed (30 minutes after it started). A live call is liveToMark, below.
 export const needsOutcome = (l, now = clockNow()) => l.stage === 'booked' && !!l.apptAt && minutesFrom(l.apptAt, now) >= APPT_LENGTH
 const liveOn = l => [...(l.events || [])].reverse().find(e => e.kind === 'transferred')?.at || l.liveAt || l.came || ''
-// A live call the agent took and didn't mark by the end of its day.
-export const liveToMark = (l, now = clockNow()) => l.stage === 'showed' && !l.apptAt && !!liveOn(l) && liveOn(l).slice(0, 10) < now.slice(0, 10)
+// P917: a live call still waiting for its result: ringing now, or taken and not marked (any day).
+export const liveToMark = l => l.stage === 'ringing' || (l.stage === 'showed' && !l.apptAt)
+const liveWhat = (l, now) => {
+  if (l.stage === 'ringing') return 'Live call ringing now. Pick how it went when you hang up'
+  const at = liveOn(l)
+  if (!at) return 'Live call. Pick how it went'
+  return at.slice(0, 10) === now.slice(0, 10) ? `Live call today at ${timeLabel(at)}. Pick how it went` : `Live call ${dayLabel(at)}. Pick how it went`
+}
+const liveWhen = (l, now) => {
+  const at = liveOn(l)
+  return l.stage === 'ringing' ? 'Now' : !at || at.slice(0, 10) === now.slice(0, 10) ? 'Today' : dayLabel(at)
+}
 
 // checks = lib/clientCheck checkLists(...) for today: one to-do per draft date asked about.
 export function needsYouNow({ leads = [], checks = [] }, now = clockNow()) {
   const out = []
   const push = (t, l, what, when) => out.push({ id: `${t.key}-${l.id}`, trigger: t.key, rank: t.rank, title: t.title, action: t.action, ref: l.id, kind: 'lead', name: fullName(l), phone: l.phone, what, when })
   leads.filter(l => needsOutcome(l, now)).forEach(l => push(T.outcome, l, `Booked call at ${timeLabel(l.apptAt)} has passed`, l.apptAt.slice(0, 10) === now.slice(0, 10) ? 'Today' : dayLabel(l.apptAt)))
-  leads.filter(l => liveToMark(l, now)).forEach(l => push(T.live, l, `Live call ${dayLabel(liveOn(l))}. Pick how it went`, dayLabel(liveOn(l))))
+  leads.filter(l => liveToMark(l)).sort((a, b) => (b.stage === 'ringing') - (a.stage === 'ringing') || liveOn(b).localeCompare(liveOn(a)))
+    .forEach(l => push(T.live, l, liveWhat(l, now), liveWhen(l, now)))
   checks.forEach(c => out.push({ id: `check-${c.draft}`, trigger: 'check', rank: T.check.rank, title: T.check.title, action: T.check.action, ref: c.draft, kind: 'check',
     name: c.clients.length === 1 ? `${c.clients[0].client_first_name} ${c.clients[0].client_last_name}` : `${c.clients.length} clients`, phone: null,
     what: `Drafted ${shortDate(c.draft)}. Still on the books? One tap`, when: 'Today' }))

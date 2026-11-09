@@ -1,0 +1,65 @@
+{
+ "base": "http://localhost:4917",
+ "w": 1440,
+ "h": 900,
+ "theme": "dark",
+ "views": {
+  "messages": {
+   "openSteps": 43,
+   "closeSteps": 45,
+   "open": [
+    "5:none",
+    "39:none",
+    "73:matrix(1, 0, 0, 1, 0, 0)",
+    "109:matrix(1, 0, 0, 1, 0, -4.37998)",
+    "152:matrix(1, 0, 0, 1, 0, -6.99337)",
+    "185:matrix(1, 0, 0, 1, 0, -7.61905)",
+    "235:matrix(1, 0, 0, 1, 0, -7.94119)",
+    "251:matrix(1, 0, 0, 1, 0, -7.97875)",
+    "319:none",
+    "355:matrix(0.941835, 0, 0, 0.941835, 0, 0)",
+    "371:matrix(0.95252, 0, 0, 0.95252, 0, 0)",
+    "388:matrix(0.962034, 0, 0, 0.962034, 0, 0)",
+    "405:matrix(0.970308, 0, 0, 0.970308, 0, 0)",
+    "421:matrix(0.977455, 0, 0, 0.977455, 0, 0)"
+   ],
+   "iconPressed": "none",
+   "avatarMenuSteps": 82,
+   "after": {
+    "path": "/template",
+    "cls": "tp tp-app fx is-overview is-anim"
+   }
+  },
+  "drawers": {
+   "clientIn": 47,
+   "clientOutX": 52,
+   "clientOutEsc": 55,
+   "clientOutOutside": 55,
+   "bellIn": 89,
+   "bellOut": 51,
+   "lastOut": "gone"
+  },
+  "cards": {
+   "firstHover": "0px -5px",
+   "pressed": "0.97",
+   "wave": [
+    "0px -0.00423154px",
+    "0px -0.0659863px",
+    "0px -0.119193px",
+    "0px -0.402219px",
+    "0px -2.14274px",
+    "0px -4.68538px"
+   ],
+   "rowCards": 6
+  },
+  "after30InApp": {
+   "clicks": 34,
+   "lift": "0px -5px",
+   "drawerInSteps": 100,
+   "appSettled": false,
+   "htmlSettled": [],
+   "anim": true
+  }
+ },
+ "errors": []
+}

@@ -11,6 +11,7 @@ import { Drawer, Avatar, PillTabs, useAccount, useNote, initials } from '../kit'
 import { avatarHue } from '../avatarHue'
 import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit, useKeep } from '../motion'
 import { armEntrance } from '../../adminshell/entrance'
+import { visibilityGate } from '../../adminshell/entrance'
 import Palette from '../Palette'
 import { LiveClock } from '../Clock'
 import { OhvaraMark } from '../../components/ui/OhvaraMark'
@@ -395,7 +396,7 @@ export default function FulFrame() {
     // P859/P860: it then gets SETTLE_MS to really run; if it has not (a throttled or frozen browser), the page shows at rest
     // (.is-settled, flow.css). Reduced motion shows at once. The body never waits on an animation.
     const raf = requestAnimationFrame(() => { el.classList.add('is-anim'); stop = armEntrance(el, { still: still(), rootClass: 'fx-settled' }) })
-    const onVis = () => { if (document.hidden) el.classList.remove('is-anim') }
+    const onVis = visibilityGate(el) // P917: back from another tab, the motion comes back
     document.addEventListener('visibilitychange', onVis)
     return () => { cancelAnimationFrame(raf); stop(); document.removeEventListener('visibilitychange', onVis) }
   }, [layout])

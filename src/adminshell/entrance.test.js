@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { armEntrance, entranceStalled, SETTLE_MS, RECHECK_MS } from './entrance.js'
+import { armEntrance, entranceStalled, visibilityGate, SETTLE_MS, RECHECK_MS } from './entrance.js'
 
 const src = p => readFileSync(new URL(p, import.meta.url), 'utf8')
 const anim = (currentTime, playState = 'running') => ({ animationName: 'fx-rise-soft', currentTime, playState })
@@ -9,7 +9,7 @@ const anim = (currentTime, playState = 'running') => ({ animationName: 'fx-rise-
 function rig(anims) {
   const classes = new Set()
   const root = new Set()
-  const el = { classList: { add: c => classes.add(c) }, ownerDocument: { documentElement: { classList: { add: c => root.add(c) } } }, getAnimations: () => anims }
+  const el = { classList: { add: c => classes.add(c), remove: c => classes.delete(c), contains: c => classes.has(c) }, ownerDocument: { documentElement: { classList: { add: c => root.add(c), remove: c => root.delete(c) } } }, getAnimations: () => anims }
   const queue = []
   const timers = { set: (f, ms) => { queue.push({ f, ms }); return queue.length - 1 }, clear: id => { queue[id] = null } }
   const fire = ms => queue.filter(t => t && t.ms === ms).forEach(t => t.f())
@@ -41,8 +41,49 @@ test('a slow first paint is caught by the second look', () => {
   r.fire(SETTLE_MS) // nothing animating yet
   assert.equal(r.classes.size, 0)
   list.push(anim(0)) // motion began late and never ticked
-  r.fire(RECHECK_MS)
+  r.fire(RECHECK_MS) // P917: first seen here, so it gets one more look before it counts as stalled
+  assert.equal(r.classes.size, 0)
+  r.fire(RECHECK_MS + SETTLE_MS)
   assert.ok(r.classes.has('is-settled'))
+})
+
+test('P917: an animation that began a moment before a look (a click, a drawer, the next page) never settles the page', () => {
+  const list = [anim(700)]
+  const r = rig(list)
+  armEntrance(r.el, { timers: r.timers })
+  const wiggle = anim(20) // a click's wiggle, 20 ms old at the look
+  list.push(wiggle)
+  r.fire(SETTLE_MS)
+  assert.equal(r.classes.size, 0)
+  list.splice(list.indexOf(wiggle), 1, anim(30)) // it finished; another click began a new one just before the next look
+  r.fire(RECHECK_MS)
+  list.splice(list.length - 1, 1, anim(620, 'finished')) // by the third look it has played out
+  r.fire(RECHECK_MS + SETTLE_MS)
+  assert.equal(r.classes.size, 0, 'motion keeps working, every click, all session')
+})
+
+test('P917: stopping the watchdog (a page change) lifts a settle it made, so the next page has its motion back', () => {
+  const r = rig([anim(0)])
+  const stop = armEntrance(r.el, { rootClass: 'fx-settled', timers: r.timers })
+  r.fire(SETTLE_MS)
+  assert.ok(r.classes.has('is-settled') && r.root.has('fx-settled'))
+  stop()
+  assert.equal(r.classes.has('is-settled'), false)
+  assert.equal(r.root.has('fx-settled'), false)
+})
+
+test('P917: hiding the tab only drops .is-anim before the entrance has run; coming back puts it back', () => {
+  const classes = new Set(['is-anim'])
+  const el = { classList: { add: c => classes.add(c), remove: c => classes.delete(c), contains: c => classes.has(c) } }
+  const doc = { hidden: false }
+  let t = 0
+  const gate = visibilityGate(el, { doc, now: () => t, frame: f => f() })
+  doc.hidden = true; t = 300; gate()
+  assert.equal(classes.has('is-anim'), false, 'hidden during the entrance: rest')
+  doc.hidden = false; gate()
+  assert.ok(classes.has('is-anim'), 'back: motion on')
+  doc.hidden = true; t = RECHECK_MS + 5000; gate()
+  assert.ok(classes.has('is-anim'), 'after the entrance ran, hiding leaves motion on')
 })
 
 test('a hover transition that just began is not a stall (CSS animations only)', () => {

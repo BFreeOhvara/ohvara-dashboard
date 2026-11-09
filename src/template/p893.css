@@ -70,3 +70,14 @@
 .fx-actgrid[data-fold-fit] > .fx-act-day, .fx-actgrid[data-fold-fit] > .fx-kinds { height: 100%; min-height: 0; }
 .fx-actgrid[data-fold-fit] > .fx-kinds { overflow-y: auto; scrollbar-width: thin; }
 @media (max-width: 999px) { .fx-actgrid[data-fold-fit] { grid-template-rows: none; } .fx-actgrid[data-fold-fit] > .fx-kinds { height: auto; } }
+/* P917 — Activity: the page itself never scrolls on a desktop. It holds still at the window's height like Leads (the
+   footer line included) and only the inside of the day box scrolls; By kind scrolls inside itself if it ever must. */
+@media (min-width: 1000px) and (min-height: 620px) {
+  html .fx.tp-app.is-activity:has(.fx-actgrid) { height: 100vh; overflow: hidden; display: flex; flex-direction: column; padding-bottom: 16px; }
+  html .fx.tp-app.is-activity:has(.fx-actgrid) .fx-top { flex: none; position: relative; top: 0; }
+  html .fx.tp-app.is-activity:has(.fx-actgrid) .fx-col { flex: 1; min-height: 0; height: auto; }
+  html .fx.tp-app.is-activity:has(.fx-actgrid) .fx-main { flex: 1; min-height: 0; }
+  html .fx.tp-app.is-activity:has(.fx-actgrid) .fx-main > .fx-page { flex: 1; min-height: 0; }
+  html .fx.tp-app.is-activity .fx-actgrid[data-fold-fit] { flex: 1; min-height: 0; height: auto; }
+  html .fx.tp-app.is-activity .fx-actgrid .fx-act-day { min-height: 0; }
+}

@@ -33,11 +33,13 @@ test('live calls get no column: pinned (ringing first), with what the AI collect
   }
 })
 
-test('an unmarked live call becomes a to-do after its day; the to-do box can be empty', () => {
+test('P917: every unmarked live call is a to-do (today or older); the to-do box can be empty', () => {
   const today = lead('t', 'showed', { kind: 'live_call', came: '2026-11-02T10:00' })
   const old = lead('o', 'showed', { kind: 'live_call', came: '2026-10-30T16:17' })
-  assert.deepEqual(needsYouNow({ leads: [today] }, SAMPLE_NOW), [])
-  assert.deepEqual(needsYouNow({ leads: [today, old] }, SAMPLE_NOW).map(n => [n.trigger, n.ref, n.action]), [['live', 'o', 'Mark result']])
+  assert.deepEqual(needsYouNow({ leads: [] }, SAMPLE_NOW), [])
+  assert.deepEqual(needsYouNow({ leads: [today, old] }, SAMPLE_NOW).map(n => [n.trigger, n.ref, n.action]), [['live', 't', 'Mark result'], ['live', 'o', 'Mark result']])
+  assert.match(needsYouNow({ leads: [today] }, SAMPLE_NOW)[0].what, /^Live call today at /)
+  assert.doesNotMatch(read('./template/screens/Overview.jsx'), /LiveCalls/)
   const ui = read('./template/screens/Overview.jsx')
   assert.match(ui, /Your to-dos/)
   assert.match(ui, /You\{'’'\}re all caught up\./)

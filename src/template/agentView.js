@@ -78,7 +78,9 @@ export const RESULT_MEANING = {
 }
 // The status each result lands on (its colour in the picker).
 export const RESULT_STATUS = { sold: 'sold', no_show: 'no_show', follow_up: 'follow', not_interested: 'not_interested', booked: 'booked' }
-export const resultsFor = l => (l.stage === 'ringing' ? [] : isLiveCall(l) ? AGENT_RESULTS.live : AGENT_RESULTS[agentStatusOf(l)] || [])
+// P917: a ringing transfer takes the same results as a taken live call (the agent answers on their phone; the card is
+// only for the result).
+export const resultsFor = l => (l.stage === 'ringing' || isLiveCall(l) ? AGENT_RESULTS.live : AGENT_RESULTS[agentStatusOf(l)] || [])
 export const canMove = (l, stage) => (stage === 'showed' ? l.stage === 'ringing' : resultsFor(l).includes(stage))
 // The one way the agent's screens move a lead: refused (throws) unless the move is allowed from its status.
 export function agentMove(l, stage, extra = {}, now = clockNow()) {

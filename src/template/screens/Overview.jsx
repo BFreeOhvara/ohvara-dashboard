@@ -1,8 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, Check, Clock, CalendarDays } from 'lucide-react'
 import { rangeWords } from '../spendPlan'
-import { countByStatus, liveCalls } from '../agentView'
-import { LiveCalls } from '../LiveCall'
+import { countByStatus } from '../agentView'
 import { useDataSource, useSampleOverview, useSampleClients, useSampleBilling, useSampleLeads, useSampleAppointments, useSampleNeeds } from '../data'
 import { Avatar, Empty } from '../kit'
 import { CountUp } from '../motion'
@@ -227,7 +226,7 @@ export default function Overview() {
       </div>
 
       <div className="fx-ovl-side">
-        <LiveCalls calls={liveCalls(leads)} compact />
+        {/* P917: no live-call cards here; a live call waiting for its result is a to-do (and pinned on Leads) */}
         <section className="fx-tile is-deep fx-ovl-needs" style={{ '--i': 4 }} aria-label="Your to-dos">
           <div className="fx-ovl-needs-in">
             <header className="fx-tile-h">

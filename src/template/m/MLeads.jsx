@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { PhoneIncoming, CalendarDays, Clock, MapPin, Search, Wallet, ChevronRight, Users, Link2, ClipboardCheck, PhoneForwarded, Phone, X, MessageSquareWarning } from 'lucide-react'
+import { PhoneIncoming, CalendarDays, Clock, MapPin, Search, Wallet, ChevronRight, Users, Link2, ClipboardCheck, PhoneForwarded, X, MessageSquareWarning } from 'lucide-react'
 import { useSampleLeads, useSampleLead, useSampleActions, useSampleBilling, useDataSource } from '../data'
 import { Avatar, Chip, Pending, useNote } from '../kit'
 import { stageChip, OutcomeDrawer, NoShowUndo } from '../LeadOutcome'
@@ -32,10 +32,9 @@ const tagOf = l => {
 }
 const nameOf = l => `${l.first_name} ${l.last_name}`
 
-// A live transfer: ringing (Answer) or taken and waiting for its result.
+// A live call waiting for its result (ringing now, or taken and not marked). P917: the agent answers on their phone, so
+// the card is only for the result: "Live call", Mark result, no Answer.
 export function LiveStrip({ leads, compact = false }) {
-  const { moveLead } = useSampleActions()
-  const note = useNote()
   const calls = liveCalls(leads)
   if (!calls.length) return null
   const btn = `mx-btn is-primary${compact ? ' is-sm' : ' is-wide'}`
@@ -45,11 +44,9 @@ export function LiveStrip({ leads, compact = false }) {
         const ringing = l.stage === 'ringing'
         return (
           <li key={l.id} className={`mx-livecard${ringing ? ' is-ringing' : ''}`}>
-            <span className="mx-live-k"><PhoneIncoming size={15} aria-hidden="true" />{ringing ? 'Live transfer · ringing now' : compact ? 'Live call · mark it' : 'Live call · waiting for its result'}</span>
+            <span className="mx-live-k"><PhoneIncoming size={15} aria-hidden="true" />Live call</span>
             <span className="mx-live-n"><b>{nameOf(l)}</b><small>{l.city}, {l.state} · {l.age_band}</small></span>
-            {ringing
-              ? <button type="button" className={btn} onClick={() => { moveLead(l.id, 'showed'); note(`You took the call with ${l.first_name}. Pick the result when you hang up`) }}><Phone size={18} aria-hidden="true" />Answer</button>
-              : <Link to={mp.lead(l.id, true)} className={btn}><ClipboardCheck size={18} aria-hidden="true" />{compact ? 'Mark' : 'Mark result'}</Link>}
+            <Link to={mp.lead(l.id, true)} className={btn}><ClipboardCheck size={18} aria-hidden="true" />{compact ? 'Mark' : 'Mark result'}</Link>
           </li>
         )
       })}

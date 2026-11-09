@@ -6,7 +6,7 @@ import { seedEvents, applyMove, rebookLead, closeCallTask, whenLabel, needsYouNo
 import { canMove, withSoldLeads, followUpPick } from '../agentView.js'
 import { wallOf } from '../../lib/agentReal.js'
 import { leadText, SENDER } from '../leadTexts.js'
-import { nightly as nightlyOf, expected, startsText, TIERS } from '../spendPlan.js'
+import { nightly as nightlyOf, expected, startsText, TIERS, SETUP_FEE } from '../spendPlan.js'
 
 // P901: sample invoices use the price book's Growth price, never a number of their own.
 const GROWTH = TIERS.find(t => t.key === 'growth').monthly
@@ -308,8 +308,18 @@ const seed = {
         { day: 'Tue, Nov 3', spend: 100, delivered: null, status: param('billing') === 'failed' ? 'failed' : 'paid' },
       ],
     },
-    card: { label: 'Visa ending 4242', onFile: param('card') !== 'none' },
-    founding: { no: 7, until: 'Nov 8, 2027' },
+    card: { label: 'Visa ending 4242', brand: 'Visa', last4: '4242', exp: '08/28', onFile: param('card') !== 'none' },
+    founding: { no: 7, until: 'Nov 8, 2027' }, setupPaid: 'Mon, Sep 28',
+    // P917: past charges (Billing shows tonight's on top): nightly lead spend + 12%, the monthly plan, the setup fee.
+    charges: [
+      { id: 'ch1', at: 'Sun, Nov 1, 8 PM', label: 'Lead spend for Tue, Nov 3 + 12%', kind: 'lead', amount: 112, status: param('billing') === 'failed' ? 'declined' : 'paid' },
+      { id: 'ch2', at: 'Sun, Nov 1', label: 'Plan, Growth, November', kind: 'plan', amount: GROWTH, status: 'paid' },
+      { id: 'ch3', at: 'Sat, Oct 31, 8 PM', label: 'Lead spend for Mon, Nov 2 + 12%', kind: 'lead', amount: 112, status: 'paid' },
+      { id: 'ch4', at: 'Fri, Oct 30, 8 PM', label: 'Lead spend for Sun, Nov 1 + 12%', kind: 'lead', amount: 112, status: 'paid' },
+      { id: 'ch5', at: 'Thu, Oct 29, 8 PM', label: 'Lead spend for Sat, Oct 31 + 12%', kind: 'lead', amount: 107.52, status: 'paid' },
+      { id: 'ch6', at: 'Thu, Oct 1', label: 'Plan, Growth, October', kind: 'plan', amount: GROWTH, status: 'paid' },
+      { id: 'ch7', at: 'Mon, Sep 28', label: 'Setup fee, one time', kind: 'setup', amount: SETUP_FEE, status: 'paid' },
+    ],
     clients: { total: 38, sold: 26, added: 12 },
     bought: {
       week: { spent: 500, leads: 16, reached: 13, booked: 4, offered: 3, transferred: 2, showed: 2, sold: 2, premium: 1927.8 },
@@ -554,13 +564,13 @@ function useActionsSample() {
     setSpend: spend => set(s => ({ ...s, billing: { ...s.billing, pending: { spend, starts: startsText('Wed, Nov 4') }, spend } })),
     // P889: how they take leads (mode + live-call hours). Starts at midnight like a spend change.
     setTake: take => set(s => ({ ...s, billing: { ...s.billing, take } })),
-    addCard: () => set(s => ({ ...s, billing: { ...s.billing, card: { label: 'Visa ending 4242', onFile: true } } })),
+    addCard: () => set(s => ({ ...s, billing: { ...s.billing, card: { label: 'Visa ending 4242', brand: 'Visa', last4: '4242', exp: '08/28', onFile: true } } })),
     setProducts: products => set(s => ({ ...s, billing: { ...s.billing, products } })),
     pause: p => set(s => ({ ...s, billing: { ...s.billing, paused: p } })),
     resume: () => set(s => ({ ...s, billing: { ...s.billing, paused: null } })),
     cancelPlan: c => set(s => ({ ...s, billing: { ...s.billing, cancel: c } })),
     keepPlan: () => set(s => ({ ...s, billing: { ...s.billing, cancel: null } })),
-    fixCard: () => set(s => ({ ...s, billing: { ...s.billing, payment: { ...s.billing.payment, failed: false },
+    fixCard: () => set(s => ({ ...s, billing: { ...s.billing, payment: { ...s.billing.payment, failed: false }, charges: (s.billing.charges || []).map(c => (c.status === 'declined' ? { ...c, status: 'paid' } : c)),
       nightly: { ...s.billing.nightly, nights: s.billing.nightly.nights.map(x => (x.status === 'failed' ? { ...x, status: 'paid' } : x)) } } })),
     saveSetup: patch => set(s => ({ ...s, setup: { ...(s.setup || {}), ...patch } })),
     addLeadNote: (id, text) => set(s => ({ ...s, leads: s.leads.map(l => (l.id === id ? { ...l, note: l.note ? `${l.note}\n${text}` : text } : l)) })),

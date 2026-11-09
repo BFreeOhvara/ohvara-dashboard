@@ -12,6 +12,7 @@ import { ReportBug } from '../template/ReportBug'
 import { avatarHue } from '../template/avatarHue'
 import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit, useKeep } from '../template/motion'
 import { armEntrance } from './entrance'
+import { visibilityGate } from './entrance'
 import Palette from '../template/Palette'
 import { OhvaraMark } from '../components/ui/OhvaraMark'
 import { isSearchKey } from '../lib/searchKey'
@@ -252,7 +253,7 @@ export default function AdminFrame({ preview = false }) {
     // P859: motion starts on the first painted frame, then gets SETTLE_MS to really run; if it has not, the page
     // shows at rest (.is-settled). Under reduced motion it shows at once. The body never waits on an animation.
     const raf = requestAnimationFrame(() => { el.classList.add('is-anim'); stop = armEntrance(el, { still: still() }) })
-    const onVis = () => { if (document.hidden) el.classList.remove('is-anim') }
+    const onVis = visibilityGate(el) // P917: back from another tab, the motion comes back
     document.addEventListener('visibilitychange', onVis)
     return () => { cancelAnimationFrame(raf); stop(); document.removeEventListener('visibilitychange', onVis) }
   }, [layout])

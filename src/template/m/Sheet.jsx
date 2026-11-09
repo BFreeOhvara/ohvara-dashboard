@@ -1,7 +1,7 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown, X } from 'lucide-react'
-import { useExit } from '../motion'
+import { useExit, still } from '../motion'
 
 // P908 — phone sheets. Sheet: a full-screen page that slides up (what a desktop drawer becomes on a phone), with a
 // close at the top-left, the title in the middle and its buttons pinned at the bottom above the home bar.
@@ -18,15 +18,34 @@ function useEsc(open, onClose) {
   }, [open, onClose])
 }
 
+// P917: a sheet plays its way down before it closes. A record sheet (a lead, a client) is unmounted by its page the
+// moment the address changes, so useExit alone never saw it leave and it vanished; now the close plays out (.22s, the
+// same as mx-down) and only then calls onClose. A sheet driven by open= doesn't play out a second time (gone).
+function useShut(open, onClose) {
+  const [shutting, setShutting] = useState(false)
+  const [gone, setGone] = useState(false)
+  if (open && gone && !shutting) setGone(false)
+  const timer = useRef(0)
+  useEffect(() => () => clearTimeout(timer.current), [])
+  const shut = useCallback(() => {
+    if (still()) { onClose(); return }
+    if (timer.current) return
+    setShutting(true)
+    timer.current = setTimeout(() => { timer.current = 0; setShutting(false); setGone(true); onClose() }, 220)
+  }, [onClose])
+  return [shut, shutting, gone]
+}
+
 export function Sheet({ open, onClose, title, kicker, tone, footer, children }) {
   const [shown, leaving] = useExit(open)
-  useEsc(open, onClose)
-  if (!shown) return null
+  const [shut, shutting, gone] = useShut(open, onClose)
+  useEsc(open, shut)
+  if (!shown || (gone && !open)) return null
   return createPortal(
-    <div className={`tp fx mx-layer${leaving ? ' is-leaving' : ''}`} role="presentation">
+    <div className={`tp fx mx-layer${leaving || shutting ? ' is-leaving' : ''}`} role="presentation">
       <section className={`mx-sheet${tone ? ` is-${tone}` : ''}`} role="dialog" aria-modal="true" aria-label={title}>
         <header className="mx-sheet-h">
-          <button type="button" className="mx-ib" aria-label="Close" onClick={onClose}><ChevronDown size={24} aria-hidden="true" /></button>
+          <button type="button" className="mx-ib" aria-label="Close" onClick={shut}><ChevronDown size={24} aria-hidden="true" /></button>
           <span className="mx-sheet-t">{kicker && <small>{kicker}</small>}<b>{title}</b></span>
           <span className="mx-ib-gap" aria-hidden="true" />
         </header>

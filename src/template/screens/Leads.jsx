@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { PhoneIncoming, CalendarDays, Phone, Search, Wallet, Clock, MapPin, Check, X, ClipboardCheck, Users, Link2, MessageSquareWarning, Archive, PhoneForwarded, Inbox } from 'lucide-react'
+import { PhoneIncoming, CalendarDays, Search, Wallet, Clock, MapPin, Check, X, ClipboardCheck, Users, Link2, MessageSquareWarning, Archive, PhoneForwarded, Inbox } from 'lucide-react'
 import { useDataSource, useSampleLeads, useSampleLead, useSampleBilling, useSampleActions, useSampleSettings } from '../data'
 import { Avatar, Chip, Seg, Drawer, Empty, Pending, Switch, useNote } from '../kit'
 import { stageChip, OutcomeDrawer, OutcomePrompt, NoShowUndo } from '../LeadOutcome'
@@ -50,7 +50,7 @@ const tagOf = l => {
   return null
 }
 
-function LeadCard({ l, i, onAnswer, onResult }) {
+function LeadCard({ l, i, onResult }) {
   const live = l.kind === 'live_call'
   const tone = laneOf(l).tone
   const tag = tagOf(l)
@@ -63,11 +63,9 @@ function LeadCard({ l, i, onAnswer, onResult }) {
       <p>{l.city}, {l.state} · {l.age_band}</p>
       <div className="fx-lcard-bot">
         <span className="fx-big">{shortWhen(l)}</span>
-        {l.stage === 'ringing'
-          ? <button type="button" className="tp-primary sm fx-accent fx-over" onClick={() => onAnswer(l)}><Phone size={14} />Answer</button>
-          : result
-            ? <button type="button" className="tp-primary sm fx-accent fx-over" onClick={() => onResult(l)}><ClipboardCheck size={14} />Mark result</button>
-            : <Avatar name={`${l.first_name} ${l.last_name}`} tone={tone} />}
+        {result
+          ? <button type="button" className="tp-primary sm fx-accent fx-over" onClick={() => onResult(l)}><ClipboardCheck size={14} />Mark result</button>
+          : <Avatar name={`${l.first_name} ${l.last_name}`} tone={tone} />}
       </div>
     </article>
   )
@@ -171,14 +169,34 @@ function LeadDrawer({ id, onClose }) {
   )
 }
 
+// P917: the status columns never shrink for the live-call cards. On a desktop the Leads page holds still at the window's
+// height and the lanes scroll inside; this hands the cards' height to the page (--lc-live-h on <html>, leads873.css) so
+// the window grows by exactly that much and scrolls, like Clients. When the cards go away the board keeps its size.
+function useLiveRoom() {
+  const ref = useRef(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    const root = document.documentElement
+    if (!el) return undefined
+    const set = () => {
+      const h = el.getBoundingClientRect().height
+      const gap = h > 0 ? parseFloat(getComputedStyle(el.parentElement).rowGap) || 0 : 0 // the page's gap under the cards
+      root.style.setProperty('--lc-live-h', `${h + gap}px`)
+    }
+    set()
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(set) : null
+    ro?.observe(el)
+    return () => { ro?.disconnect(); root.style.removeProperty('--lc-live-h') }
+  }, [])
+  return ref
+}
+
 export default function Leads() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { data: leads } = useSampleLeads()
   const source = useDataSource()
   const { data: billing } = useSampleBilling()
-  const { moveLead } = useSampleActions()
-  const note = useNote()
   const [q, setQ] = useState('')
   const [spend, setSpend] = useState(false)
   const [params, setParams] = useSearchParams()
@@ -190,8 +208,8 @@ export default function Leads() {
   const n = q.trim().toLowerCase()
   const shown = leads.filter(l => !n || `${l.first_name} ${l.last_name} ${l.city} ${l.phone}`.toLowerCase().includes(n))
   const live = liveCalls(shown)
+  const liveRef = useLiveRoom()
   const inLane = (lane, l) => agentStatusOf(l) === lane.key
-  const answer = l => { moveLead(l.id, 'showed'); note(`You took the call with ${l.first_name}. The team dropped off. Pick the result when you hang up`); navigate(paths.lead(l.id)) }
   const result = l => navigate(`${paths.lead(l.id)}?outcome=1`)
   const lanes = laneKey === 'all' ? ALL : ALL.filter(l => l.key === laneKey)
   const money = usd()
@@ -205,8 +223,9 @@ export default function Leads() {
         <button type="button" className="fx-pillbtn" aria-label="Change your daily lead spend" onClick={() => setSpend(true)}><Wallet size={15} aria-hidden="true" /><b className="tp-money">{money(dailyTotal(billing.spend))}</b><small>a day</small></button>
       </div>
 
-      {/* P910: live calls pinned on top, ringing first, each with Sold · Follow up · Not interested */}
-      <LiveCalls calls={live} />
+      {/* P910: live calls pinned on top, ringing first, each with Sold · Follow up · Not interested. P917: the board
+          keeps its full size below them and the page scrolls (useLiveRoom) */}
+      <div ref={liveRef} className="lc-live"><LiveCalls calls={live} /></div>
 
       {/* P893: each status pill in its own colour with its count, like the Clients page; the picked one goes darker */}
       <FilterPills label="Status" value={laneKey} onChange={setLane} items={[{ key: 'all', label: 'All', count: shown.filter(x => ALL.some(l => inLane(l, x))).length }, ...ALL.map(l => ({ key: l.key, label: l.label, tone: l.tone, count: shown.filter(x => inLane(l, x)).length }))]} />
@@ -220,7 +239,7 @@ export default function Leads() {
             <section key={lane.key} className={`fx-lane is-${lane.tone}`} style={{ '--i': li }} aria-label={`${lane.label}, ${rows.length}`}>
               <header className="fx-lane-h"><i aria-hidden="true" /><b>{lane.label}</b><span>{rows.length}</span></header>
               <div className="fx-lane-b">
-                {rows.map(l => <LeadCard key={l.id} l={l} i={card++} onAnswer={answer} onResult={result} />)}
+                {rows.map(l => <LeadCard key={l.id} l={l} i={card++} onResult={result} />)}
                 {rows.length === 0 && <Empty title="Nothing here" sub={n ? 'No lead matches that search.' : lane.empty} />}
               </div>
             </section>

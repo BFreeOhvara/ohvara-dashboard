@@ -14,7 +14,7 @@ const ALL = ['sold', 'no_show', 'follow_up', 'not_interested', 'booked']
 const CASES = {
   booked: [mk('b', 'booked', { apptAt: '2026-11-02T13:00' }), ['sold', 'no_show', 'follow_up', 'not_interested']],
   live: [mk('l', 'showed', { kind: 'live_call' }), ['sold', 'follow_up', 'not_interested']],
-  ringing: [mk('r', 'ringing', { kind: 'live_call' }), []],
+  ringing: [mk('r', 'ringing', { kind: 'live_call' }), ['sold', 'follow_up', 'not_interested']], // P917
   no_show: [mk('n', 'no_show', { apptAt: '2026-11-02T11:00' }), ['not_interested']],
   follow: [mk('f', 'follow_up', { follow: 'Mon, Nov 9' }), ['sold', 'booked', 'not_interested']],
   not_interested: [mk('x', 'not_interested', { reason: 'Already covered' }), ['follow_up']],

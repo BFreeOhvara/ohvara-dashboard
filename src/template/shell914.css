@@ -13,7 +13,17 @@
    the normal page swap (the same as a nav tab); the icon just presses. ── */
 .fx .fx-ib.active { color: var(--sh-on-accent); background: var(--sh-acc); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3); }
 .fx .fx-ib.active .fx-badge { color: var(--sh-on-accent); background: var(--sh-acc); box-shadow: 0 0 0 2px var(--bg-surface); }
-.fx .fx-ib.is-closing { transform: scale(.9); transition: transform .16s var(--fx-ease, ease); }
+/* P917: the icon presses and releases exactly like the avatar (same scale, inset, curve and time); colour eases too. */
+.fx .fx-ib[href] { transition: box-shadow .18s ease, transform .18s var(--fx-ease), filter .18s ease, background-color .18s ease, color .18s ease; }
+.fx .fx-ib.active[href] { transform: scale(.92); box-shadow: inset 0 2px 5px color-mix(in srgb, var(--sh-fi-stone, var(--ov-hi)) 45%, transparent), 0 0 0 3px color-mix(in srgb, var(--ov-hi) 28%, transparent); filter: brightness(.9); }
+.fx .fx-ib.is-closing { transform: none; }
+
+/* ── P917 — Messages opens and closes like the avatar menu (fx-menu / fx-menu-out, flow.css): it grows in from the top
+   right, where its icon is, and shrinks back out; the page you go to then builds in with the normal page transition.
+   The page class follows the page on screen (usePageSwap), so the leave is Messages' own. ── */
+.fx.tp-app.is-messages .fx-main { transform-origin: top right; animation: fx-menu .38s var(--fx-spring, cubic-bezier(.34, 1.32, .64, 1)) both; }
+.fx.tp-app.is-messages .fx-main.is-leaving { animation: fx-menu-out .2s cubic-bezier(.2, .8, .2, 1) forwards; }
+.fx.tp-app.is-messages .fx-main > :not(.tp-foot) { animation: none; }
 
 /* ── One motion for every drawer and pop-up (kit Drawer .tp-sheet, the record drawer .fx-rec): side drawers slide in
    from the right and back out the same way; centred pop-ups rise and settle, then sink away; on a phone every sheet
@@ -38,3 +48,22 @@
 @keyframes dr-down { from { transform: none; } to { transform: translateY(100%); } }
 @keyframes dr-pop-in { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
 @keyframes dr-pop-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(10px) scale(.97); } }
+
+/* ── P917 — motion on everything clickable (every role). A clickable card (Leads, Clients, To-dos, Setup, Servicing:
+   any .fx-card with a full-face .fx-cover link) and each appointment inside This week lift on hover and press in on
+   click. It uses the separate translate/scale properties, so the entrance animations (which hold transform with
+   fill-mode both, P912) can never pin it. The lift comes in fast and settles back slowly, so sweeping the mouse across
+   a row of cards leaves a wave: one card rising as the last one sinks. Day boxes and plain sections don't move. ── */
+.fx-card:has(.fx-cover), .fx-wk-ev {
+  transition: translate .7s cubic-bezier(.22, 1, .36, 1), scale .22s cubic-bezier(.22, 1, .36, 1), box-shadow .6s ease, border-color .3s ease, filter .2s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .fx-card:has(.fx-cover):hover { translate: 0 -5px; transition-duration: .2s, .22s, .25s, .2s, .2s; box-shadow: inset 0 1px 0 var(--sh-card-hl, rgba(255, 255, 255, .3)), 0 22px 30px -18px rgba(0, 0, 0, .55); }
+  [data-theme="light"] .fx-card:has(.fx-cover):hover { box-shadow: inset 0 1px 0 var(--sh-card-hl, rgba(255, 255, 255, .3)), 0 20px 28px -18px rgba(0, 0, 0, .3); }
+  .fx-wk-ev:hover { translate: 0 -3px; transition-duration: .2s, .22s, .25s, .2s, .2s; }
+}
+.fx-card:has(.fx-cover):active, .fx-wk-ev:active { scale: .97; transition-duration: .7s, .09s, .6s, .3s, .2s; }
+.fx-card:has(.fx-cover):has(.fx-over:active) { scale: none; } /* pressing a button on the card presses the button only */
+@media (prefers-reduced-motion: reduce) {
+  .fx-card:has(.fx-cover), .fx-wk-ev { translate: none !important; scale: none !important; }
+}

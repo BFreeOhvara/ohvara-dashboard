@@ -12,6 +12,7 @@ import { usePortalPhone } from '../contexts/portalPhone'
 import { Drawer, Avatar, useAccount, useNote, initials } from '../template/kit'
 import { wig, still, CountUp, RollTitle, usePageSwap, useExit } from '../template/motion'
 import { armEntrance } from '../adminshell/entrance'
+import { visibilityGate } from '../adminshell/entrance'
 import Palette from '../template/Palette'
 import { OhvaraMark } from '../components/ui/OhvaraMark'
 import { isSearchKey } from '../lib/searchKey'
@@ -233,7 +234,7 @@ export default function FulfillFrame() {
     // P859/P860: it then gets SETTLE_MS to really run; if it has not (a throttled or frozen browser), the page shows at rest
     // (.is-settled, flow.css). Reduced motion shows at once. The body never waits on an animation.
     const raf = requestAnimationFrame(() => { el.classList.add('is-anim'); stop = armEntrance(el, { still: still(), rootClass: 'fx-settled' }) })
-    const onVis = () => { if (document.hidden) el.classList.remove('is-anim') }
+    const onVis = visibilityGate(el) // P917: back from another tab, the motion comes back
     document.addEventListener('visibilitychange', onVis)
     return () => { cancelAnimationFrame(raf); stop(); document.removeEventListener('visibilitychange', onVis) }
   }, [layout])

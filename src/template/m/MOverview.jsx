@@ -8,7 +8,6 @@ import { clientStatus } from '../../lib/clientCheck.js'
 import { dailyTotal, rangeWords } from '../spendPlan'
 import { usd } from '../motion'
 import { CallBtn, NeedList, Sec } from './bits'
-import { LiveStrip } from './MLeads'
 import { mp } from './mpaths'
 
 // P908 — the Overview on a phone: only what matters, stacked. Live calls first, then your next call (Call in reach),
@@ -35,8 +34,6 @@ export default function MOverview() {
   return (
     <div className="mx-page">
       <p className="mx-hello"><b>{hello}, {o.name}.</b><span>{o.today} · {o.clock.time} {o.clock.ampm}</span></p>
-
-      <LiveStrip leads={leads} compact />
 
       <Sec title="Next call" to={mp.calendar()} link="Calendar">
         {next

@@ -124,11 +124,12 @@ test('P910 Your to-dos: only calls to mark (a booked call that passed, a live ca
   ]
   const checks = [{ draft: '2026-11-01', clients: [{ client_first_name: 'Gloria', client_last_name: 'Santos' }] }]
   const now = needsYouNow({ leads, checks }, SAMPLE_NOW)
-  assert.deepEqual(now.map(n => [n.trigger, n.ref]), [['outcome', 'o'], ['live', 'y'], ['check', '2026-11-01']])
+  // P917: every live call still waiting for its result, ringing first, then newest.
+  assert.deepEqual(now.map(n => [n.trigger, n.ref]), [['outcome', 'o'], ['live', 'l'], ['live', 't'], ['live', 'y'], ['check', '2026-11-01']])
   assert.deepEqual(TRIGGERS.map(t => t.action), ['Mark result', 'Mark result', 'Answer'])
-  assert.equal(now[2].title, 'Still on the books?')
+  assert.equal(now[4].title, 'Still on the books?')
   // Empty: nothing to mark, no check.
-  assert.deepEqual(needsYouNow({ leads: [leads[0], leads[1], leads[5], leads[6]] }, SAMPLE_NOW), [])
+  assert.deepEqual(needsYouNow({ leads: [leads[0], leads[1], leads[2], leads[4]] }, SAMPLE_NOW), [])
   // FYI: the team is on it.
   assert.deepEqual(forYourInfo({ leads }).map(f => f.title), ['Missed transfer', 'No show'])
   assert.deepEqual(forYourInfo({ leads: [mk('q', 'Q', 'rebooking')] }).map(f => f.title), ['Rebooking'])
