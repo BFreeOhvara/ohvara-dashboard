@@ -7,7 +7,7 @@ import { useAccount, useNote, initials } from '../kit'
 import { avatarHue } from '../avatarHue'
 import { SpendSliders, TakeLeads } from '../PlanBuilder'
 import { takeOk, inLiveHours } from '../../lib/leadSplit'
-import { dailyTotal, openSlotsPerWeek, spendOk } from '../spendPlan'
+import { dailyTotal, openSlotsPerWeek, spendOk, tierOf } from '../spendPlan'
 import { usd } from '../motion'
 import { paths, isTemplateAddress } from '../paths'
 import { GetApp, Help } from '../TemplateFrame'
@@ -45,7 +45,7 @@ export default function MMore() {
     <div className="mx-page">
       <section className="mx-card mx-me-card">
         <span className={`mx-me is-big av-${avatarHue(account.name)}`} aria-hidden="true">{initials(account.name).toUpperCase()}</span>
-        <span className="tp-grow"><b>{account.name}</b><small>Agent · {b.plan === 'pilot' ? 'pilot, lead spend only' : s.profile.plan}</small></span>
+        <span className="tp-grow"><b>{account.name}</b><small>Agent · {tierOf(dailyTotal(b.spend)).label} plan</small></span>
         <button type="button" className="mx-ib is-soft" aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'} onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={20} aria-hidden="true" /> : <Moon size={20} aria-hidden="true" />}</button>
       </section>
       {account.view?.canPreview && <div className="mx-card mx-view"><ViewToggle /></div>}
