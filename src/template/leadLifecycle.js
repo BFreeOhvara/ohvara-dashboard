@@ -36,34 +36,36 @@ export function atLabel(s, now = clockNow()) {
 // key: the sample stage. db: the lead row stage column (migration 180: new/contacting/booked/met/sold/follow_up/lost);
 // outcome: leads.outcome (migration 215). lane: the Leads board column. who: who acts next.
 export const STAGES = {
-  new: { label: 'New', chip: 'New lead', lane: 'calling', db: 'new', who: 'The team calls right away' },
-  calling: { label: 'Calling', chip: 'Calling', lane: 'calling', db: 'contacting', who: 'The team, then automatic texts' },
-  ringing: { label: 'Live transfer', chip: 'Ringing now', lane: 'live', db: 'contacting', who: 'You' },
-  missed: { label: 'Missed transfer', chip: 'Missed transfer', lane: 'calling', db: 'contacting', who: 'The team books a time' },
+  new: { label: 'New', chip: 'New lead', lane: 'follow_up', owner: 'team', db: 'new', who: 'The team calls right away' },
+  calling: { label: 'Calling', chip: 'Calling', lane: 'follow_up', owner: 'team', db: 'contacting', who: 'The team, then automatic texts' },
+  ringing: { label: 'Live transfer', chip: 'Ringing now', lane: 'booked', db: 'contacting', who: 'You' },
+  missed: { label: 'Missed transfer', chip: 'Missed transfer', lane: 'follow_up', owner: 'team', db: 'contacting', who: 'The team books a time' },
   booked: { label: 'Booked', chip: 'Appointment booked', lane: 'booked', db: 'booked', who: 'You, at the time' },
   showed: { label: 'Showed', chip: 'Mark how it went', lane: 'booked', db: 'met', who: 'You' },
   no_show: { label: 'No-show', chip: 'No-show', lane: 'no_show', db: 'booked', who: 'The team rebooks' },
   // P878: the agent can't make a booked appointment; the client got an apology and a rebook link.
-  rebooking: { label: 'Rebooking', chip: 'Rebooking', lane: 'calling', db: 'contacting', who: 'The client picks a new time' },
-  follow_up: { label: 'Follow up', chip: 'Follow up', lane: 'follow', db: 'follow_up', outcome: 'follow_up', who: 'You' },
+  rebooking: { label: 'Rebooking', chip: 'Rebooking', lane: 'follow_up', owner: 'team', db: 'contacting', who: 'The client picks a new time' },
+  follow_up: { label: 'Follow up', chip: 'Follow up', lane: 'follow_up', owner: 'agent', db: 'follow_up', outcome: 'follow_up', who: 'You' },
   sold: { label: 'Sold', chip: 'Sold', lane: 'sold', db: 'sold', outcome: 'sold', who: 'You submit it' },
-  not_interested: { label: 'Not interested', chip: 'Not interested', lane: 'closed', db: 'lost', outcome: 'not_interested', who: 'No one' },
-  unreachable: { label: 'Unreachable', chip: 'Closed: unreachable', lane: 'closed', db: 'lost', who: 'No one' },
-  opted_out: { label: 'Opted out', chip: 'Closed: opted out', lane: 'closed', db: 'lost', who: 'No one' },
+  not_interested: { label: 'Not interested', chip: 'Not interested', lane: 'not_interested', db: 'lost', outcome: 'not_interested', who: 'No one' },
+  unreachable: { label: 'Unreachable', chip: 'Closed: unreachable', lane: 'not_interested', db: 'lost', who: 'No one' },
+  opted_out: { label: 'Opted out', chip: 'Closed: opted out', lane: 'not_interested', db: 'lost', who: 'No one' },
 }
 export const STAGE_KEYS = Object.keys(STAGES)
 export const MAX_TRIES = 3
 
-// The Leads board, left to right (the lead's path). Each stage sits in one lane.
+// The Leads board for the VA and admin, left to right (P913's five statuses, the same words and colours as
+// src/adminshell/words.js LEAD_LANES; P915 brought the VA side in line). Each stage sits in one lane; a Follow up still
+// being worked by the AI or the no-answer texts is owned by Our team (STAGES[k].owner), the agent's own callback by Agent.
 export const LEAD_LANES = [
-  { key: 'calling', label: 'Calling', tone: 'violet', empty: 'No one in the call sequence.' },
-  { key: 'live', label: 'Live transfer', tone: 'warn', empty: 'No live call ringing.' },
-  { key: 'booked', label: 'Booked', tone: 'blue', empty: 'No appointments booked yet.' },
-  { key: 'no_show', label: 'No-show', tone: 'warn', empty: 'No missed appointments.' },
-  { key: 'follow', label: 'Follow up', tone: 'teal', empty: 'No callbacks set.' },
-  { key: 'sold', label: 'Sold', tone: 'green', empty: 'Sales you mark show here.' },
-  { key: 'closed', label: 'Closed', tone: 'mute', empty: 'Nothing closed out.' },
+  { key: 'booked', label: 'Booked', tone: 'blue', empty: 'No appointments booked.' },
+  { key: 'no_show', label: 'No show', tone: 'mute', empty: 'No missed appointments.' },
+  { key: 'follow_up', label: 'Follow up', tone: 'teal', empty: 'No follow-ups set.' },
+  { key: 'sold', label: 'Sold', tone: 'green', empty: 'No sales yet this week.' },
+  { key: 'not_interested', label: 'Not interested', tone: 'warn', empty: 'No one said no.' },
 ].map(l => ({ ...l, stages: STAGE_KEYS.filter(k => STAGES[k].lane === l.key) }))
+// Who owns a lead's Follow up on the VA/admin board: 'team' or 'agent' (null off Follow up).
+export const laneOwner = stage => (STAGES[stage]?.lane === 'follow_up' ? STAGES[stage].owner || 'agent' : null)
 
 export const stageChipOf = l => {
   const s = STAGES[l.stage] || STAGES.new

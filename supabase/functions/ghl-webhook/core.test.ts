@@ -260,3 +260,58 @@ test('lead_created: bad payloads are dropped, not retried; switch off saves noth
   dup.d.rpc = async () => ({ data: { lead_id: LEAD, routing: 'duplicate', duplicate: true }, error: null })
   assert.deepEqual(await (await handle(viaSecret(raw), dup.d)).json(), { ok: 'duplicate', routing: 'duplicate' })
 })
+
+// ── P915: the short agent code, the test flag, "campaign created" and "campaign state" ──
+test('lead_created: a DS-XXXX code in the link and the test flag reach ghl_intake_lead', async () => {
+  const base = JSON.parse(fx('workflow-lead.json'))
+  const body = { ...base, customData: { ...base.customData, agent_id: 'DS-OWEN', is_test: 'true' } }
+  const a = await classify(body, JSON.stringify(body))
+  assert.ok(a.kind === 'lead')
+  if (a.kind !== 'lead') return
+  assert.equal(a.lead.agent_id, 'DS-OWEN')
+  assert.equal(a.lead.is_test, true)
+  const plain = await classify(base, JSON.stringify(base))
+  assert.ok(plain.kind === 'lead' && plain.lead.is_test === false)
+})
+
+test('campaign_created: GoHighLevel\'s new campaign is saved on the agent (ghl_campaign_created)', async () => {
+  const raw = fx('workflow-campaign-created.json')
+  const db = fakeDb()
+  const res = await handle(viaSecret(raw), db.d)
+  assert.equal(res.status, 200)
+  assert.deepEqual(await res.json(), { ok: 'campaign_saved' })
+  assert.equal(db.calls.length, 1)
+  assert.equal(db.calls[0].fn, 'ghl_campaign_created')
+  assert.deepEqual(db.calls[0].args.p, {
+    agent_id: 'DS-OWEN', campaign_id: 'ghl-cmp-owen-01', fb_campaign_id: '120210000188',
+    campaign_name: 'Deedstone · Owen Fisher · DS-OWEN', lead_type: 'appts',
+  })
+})
+
+test('campaign_created: no agent or no campaign is ignored; an unknown agent is not retried; db down retries; off saves nothing', async () => {
+  const base = JSON.parse(fx('workflow-campaign-created.json'))
+  const noAgent = { ...base, customData: { ...base.customData, agent_id: undefined } }
+  assert.deepEqual(await classify(noAgent, JSON.stringify(noAgent)), { kind: 'ignore', why: 'no agent id' })
+  const noCamp = { ...base, customData: { ...base.customData, campaign_id: undefined, fb_campaign_id: undefined } }
+  assert.deepEqual(await classify(noCamp, JSON.stringify(noCamp)), { kind: 'ignore', why: 'no campaign id' })
+  const raw = fx('workflow-campaign-created.json')
+  const unknown = fakeDb()
+  unknown.d.rpc = async () => ({ data: null, error: { message: 'unknown agent', code: '22023' } })
+  const r = await handle(viaSecret(raw), unknown.d)
+  assert.equal(r.status, 200)
+  assert.deepEqual(await r.json(), { ignored: 'unknown agent' })
+  assert.equal((await handle(viaSecret(raw), fakeDb({ rpcError: 'connection reset' }).d)).status, 500)
+  const off = fakeDb({ settings: { enabled: false, location_id: LOC } })
+  assert.deepEqual(await (await handle(viaSecret(raw), off.d)).json(), { skipped: 'off' })
+  assert.equal(off.calls.length, 0)
+})
+
+test('campaign_state: what GoHighLevel did with an on/off push goes to ghl_campaign_state', async () => {
+  const raw = fx('workflow-campaign-state.json')
+  const db = fakeDb()
+  assert.deepEqual(await (await handle(viaSecret(raw), db.d)).json(), { ok: 'state_saved' })
+  assert.equal(db.calls[0].fn, 'ghl_campaign_state')
+  assert.deepEqual(db.calls[0].args.p, { agent_id: 'DS-OWEN', lead_type: 'appts', state: 'paused' })
+  const noState = { ...JSON.parse(raw), customData: { ohvara_event: 'campaign_state', agent_id: 'DS-OWEN' } }
+  assert.deepEqual(await classify(noState, JSON.stringify(noState)), { kind: 'ignore', why: 'no state' })
+})

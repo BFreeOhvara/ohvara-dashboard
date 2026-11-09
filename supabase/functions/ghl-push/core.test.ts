@@ -185,3 +185,74 @@ test('tags and contact body helpers', () => {
   assert.deepEqual(tagsFor(row({ stage: 'weird' })), { add: ['ohvara'], remove: [] })
   assert.deepEqual(contactBody({ locationId: LOC, name: 'Cher' }), { locationId: LOC, source: 'Ohvara', name: 'Cher', firstName: 'Cher' })
 })
+
+// ── P915: campaign on/off → GoHighLevel's inbound webhook ─────────────────────
+import { runControls, controlBody, controlUrlOk, type ControlRow } from './core.ts'
+const HOOK = 'https://services.leadconnectorhq.com/hooks/l1C08ntBrFjLS0elLIYU/webhook-trigger/0a1b2c3d-4e5f'
+const ctl = (o: Partial<ControlRow> = {}): ControlRow => ({
+  agent_id: '9f1c2b3a-4d5e-4f60-8a7b-1c2d3e4f5a6b', lead_type: 'appts', run: false, daily_budget_cents: 0, cap_cents: 0,
+  reason: 'paused by agent', split_form_pct: 100, schedule: null, changed_at: '2026-11-09T15:00:00Z', attempt: 1,
+  agent_code: 'DS-OWEN', agent_name: 'Owen Fisher', campaign_id: 'ghl-cmp-owen-01', fb_campaign_id: '120210000188', ...o,
+})
+function ctlDeps(o: { rows?: ControlRow[]; status?: number; throws?: boolean; url?: string } = {}) {
+  const calls: { fn: string; args: Record<string, unknown> }[] = []
+  const posts: { url: string; body: any }[] = []
+  const logs: string[] = []
+  const d: Deps = {
+    apiKey: KEY, controlUrl: 'url' in o ? o.url : HOOK,
+    ghl: key => ghlClient(key, fakeGhl().fetchFn),
+    settings: async () => ({ data: ON, error: null }),
+    rpc: async (fn, args) => { calls.push({ fn, args }); return { data: fn === 'ghl_claim_outbox' ? [] : fn === 'ghl_claim_controls' ? (o.rows ?? [ctl()]) : null, error: null } },
+    post: async (url, body) => { posts.push({ url, body }); if (o.throws) throw new Error('timed out'); return { ok: (o.status ?? 200) < 300, status: o.status ?? 200 } },
+    log: m => logs.push(m),
+  }
+  return { d, calls, posts, logs }
+}
+
+test('control: a pause is pushed to GoHighLevel and settled as sent', async () => {
+  const t = ctlDeps()
+  const res = await run(t.d)
+  const out = await res.json()
+  assert.deepEqual(out.controls, { claimed: 1, sent: 1, failed: 0 })
+  assert.equal(t.posts.length, 1)
+  assert.equal(t.posts[0].url, HOOK)
+  assert.equal(t.posts[0].body.ohvara_event, 'campaign_control')
+  assert.equal(t.posts[0].body.state, 'off')
+  assert.equal(t.posts[0].body.agent_code, 'DS-OWEN')
+  assert.equal(t.posts[0].body.fb_campaign_id, '120210000188')
+  const fin = t.calls.find(c => c.fn === 'ghl_control_result')!
+  assert.equal(fin.args.p_ok, true)
+  assert.equal(fin.args.p_status, 200)
+  assert.equal(fin.args.p_changed_at, '2026-11-09T15:00:00Z')
+})
+
+test('control: a failed or timed-out send is logged for a retry, never thrown', async () => {
+  for (const o of [{ status: 503 }, { throws: true }]) {
+    const t = ctlDeps(o)
+    const r = await runControls(t.d)
+    assert.deepEqual(r, { claimed: 1, sent: 0, failed: 1 })
+    const fin = t.calls.find(c => c.fn === 'ghl_control_result')!
+    assert.equal(fin.args.p_ok, false)
+    assert.match(String(fin.args.p_error), o.throws ? /timed out/ : /HTTP 503/)
+    assert.ok(t.logs.some(l => l.includes('attempt 1')))
+  }
+})
+
+test('control: no URL, or one that is not GoHighLevel\'s hook host, claims nothing', async () => {
+  for (const url of [undefined, 'https://evil.example.com/hooks/abcdefgh', 'http://services.leadconnectorhq.com/hooks/abcdefgh']) {
+    const t = ctlDeps({ url })
+    assert.deepEqual(await runControls(t.d), { claimed: 0, sent: 0, failed: 0, skipped: 'not_configured' })
+    assert.equal(t.calls.length, 0)
+    assert.equal(t.posts.length, 0)
+  }
+  assert.ok(controlUrlOk(HOOK))
+})
+
+test('control: the body carries budget in cents and dollars, the cap, the split and the hours', () => {
+  const b = controlBody(ctl({ run: true, reason: 'funded', daily_budget_cents: 2550, cap_cents: 9000, split_form_pct: 70, schedule: { tz: 'America/Chicago' } }))
+  assert.equal(b.state, 'on')
+  assert.equal(b.daily_budget, 25.5)
+  assert.equal(b.spend_cap_cents, 9000)
+  assert.equal(b.split_form_pct, 70)
+  assert.deepEqual(b.schedule, { tz: 'America/Chicago' })
+})

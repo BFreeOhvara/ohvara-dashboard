@@ -35,7 +35,7 @@ export async function loadAdmin(sb, clock) {
   const lastMonthStart = (() => { const [y, m] = clock.monthStartIso.split('-').map(Number); return m === 1 ? `${y - 1}-12-01` : `${y}-${String(m - 1).padStart(2, '0')}-01` })()
   const dayBefore = iso => new Date(Date.parse(`${iso}T12:00:00Z`) - 864e5).toISOString().slice(0, 10)
   const [profiles, leadSettings, onDuty, accounts, invites, leads, unassigned, policies, steps, threads, messages, bugs, audit, app, rc,
-    campaigns, costsWeek, costsMonth, costsLast, runs, ticks, dayOff, ghl, keySaved] = await Promise.all([
+    campaigns, costsWeek, costsMonth, costsLast, runs, ticks, dayOff, ghl, keySaved, launch] = await Promise.all([
     src('people', sb.rpc('admin_list_profiles'), [], failed),
     src('lead settings', sb.from('agent_lead_settings').select('agent_id, active, states'), [], failed),
     src('on duty', sb.rpc('on_duty_agents'), [], []),
@@ -60,12 +60,13 @@ export async function loadAdmin(sb, clock) {
     src('days off', sb.from('va_day_off_requests').select('id, va_id, off_date, reason, status, created_at').order('created_at', { ascending: false }).limit(50), [], []),
     readGhlSettings(sb).catch(() => null),
     readGhlKeySaved(sb).catch(() => false),
+    src('launch checks', sb.rpc('admin_launch_view'), [], []), // P915: the server's launch checks + last GoHighLevel send
   ])
   const leadIds = [...leads, ...unassigned].map(l => l.id)
   const intake = leadIds.length ? await src('intake', sb.from('lead_intake').select('lead_id, routing, meta_option, agent_ref, campaign_id').in('lead_id', leadIds.slice(0, 300)), [], []) : []
   return {
     profiles, leadSettings, onDuty: (onDuty || []).map(r => r.agent_id || r.id).filter(Boolean), accounts, invites, leads, unassigned, intake, policies, steps,
-    threads, messages: (messages || []).slice().reverse(), bugs, audit, app, rc, campaigns, costsWeek, costsMonth, costsLast, runs, ticks, dayOff, ghl, keySaved, failed: [...new Set(failed)],
+    threads, messages: (messages || []).slice().reverse(), bugs, audit, app, rc, campaigns, costsWeek, costsMonth, costsLast, runs, ticks, dayOff, ghl, keySaved, launch, failed: [...new Set(failed)],
   }
 }
 
@@ -132,8 +133,10 @@ export function useAdmRealActions() {
       markLaunched: id => run(Promise.all(['campaign', 'budget', 'mapped', 'link', 'tracking', 'workflows']
         .map(k => supabase.rpc('admin_setup_tick', { p_agent: id, p_step: k, p_on: true }))).then(rs => rs.find(r => r.error) || rs[0])),
       markLive: id => rpc('admin_mark_live', { p_agent: id }),
-      // P913: the seatbelt's server half (enforcing every launch check, the campaign ID from GoHighLevel) is the backend prompt.
-      turnCampaignOn: notYet('Turning a campaign on'), placeTestCall: notYet('Placing a test call'),
+      // P915: the seatbelt's server half. The server refuses Turn campaign on until every launch check passes; Place test
+      // call asks the VAs to call the agent's test lead now (it rings the agent's own phone).
+      turnCampaignOn: id => run(supabase.rpc('admin_turn_campaign_on', { p_agent: id }), 'Could not turn it on'),
+      placeTestCall: id => run(supabase.rpc('admin_place_test_call', { p_agent: id }), 'Could not ask for the test call'),
       resendSetupInvite: notYet('Resending a setup invite'),
       giveCall: (callId, vaId) => rpc('admin_give_call', { p_policy: callId, p_to: vaId }),
       giveStep: notYet('Giving a servicing step to a VA'),
@@ -149,7 +152,12 @@ export function useAdmRealActions() {
       },
       savePayRules: notYet('The hourly pay rule'),
       saveBilling: notYet('Lead billing settings'), setMaxDaily: notYet('Raising a max daily spend'),
-      saveSettings: patch => (patch?.liveRoom !== undefined ? run(supabase.from('app_settings').update({ daily_room_url: patch.liveRoom }).eq('id', 1)) : undefined),
+      saveSettings: patch => {
+        if (patch?.liveRoom !== undefined) return run(supabase.from('app_settings').update({ daily_room_url: patch.liveRoom }).eq('id', 1))
+        // P915: the VA day-off allowance the server enforces (app_settings.va_days_off_per_month).
+        if (patch?.daysOffPerMonth !== undefined) return run(supabase.from('app_settings').update({ va_days_off_per_month: patch.daysOffPerMonth }).eq('id', 1))
+        return undefined
+      },
       setTz: tz => run(supabase.from('profiles').update({ timezone: tz }).eq('id', profile?.id)),
       setBugStatus: (id, status) => run(supabase.from('bug_reports').update({ status: status === 'fixed' ? 'resolved' : 'new' }).eq('id', id)),
       sendMessage: (threadId, text) => {

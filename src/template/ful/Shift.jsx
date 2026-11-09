@@ -16,7 +16,7 @@ import { dateLabel } from '../../lib/vaShifts'
 
 export function DayOffDrawer({ open, onClose }) {
   const { data: shift } = useFulShift()
-  const { request } = useDayOffActions()
+  const { request, check } = useDayOffActions()
   const note = useNote()
   const [busy, setBusy] = useState(false)
   const [day, setDay] = useState(null)
@@ -24,6 +24,8 @@ export function DayOffDrawer({ open, onClose }) {
   const keep = useKeep(open)
   if (!keep) return null
   const pick = day ?? shift.askable[0]?.day ?? null
+  // P915: the monthly allowance (no approvals since P913): used up, the day can't be booked.
+  const room = pick == null ? null : check(shift.askable.find(x => x.day === pick))
   const send = () => {
     const d = shift.askable.find(x => x.day === pick)
     setBusy(true)
@@ -36,12 +38,13 @@ export function DayOffDrawer({ open, onClose }) {
   }
   return (
     <Drawer open={open} center onClose={onClose} title="Request a day off" sub="The team sees it right away and covers your shift."
-      footer={pick == null ? null : <><button type="button" className="tp-primary fx-accent" onClick={send} disabled={busy}><CalendarOff size={16} />Tell the team</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
+      footer={pick == null ? null : <><button type="button" className="tp-primary fx-accent" onClick={send} disabled={busy || !room?.ok}><CalendarOff size={16} />Tell the team</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
       {pick == null ? <p className="fx-calm">{shift.notSet ? 'Day-off requests open once your rota is set up.' : 'You have no more shifts to ask off in the next two weeks.'}</p> : <>
         <div className="tp-field"><span>Which day</span>
           <PillTabs role="radiogroup" label="Day off" className="fx-chips fs-wrap" itemClass="fx-chip" value={pick} onChange={setDay}
             items={shift.askable.map(d => ({ key: d.day, label: <><small>{d.name}</small><b>{d.day}</b></> }))} />
           <small className="tp-sub">Your shifts after today. Ask as early as you can so the others can plan.</small>
+          {room && <small className={room.ok ? 'tp-sub' : 'tp-sub is-warn'} role={room.ok ? undefined : 'alert'}>{room.ok ? `${room.used} of ${room.allowance} days off used that month.` : room.why}</small>}
         </div>
         <Field label="Anything the team should know" hint="Optional"><input value={why} placeholder="e.g. Doctor's appointment" onChange={e => setWhy(e.target.value)} /></Field>
       </>}

@@ -21,6 +21,22 @@ function useClient() {
   return qc ? [qc, true] : [idle, false]
 }
 
+// P915: the days off a month each VA may book (app_settings.va_days_off_per_month via day_off_allowance, migration
+// 253). null until loaded or before 253 is applied (the drawer then uses the default and the server still decides).
+export function useDayOffAllowance() {
+  const [client, on] = useClient()
+  return useQuery({
+    enabled: on,
+    queryKey: ['va-shifts', 'day-off-allowance'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('day_off_allowance')
+      if (error) return null
+      return Number.isFinite(Number(data)) ? Number(data) : null
+    },
+    staleTime: 10 * 60e3,
+  }, client)
+}
+
 // Who is on shift that day (default today, Central).
 export function useVaShiftsToday(day = null) {
   const [client, on] = useClient()

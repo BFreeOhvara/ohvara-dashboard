@@ -13,6 +13,12 @@
 // to the no-answer workflow when text_flow is no_answer (the booked texts ride on the stage → appointment_reminder
 // event that follows). flow_stop: anything the lead did stopped the no-answer flow, so the contact leaves that
 // workflow and gets ohvara-flow-stopped.
+//
+// P915: campaign on/off. After the outbox, the same run claims agent_campaign_control rows that changed since they
+// were last sent (ghl_claim_controls, migration 253), POSTs each to Jordan's GoHighLevel Inbound Webhook (the URL is
+// the Supabase secret GHL_CONTROL_WEBHOOK_URL; only https://services.leadconnectorhq.com/hooks/… is accepted) and
+// settles it with ghl_control_result: a good answer marks it pushed; a failure is logged and retried after 1, 2, 4…
+// minutes (admins hear after 5 failures). With no URL set, the rows wait (nothing claimed).
 import { GhlError, type GhlClient } from './api.ts'
 import { OUTCOME_TAGS, outcomeTag, GHL_OUTCOME_FIELDS } from '../_shared/leadFlows.js'
 
@@ -44,8 +50,18 @@ export type OutboxRow = {
   detail?: Record<string, unknown> | null // P902: call_outcome / flow_stop fields
 }
 
+export type ControlRow = {
+  agent_id: string; lead_type: 'appts' | 'live'; run: boolean; daily_budget_cents: number; cap_cents: number; reason: string
+  split_form_pct: number | null; schedule: Record<string, unknown> | null; changed_at: string; attempt: number
+  agent_code: string | null; agent_name: string | null; campaign_id: string | null; fb_campaign_id: string | null
+}
+
+export type PostResult = { ok: boolean; status: number }
+
 export type Deps = {
   apiKey: string | undefined
+  controlUrl?: string | undefined                                  // P915: GHL_CONTROL_WEBHOOK_URL
+  post?(url: string, body: unknown): Promise<PostResult>           // P915: one JSON POST (index.ts: fetch, 10 s timeout)
   ghl(apiKey: string): GhlClient
   settings(): PromiseLike<{ data: Settings | null; error: DbError }>
   rpc(fn: string, args: Record<string, unknown>): PromiseLike<{ data: unknown; error: DbError }>
@@ -122,6 +138,56 @@ export async function pushRow(row: OutboxRow, s: Settings, api: GhlClient): Prom
   return contactId
 }
 
+// P915: only GoHighLevel's own inbound-webhook host, so a typo can never send agents' budgets elsewhere.
+export const CONTROL_URL = /^https:\/\/services\.leadconnectorhq\.com\/hooks\/[A-Za-z0-9_\-/]{8,300}$/
+export const controlUrlOk = (u: string | undefined | null): u is string => !!u && CONTROL_URL.test(u)
+
+// What GoHighLevel's workflow receives per agent and side (form ads = appts, call ads = live). Money in cents and
+// dollars; schedule = the call-ads hours ({ tz, hours: { Mon: { on, start, end } … } }, null = any time).
+export function controlBody(r: ControlRow) {
+  return {
+    ohvara_event: 'campaign_control',
+    agent_id: r.agent_id, agent_code: r.agent_code, agent_name: r.agent_name, lead_type: r.lead_type,
+    run: r.run, state: r.run ? 'on' : 'off', reason: r.reason,
+    daily_budget_cents: r.daily_budget_cents, daily_budget: Math.round(r.daily_budget_cents) / 100,
+    spend_cap_cents: r.cap_cents, split_form_pct: r.split_form_pct, schedule: r.schedule,
+    campaign_id: r.campaign_id, fb_campaign_id: r.fb_campaign_id, changed_at: r.changed_at,
+  }
+}
+
+export async function runControls(deps: Deps): Promise<{ claimed: number; sent: number; failed: number; skipped?: string }> {
+  if (!controlUrlOk(deps.controlUrl) || !deps.post) {
+    if (deps.controlUrl) deps.log('[ghl-push] GHL_CONTROL_WEBHOOK_URL is not a services.leadconnectorhq.com/hooks/ address')
+    return { claimed: 0, sent: 0, failed: 0, skipped: 'not_configured' }
+  }
+  const claim = await deps.rpc('ghl_claim_controls', { p_limit: BATCH })
+  if (claim.error) {
+    deps.log(`[ghl-push] claim controls ${claim.error.message}`)
+    return { claimed: 0, sent: 0, failed: 0, skipped: 'claim' }
+  }
+  const rows = (claim.data as ControlRow[] | null) ?? []
+  let sent = 0, failed = 0
+  for (const r of rows) {
+    const body = controlBody(r)
+    let ok = false, status: number | null = null, error: string | null = null
+    try {
+      const res = await deps.post(deps.controlUrl, body)
+      ok = res.ok; status = res.status
+      if (!ok) error = `GHL hook: HTTP ${res.status}`
+    } catch (e) {
+      error = `GHL hook: ${e instanceof Error ? e.message : String(e)}`.slice(0, 300)
+    }
+    const fin = await deps.rpc('ghl_control_result', {
+      p_agent: r.agent_id, p_type: r.lead_type, p_changed_at: r.changed_at, p_ok: ok, p_status: status, p_error: error,
+      p_sent: { run: body.run, daily_budget_cents: body.daily_budget_cents, spend_cap_cents: body.spend_cap_cents, reason: body.reason },
+    })
+    if (fin.error) deps.log(`[ghl-push] control result ${fin.error.message}`)
+    if (ok) sent++
+    else { failed++; deps.log(`[ghl-push] control ${r.lead_type} attempt ${r.attempt}: ${error}`) }
+  }
+  return { claimed: rows.length, sent, failed }
+}
+
 export async function run(deps: Deps): Promise<Response> {
   const { data: s, error } = await deps.settings()
   if (error) {
@@ -137,6 +203,7 @@ export async function run(deps: Deps): Promise<Response> {
   const claim = await deps.rpc('ghl_claim_outbox', { p_limit: BATCH })
   if (claim.error) {
     deps.log(`[ghl-push] claim ${claim.error.message}`)
+    await runControls(deps)
     return json({ error: 'claim' }, 500)
   }
   const rows = (claim.data as OutboxRow[] | null) ?? []
@@ -158,8 +225,12 @@ export async function run(deps: Deps): Promise<Response> {
       if (e instanceof GhlError && e.auth) break   // the rest would fail the same way
     }
   }
-  if (rows.length) await deps.rpc('ghl_note_sync', { p_status: failed ? 'error' : 'ok', p_error: lastError })
-  return json({ claimed: rows.length, sent, failed })
+  const controls = await runControls(deps)
+  const anyFail = failed || controls.failed
+  if (rows.length || controls.claimed) {
+    await deps.rpc('ghl_note_sync', { p_status: anyFail ? 'error' : 'ok', p_error: lastError ?? (controls.failed ? 'campaign on/off: a send failed (retrying)' : null) })
+  }
+  return json({ claimed: rows.length, sent, failed, ...(controls.skipped ? {} : { controls }) })
 }
 
 export async function handle(req: Request, deps: Deps & { isCron(req: Request): Promise<boolean> }): Promise<Response> {

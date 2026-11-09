@@ -8,6 +8,8 @@
 //     $$select public.fulfillment_cron_post('ghl-push', '{"action":"run"}'::jsonb)$$);
 // Secret: GHL_API_KEY (Jordan's Private Integration token, sub-account scope
 // contacts.write). Logic: core.ts. GHL endpoints: api.ts.
+// P915: GHL_CONTROL_WEBHOOK_URL (Jordan's Inbound Webhook trigger URL,
+// https://services.leadconnectorhq.com/hooks/…) receives campaign on/off.
 import { createClient } from 'npm:@supabase/supabase-js'
 import { isCron } from '../_shared/cronAuth.ts'
 import { ghlClient } from './api.ts'
@@ -19,6 +21,15 @@ Deno.serve(req => handle(req, {
   apiKey: Deno.env.get('GHL_API_KEY') || undefined,
   isCron: r => isCron(r, supabase),
   ghl: key => ghlClient(key, (url, init) => fetch(url, init)),
+  controlUrl: Deno.env.get('GHL_CONTROL_WEBHOOK_URL') || undefined,
+  post: async (url, body) => {
+    const res = await fetch(url, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(body), signal: AbortSignal.timeout(10_000),
+    })
+    await res.text().catch(() => '')
+    return { ok: res.ok, status: res.status }
+  },
   settings: () => supabase.from('ghl_settings')
     .select('enabled, location_id, workflow_new_inbound, workflow_appointment_reminder, workflow_no_show, workflow_opt_out, workflow_no_answer')
     .eq('id', true).maybeSingle() as PromiseLike<{ data: Settings | null; error: { message: string } | null }>,

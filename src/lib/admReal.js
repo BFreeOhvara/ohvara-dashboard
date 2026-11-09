@@ -280,15 +280,48 @@ export function toOnboard(p, ctx = {}) {
     id: p.id, name: nameOf(p), city: '', state: s?.states?.[0] || '', states: s?.states || [], lead: p.live_transfer_phone ? 'live' : 'appointment',
     spend: Math.round((p.leads_weekly_cents || 0) / 700), done, since: shortDate(p.created_at), liveOn: live ? whenText(live.done_at) : undefined, campaignReq: null,
     plan: done.includes('plan') ? planKey(p.billing_tier, Math.round((p.leads_weekly_cents || 0) / 100)) : null, real: true,
-    // P913: the launch checks from what the real records already hold; the link, campaign ID, test lead, test push and
-    // test call come from the backend prompt (until then those ticks stay open, so Turn campaign on stays locked).
-    agentRef: p.id,
+    // P913/P915: the launch checks. With admin_launch_view (migration 253) loaded, every fact comes from the server
+    // (agent_launch_facts: the same rules the server enforces); without it, what the profile already holds.
+    agentRef: p.agent_code || p.id,
     launch: {
       licence: !!p.npn, hours: p.working_hours_start || '', tz: p.timezone || '',
       card: ['active', 'trialing'].includes(p.billing_status) ? 'Card on file' : '', cardFailed: p.billing_status === 'past_due' ? 'past due' : '',
     },
     paid: done.includes('paid') ? { on: shortDate(p.created_at), days: 2 } : null,
+    ...launchOf(ctx.launch?.[p.id], done, ctx.now),
   }
+}
+
+// P915: one agent's row of admin_launch_view: { checks: { ok, failed, facts }, push: [control rows] } -> the ticket's
+// launch facts, 'on' when the campaign is turned on, and the last send of campaign on/off to GoHighLevel per side.
+export function launchOf(row, done = [], now = Date.now()) {
+  const f = row?.checks?.facts
+  if (!f) return {}
+  const L = f.launch || {}
+  const when = v => (v ? whenText(v, now) : '')
+  const launch = {
+    linkRef: L.linkRef || '', campaignId: L.campaignId || '', campaignRef: L.campaignRef || '',
+    testLead: L.testLead ? { at: when(L.testLead.at), matchedRef: L.testLead.matchedRef, by: L.testLead.by, leadId: L.testLead.leadId } : null,
+    licence: !!L.licence, hours: L.hours || '', tz: L.tz || '', card: L.card || '', cardFailed: L.cardFailed || '',
+    app: { installed: !!L.app?.installed, pushAnswered: !!L.app?.pushAnswered },
+    testCall: L.testCall ? { at: when(L.testCall.at), by: L.testCall.by || 'VA' } : null,
+    testCallAsked: f.testCallAskedAt ? when(f.testCallAskedAt) : '',
+  }
+  const out = { agentRef: f.agentRef, lead: f.lead === 'live' ? 'live' : 'appointment', states: f.states || [], launch, launchState: f.state || 'off' }
+  if (f.state === 'on') out.done = [...new Set([...done, 'on'])]
+  if (f.state === 'paused') out.pausedKey = f.pausedKey || ''
+  out.push = (row.push || []).map(c => pushOf(c, now))
+  return out
+}
+
+// The last send of one campaign on/off row: sent, waiting, or failing (with the error and the next try).
+export function pushOf(c, now = Date.now()) {
+  const side = c.lead_type === 'live' ? 'Call ads' : 'Form ads'
+  const what = c.run ? `on, $${Math.round((c.daily_budget_cents || 0) / 100)}/day` : `off (${c.reason || 'off'})`
+  const pending = !c.pushed_at || Date.parse(c.pushed_at) < Date.parse(c.changed_at)
+  if (c.error) return { side, what, tone: 'warn', text: `Failed ${c.attempts}x · ${c.error}${c.next_at ? ` · next try ${whenText(c.next_at, now)}` : ''}` }
+  if (pending) return { side, what, tone: 'mute', text: 'Waiting to send to GoHighLevel' }
+  return { side, what, tone: 'green', text: `Sent ${whenText(c.pushed_at, now)}${c.engine_state ? ` · GoHighLevel: ${c.engine_state}` : ''}` }
 }
 
 // ── the whole admin store on real data ───────────────────────────────────────
@@ -318,7 +351,7 @@ export function buildAdmState(raw = {}, { now = Date.now(), clock = realClock(no
   const agentProfiles = profiles.filter(p => p.role === 'agent')
   const ticks = raw.ticks || []
   const onboard = agentProfiles.filter(p => !ticks.some(t => t.agent_id === p.id && t.step === 'live'))
-    .map(p => toOnboard(p, { settings, ticks, mapped, ghl: raw.ghl }))
+    .map(p => toOnboard(p, { settings, ticks, mapped, ghl: raw.ghl, launch: Object.fromEntries((raw.launch || []).map(r => [r.agent_id, r])), now }))
   const app = raw.app || {}
   const rc = raw.rc || {}
   const meP = profiles.find(p => p.id === me?.id) || me || {}
@@ -339,6 +372,7 @@ export function buildAdmState(raw = {}, { now = Date.now(), clock = realClock(no
       billing: { ...(base.settings?.billing || {}), maxOverride: {} },
       switches: switchesOf(app, rc), payoutsPaused: !!rc.payouts_paused, liveRoom: app.daily_room_url || '',
       split: base.settings?.split || { brayden: 50, changed: null }, showSample: app.show_sample_data !== false,
+      daysOffPerMonth: app.va_days_off_per_month ?? base.settings?.daysOffPerMonth, // P915: the server's allowance
     },
     bugs: (raw.bugs || []).map(b => toBug(b, now)), audit, connect, setupFees: [], draws: [], onboard, setupLog: {},
     clock, costs, costsMonth: costsOf(raw.costsMonth || []), costsLast: costsOf(raw.costsLast || []), periodCosts: { week: { adsExtra: 0, tools: 0 }, month: { adsExtra: 0, tools: 0 }, last: { ads: 0, tools: 0 } },

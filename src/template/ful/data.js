@@ -407,7 +407,7 @@ function useSampleShift() {
     onToday: today.some(v => v.me), mates: today.filter(v => !v.me),
     // Days a VA can still ask off: their shift days after today that are not asked yet.
     askable: mine.filter(d => d.day > TODAY && !off(d.day)),
-    dayOffs: s.dayOffs.map(o => ({ ...o, date: novDate(o.day), status: 'pending' })), live: false, thisWeek: mine.filter(d => WEEKS[0].includes(d.day) && !off(d.day)).length,
+    dayOffs: s.dayOffs.map(o => ({ ...o, date: novDate(o.day), status: 'approved' })), live: false, thisWeek: mine.filter(d => WEEKS[0].includes(d.day) && !off(d.day)).length,
   })
 }
 

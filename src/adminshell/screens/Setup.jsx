@@ -118,19 +118,27 @@ function LaunchChecks({ c }) {
   const note = useNote()
   const { list, ok, passed } = c.checks
   const on = c.done.includes('on') && ok
-  const turnOn = () => {
+  const first = c.name.split(' ')[0]
+  // P915: on real data the server checks every launch check again before it turns anything on (and says which fails).
+  const turnOn = async () => {
     if (!turnCampaignOn) { note('Turning a campaign on goes through GoHighLevel once it is connected'); return }
-    turnCampaignOn(c.id)
-    note(`${c.name}'s campaign is on (sample: nothing is sent)`)
+    const r = await turnCampaignOn(c.id)
+    if (!c.real) note(`${c.name}'s campaign is on (sample: nothing is sent)`)
+    else if (r) note(`${c.name}'s campaign is on. GoHighLevel gets it within a minute.`)
   }
-  const testCall = () => { placeTestCall?.(c.id); note(`AI test call placed to ${c.name}'s own number (sample)`) }
+  // Real: the VAs are asked to call the test lead now (it rings the agent's own phone); the tick passes once it's logged.
+  const testCall = async () => {
+    const r = await placeTestCall?.(c.id)
+    if (!c.real) note(`AI test call placed to ${c.name}'s own number (sample)`)
+    else if (r) note(r.data?.already ? 'The test call is already logged' : `Asked ${r.data?.asked ?? 0} VA${r.data?.asked === 1 ? '' : 's'} to call ${first}'s test lead now`)
+  }
   return (
     <Block title="Launch checks" sub={<span className="adm-checks-n">{passed} of {list.length} pass</span>}>
       {c.paused && <p className="adm-paused"><PauseCircle size={15} aria-hidden="true" /><span className="tp-grow"><b>Campaign paused, ticket reopened.</b> {c.checks.failed[0].why} It turns back on only once every check passes again.</span></p>}
       <ul className="adm-checks" aria-label="Launch checks">{list.map(x => (
         <li key={x.key} className={x.ok ? 'is-ok' : 'is-bad'}>
           {x.ok ? <CircleCheck size={16} aria-label="Passes" /> : <CircleX size={16} aria-label="Fails" />}
-          <span className="tp-grow"><b>{x.label}</b><small>{x.text}</small></span>
+          <span className="tp-grow"><b>{x.label}</b><small>{x.text}{x.key === 'testCall' && !x.ok && c.launch?.testCallAsked ? ` VAs asked ${c.launch.testCallAsked}.` : ''}</small></span>
           {x.key === 'testCall' && !x.ok && c.launch?.testLead && <button type="button" className="fx-pillbtn" onClick={testCall}><PhoneOutgoing size={13} />Place test call</button>}
         </li>
       ))}</ul>
@@ -182,6 +190,9 @@ function SetupDrawer({ id, onClose, row }) {
         <CampaignRequest c={c} row={row} />
       </Block>
       {c.done.includes('campaign') && <LaunchChecks c={c} />}
+      {c.push?.length > 0 && <Block title="Campaign on/off in GoHighLevel" sub="The last send of each side. A failed send retries by itself.">
+        <ul className="adm-log">{c.push.map(p => <li key={p.side}><b>{p.side}: {p.what}</b><small><Chip tone={p.tone}>{p.tone === 'green' ? 'Sent' : p.tone === 'warn' ? 'Failing' : 'Waiting'}</Chip> {p.text}</small></li>)}</ul>
+      </Block>}
       <Block title="How their leads find them" sub="The agent ID rides hidden in the ad link; the Meta campaign ID is the backup. Either one matches a lead to them.">
         <p className="adm-ticket-id">Agent ID <b className="tp-num">{c.agentRef}</b><button type="button" className="fx-pillbtn" onClick={() => copyText(c.agentRef, note, 'Agent ID')}><Copy size={13} />Copy</button></p>
         <p className="adm-ticket-id">Meta campaign ID <b className="tp-num">{c.launch?.campaignId || 'Not saved yet'}</b>{c.launch?.campaignId && <button type="button" className="fx-pillbtn" onClick={() => copyText(c.launch.campaignId, note, 'Campaign ID')}><Copy size={13} />Copy</button>}</p>

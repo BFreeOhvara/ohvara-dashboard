@@ -550,3 +550,6 @@
   .fs-ov .fs-ov-side { gap: 12px; }
   .fs-ov-side .fs-agents li { padding: 6px 12px; }
 }
+
+/* P915: the day-off drawer's "used them all" line */
+.tp-sub.is-warn { color: var(--ov-warn); font-weight: 600; }

@@ -30,6 +30,13 @@
 //                          meta_option -> ghl_intake_lead (migration 232), saved
 //                          once per delivery and routed to that agent, or to
 //                          admin's Unassigned when the ID is unknown or missing.
+//                          P915: agent_id may be the short DS-XXXX code or the
+//                          full ID; is_test (Meta's lead testing tool) is kept.
+//                          'campaign_created' (P915): GoHighLevel made an agent's
+//                          campaign -> ghl_campaign_created (migration 253) saves
+//                          its campaign IDs on the agent (one of the launch checks).
+//                          'campaign_state' (P915): what GoHighLevel did with an
+//                          on/off push -> ghl_campaign_state.
 // The switch: while ghl_settings.enabled is off, only opt-outs are recorded
 // (a STOP is always honoured); everything else is answered 200 and dropped.
 // A webhook for another location is ignored. Database errors answer 500 so
@@ -100,6 +107,8 @@ export type Action =
   | { kind: 'reply'; messageId: string; phone: string; contactId: string | null; body: string; locationId: string | null }
   | { kind: 'sent'; messageId: string; phone: string | null; contactId: string | null; body: string; status: string | null; at: string | null; locationId: string | null }
   | { kind: 'lead'; lead: IntakeLead; locationId: string | null }
+  | { kind: 'campaign'; campaign: CampaignCreated; locationId: string | null }
+  | { kind: 'campaignState'; state: CampaignState; locationId: string | null }
   | { kind: 'ignore'; why: string }
 
 // P858: the lead the Deedstone page / Meta form posted, as ghl_intake_lead (migration 232) takes it.
@@ -107,8 +116,16 @@ export type IntakeLead = {
   intake_key: string; agent_id: string | null; lead_type: 'booked_appointment' | 'live_call'; meta_option: 'form_page' | 'page_only' | null
   first_name: string | null; last_name: string | null; phone: string; email: string | null; state: string | null; postal_code: string | null
   campaign_id: string | null; adset_id: string | null; ad_id: string | null; contact_id: string | null; page_url: string | null
-  consent_at: string | null; consent_text_version: string | null
+  consent_at: string | null; consent_text_version: string | null; is_test: boolean
 }
+
+// P915: GoHighLevel → Ohvara when it creates an agent's campaign from the template (ghl_campaign_created, 253).
+export type CampaignCreated = {
+  agent_id: string; campaign_id: string | null; fb_campaign_id: string | null; campaign_name: string | null; lead_type: string | null
+}
+// P915: what GoHighLevel did with an on/off push (ghl_campaign_state → campaign_control_confirm).
+export type CampaignState = { agent_id: string; lead_type: string | null; state: string }
+const truthy = (v: string | null) => !!v && ['true', 't', '1', 'yes', 'y'].includes(v.toLowerCase())
 const LEAD_TYPES: Record<string, IntakeLead['lead_type']> = {
   booked_appointment: 'booked_appointment', appointment: 'booked_appointment', booked: 'booked_appointment',
   live_call: 'live_call', live: 'live_call', call: 'live_call',
@@ -184,7 +201,25 @@ export async function classify(p: any, raw: string): Promise<Action> {
         email: pick('email'), state: pick('state'), postal_code: pick('postal_code', 'zip'), campaign_id: pick('campaign_id', 'utm_campaign_id'),
         adset_id: pick('adset_id'), ad_id: pick('ad_id', 'utm_content'), contact_id: contactId, page_url: pick('page_url'),
         consent_at: pick('consent_at'), consent_text_version: pick('consent_text_version'),
+        is_test: truthy(pick('is_test', 'test_lead')),
       },
+    }
+  }
+  if (event === 'campaign_created' || event === 'campaign_state') {
+    const pick = (...keys: string[]) => { for (const k of keys) { const v = str(cd[k]) ?? str(p[k]); if (v) return v } return null }
+    const agent_id = pick('agent_id', 'agent_ref', 'ohvara_agent_id')
+    if (!agent_id) return { kind: 'ignore', why: 'no agent id' }
+    if (event === 'campaign_state') {
+      const state = pick('state', 'engine_state', 'status')
+      if (!state) return { kind: 'ignore', why: 'no state' }
+      return { kind: 'campaignState', locationId, state: { agent_id, lead_type: pick('lead_type'), state: state.slice(0, 60) } }
+    }
+    const campaign_id = pick('campaign_id', 'ghl_campaign_id')
+    const fb_campaign_id = pick('fb_campaign_id', 'meta_campaign_id')
+    if (!campaign_id && !fb_campaign_id) return { kind: 'ignore', why: 'no campaign id' }
+    return {
+      kind: 'campaign', locationId,
+      campaign: { agent_id, campaign_id, fb_campaign_id, campaign_name: pick('campaign_name', 'name'), lead_type: pick('lead_type') },
     }
   }
   if (event === 'opt_out') {
@@ -253,6 +288,19 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
     }
     const out = (r.data ?? {}) as { routing?: string; duplicate?: boolean }
     return json({ ok: out.duplicate ? 'duplicate' : 'lead_saved', routing: out.routing ?? null })
+  }
+
+  if (action.kind === 'campaign' || action.kind === 'campaignState') {
+    // P915: the campaign ID lands on the agent (a launch check), or the engine confirms an on/off push.
+    const fn = action.kind === 'campaign' ? 'ghl_campaign_created' : 'ghl_campaign_state'
+    const r = await deps.rpc(fn, { p: action.kind === 'campaign' ? action.campaign : action.state })
+    if (r.error) {
+      // Unknown agent or a bad field (22xxx): retrying won't fix it.
+      if (r.error.code?.startsWith('22')) return json({ ignored: r.error.message === 'unknown agent' ? 'unknown agent' : 'bad campaign' })
+      deps.log(`[ghl-webhook] ${fn} ${r.error.message}`)
+      return retry()
+    }
+    return json({ ok: action.kind === 'campaign' ? 'campaign_saved' : 'state_saved' })
   }
 
   const match = await deps.rpc('ghl_lead_for_contact', { p_contact_id: action.contactId, p_phone: action.phone })
