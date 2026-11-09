@@ -285,14 +285,6 @@
 @keyframes mx-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .mx-sheet, .mx-act, .mx-scrim { animation: none !important; } }
 
-/* The mockup is drawn for a phone: on a wider window it sits in a phone-width column. */
-@media (min-width: 600px) {
-  .mx { max-width: 430px; margin: 0 auto; border-left: 1px solid var(--sh-line); border-right: 1px solid var(--sh-line); }
-  .mx-tabs, .mx-top { max-width: 430px; margin: 0 auto; }
-  .mx-tabs { left: 50%; transform: translateX(-50%); width: 100%; }
-  .mx-fab { right: calc(50% - 215px + 16px); }
-  .mx-sheet, .mx-act { left: 50%; right: auto; width: 430px; transform: translateX(-50%); }
-}
 
 /* QA pass: sizes the shared desktop pieces inside the phone screens up to 44 px targets and 16 px text. */
 :is(.mx, .mx-layer) .mx-lcard-when { font-size: 16px; }
@@ -313,3 +305,35 @@
 :is(.mx, .mx-layer) .mx-btn.is-ghost { min-height: 50px; }
 .mx-row .tp-switch::before, .mx-plan .tp-switch::before { content: ''; position: absolute; inset: -6px -2px; }
 .mx-layer.is-short { z-index: 70; }
+
+/* Phase 2: bits the real pages use. */
+.mx-act-sec { display: flex; align-items: center; gap: 8px; margin: 14px 4px 6px; font-size: 14px; font-weight: 700; color: var(--ov-mute); }
+.mx-gap { margin-top: 10px; }
+.mx-view { padding: 10px; }
+.mx-row.is-danger, .mx-row.is-danger .mx-row-ic { color: var(--danger); }
+.mx-dots { height: 12px; align-items: center; }
+.mx-sday.is-blocked b { opacity: .5; text-decoration: line-through; }
+
+/* Phase 2: Billing, Activity, Settings, Submit, Request a service and Messages are the full pages inside the phone
+   frame (they already stack to one column below 768 px). Phone sizes: reading text 16 px, labels 12 px or more,
+   every control 44 px. */
+.mx.is-sub .mx-main :is(p.tp-sub, .pb-note, .pb-foot, .sp-plain, .tp-grow > p, dd, .fx-sub-check li, .fx-calm, p.tp-mid, .fx-form-h p) { font-size: 16px; }
+.mx.is-sub .mx-main :is(.tp-tag, .is-paid small, .is-tonight small, .bl-tile small) { font-size: 12px; }
+.mx.is-sub .mx-main :is(.fx-pt, .fx-form-f .tp-primary, .fx-form-row .tp-btn, .fx-form-f .tp-btn, .tp-row .tp-btn) { min-height: 44px; font-size: 15px; }
+.mx.is-sub .mx-main :is(.fx-act-nav, .fx-act-today) { min-width: 44px; min-height: 44px; font-size: 14px; }
+.mx.is-sub .mx-main .tp-find input { min-height: 44px; }
+.mx.is-sub .mx-main input.pb-range { height: 44px; }
+.mx.is-sub .mx-main .hr-day .tp-switch { position: relative; width: 52px; height: 32px; border-radius: 16px; padding: 3px; box-sizing: border-box; }
+.mx.is-sub .mx-main .hr-day .tp-switch span { width: 26px; height: 26px; }
+.mx.is-sub .mx-main .hr-day .tp-switch.on span { transform: translateX(20px); }
+.mx.is-sub .mx-main .hr-day .tp-switch::before { content: ''; position: absolute; inset: -6px -2px; }
+/* The desktop's fit-to-the-fold sizing is off inside the phone frame: pages just scroll. */
+.mx [data-fold-fit] { height: auto; grid-template-rows: none; }
+.mx .fx-actgrid[data-fold-fit] > .fx-act-day { height: min(70vh, 560px); }
+.mx .fx-actgrid[data-fold-fit] > .fx-kinds { height: auto; }
+/* Messages on a phone: the list, then one thread at a time. */
+.mx .tp-msgs.is-m-list .tp-conv, .mx .tp-msgs.is-m-thread .tp-threads { display: none; }
+.mx .tp-msgs { display: block; }
+.mx .tp-msgs .tp-thread { min-height: 64px; }
+.mx .tp-conv-back { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; font: inherit; font-size: 16px; font-weight: 600; color: var(--ov-hi); background: none; border: 0; }
+.mx .tp-conv-f .tp-input, .mx .tp-conv-f .tp-primary { min-height: 48px; font-size: 16px; }

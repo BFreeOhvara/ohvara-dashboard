@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, ArrowUpRight, MessageSquare, Pin } from 'lucide-react'
+import { Search, ArrowUpRight, MessageSquare, Pin, ChevronLeft } from 'lucide-react'
+import { usePhone } from '../m/phone'
 import { useSampleThreads, useSampleActions, useDataSource } from '../data'
 import { Avatar, Empty } from '../kit'
 import { paths } from '../paths'
@@ -38,12 +39,15 @@ function Inbox({ realSupport = null, sendReal = null }) {
   const [sel, setSel] = useState(() => threads.find(t => !isSupport(t) && t.unread > 0)?.id || threads.find(t => !isSupport(t))?.id || threads[0]?.id)
   const [text, setText] = useState('')
   const [q, setQ] = useState('')
+  // P908: on a phone, the list first; a thread opens on its own with a back arrow.
+  const phone = usePhone()
+  const [opened, setOpened] = useState(false)
   const t = threads.find(x => x.id === sel) || threads[0]
   const n = q.trim().toLowerCase()
   // Ohvara Support stays at the top whatever the search says (it can't be hidden).
   const list = pinSupport(threads, x => x.name.toLowerCase().includes(n))
   // The real support line isn't a client thread: no policy read mark for it.
-  const pick = id => { setSel(id); if (!(id === support.thread?.id && support.sendReal)) readThread(id) }
+  const pick = id => { setSel(id); setOpened(true); if (!(id === support.thread?.id && support.sendReal)) readThread(id) }
   const sup = isSupport(t)
   const send = e => {
     e.preventDefault()
@@ -56,7 +60,7 @@ function Inbox({ realSupport = null, sendReal = null }) {
   const first = t.name.split(' ')[0]
   return (
     // P867: on a phone the card is sized to the window too (data-fold-fit), so the page holds still there as well
-    <section className="ov-card tp-msgs" aria-label="Messages" data-fold data-fold-fit="440" data-fold-phone>
+    <section className={`ov-card tp-msgs${phone ? (opened ? ' is-m-thread' : ' is-m-list') : ''}`} aria-label="Messages" data-fold data-fold-fit="440" data-fold-phone>
       <div className="tp-threads">
         <label className="tp-find tp-threads-find"><Search size={15} aria-hidden="true" /><input aria-label="Find a thread" placeholder="Find a client" value={q} onChange={e => setQ(e.target.value)} /></label>
         <div className="tp-threads-b">
@@ -71,6 +75,7 @@ function Inbox({ realSupport = null, sendReal = null }) {
         </div>
       </div>
       <div className="tp-conv">
+        {phone && <button type="button" className="tp-conv-back" onClick={() => setOpened(false)}><ChevronLeft size={20} aria-hidden="true" />All threads</button>}
         {sup
           ? <div className="tp-conv-h"><Avatar name={SUPPORT_NAME} /><span className="tp-grow"><b>{SUPPORT_NAME}</b><small>The Ohvara admin team. Account, billing, leads, anything.</small></span></div>
           : <div className="tp-conv-h"><Avatar name={t.name} /><span className="tp-grow"><b>Ohvara fulfillment · about {t.name}</b><small>Your Ohvara team. The client doesn't see this.</small></span><Link to={paths.client(t.client_id)} className="tp-link">Open client<ArrowUpRight size={14} /></Link></div>}

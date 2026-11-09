@@ -2,28 +2,34 @@ import process from 'node:process'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { chromium } from 'playwright'
 
-// P908 QA: the phone mockup (/template/m), every screen at 390 and 430, light and dark. Full-page shots for pages,
+// P908 QA: the phone build (below 768 px at the real /template addresses), every screen at 390 and 430, light and dark. Full-page shots for pages,
 // the viewport for sheets. Numbers: sideways scroll, tap targets under 44 px, text under 16 px (outside chips/badges).
 //   node qa/p908/shots.mjs http://localhost:4908 [onlyWidth]
 const [BASE = 'http://localhost:4908', ONLY] = process.argv.slice(2)
 const OUT = 'qa/p908/shots'
 mkdirSync(OUT, { recursive: true })
 const SCREENS = [
-  ['01-overview', '/template/m'],
-  ['02-leads-booked', '/template/m/leads'],
-  ['03-leads-follow-up', '/template/m/leads?lane=follow'],
-  ['04-lead-sheet', '/template/m/leads/sample-lead-1', { sheet: true }],
-  ['05-lead-pick-result', '/template/m/leads/sample-lead-8?outcome=1', { sheet: true }],
-  ['06-clients', '/template/m/clients'],
-  ['07-client-sheet', '/template/m/clients/sample-client-3', { sheet: true }],
-  ['08-client-app-link', '/template/m/clients/sample-client-3', { sheet: true, click: '.mx-sheet-f .mx-btn:not(.is-primary)' }],
-  ['09-calendar', '/template/m/calendar'],
-  ['10-more', '/template/m/more'],
-  ['11-billing', '/template/m/billing'],
-  ['12-activity', '/template/m/activity'],
-  ['13-settings', '/template/m/settings'],
-  ['14-create', '/template/m', { sheet: true, click: '.mx-fab' }],
-  ['15-spend-sheet', '/template/m/billing', { sheet: true, click: '.mx-spend .mx-btn.is-primary' }],
+  ['01-overview', '/template'],
+  ['02-leads-booked', '/template/leads'],
+  ['03-leads-follow-up', '/template/leads?lane=follow'],
+  ['04-lead-sheet', '/template/leads/sample-lead-1', { sheet: true }],
+  ['05-lead-pick-result', '/template/leads/sample-lead-8?outcome=1', { sheet: true }],
+  ['06-clients', '/template/clients'],
+  ['07-client-sheet', '/template/clients/sample-client-3', { sheet: true }],
+  ['08-client-app-link', '/template/clients/sample-client-3', { sheet: true, click: '.mx-sheet-f .mx-btn:not(.is-primary)' }],
+  ['09-calendar', '/template/calendar'],
+  ['10-calendar-call', '/template/calendar', { sheet: true, click: '.mx-ev .mx-cover' }],
+  ['11-more', '/template/more'],
+  ['12-billing', '/template/billing'],
+  ['13-activity', '/template/activity'],
+  ['14-settings', '/template/settings'],
+  ['15-submit', '/template/submit'],
+  ['16-request-service', '/template/request-service'],
+  ['17-messages', '/template/messages'],
+  ['17b-messages-thread', '/template/messages', { click: '.tp-thread:nth-child(2)' }],
+  ['18-create', '/template', { sheet: true, click: '.mx-fab' }],
+  ['19-bell', '/template', { sheet: true, click: '.mx-top .mx-ib[aria-label^="Your to-dos"]' }],
+  ['20-spend-sheet', '/template/leads', { sheet: true, click: '.mx-pill[aria-label^="Change your daily"]' }],
 ]
 const WIDTHS = ONLY ? [Number(ONLY)] : [390, 430]
 const browser = await chromium.launch()

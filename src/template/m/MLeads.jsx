@@ -1,9 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { PhoneIncoming, CalendarDays, Clock, MapPin, Search, Wallet, ChevronRight, Users, Link2, ClipboardCheck, PhoneForwarded, Phone, X } from 'lucide-react'
+import { PhoneIncoming, CalendarDays, Clock, MapPin, Search, Wallet, ChevronRight, Users, Link2, ClipboardCheck, PhoneForwarded, Phone, X, MessageSquareWarning } from 'lucide-react'
 import { useSampleLeads, useSampleLead, useSampleActions, useSampleBilling, useDataSource } from '../data'
 import { Avatar, Chip, Pending, useNote } from '../kit'
-import { stageChip, OutcomeDrawer } from '../LeadOutcome'
+import { stageChip, OutcomeDrawer, NoShowUndo } from '../LeadOutcome'
+import { FeedbackDrawer } from '../Talk'
 import { LANES, CLOSED_LANE, laneOf } from '../stages'
 import { agentCallTask, confirmedByText, atLabel, clockNow } from '../leadLifecycle'
 import { agentStatusOf, agentEvents, closedReason, needsResult, resultsFor, isLiveCall, liveCalls, RESULT_LABEL, RESULT_MEANING } from '../agentView'
@@ -98,7 +99,9 @@ export function StatusPicker({ lead, open, onClose }) {
 const ASK_WHY = ['I can’t reach them', 'They want a different time', 'Check their details', 'Something else']
 function LeadSheet({ id, onClose }) {
   const { data: lead } = useSampleLead(id)
-  const { addLeadNote, askTeamToCall, sendBookingLink, callBack } = useSampleActions()
+  const { addLeadNote, askTeamToCall, sendBookingLink, callBack, rebookLead } = useSampleActions()
+  const source = useDataSource()
+  const [fb, setFb] = useState(false)
   const note = useNote()
   const [params, setParams] = useSearchParams()
   const [pick, setPick] = useState(params.get('outcome') === '1')
@@ -124,9 +127,15 @@ function LeadSheet({ id, onClose }) {
         <p><MapPin size={14} aria-hidden="true" />{lead.city}, {lead.state} · {lead.kind === 'live_call' ? 'Live call' : 'Appointment'}</p>
         <b className="mx-hero-big tp-money">{lead.mortgage_balance_band.replace(' to ', '–')}</b>
       </div>
+      <NoShowUndo lead={lead} />
       {task && <a href={`tel:${lead.rawPhone || lead.phone}`} className="mx-nudge is-warn" onClick={() => callBack(lead.id)}><PhoneForwarded size={18} aria-hidden="true" /><span className="tp-grow"><b>{lead.first_name} asked you to call</b><small>“{lead.reply.text}”</small></span><ChevronRight size={18} aria-hidden="true" /></a>}
       {lead.stage === 'sold' && !lead.submitted && <Link to={paths.submit(lead.id)} className="mx-nudge is-green"><span className="tp-grow"><b>Finish the servicing details</b><small>The team takes it from there</small></span><ChevronRight size={18} aria-hidden="true" /></Link>}
       {closed && <p className="mx-note"><b>{closedReason(lead)}.</b> No more calls or texts. A reply from them brings them back as a new lead.</p>}
+      {agentStatusOf(lead) === 'team' && <p className="mx-note">Our team is calling {lead.first_name}. Nothing for you to do yet: they land on Booked.</p>}
+      {agentStatusOf(lead) === 'no_show' && !lead.undo && (
+        <div className="mx-note"><b>No show{lead.appt ? ` at ${lead.appt}` : ''}.</b> We sent {lead.first_name} a one-tap link to rebook. {lead.vaCall ? `${lead.vaCall.va || 'Our team'} is booked to call ${atLabel(lead.vaCall.at, clockNow())} if they haven’t picked a time.` : 'If they don’t pick a time, our team calls to book them again.'}
+          {source === 'sample' && <button type="button" className="mx-btn is-wide mx-gap" onClick={() => { rebookLead(lead.id); note(`${lead.first_name} picked a new time. Back on Booked`) }}>Sample: they pick a new time</button>}</div>
+      )}
       {!closed && (
         <ul className="mx-list">
           <li><ActRow icon={Users} label="Ask our team to call" sub="The next free person calls right away" onClick={() => setAsk(true)} /></li>
@@ -151,6 +160,8 @@ function LeadSheet({ id, onClose }) {
         <textarea className="mx-input mx-ta" aria-label="Add a note" placeholder="Add a note" value={draft} onChange={e => setDraft(e.target.value)} />
         {draft.trim() && <button type="button" className="mx-btn is-wide" onClick={() => { addLeadNote(lead.id, draft.trim()); setDraft(''); note('Note saved') }}>Save note</button>}
       </section>
+      <button type="button" className="mx-btn is-ghost is-wide" onClick={() => setFb(true)}><MessageSquareWarning size={18} aria-hidden="true" />Feedback on how our team handled {lead.first_name}</button>
+      <FeedbackDrawer open={fb} lead={lead} onClose={() => setFb(false)} />
       <StatusPicker lead={lead} open={pick} onClose={() => setPick(false)} />
       <ActionSheet open={ask} onClose={() => setAsk(false)} title="Ask our team to call" sub={`${name} · ${lead.phone}`}>
         {ASK_WHY.map(w => <ActRow key={w} icon={Users} label={w} onClick={() => { askTeamToCall(lead.id, w); setAsk(false); note(`Our team calls ${lead.first_name}. You see it here`) }} />)}

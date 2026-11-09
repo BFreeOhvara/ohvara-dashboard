@@ -25,7 +25,7 @@ const label12 = h => `${((h + 11) % 12) + 1} ${h < 12 ? 'AM' : 'PM'}`
 
 // P878 (N-K-04, N-C-38, N-H-13): your hours per weekday and your calendar link, with any booked appointments the new
 // hours would leave out listed to Keep or Move.
-function HoursDrawer({ open, onClose, settings, appts }) {
+export function HoursDrawer({ open, onClose, settings, appts }) {
   const { saveWeek, connectCalendar, moveAppts } = useSampleActions()
   const note = useNote()
   const [week, setWeek] = useState(settings.week)
@@ -49,7 +49,7 @@ function HoursDrawer({ open, onClose, settings, appts }) {
 }
 
 // Block a whole day off: anything booked that day is listed to Keep or Move.
-function BlockDrawer({ open, onClose, appts, blocked }) {
+export function BlockDrawer({ open, onClose, appts, blocked }) {
   const { days: DAYS, monOf } = useWeek()
   const { blockDay, unblockDay } = useSampleActions()
   const note = useNote()
@@ -71,7 +71,7 @@ function BlockDrawer({ open, onClose, appts, blocked }) {
 }
 
 // "Can't make it" on a lead's appointment (N-C-36): an automatic apology and a one-tap rebook link go out.
-function CantMakeIt({ appt, lead, onClose }) {
+export function CantMakeIt({ appt, lead, onClose }) {
   const { monOf } = useWeek()
   const { cantMakeIt } = useSampleActions()
   const note = useNote()

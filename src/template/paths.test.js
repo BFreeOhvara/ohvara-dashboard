@@ -7,9 +7,7 @@ const at = pathname => { globalThis.window = { location: { pathname } } }
 test.afterEach(() => { delete globalThis.window })
 
 test('THE LINK CHECK: no raw link strings in src/template', () => {
-  // P908: mpaths.js holds the phone mockup's own /template/m addresses (preview only; Phase 2 builds the phone
-  // layouts at the real agent paths, through paths.js).
-  const skip = new Set(['paths.js', 'paths.test.js', 'TemplateApp.jsx', 'mpaths.js'])
+  const skip = new Set(['paths.js', 'paths.test.js', 'TemplateApp.jsx'])
   const files = globSync('src/template/**/*.{js,jsx}')
     .map(f => f.replaceAll('\\', '/'))
     .filter(f => !skip.has(f.split('/').pop()))

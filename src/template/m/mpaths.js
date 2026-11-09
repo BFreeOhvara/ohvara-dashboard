@@ -1,21 +1,26 @@
-// P908 — the phone mockup's addresses (inside /template). Phase 2 swaps these for the real agent paths.
+import { paths, layoutOf } from '../paths'
+
+// P908 — the phone build's links: the same addresses as the desktop (paths.js), so a link works at /template and at
+// the real agent URLs, and a phone and a desktop share every address.
 export const mp = {
-  home: () => '/m',
-  leads: lane => `/m/leads${lane ? `?lane=${lane}` : ''}`,
-  lead: (id, outcome) => `/m/leads/${id}${outcome ? '?outcome=1' : ''}`,
-  clients: () => '/m/clients',
-  client: id => `/m/clients/${id}`,
-  calendar: () => '/m/calendar',
-  more: () => '/m/more',
-  billing: () => '/m/billing',
-  activity: () => '/m/activity',
-  settings: () => '/m/settings',
+  home: () => paths.home(),
+  leads: lane => `${paths.leads()}${lane ? `?lane=${lane}` : ''}`,
+  lead: (id, outcome) => `${paths.lead(id)}${outcome ? '?outcome=1' : ''}`,
+  clients: () => paths.clients(),
+  client: id => paths.client(id),
+  calendar: () => paths.calendar(),
+  more: () => paths.more(),
+  billing: () => paths.billing(),
+  activity: () => paths.activity(),
+  settings: () => paths.settings(),
 }
 
-// The page title for the top bar, from the address.
-export const titleOf = pathname => {
-  const seg = pathname.replace(/^\/m\/?/, '').split('/')[0]
-  return { '': 'Overview', leads: 'Leads', clients: 'Clients', calendar: 'Calendar', more: 'More', billing: 'Billing', activity: 'Activity', settings: 'Settings' }[seg] || 'Overview'
+const TITLE = {
+  overview: 'Overview', leads: 'Leads', clients: 'Clients', calendar: 'Calendar', more: 'More', billing: 'Billing', activity: 'Activity',
+  settings: 'Settings', messages: 'Messages', submit: 'Submit a policy', 'request-service': 'Request a service',
 }
-// Billing, Activity and Settings sit under More: their top bar shows a back arrow to More.
-export const underMore = pathname => /^\/m\/(billing|activity|settings)/.test(pathname)
+// The page title for the top bar.
+export const titleOf = pathname => TITLE[layoutOf(pathname)] || 'Overview'
+// Pages with no tab of their own: the top bar shows a back arrow, and the More tab stays lit.
+const SUB = ['billing', 'activity', 'settings', 'messages', 'submit', 'request-service']
+export const isSub = pathname => SUB.includes(layoutOf(pathname))

@@ -102,7 +102,7 @@ const APPT_CLOCKS = clocksBetween(8 * 60, 20 * 60) // the client's 8 AM to 8 PM;
 const AGENT_HOURS = { open: 9 * 60, close: 18 * 60, days: [1, 2, 3, 4, 5] } // "Working hours 9:00 AM to 6:00 PM"
 const CALL_KINDS = [{ key: 'appt', label: 'Appointment' }, { key: 'cancellation', label: 'Cancellation call' }, { key: 'service', label: 'Service call' }]
 const SERVICE_WHAT = ['Change address', 'Update phone', 'Change beneficiary', 'Change billing date', 'Payment change', 'Policy question', 'Other']
-function BookCall({ open, onClose }) {
+export function BookCall({ open, onClose }) {
   const { data: clients } = useSampleClients()
   const { data: leads } = useSampleLeads()
   const { data: events } = useSampleAppointments()
@@ -180,7 +180,7 @@ function usePeople() {
 }
 
 // Add a note to a client: it shows on the client's page (sample only).
-function AddNote({ open, onClose }) {
+export function AddNote({ open, onClose }) {
   const { data: clients } = useSampleClients()
   const { clientAction } = useSampleActions()
   const note = useNote()
@@ -201,7 +201,7 @@ function AddNote({ open, onClose }) {
 
 // Log a call you made yourself, so the record stays whole (sample only).
 const RESULTS = ['Reached them', 'Left a voicemail', 'No answer', 'Set a follow-up']
-function LogCall({ open, onClose }) {
+export function LogCall({ open, onClose }) {
   const people = usePeople()
   const { clientAction, addLeadNote } = useSampleActions()
   const note = useNote()
@@ -264,7 +264,7 @@ export function GetApp({ open, onClose }) {
 }
 
 // Help and support: where to ask, and the one shortcut worth knowing.
-function Help({ open, onClose, onBug, onTalk }) {
+export function Help({ open, onClose, onBug, onTalk }) {
   const keep = useKeep(open)
   if (!keep) return null
   return (
