@@ -60,13 +60,15 @@ async function grab(rect) {
 
 
 const VARIANTS = {
+  noblur: '.fx .fx-tile.fx-tile:not(.is-fill), .fx .ov-card.ov-card, .fx .ov-attn.ov-attn { -webkit-backdrop-filter: saturate(1.35) !important; backdrop-filter: saturate(1.35) !important; }',
   now: '',
   oldblur: '.fx .fx-tile.fx-tile:not(.is-fill), .fx .ov-card.ov-card, .fx .ov-attn.ov-attn { -webkit-backdrop-filter: blur(26px) saturate(1.35) !important; backdrop-filter: blur(26px) saturate(1.35) !important; }',
 }
 const strip = (buf) => { const P = PNG.sync.read(buf); const m = (x0, x1) => { let s = 0, n = 0; for (let y = 300; y < 700; y += 2) for (let x = x0; x < x1; x++) { const i = (y * P.width + x) * 4; s += P.data[i] + P.data[i + 1] + P.data[i + 2]; n++ } return s / n / 3 }; return { band: m(933, 950), left: m(880, 900) } }
 const browser = await chromium.launch({ channel: 'msedge', headless: false, args: ['--window-position=0,0', '--window-size=1460,1040', '--disable-features=CalculateNativeWinOcclusion', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding'] })
-const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: 'dark' })
-await ctx.addInitScript(() => { try { localStorage.setItem('ohvara-theme', 'dark') } catch { /* */ } })
+const THEME = flag('--theme', 'dark')
+const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: THEME })
+await ctx.addInitScript(t => { try { localStorage.setItem('ohvara-theme', t) } catch { /* */ } }, THEME)
 const page = await ctx.newPage()
 await page.goto(`${BASE}/login`, { waitUntil: 'networkidle' })
 await page.fill('input[placeholder="you@email.com"]', logins.agent.email); await page.fill('input[placeholder="Your password"]', logins.agent.password)
@@ -79,15 +81,16 @@ for (const v of only) {
   if (VARIANTS[v]) await page.addStyleTag({ content: VARIANTS[v] })
   await page.evaluate(() => { document.title = 'P912CAPTURE' }); await page.waitForTimeout(2500)
   const hb = await page.locator('.fx-ovl-hero').boundingBox()
-  let hits = 0, max = -99
+  let hits = 0, max = -99, min = 99
   for (let k = 0; k < 48; k++) {
     const [x, y] = PTS[k % PTS.length]
     await page.mouse.move(x, y, { steps: 3 }); await page.waitForTimeout(k % 3 === 0 ? 40 : k % 3 === 1 ? 160 : 500)
     const buf = await grab(rect); const st = strip(buf); const d = st.band - st.left
     if (d > max) max = d
+    if (d < min) min = d
     if (d > 0) { hits++; writeFileSync(join(OUT, `${v}-band-${k}.png`), buf) }
     if (k === 47) writeFileSync(join(OUT, `${v}-last.png`), buf)
   }
-  console.log(v, `band frames ${hits}/48, brightest ${max.toFixed(1)} (normal -4.0, film +3.7)`)
+  console.log(v, `band frames ${hits}/48, strip-minus-chart ranged ${min.toFixed(1)} to ${max.toFixed(1)} (dark: steady -4.0, film +3.7)`)
 }
 ps.stdin.write('quit\n'); await browser.close()
