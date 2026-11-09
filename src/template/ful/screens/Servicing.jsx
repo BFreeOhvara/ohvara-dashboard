@@ -1,19 +1,24 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Search, CalendarClock, MapPin, Hand, Undo2, Send, CircleCheck, LifeBuoy, Check, MessageSquare, Phone } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { CalendarClock, MapPin, Hand, Undo2, Send, CircleCheck, Check, MessageSquare, Phone } from 'lucide-react'
 import { useFulTasks, useFulActions } from '../data'
-import { Avatar, Chip, Drawer, Empty, PillTabs, useNote } from '../../kit'
+import { Avatar, Chip, Drawer, PillTabs, useNote } from '../../kit'
 import { MoveBooking } from '../MoveBooking'
 import { CALLBACK_WHY, isCallKind } from '../bookings'
 import { WINDOWS } from '../../../lib/callSlots'
 import { RecordDrawer, Block, Stepper } from '../../Record'
 import { fp } from '../paths'
-import { KIND, kindTone, outcomesOf, outcomeLabel, SEND_REASONS, TASK_GROUPS } from '../words'
+import { KIND, kindTone, outcomesOf, outcomeLabel, SEND_REASONS } from '../words'
 import { HelpDot } from '../../../fulshell/training/HelpDot'
 import { DocsBlock } from '../Docs886'
 import { WELCOME_TEXT_ASK, ordinal } from '../../../lib/bookImport.js'
 import '../../p891.css'
+import { StartCall } from '../StartCall'
 
+// P918 — no Servicing page any more. This file keeps the call view for every booking that isn't a cancel-the-old-policy
+// call (it opens on the Calendar at /fulfillment/calendar/<id>, and from a client's drawer): who, why, the short script,
+// the steps, and Start call, which turns on only near the call's time. A step that isn't a call (a packet check) still
+// opens here from its client; the client's stage checklist is where that work lives.
 // P845 — Servicing: the steps agents asked for (packet checks, payment and beneficiary changes, review calls, lapse
 // saves). A board: overdue, booked today, booked later, not a call; each card takes its kind's colour (lib/
 // vaServicing toneOf). A step opens in a drawer at its own URL: start it, pick the result from a closed list, or send
@@ -22,20 +27,6 @@ import '../../p891.css'
 // shift who is free) and sits on that VA's Schedule. Here the whole team's steps show with who has each one; Move
 // picks another time (the client gets a confirmation text). There is no manual "Schedule it" any more.
 const STEPS = [{ key: 'requested', label: 'Asked for' }, { key: 'scheduled', label: 'Scheduled' }, { key: 'in_progress', label: 'Working on it' }, { key: 'done', label: 'Done' }]
-
-function TaskCard({ t, i }) {
-  const tone = kindTone(t.kind)
-  return (
-    <article className={`fx-card fx-lcard is-${tone}`} style={{ '--i': i }}>
-      <Link to={fp('servicing', t.id)} className="fx-cover" aria-label={`Open ${KIND[t.kind]} for ${t.name}`} />
-      <div className="fx-lcard-top"><span className="fx-kind"><LifeBuoy size={13} aria-hidden="true" />{KIND[t.kind]}</span>{t.held && <span className="fx-tag">Working</span>}</div>
-      <h3>{t.name}</h3>
-      <p>{t.agent}'s client · {t.carrier}</p>
-      <div className="fx-lcard-bot"><span className="fx-big">{t.due_text}{t.iso && t.mine === false && <small className="fs-who"> · {t.vaName.split(' ')[0]} has it</small>}</span><Avatar name={t.name} tone={tone} /></div>
-    </article>
-  )
-}
-
 
 // P888: a missed payment, lapse notice or chargeback warning is one ordinary call task (a lapse save). It comes in by
 // itself: the agent's forwarded carrier email, the agent's Request service, or the client calling in. No desk, no
@@ -75,6 +66,24 @@ function WelcomeSteps({ t }) {
   )
 }
 
+// P918: the short script for every other booked call (Brayden: a call's view has the client, the agent, why, the
+// short script and the steps). Draft wording, like the rest of the scripts.
+const CHANGE_KINDS = ['payment_change', 'beneficiary_change', 'address_change', 'draft_date_change', 'name_change', 'change_request']
+function sayFor918(t) {
+  const first = t.client.client_first_name || t.name.split(' ')[0]
+  const ag = (t.agent || '').split(' ')[0]
+  if (t.kind === 'handoff_call') return `Hi ${first}, this is (your name) with Deedstone, part of ${ag}’s client care team. Congratulations on your new ${t.carrier || ''} policy. I’m calling to check your details and tell you who to call for anything you need.`.replace('  ', ' ')
+  if (t.kind === 'callback') {
+    if (t.why === 'no_show') return `Hi ${first}, this is (your name) with Deedstone. We missed you at your call with ${ag}. Can we find a new time that works for you?`
+    if (t.why === 'missed_call') return `Hi ${first}, this is (your name) with Deedstone, returning your call. How can I help?`
+    return `Hi ${first}, this is (your name) with Deedstone, calling you back as promised. How can I help?`
+  }
+  if (t.kind === 'cancel_request') return `Hi ${first}, this is (your name) with Deedstone. You asked about cancelling your ${t.carrier || ''} policy. Before anything changes, can I ask what’s going on? There may be a way to keep your coverage.`.replace('  ', ' ')
+  if (CHANGE_KINDS.includes(t.kind)) return `Hi ${first}, this is (your name) with Deedstone. ${ag} let us know you’d like a ${(KIND[t.kind] || 'change').toLowerCase()}. I can help with that now. First, let me confirm it’s you.`
+  if (t.kind === 'annual_review' || t.kind === 'review_call') return `Hi ${first}, this is (your name) with Deedstone, calling for your yearly review for ${ag}. It takes five minutes: I’ll check your policy still fits and your details are right.`
+  return null
+}
+
 function TaskSteps({ t }) {
   if (t.kind === 'welcome_call') return <WelcomeSteps t={t} />
   const m = t.missed
@@ -94,6 +103,7 @@ function TaskSteps({ t }) {
     papers, result,
   ] : [
     <li key="call" className={done ? 'done' : t.held ? 'now' : ''}><i /><div><b>{m ? `Check with ${t.carrier}, then call ${t.client.client_first_name} if it didn’t clear` : `Call ${t.client.client_first_name}`}</b><span>{[t.client.client_phone, t.carrier].filter(Boolean).join(" · ")}</span></div></li>,
+    ...(!m && sayFor918(t) ? [<li key="say" className={done ? 'done' : ''}><i /><div><b>Say why you’re calling</b><p className="fs-say">“{sayFor918(t)}”</p></div></li>] : []),
     ...(t.kind === "callback" ? [] : [papers]), result,
   ]
   return <Block title="On this call"><ol className="fs-steps">{steps}</ol></Block>
@@ -151,7 +161,7 @@ function Booked({ t, onMove }) {
   return (
     <section className="fx-blk fs-booked">
       <header><h3><CalendarClock size={16} aria-hidden="true" />Booked {t.due_text.replace(/^Today, /, 'today, ')}</h3>{onMove && <button type="button" className="fx-pillbtn" onClick={onMove}><CalendarClock size={13} aria-hidden="true" />Move</button>}</header>
-      <p className="tp-mid">{t.mine === false ? `${t.vaName} has this call. ` : 'On your Schedule. '}{t.inWindow === false ? `Nothing was open in their ${win || 'usual'} window, so the system took the next open time.` : `The system picked the next open time in their ${win || 'usual'} window, their clock.`}{t.tries > 1 ? ` Try ${t.tries} of 3.` : ''}</p>
+      <p className="tp-mid">{t.mine === false ? `${t.vaName} has this call. ` : 'On your Calendar. '}{t.inWindow === false ? `Nothing was open in their ${win || 'usual'} window, so the system took the next open time.` : `The system picked the next open time in their ${win || 'usual'} window, their clock.`}{t.tries > 1 ? ` Try ${t.tries} of 3.` : ''}</p>
     </section>
   )
 }
@@ -164,13 +174,16 @@ export function TaskDrawer({ id, onClose }) {
   const [panel, setPanel] = useState(null)
   const [result, setResult] = useState(null)
   const [why, setWhy] = useState(SEND_REASONS[0])
-  if (!t) return <RecordDrawer label="Step not found" kicker="Servicing" onClose={onClose} hero={<h2>Sent back</h2>}><p className="fx-calm"><Check size={16} aria-hidden="true" />This step went back to the agent.</p></RecordDrawer>
+  if (!t) return <RecordDrawer label="Step not found" kicker="Calendar" onClose={onClose} hero={<h2>Sent back</h2>}><p className="fx-calm"><Check size={16} aria-hidden="true" />This step went back to the agent.</p></RecordDrawer>
   const tone = kindTone(t.kind)
   const done = t.status === 'done'
   const canMove = !done && isCallKind(t.kind) && !!moveTask
+  // P918: a booked call starts only at its time (StartCall); starting it takes the step and opens the phone.
+  const booked = isCallKind(t.kind) && !!t.iso
+  const startCall = () => { if (!t.held) startTask(t.id); showLive({ kind: 'task', id: t.id }) }
   const openClient = t.client_id ? <Link to={fp('clients', t.client_id)} className="tp-btn ov-ghost">Open client</Link> : null
   return (
-    <RecordDrawer label={`${KIND[t.kind]} for ${t.name}`} kicker={<>Servicing · asked by {t.agent} <HelpDot lesson={t.kind} inline /></>} tone={tone} onClose={onClose}
+    <RecordDrawer label={`${KIND[t.kind]} for ${t.name}`} kicker={<>{booked ? 'Booked call' : 'Client step'} · {t.agent}{t.agent ? '’s client' : ''} <HelpDot lesson={t.kind} inline /></>} tone={tone} onClose={onClose}
       hero={<>
         <div className="fx-hero-top"><span className="fx-when"><CalendarClock size={13} aria-hidden="true" />{t.due_text}</span><Chip tone={tone}>{KIND[t.kind]}</Chip></div>
         <h2>{t.name}</h2>
@@ -178,7 +191,14 @@ export function TaskDrawer({ id, onClose }) {
         <div className="fx-hero-bot"><b className="fx-hero-big tp-num">{t.client.client_phone}</b><Avatar name={t.name} tone={tone} /></div>
       </>}
       stepper={<Stepper label="Where this step is" steps={STEPS} current={t.status} onPick={k => (k === 'in_progress' ? (startTask(t.id), note('Started')) : k === 'scheduled' && canMove ? setPanel('move') : k === 'done' ? setPanel('done') : null)} />}
-      actions={done ? openClient : t.held ? <>
+      actions={done ? openClient : booked ? <>
+        <StartCall iso={t.iso} onStart={startCall} label={t.held ? 'Call' : 'Start call'} />
+        {t.held && <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('done')}><CircleCheck size={16} />Record the result</button>}
+        {!t.held && canMove && <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('move')}><CalendarClock size={15} />Move</button>}
+        <span className="tp-grow" />
+        <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('send')}><Send size={15} />Send to agent</button>
+        {t.held && <button type="button" className="tp-btn ov-ghost" onClick={() => { putBack(t.id); note('Put back') }}><Undo2 size={15} />Put back</button>}
+      </> : t.held ? <>
         {/* P876: a servicing step is a task the system gave the VA; its Call button starts the call on the phone. */}
         <button type="button" className="tp-primary fx-accent" onClick={() => showLive({ kind: 'task', id: t.id })}><Phone size={16} />Call</button>
         <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('done')}><CircleCheck size={16} />Record the result</button>
@@ -209,53 +229,5 @@ export function TaskDrawer({ id, onClose }) {
         <PillTabs role="radiogroup" label="Why" className="fx-chips fs-wrap" itemClass="fx-chip" value={why} onChange={setWhy} items={SEND_REASONS.map(r => ({ key: r, label: <b>{r}</b> }))} />
       </Drawer>
     </RecordDrawer>
-  )
-}
-
-export default function Servicing() {
-  const { id } = useParams()
-  const navigate = useNavigate()
-  const { data: tasks } = useFulTasks()
-  const [q, setQ] = useState('')
-  const [kind, setKind] = useState('all')
-  const n = q.trim().toLowerCase()
-  const open = tasks.filter(t => t.due !== 'done')
-  const shown = open.filter(t => (kind === 'all' || kindTone(t.kind) === kind) && (!n || `${t.name} ${KIND[t.kind]} ${t.agent}`.toLowerCase().includes(n)))
-  const done = tasks.filter(t => t.due === 'done')
-  const kinds = [{ key: 'all', label: 'All', count: open.length }, { key: 'warn', label: 'Saves and watches' }, { key: 'teal', label: 'Changes' }, { key: 'blue', label: 'Calls' }, { key: 'green', label: 'Packets' }].map(o => (o.key === 'all' ? o : { ...o, count: open.filter(t => kindTone(t.kind) === o.key).length }))
-  let card = 0
-  return (
-    <div className="tp-page fx-page fx-leads fs-serv">
-      <div className="fx-tools">
-        <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a step" placeholder="Find by client, step or agent" value={q} onChange={e => setQ(e.target.value)} /></label>
-        <PillTabs label="Kind" className="fx-filters" itemClass="fx-filter" value={kind} onChange={setKind} items={kinds.map(k => ({ ...k, className: k.key === 'all' ? '' : `is-tone is-${k.key}` }))} />
-        <HelpDot lesson="servicing" />
-      </div>
-
-      <div className="fx-board fs-board4" role="region" aria-label="Servicing by when it is due">
-        {TASK_GROUPS.map((g, li) => {
-          const rows = shown.filter(t => t.due === g.key)
-          return (
-            <section key={g.key} className={`fx-lane is-${g.tone}`} style={{ '--i': li }} aria-label={`${g.label}, ${rows.length}`}>
-              <header className="fx-lane-h"><i aria-hidden="true" /><b>{g.label}</b><span>{rows.length}</span></header>
-              <div className="fx-lane-b">
-                {rows.map(t => <TaskCard key={t.id} t={t} i={card++} />)}
-                {rows.length === 0 && <Empty title="Nothing here" sub={n ? 'No step matches.' : g.empty} />}
-              </div>
-            </section>
-          )
-        })}
-      </div>
-
-      <section className="fx-tile fs-donelist" aria-label="Done this week">
-        <header className="fx-tile-h"><span className="tp-grow"><h2>Done this week</h2><p>{done.length} steps</p></span></header>
-        <ul className="fs-agents">
-          {done.map(t => <li key={t.id}><Avatar name={t.name} tone="green" /><span className="tp-grow"><b>{KIND[t.kind]} · {t.name}</b><small>{t.agent} · {t.due_text}</small></span><Link to={fp('servicing', t.id)} className="fx-delta is-up">{outcomeLabel(t.kind, t.outcome) || 'Done'}</Link></li>)}
-
-        </ul>
-      </section>
-
-      {id && <TaskDrawer key={id} id={id} onClose={() => navigate(fp('servicing'))} />}
-    </div>
   )
 }

@@ -1,8 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { AGENT_STATUSES, AGENT_RESULTS, agentStatusOf, canMove, agentMove, needsResult, countByStatus, soldLeadClients, withSoldLeads } from './template/agentView.js'
-import { seedEvents, applyMove, rebookLead, SAMPLE_NOW, addMin } from './template/leadLifecycle.js'
+import { AGENT_STATUSES, AGENT_RESULTS, agentStatusOf, canMove, agentMove, needsResult, countByStatus, unsubmittedSales, clientCards } from './template/agentView.js'
+import { seedEvents, applyMove, rebookLead, needsYouNow, SAMPLE_NOW, addMin } from './template/leadLifecycle.js'
 import { stageOfInbound, noShowOpen } from './lib/agentReal.js'
 import { agentSlots, agentFree, agentGap, slotOptions, instantOf } from './lib/callSlots.js'
 
@@ -98,22 +98,18 @@ test('real rows: a no_show after the booking is No show; a newer booking puts it
   assert.equal(stageOfInbound(r, null, []), 'calling')
 })
 
-test('every sold lead is on Clients as Setting up', () => {
+test('P918: a sold lead not yet submitted is a to-do, not a client card; every client card has a draft date', () => {
   const nina = mk('nina', 'sold', { first_name: 'Nina', phone: '(704) 555-0119', apptAt: '2026-10-30T13:00', submitted: false })
   const denise = mk('denise', 'sold', { first_name: 'Denise', phone: '(404) 555-0127', apptAt: '2026-10-27T11:00', submitted: true })
   const fresh = agentMove(BY_STATUS.booked, 'sold', {}, SAMPLE_NOW)
-  const clients = [{ id: 'c4', client_first_name: 'Denise', client_last_name: 'Test', client_phone: '(404) 555-0127', stage: 'setting_up', steps: [], calls: [] }]
-  const made = soldLeadClients([nina, denise, fresh, BY_STATUS.follow], clients)
-  assert.deepEqual(made.map(c => c.lead_id), ['nina', 'b']) // Denise already has her client row; a follow-up isn't sold
-  for (const c of made) {
-    assert.equal(c.stage, 'setting_up')
-    assert.equal(c.next_step, 'Add the policy details')
-    assert.ok(Array.isArray(c.steps) && Array.isArray(c.calls))
-  }
-  assert.equal(made[0].submitted, 'Fri, Oct 30')
-  assert.equal(withSoldLeads(clients, [nina, denise]).length, 2)
-  // A real sale links its client row by id.
-  assert.equal(soldLeadClients([{ ...nina, real: true, phone: '', clientId: 'p1' }], [{ id: 'p1', client_phone: '' }]).length, 0)
+  const clients = [{ id: 'c4', client_first_name: 'Denise', client_last_name: 'Test', client_phone: '(404) 555-0127', stage: 'setting_up', draft_day: 20 }, { id: 'c9', client_phone: '', stage: 'setting_up' }]
+  assert.deepEqual(unsubmittedSales([nina, denise, fresh, BY_STATUS.follow], clients).map(l => l.id), ['nina', 'b']) // Denise has her client row; a follow-up isn't sold
+  assert.deepEqual(clientCards(clients).map(c => c.id), ['c4'])
+  // A client row without a draft date doesn't count as submitted.
+  assert.equal(unsubmittedSales([{ ...nina, clientId: 'c9' }], clients).length, 1)
+  const todo = needsYouNow({ toSubmit: [nina] }, SAMPLE_NOW)[0]
+  assert.equal(todo.trigger, 'submit')
+  assert.match(todo.title, /^Finish submitting Nina .*'s policy$/)
 })
 
 test('the 30-minute gap: nothing bookable within 30 minutes of another booked call, whatever the length setting', () => {

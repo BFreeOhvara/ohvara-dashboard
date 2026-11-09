@@ -126,7 +126,7 @@ test('P910 Your to-dos: only calls to mark (a booked call that passed, a live ca
   const now = needsYouNow({ leads, checks }, SAMPLE_NOW)
   // P917: every live call still waiting for its result, ringing first, then newest.
   assert.deepEqual(now.map(n => [n.trigger, n.ref]), [['outcome', 'o'], ['live', 'l'], ['live', 't'], ['live', 'y'], ['check', '2026-11-01']])
-  assert.deepEqual(TRIGGERS.map(t => t.action), ['Mark result', 'Mark result', 'Answer'])
+  assert.deepEqual(TRIGGERS.map(t => t.action), ['Mark result', 'Mark result', 'Finish', 'Answer']) // P918: Finish submitting
   assert.equal(now[4].title, 'Still on the books?')
   // Empty: nothing to mark, no check.
   assert.deepEqual(needsYouNow({ leads: [leads[0], leads[1], leads[2], leads[4]] }, SAMPLE_NOW), [])

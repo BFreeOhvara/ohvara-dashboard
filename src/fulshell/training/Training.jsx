@@ -55,6 +55,22 @@ export function TrainingNudge() {
   )
 }
 
+// P918 — the Overview's training box while training isn't finished: progress, the next lesson, one button.
+export function TrainingTile({ i = 2 }) {
+  const account = useAccount()
+  const { sum } = useTraining(account.name)
+  const lessons = useLessons()
+  if (sum.complete) return null
+  const next = lessons.find(l => l.id === sum.next)
+  return (
+    <section className="fx-tile tr-tile" style={{ '--i': i }} aria-label="Training">
+      <header className="fx-tile-h"><span className="tp-grow"><h2>Training</h2><p>{sum.left} {sum.left === 1 ? 'lesson' : 'lessons'} to go</p></span></header>
+      <div className="tr-tile-mid"><Ring value={sum.pct} size={64} /><span className="tp-grow"><b>{sum.passed} of {sum.total} lessons done</b><small>{next ? `Next: ${next.title}` : 'Pick up where you left off'}</small></span></div>
+      <Link to={next ? fp('training', next.id) : fp('training')} className="tp-primary sm fx-accent tr-tile-go">{sum.passed ? 'Keep going' : 'Start'}<ArrowRight size={15} /></Link>
+    </section>
+  )
+}
+
 function Home({ lessons, t, who }) {
   const [q, setQ] = useState('')
   const seen = useWatchedMap(who)

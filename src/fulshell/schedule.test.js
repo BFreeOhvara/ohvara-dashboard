@@ -4,21 +4,25 @@ import { FUL, FUL_TABS, FUL_ROUTES, OLD_CALLS, fp, fulPageOf, fulTitleOf } from 
 import { readFileSync } from 'node:fs'
 import { whenOf, minutesOf, WEEKS, atVa, teamOn, busyOf, pickVa } from '../template/ful/data.js'
 
-// P846 — Calls became Schedule.
-test('Schedule is a tab and Calls is gone', () => {
-  assert.ok(FUL_TABS.some(([k, label]) => k === 'schedule' && label === 'Schedule'))
-  assert.equal(FUL_TABS.some(([k]) => k === 'calls'), false)
+// P846 — Calls became Schedule. P918 — booked calls are the Calendar; Schedule is the VA's own hours. Six tabs, no Servicing.
+test('six VA tabs: Overview, Calendar, Clients, Schedule, Pay, Training', () => {
+  assert.deepEqual(FUL_TABS.map(([, label]) => label), ['Overview', 'Calendar', 'Clients', 'Schedule', 'Pay', 'Training'])
+  assert.equal(FUL_TABS.some(([k]) => k === 'calls' || k === 'servicing'), false)
+  assert.equal(FUL.calendar, '/fulfillment/calendar')
   assert.equal(FUL.schedule, '/fulfillment/schedule')
-  assert.deepEqual(fulTitleOf('schedule'), ['Your booked calls', 'Schedule']) // P907
-  assert.ok(FUL_ROUTES.some(([k, p]) => k === 'schedule' && p === '/fulfillment/schedule/:id'))
+  assert.deepEqual(fulTitleOf('calendar'), ['Your booked calls', 'Calendar'])
+  assert.deepEqual(fulTitleOf('schedule'), ['Your hours', 'Schedule'])
+  assert.ok(FUL_ROUTES.some(([k, p]) => k === 'calendar' && p === '/fulfillment/calendar/:id'))
 })
 
-test('the old Calls address and its drawers land on the Schedule page', () => {
+test('the old Calls, Schedule and Servicing call addresses land on the Calendar', () => {
   assert.equal(OLD_CALLS, '/fulfillment/desk')
-  assert.equal(fulPageOf('/fulfillment/desk'), 'schedule')
-  assert.equal(fulPageOf('/fulfillment/desk/cl-8'), 'schedule')
-  assert.equal(fulPageOf('/fulfillment/schedule/cl-8'), 'schedule')
-  assert.equal(fp('schedule', 'vq-1'), '/fulfillment/schedule/vq-1')
+  assert.equal(fulPageOf('/fulfillment/desk'), 'calendar')
+  assert.equal(fulPageOf('/fulfillment/desk/cl-8'), 'calendar')
+  assert.equal(fulPageOf('/fulfillment/schedule/cl-8'), 'calendar')
+  assert.equal(fulPageOf('/fulfillment/servicing/vq-1'), 'calendar')
+  assert.equal(fulPageOf('/fulfillment/schedule'), 'schedule')
+  assert.equal(fp('calendar', 'vq-1'), '/fulfillment/calendar/vq-1')
 })
 
 test('a time text lands on the calendar', () => {
@@ -38,7 +42,7 @@ test('two weeks of rota', () => {
 
 // P854: one week view with a day you click open (no Week/Day toggle), and calls stored as one instant.
 test('the Week/Day toggle is gone; a day opens from the URL', () => {
-  for (const f of ['../template/ful/screens/Schedule.jsx', '../template/screens/Calendar.jsx']) {
+  for (const f of ['../template/ful/screens/Calendar.jsx', '../template/screens/Calendar.jsx']) {
     const src = readFileSync(new URL(f, import.meta.url), 'utf8')
     assert.doesNotMatch(src, /label="View"|'Week' \}, \{ key: 'day'/, `${f} still has the Week/Day toggle`)
     assert.match(src, /useOpenDay\(/, `${f} does not open a day from ?day=`)

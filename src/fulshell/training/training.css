@@ -207,3 +207,11 @@
 }
 /* P897: video lessons show only the video; the lesson name sits in the crumb line */
 .tr-crumb-t { font-family: var(--font-display); font-weight: 600; color: var(--ov-hi); }
+
+/* P918 — the Overview's Training box (until training is finished) */
+.tr-tile { gap: 10px; }
+.tr-tile-mid { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.tr-tile-mid b { display: block; font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--ov-hi); }
+.tr-tile-mid small { display: block; margin-top: 2px; font-size: 12.5px; color: var(--ov-mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tr-tile-mid .tp-grow { min-width: 0; }
+.tr-tile-go { align-self: flex-start; margin-top: auto; }

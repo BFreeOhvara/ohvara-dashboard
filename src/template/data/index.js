@@ -3,7 +3,7 @@ import { instantOf, clockOf, dateOf, zoneOf } from '../../lib/callSlots.js'
 import { bookNoShowCall, cancelNoShowCall } from '../ful/data.js'
 import { checkLists, CHECK_DEFAULTS } from '../../lib/clientCheck.js'
 import { seedEvents, applyMove, rebookLead, closeCallTask, whenLabel, needsYouNow, forYourInfo, addMin, STAGES, SAMPLE_NOW } from '../leadLifecycle.js'
-import { canMove, withSoldLeads, followUpPick } from '../agentView.js'
+import { canMove, clientCards, unsubmittedSales, followUpPick } from '../agentView.js'
 import { wallOf } from '../../lib/agentReal.js'
 import { leadText, SENDER } from '../leadTexts.js'
 import { nightly as nightlyOf, expected, startsText, TIERS, SETUP_FEE } from '../spendPlan.js'
@@ -349,10 +349,10 @@ const fullName = c => `${c.client_first_name} ${c.client_last_name}`
 
 function useLeadsSample() { const s = useStore(); return ok(s.leads) }
 function useLeadSample(id) { const s = useStore(); return ok(s.leads.find(l => l.id === id) || s.leads[0]) }
-// P894: every sold lead is on Clients as Setting up (agentView.js withSoldLeads), worked out once per store change.
+// P918: Clients shows clients with a draft date only (agentView.js clientCards), worked out once per store change.
 let clientsMemo = { clients: null, leads: null, out: [] }
 const clientsOf = s => {
-  if (clientsMemo.clients !== s.clients || clientsMemo.leads !== s.leads) clientsMemo = { clients: s.clients, leads: s.leads, out: withSoldLeads(s.clients, s.leads) }
+  if (clientsMemo.clients !== s.clients || clientsMemo.leads !== s.leads) clientsMemo = { clients: s.clients, leads: s.leads, out: clientCards(s.clients) }
   return clientsMemo.out
 }
 function useClientsSample() { const s = useStore(); return ok(clientsOf(s)) }
@@ -379,7 +379,7 @@ function useBlocksSample() { const s = useStore(); return ok(s.blocks) }
 function useSetupSample() { const s = useStore(); return ok(s.setup) }
 function useSettingsSample() { const s = useStore(); return ok(s.settings) }
 // P910: Your to-dos (calls to mark, the monthly check) and, apart, billing notices (a declined card: Fix card).
-function useNeedsSample() { const s = useStore(); return ok(useMemo(() => ({ now: needsYouNow({ leads: s.leads, checks: checkLists(clientsOf(s), SAMPLE_NOW.slice(0, 10), CHECK_DEFAULTS) }, SAMPLE_NOW), fyi: forYourInfo(s), notices: billingNeeds(s.billing) }), [s])) }
+function useNeedsSample() { const s = useStore(); return ok(useMemo(() => ({ now: needsYouNow({ leads: s.leads, checks: checkLists(clientsOf(s), SAMPLE_NOW.slice(0, 10), CHECK_DEFAULTS), toSubmit: unsubmittedSales(s.leads, s.clients) }, SAMPLE_NOW), fyi: forYourInfo(s), notices: billingNeeds(s.billing) }), [s])) }
 function useSignupSample() {
   return useMemo(() => ok({
     covers: ['Booked appointments and live calls, at a daily spend you set', 'A team that calls every lead right away and books them on your calendar', 'Servicing that keeps your policies on the books', 'Your own portal and phone app'],

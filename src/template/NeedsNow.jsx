@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import './leads873.css'
-import { PhoneIncoming, ClipboardCheck, ShieldQuestion, Wallet, Info } from 'lucide-react'
+import { PhoneIncoming, ClipboardCheck, ShieldQuestion, Wallet, Info, FileSignature } from 'lucide-react'
 import { Avatar } from './kit'
 import { paths } from './paths'
 
@@ -10,11 +10,12 @@ import { paths } from './paths'
 const TRIGGER_LOOK = {
   outcome: { tone: 'blue', Icon: ClipboardCheck },
   live: { tone: 'blue', Icon: PhoneIncoming },
+  submit: { tone: 'green', Icon: FileSignature },
   check: { tone: 'warn', Icon: ShieldQuestion },
   billing: { tone: 'warn', Icon: Wallet },
 }
 
-const toOf = item => (item.kind === 'billing' ? paths.billing() : item.kind === 'check' ? paths.clients('needs_attention') : item.kind === 'client' ? paths.client(item.ref) : paths.lead(item.ref))
+const toOf = item => (item.kind === 'billing' ? paths.billing() : item.kind === 'check' ? paths.clients('needs_attention') : item.kind === 'client' ? paths.client(item.ref) : item.kind === 'submit' ? paths.submit(item.ref) : paths.lead(item.ref))
 
 export function NeedCard({ item, i, onAct }) {
   const { tone, Icon } = TRIGGER_LOOK[item.trigger]

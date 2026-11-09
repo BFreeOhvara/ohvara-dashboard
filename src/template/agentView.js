@@ -132,24 +132,15 @@ export function countByStatus(leads) {
   return out
 }
 
-// P894: every sold lead is on Clients as Setting up. A sale with no client row yet (its policy details aren't in, or
-// the row hasn't synced) shows as a Setting up client made from the lead, its next step "Add the policy details".
+// P918: a client always has a draft date. A sold lead not yet submitted (no client row with a draft date) isn't a
+// client card: it's a to-do, "Finish submitting {name}'s policy" (leadLifecycle.js needsYouNow), until Submit is done.
 const digits10 = p => String(p || '').replace(/\D/g, '').slice(-10)
-export function soldLeadClients(leads = [], clients = []) {
-  const have = new Set(clients.flatMap(c => [c.id, c.lead_id, digits10(c.client_phone)]).filter(Boolean))
-  return leads.filter(l => l.stage === 'sold' && !have.has(l.clientId) && !have.has(l.id) && !have.has(digits10(l.phone))).map(l => {
-    const soldAt = [...(l.events || [])].reverse().find(e => e.kind === 'outcome' && /Sold/.test(e.label))?.at || clockNow()
-    const sold = dayLabel(soldAt)
-    return {
-      id: `sold-${l.id}`, lead_id: l.id, fromLead: true, client_first_name: l.first_name, client_last_name: l.last_name, client_phone: l.phone, city: l.city, state: l.state,
-      carrier_name: 'To be added', product_name: 'Mortgage protection', product_type: 'mortgage_protection', policy_number: 'To be added', monthly_premium: 0, annual_premium: 0,
-      status: 'booked', stage: 'setting_up', note: 'Sold. Add the policy details on Submit and our team takes it from there.', next_step: 'Add the policy details', attention: null, submitted: sold,
-      steps: [{ label: 'Sold', at: sold, done: true }, { label: 'Policy details', at: 'Waiting on you', done: false }, { label: 'Packet check', at: 'To be set', done: false }, { label: 'Review call', at: 'To be set', done: false }],
-      calls: [], is_sample: !l.real,
-    }
-  })
+export const hasDraftDay = c => c.draft_day != null && c.draft_day !== ''
+export function unsubmittedSales(leads = [], clients = []) {
+  const have = new Set(clients.filter(hasDraftDay).flatMap(c => [c.id, c.lead_id, digits10(c.client_phone)]).filter(Boolean))
+  return leads.filter(l => l.stage === 'sold' && !have.has(l.clientId) && !have.has(l.id) && !have.has(digits10(l.phone)))
 }
-export const withSoldLeads = (clients = [], leads = []) => [...soldLeadClients(leads, clients), ...clients]
+export const clientCards = (clients = []) => clients.filter(hasDraftDay)
 
 // The agent's timeline: what happened that matters to them. Call attempts and the chase texts are the team's work and
 // stay off it; where the lead came from is never shown. Incoming texts, automatic replies and call tasks stay on.

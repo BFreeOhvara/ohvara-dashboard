@@ -40,3 +40,11 @@ export const RETRY_KINDS = ['lapse_save', 'welcome_call', 'handoff_call', 'cance
 // Why a callback was booked (the missed incoming call, a text reply that needs a person, the client asked, a no-show).
 // P910: no_show = a lead missed their booked call with the agent; the VA calls to re-engage and book them again.
 export const CALLBACK_WHY = { missed_call: 'Missed their call', reply: 'Replied to a text', asked: 'Asked for a call back', no_show: 'No show: book them again' }
+
+// P918: the filter chips beside the week, one per call type (a no-show rebook is a callback the system booked after a
+// lead missed their call with the agent).
+export const FILTERS = [
+  ['handoff', 'Hand-off'], ['cancel_old', 'Cancel old policy'], ['save', 'Save call'], ['change', 'Change request'], ['cancel_request', 'Cancel request'],
+  ['callback', 'Callback'], ['welcome', 'Welcome call'], ['noshow', 'No-show rebook'], ['review', 'Yearly review'],
+]
+export const filterOf = e => (e.type === 'callback' && (e.row?.why || e.why) === 'no_show' ? 'noshow' : e.type)

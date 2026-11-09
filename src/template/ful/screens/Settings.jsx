@@ -50,7 +50,7 @@ function ProfileCard({ name, email }) {
       </div>
       <ul className="fx-pstats">{stats.map(([n, label]) => <li key={label}><small>{label}</small><b className="tp-num"><CountUp value={n} /></b></li>)}</ul>
       {day.next && (
-        <Link to={fp('schedule', day.next.ref || day.next.id)} className="fx-pnext">
+        <Link to={fp('calendar', day.next.ref || day.next.id)} className="fx-pnext">
           <i aria-hidden="true" />
           <span className="tp-grow"><small>Next call</small><b>{day.next.name}</b><small>Today · {day.next.time}</small></span>
           <ChevronRight size={16} aria-hidden="true" />

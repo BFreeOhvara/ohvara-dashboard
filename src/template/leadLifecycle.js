@@ -325,6 +325,7 @@ export function closeCallTask(lead, now = clockNow()) {
 export const TRIGGERS = [
   { key: 'outcome', title: 'How did it go?', action: 'Mark result' },
   { key: 'live', title: 'Live call to mark', action: 'Mark result' },
+  { key: 'submit', title: 'Finish submitting', action: 'Finish' },
   { key: 'check', title: 'Still on the books?', action: 'Answer' },
 ].map((t, i) => ({ ...t, rank: i + 1 }))
 const T = Object.fromEntries(TRIGGERS.map(t => [t.key, t]))
@@ -348,12 +349,15 @@ const liveWhen = (l, now) => {
 }
 
 // checks = lib/clientCheck checkLists(...) for today: one to-do per draft date asked about.
-export function needsYouNow({ leads = [], checks = [] }, now = clockNow()) {
+// toSubmit = agentView.js unsubmittedSales(...): P918, a sold lead not yet submitted is "Finish submitting {name}'s policy".
+export function needsYouNow({ leads = [], checks = [], toSubmit = [] }, now = clockNow()) {
   const out = []
   const push = (t, l, what, when) => out.push({ id: `${t.key}-${l.id}`, trigger: t.key, rank: t.rank, title: t.title, action: t.action, ref: l.id, kind: 'lead', name: fullName(l), phone: l.phone, what, when })
   leads.filter(l => needsOutcome(l, now)).forEach(l => push(T.outcome, l, `Booked call at ${timeLabel(l.apptAt)} has passed`, l.apptAt.slice(0, 10) === now.slice(0, 10) ? 'Today' : dayLabel(l.apptAt)))
   leads.filter(l => liveToMark(l)).sort((a, b) => (b.stage === 'ringing') - (a.stage === 'ringing') || liveOn(b).localeCompare(liveOn(a)))
     .forEach(l => push(T.live, l, liveWhat(l, now), liveWhen(l, now)))
+  toSubmit.forEach(l => out.push({ id: `submit-${l.id}`, trigger: 'submit', rank: T.submit.rank, title: `Finish submitting ${fullName(l)}'s policy`, action: T.submit.action,
+    ref: l.id, kind: 'submit', name: fullName(l), phone: l.phone, what: 'Sold. Add the policy details and draft date on Submit', when: 'Today' }))
   checks.forEach(c => out.push({ id: `check-${c.draft}`, trigger: 'check', rank: T.check.rank, title: T.check.title, action: T.check.action, ref: c.draft, kind: 'check',
     name: c.clients.length === 1 ? `${c.clients[0].client_first_name} ${c.clients[0].client_last_name}` : `${c.clients.length} clients`, phone: null,
     what: `Drafted ${shortDate(c.draft)}. Still on the books? One tap`, when: 'Today' }))

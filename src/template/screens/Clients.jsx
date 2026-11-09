@@ -100,7 +100,7 @@ function ClientCard({ c, i, today, settings, onLapsed }) {
       <div className="fx-ccard-top"><Avatar name={name} tone={tone} /><span className="fx-tag">{label}</span></div>
       <h3>{name}</h3>
       <p className="ck-where">{where(c) || 'Details to be added'}</p>
-      <p className="ck-dates"><span>{c.draft_day ? <>Drafts the <b>{ordinal(Number(c.draft_day))}</b></> : 'No draft date yet'}</span><span>{cameOn(c)}</span></p>
+      <p className="ck-dates"><span>Drafts the <b>{ordinal(Number(c.draft_day))}</b></span><span>{cameOn(c)}</span></p>
       <div className={`ck-stand is-${st}`}>
         <small>{stand.kicker}</small>
         <span>{stand.text}</span>

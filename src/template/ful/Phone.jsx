@@ -6,7 +6,9 @@ import {
   Volume2, UserPlus, Merge, PhoneForwarded, NotebookPen, X, ArrowUpRight, Building2, ShieldCheck, ListTodo,
   Ban, LifeBuoy, Voicemail, ArrowRightLeft, Undo2, CircleSlash, Timer, Plus,
 } from 'lucide-react'
-import { useFulCalls, useFulActions, useFulDay, useFulTasks, useFulAgents, useFulClock } from './data'
+import { useFulCalls, useFulActions, useFulDay, useFulTasks, useFulAgents, useFulClock, sampleNowMs } from './data'
+import { callGate } from '../../lib/callOpen'
+import { useCallOpenMin } from '../../hooks/useCallOpen'
 import { Avatar, Field, PillTabs, useNote } from '../kit'
 import { useClientZone } from '../useClientZone'
 import { clockOf, zoneAbbr } from '../../lib/callSlots'
@@ -69,13 +71,13 @@ function useTheirTime(who) {
 const fromCall = k => ({
   key: `k-${k.id}`, kind: 'call', id: k.id, role: 'client', name: k.name, number: k.client.client_phone, state: k.client.state, city: k.client.city,
   tz: k.tz || null, agentId: k.client.agent_id, agent: k.agent, reason: `Cancel ${k.old_carrier}, keeping ${k.carrier}`, carrier: k.old_carrier,
-  callId: OPEN.includes(k.status) ? k.id : null, notes: k.notes || '', rec: fp('schedule', k.id), when: k.time,
+  callId: OPEN.includes(k.status) ? k.id : null, notes: k.notes || '', rec: fp('calendar', k.id), when: k.time, iso: k.iso || null, done: !OPEN.includes(k.status),
 })
-// P907: a booked servicing call (a hand-off, save, change, callback...) opens on the Schedule when it's yours.
+// P907: a booked servicing call (a hand-off, save, change, callback...) opens on the Calendar when it's yours (P918).
 const fromTask = t => ({
   key: `t-${t.id}`, kind: 'task', id: t.id, role: t.client.lead ? 'lead' : 'client', name: t.name, number: t.client.client_phone, state: t.client.state, city: t.client.city,
   tz: t.tz || null, agentId: t.client.agent_id || t.agent_id, agent: t.agent, reason: [KIND[t.kind] || 'Servicing', t.carrier].filter(Boolean).join(' · '), carrier: t.carrier, notes: t.note || '',
-  rec: t.iso && t.mine !== false ? fp('schedule', t.id) : fp('servicing', t.id), when: t.when || t.due_text,
+  rec: t.iso && t.mine !== false ? fp('calendar', t.id) : t.client_id ? fp('clients', t.client_id) : fp('calendar', t.id), when: t.when || t.due_text, iso: t.iso || null, done: t.status === 'done',
 })
 // A Schedule item (P907's one row shape) or, on real data, a call row.
 const fromItem = i => (i.row ? (i.kind === 'task' ? fromTask(i.row) : fromCall(i.row)) : fromCall(i))
@@ -87,7 +89,8 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
   const { markCall, hideLive } = useFulActions()
   const { data: AGENTS } = useFulAgents()
   // P852: the sample clock on sample rows; the real minute on real rows (and on a real line).
-  const { nowIso: NOW_ISO } = useFulClock()
+  const { nowIso: NOW_ISO, real: realClock, tz: vaTz } = useFulClock()
+  const openMin = useCallOpenMin(!!realClock)
   const note = useNote()
   const navigate = useNavigate()
   const loc = useLocation()
@@ -110,6 +113,11 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
 
   // P882: who can be called right now (consent, opt-out and do-not-call, calling hours in their state, the state's
   // attempt limit). A blocked row says why and when; its Call button is off.
+  // P918: a booked call can be called only from N minutes before its time (admin setting); until then the row says when.
+  const timeBlock = w => {
+    const g = callGate({ iso: w.iso, done: w.done, nowMs: realClock ? now : sampleNowMs(), lead: openMin })
+    return g.open || g.done || g.at == null ? null : `Opens at ${new Date(g.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: vaTz })}`
+  }
   const check = w => {
     if (w.role === 'carrier') return { ok: true }
     const f = w.kind === 'lead' ? flagsOf({ id: w.id }) : {}
@@ -389,7 +397,7 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
       save={r => {
         const p = call.who
         if (p.callId && (r.pick === 'cancelled' || r.pick === 'no_answer')) {
-          if (r.pick === 'cancelled') { markCall(p.callId, 'cancelled', { confirmation: r.conf.trim().toUpperCase(), notes: r.notes }); note('Cancelled. Saved with the confirmation number') }
+          if (r.pick === 'cancelled') { markCall(p.callId, 'cancelled', { notes: r.notes }); note(`Old policy cancelled for ${p.name.split(' ')[0]}`) }
           else { markCall(p.callId, 'no_answer', { notes: r.notes || 'No answer.' }); note(`No answer logged for ${p.name.split(' ')[0]}`) }
         } else note(`Call with ${p.name} logged · you're Available`)
         const word = CALL_WORD[r.pick] || r.pick
@@ -422,7 +430,7 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
             {todo.map(([head, rows]) => (
               <section key={head} className="fs-ph-group" aria-label={head}>
                 <h3 className="fs-ph-gh">{head}<span className="tp-num">{rows.length}</span></h3>
-                <ul className="tp-list fs-ph-todo">{rows.map(w => { const c = check(w); return <TodoRow key={w.key} w={w} block={c.ok ? null : predialLine(c, w.state, clockNow)} onCall={() => start(w)} onOpen={() => openRec(w)} /> })}</ul>
+                <ul className="tp-list fs-ph-todo">{rows.map(w => { const c = check(w); return <TodoRow key={w.key} w={w} block={c.ok ? timeBlock(w) : predialLine(c, w.state, clockNow)} onCall={() => start(w)} onOpen={() => openRec(w)} /> })}</ul>
               </section>
             ))}
           </>
@@ -514,7 +522,7 @@ function HandOff({ call, rl, note, onDone, onClose }) {
           <p className="fs-cs-why" role="note">No VA is free to take it.</p>
           <div className="fs-ph-acts">
             <button type="button" className="tp-primary fx-accent" onClick={() => { rl?.overtime(call.lineId, 30).catch(e => note(e.message)); note('Overtime asked for. You stay on the hold until an admin answers'); onClose() }}><Timer size={16} />Ask for overtime</button>
-            <button type="button" className="tp-btn ov-ghost" onClick={() => { rl?.send(call.lineId, 'end_all').catch(() => {}); note('Booked as a callback on the Schedule. The client gets an automatic text'); onDone({ path, notes }) }}>Book a callback</button>
+            <button type="button" className="tp-btn ov-ghost" onClick={() => { rl?.send(call.lineId, 'end_all').catch(() => {}); note('Booked as a callback on the Calendar. The client gets an automatic text'); onDone({ path, notes }) }}>Book a callback</button>
           </div>
         </>
       ) : <div className="fs-ph-acts"><button type="button" className="tp-primary fx-accent" onClick={go}><ArrowRightLeft size={16} />Hand off</button></div>}
@@ -623,7 +631,7 @@ function XferCard({ x, agent, now, onTransfer, onBook, onClear }) {
   )
 }
 
-// After the call: the result and notes (a cancellation call: Cancelled with the carrier's confirmation number, or No
+// After the call: the result and notes (a cancellation call: Cancelled (P918: no confirmation number), or No
 // answer). A lead or servicing call keeps a simple outcome; a transferred lead says so.
 // P882 wrap-up: the outcome is required before the VA is Available again (no Skip). 60 seconds, +60 s at a time (each
 // one counted); past 3 minutes the admins are told.
@@ -637,9 +645,8 @@ function Result({ call, took, agent, pres, now, onMore, save }) {
     : handed ? [['Handed off the hold', 'Handed off the hold']]
       : p.callId ? [['cancelled', 'Cancelled'], ['no_answer', 'No answer']] : free.map(f => [f, f])
   const [pick, setPick] = useState(call.vm && !p.callId ? 'Left a voicemail' : opts[0][0])
-  const [conf, setConf] = useState('')
   const [notes, setNotes] = useState(call.notes || '')
-  const ready = !!pick && (!p.callId || pick !== 'cancelled' || conf.trim().length >= 4)
+  const ready = !!pick // P918: no confirmation number on a cancel call; the note stays optional
   const left = wrapLeft(pres, now)
   const over = left != null && left < 0
   const stuck = wrapStuck(pres, now)
@@ -657,10 +664,9 @@ function Result({ call, took, agent, pres, now, onMore, save }) {
       <div className="tp-field"><span>How did it go?</span>
         <PillTabs role="radiogroup" label="How did it go?" className="fx-chips" itemClass="fx-chip" value={pick} onChange={setPick} items={opts.map(([v, l]) => ({ key: v, label: <b>{l}</b> }))} />
       </div>
-      {p.callId && pick === 'cancelled' && <Field label="Confirmation number" hint="From the carrier, on the call"><input data-first value={conf} placeholder="e.g. GL-301977" onChange={e => setConf(e.target.value)} /></Field>}
       <Field label="Notes" hint={p.agent ? `${p.agent.split(' ')[0]} sees these` : undefined}><textarea className="tp-input fx-ta" rows={3} placeholder="What happened on the call" value={notes} onChange={e => setNotes(e.target.value)} /></Field>
       <div className="fs-ph-acts">
-        <button type="button" className="tp-primary fx-accent" data-first disabled={!ready} onClick={() => save({ pick, conf, notes })}><CircleCheck size={16} />Save · Available</button>
+        <button type="button" className="tp-primary fx-accent" data-first disabled={!ready} onClick={() => save({ pick, notes })}><CircleCheck size={16} />Save · Available</button>
       </div>
     </div>
   )

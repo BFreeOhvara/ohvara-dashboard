@@ -71,7 +71,7 @@ test('pre-dial: Florida, Oklahoma and Maryland stop at 3 calls in 24 hours; othe
 
 test('the phone checks every To call row and every Call before ringing', () => {
   const phone = src('../template/ful/Phone.jsx')
-  assert.match(phone, /block=\{c\.ok \? null : predialLine\(/)
+  assert.match(phone, /block=\{c\.ok \? timeBlock\(w\) : predialLine\(/) // P918: a booked call also waits for its time
   assert.match(phone, /disabled=\{!!block\}/)
   assert.match(phone, /if \(!c\.ok\) \{ note\(predialLine\(/)
 })

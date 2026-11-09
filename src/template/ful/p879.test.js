@@ -94,7 +94,7 @@ test('P879 flags, caller check, one dispute per score', () => {
 test('P879 VA screens carry the new pieces; pay is hourly, no dial pad. P907: no Queue, no lead desk', () => {
   const pay = src('./screens/Pay.jsx')
   assert.match(pay, /an hour/); assert.doesNotMatch(pay, /for each cancellation/)
-  assert.match(src('./screens/Overview.jsx'), /<ClockTile \/>/)
+  assert.match(src('./screens/Schedule.jsx'), /<ClockTile /) // P918: clock in/out moved to Schedule
   assert.match(src('./screens/Schedule.jsx'), /<SwapsHolidays \/>/)
   assert.match(src('./screens/Clients.jsx'), /<VerifyCaller/)
 })

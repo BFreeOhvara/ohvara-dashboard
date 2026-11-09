@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 import { toLead, toClient, wallOf, weekOf, weekToPortal, portalToRows, toActivity, boughtOf, DEFAULT_TZ } from '../lib/agentReal'
 import { atLabel, whenLabel, minutesFrom, needsYouNow, forYourInfo } from '../template/leadLifecycle'
-import { canMove, RESULT_LABEL, withSoldLeads } from '../template/agentView'
+import { canMove, RESULT_LABEL, clientCards, unsubmittedSales } from '../template/agentView'
 import { normalizeSettings } from '../lib/agentSettings'
 import { outcomeArgs } from '../lib/leadOutcomes'
 import { invokeBilling } from '../lib/billing'
@@ -127,12 +127,11 @@ export function useClientReal(id) {
   const all = useClientsReal()
   return { ...all, data: all.data.find(c => c.id === id) || null }
 }
-// P894: the Clients page — every sold lead is on it as Setting up, a client row or not (agentView.js withSoldLeads).
+// P918: the Clients page shows clients with a draft date only; a sale not yet submitted is a to-do (agentView.js).
 export function useClientsBoardReal() {
   const clients = useClientsReal()
-  const leads = useLeadsReal()
-  const data = useMemo(() => withSoldLeads(clients.data, leads.data), [clients.data, leads.data])
-  return { ...clients, data, isLoading: clients.isLoading || leads.isLoading }
+  const data = useMemo(() => clientCards(clients.data), [clients.data])
+  return { ...clients, data }
 }
 export function useClientBoardReal(id) {
   const all = useClientsBoardReal()
@@ -314,7 +313,7 @@ export function useNeedsReal() {
   const billing = useBillingReal()
   const now = useWallNow()
   const data = useMemo(() => ({
-    now: needsYouNow({ leads: leads.data, checks: checkLists(clients.data, now.slice(0, 10)) }, now),
+    now: needsYouNow({ leads: leads.data, checks: checkLists(clients.data, now.slice(0, 10)), toSubmit: unsubmittedSales(leads.data, clients.data) }, now),
     fyi: forYourInfo({ leads: leads.data }),
     notices: billingNeedsOf(billing.data),
   }), [leads.data, clients.data, billing.data, now])

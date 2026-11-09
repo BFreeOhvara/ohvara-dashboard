@@ -22,6 +22,7 @@ import { LaunchSwitches } from './Launch906'
 import { SplitRules } from './Split889'
 import { AiCallerSettings } from './AiCalls892'
 import { DeedstoneNumbers } from './Numbers916'
+import { useCallOpenMin, saveCallOpenMin } from '../../hooks/useCallOpen'
 
 // P849 — admin Settings on the agent page's shape: the profile card and Sign out on the left, one panel whose stretch
 // tabs switch sections. Sections: Profile, People & access (everyone with a login, as Users does today), Switches,
@@ -40,6 +41,26 @@ function FormFoot({ dirty, onDiscard, onSave, label = 'Save changes' }) {
   )
 }
 const Head = ({ title, sub }) => <header className="fx-form-h"><h2>{title}</h2><p>{sub}</p></header>
+
+// P918: when a booked call's Start call turns on for the VA (minutes before its time). Calls that come in always ring.
+function CallOpenSetting() {
+  const real = useAdmSource() === 'real'
+  const note = useNote()
+  const cur = useCallOpenMin(real)
+  const [draft, setV] = useState(null) // null = not edited: shows the saved number
+  const v = draft ?? String(cur)
+  const n = Math.min(60, Math.max(0, Number(v) || 0))
+  const save = async () => { try { await saveCallOpenMin(n, real); setV(null); note(real ? 'Start call setting saved' : 'Start call setting saved (sample)') } catch (e) { note(e.message) } }
+  return (
+    <>
+      <Head title="Booked calls" sub="A VA's Start call turns on this many minutes before the booked time and stays on until the call is done or moved. Calls that come in always ring." />
+      <div className="fx-form-grid">
+        <Field label="Start call opens (minutes before)" hint="0 to 60 · default 5"><input className="tp-num" inputMode="numeric" value={v} onChange={e => setV(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))} /></Field>
+      </div>
+      <FormFoot dirty={n !== cur} onDiscard={() => setV(null)} onSave={save} />
+    </>
+  )
+}
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
 
 function ProfileCard({ name, email }) {
@@ -147,6 +168,7 @@ function PayRules() {
         <Field label="Hourly rate ($)" hint="Overtime past 40 hours a week at 1.5×"><input className="tp-money" inputMode="decimal" value={d.hourly} onChange={num('hourly')} /></Field>
       </div>
       <FormFoot dirty={!same(d, s.payRules)} onDiscard={() => setD(s.payRules)} onSave={() => { savePayRules(d); note('Pay rules saved (sample)') }} />
+      <CallOpenSetting />
       {/* P909: lead billing. Lead spend is charged each night for the next day; a decline turns the next day's ads off. */}
       <Head title="Lead billing" sub="Each evening agents' cards are charged the next day's lead spend plus 12%. A decline keeps the next day's ads off and retries in the morning." />
       <div className="fx-form-grid">

@@ -211,7 +211,7 @@ const seedThreads = [
 
 const seedFeed = [
   { id: 'f1', who: 'Dana Walker', text: 'Wrote about Gloria Santos', at: '9:25 AM', kind: 'message' },
-  { id: 'f2', who: 'Angela Moore', text: 'Callback booked on your Schedule', at: '1:30 PM', kind: 'call' },
+  { id: 'f2', who: 'Angela Moore', text: 'Callback booked on your Calendar', at: '1:30 PM', kind: 'call' },
   { id: 'f3', who: 'Tom Fischer', text: 'Cancellation confirmed, checking now', at: '10:52 AM', kind: 'pay' },
   { id: 'f4', who: 'Priya Shah', text: 'Asked for a payment change for Luis Ortega', at: 'Wed', kind: 'servicing' },
   { id: 'f5', who: 'Robert Chen', text: 'Cancellation needs a listen', at: 'Wed', kind: 'pay' },
@@ -231,7 +231,7 @@ const seedSettings = {
   timeZone: 'America/Chicago', // P847: an IANA zone (profiles.timezone), picked in Settings; the Overview clock reads it
   payDetails: { bank: 'Chase', last4: '4821', taxEmail: ME.email, status: 'Payouts on' },
   notifications: [
-    { key: 'callback', label: 'A call is booked on your Schedule', push: true, email: false },
+    { key: 'callback', label: 'A call is booked on your Calendar', push: true, email: false },
     { key: 'call', label: 'Ten minutes before a call', push: true, email: false },
     { key: 'servicing', label: 'An agent asks for a servicing step', push: true, email: true },
     { key: 'message', label: 'An agent writes to you', push: true, email: true },
@@ -300,6 +300,7 @@ export const RATE_PER_CANCEL = RATE
 // nextSlot). Seeds with `at` sit at a fixed team-clock time; every other call seed books itself here at load.
 // The sample clock reads 1:32 PM; nothing books before the next half hour (NOW_ISO).
 export const SAMPLE_CLOCK_ISO = atVa(TODAY, '1:32 PM')
+export const sampleNowMs = () => Date.parse(SAMPLE_CLOCK_ISO) + (Date.now() - LOAD) // P918: the sample clock, ticking from load
 function slotFor(s, { client, tz, window, exact = null, date = null, exceptId = null, before = null, from = NOW_ISO }) {
   const t = bookingTeam(s)
   const win = preferredWindow(window || client?.best_window, client?.answered_in)

@@ -443,6 +443,10 @@
 @media (min-width: 1000px) and (max-width: 1439.98px) {
   .fx.fs .fs-clients .fx-cgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+/* P918: 5 a row up to 1600px so the next booked call ("Today 2:30 PM · client 1:30 PM MT") always fits on one line */
+@media (min-width: 1440px) and (max-width: 1599.98px) {
+  .fx.fs .fs-clients .fx-cgrid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
 
 /* P867 scroll fits: settings — on a short desktop window the profile card puts the name beside the photo, so the
    side column (card + Sign out) fits the held-still page; on a phone the settings panel leads and the card follows. */
@@ -553,3 +557,71 @@
 
 /* P915: the day-off drawer's "used them all" line */
 .tp-sub.is-warn { color: var(--ov-warn); font-weight: 600; }
+
+/* ── P918 — the VA side makes sense ─────────────────────────────────────────────────────────────────────────────── */
+/* Start call before its time: off, with the time it opens */
+.fs-startwait { gap: 7px; }
+.fs-startwait:disabled { opacity: 1; cursor: default; color: var(--ov-mid); background: color-mix(in srgb, var(--ov-hi) 8%, transparent); box-shadow: none; }
+
+/* The phone slid away during a live call: a small tab on the right edge (pulse + timer); one click brings it back */
+.fs-edge { position: fixed; right: 0; top: 50%; z-index: 86; transform: translateY(-50%); display: inline-flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 12px 9px 12px 11px; border: 1px solid var(--fx-edge); border-right: 0; border-radius: 16px 0 0 16px; cursor: pointer;
+  color: var(--ov-hi); background: color-mix(in srgb, var(--bg-surface) 88%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--fx-shadow); transition: padding .2s var(--fx-ease, ease), background-color .2s; }
+.fs-edge:hover { padding-right: 13px; background: var(--bg-surface); }
+.fs-edge:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fs-edge .fs-ri-time { position: static; font-size: 11px; font-weight: 600; color: var(--ov-hi); }
+.fs-edge-pulse { width: 9px; height: 9px; border-radius: 50%; background: var(--sh-cs-sage, var(--accent)); animation: fs-edge-pulse 1.6s ease-in-out infinite; }
+@keyframes fs-edge-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--sh-cs-sage, var(--accent)) 55%, transparent); } 50% { box-shadow: 0 0 0 6px transparent; } }
+@media (prefers-reduced-motion: reduce) { .fs-edge-pulse { animation: none; } }
+@media (max-width: 999.98px) { .fs-edge { top: auto; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: none; } }
+
+/* Calendar: the week and the call-type chips on one row, the grid right under it */
+.fs-cal > .fs-cal-tools { flex-wrap: nowrap; align-items: center; }
+.fs-cal .fs-cal-chips { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.fs-cal .fs-cal-chips::-webkit-scrollbar { display: none; }
+.fs-cal .fs-cal-chips .fx-filter { flex: none; }
+@media (max-width: 999.98px) { .fs-cal > .fs-cal-tools { flex-wrap: wrap; } .fs-cal .fs-cal-chips { flex-basis: 100%; order: 3; } }
+
+/* Schedule (the VA's own hours): clock and time off side by side, the rota under them */
+.fs-ms-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: stretch; }
+.fs-ms-grid > .fs-rota { grid-column: 1 / -1; }
+.fs-ms-grid > * { margin: 0; }
+.fs-timeoff { gap: 12px; }
+.fs-to-big { display: flex; align-items: center; gap: 14px; }
+.fs-to-big .fx-huge { line-height: 1; }
+.fs-to-big b + span b, .fs-to-big span > b { display: block; font-size: 14px; font-weight: 600; color: var(--ov-hi); }
+.fs-to-big span > small { display: block; font-size: 12.5px; color: var(--ov-mid); }
+.fs-to-ask { align-self: flex-start; margin-top: auto; }
+@media (max-width: 760px) { .fs-ms-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* VA client cards: the P911 standard. One line per row, in fixed places; the buttons pinned at the bottom. */
+.fs-ccard .fs-cc-top { justify-content: flex-start; gap: 10px; min-width: 0; }
+.fs-ccard .fs-cc-top h3 { flex: 1 1 auto; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fs-ccard .fs-cc-top .fx-tag { flex: none; }
+.fs-ccard .fs-cc-line { position: relative; display: flex; align-items: center; gap: 6px; margin: 0; min-width: 0; font-size: 12.5px; color: var(--ov-hi);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fs-ccard .fs-cc-line { display: block; }
+.fs-ccard .fs-cc-line small { margin-right: 6px; font-size: 11px; color: var(--ov-mute); }
+.fs-ccard .fs-cc-stage { font-weight: 600; }
+.fs-ccard .fs-cc-next { padding: 2px 0; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.fs-ccard .fs-cc-next svg { margin-right: 5px; vertical-align: -2px; color: var(--ov-mid); }
+.fs-ccard .fs-cc-next.is-none { font-weight: 500; color: var(--ov-mid); }
+
+/* Overview: today at a glance, filling the window on a desktop (no page scroll when nothing is below) */
+.fs-uplist li.is-done a { opacity: .62; }
+.fs-uplist li.is-done svg { flex: none; color: var(--sh-cs-sage, var(--ov-mid)); }
+@media (min-width: 1000px) {
+  .fs-ov.fx-ovl { height: var(--ov-h, auto); align-items: stretch; }
+  .fs-ov .fx-ovl-main { min-height: 0; }
+  .fs-ov .fs-ov-hero { flex: 1 1 auto; min-height: 0; }
+  .fs-ov .fs-ov-pair { flex: 0 0 auto; }
+  .fs-ov .fs-ov-side { align-self: stretch; min-height: 0; }
+  .fs-ov .fs-ov-up { flex: 1 1 0; min-height: 0; overflow: hidden; }
+  .fs-ov .fs-ov-up .fs-uplist { flex: 1 1 0; min-height: 0; overflow-y: auto; scrollbar-width: thin; padding-right: 2px; }
+  .fs-ov.is-trained .fs-ov-pair { grid-template-columns: minmax(0, 1fr); }
+  .fs-ov.is-trained .fs-ov-pay .fs-minibars { height: 72px; }
+}
+@media (max-width: 999.98px) {
+  .fs-ov .fs-ov-up { order: 3; } .fs-ov .tr-tile { order: 5; }
+}
