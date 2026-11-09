@@ -2,10 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { still } from './motion'
 
-// P911 — the header Messages icon (agent and VA shells). While Messages is open it shows selected (NavLink .active,
-// p911.css), and clicking it again closes Messages and goes back to Overview: the icon presses and the page shrinks
-// toward it as it leaves (the frame's 200 ms page swap, restyled by .is-msg-closing), like the avatar menu's close
-// (P893). Reduced motion: it just goes.
+// P911 — the header Messages icon. P914: every shell (agent, VA, admin). While Messages is open it shows selected
+// (NavLink .active, shell914.css), and clicking it again closes Messages and goes back to Overview with the same page
+// swap as a nav tab; the icon just presses (.is-closing). Reduced motion: it just goes.
 export function useMessagesToggle(on, home) {
   const navigate = useNavigate()
   const [closing, setClosing] = useState(false)
