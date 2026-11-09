@@ -6,7 +6,7 @@ import { Chip, Drawer, Field, SampleTag, Seg, useNote } from '../kit'
 import { Select } from '../Select'
 import { usd } from '../motion'
 import { TakeLeads } from '../PlanBuilder'
-import { bought, tierOf, dailyTotal, spendOk, nightlyFor, monthlyBill, feeWords, SETUP_FEE, MAX_DAILY, PAID_MIN_DAILY } from '../spendPlan'
+import { bought, tierOf, dailyTotal, spendOk, nightlyFor, monthlyBill, feeWords, SETUP_FEE, PAID_MIN_DAILY, TIERS, bandOf, bandText, switchDaily } from '../spendPlan'
 import { LEAD_MODES, liveHoursText, takeOk } from '../../lib/leadSplit'
 import { TalkDrawer } from '../Talk'
 import { cardOf, chargesOf } from '../billing917'
@@ -29,7 +29,6 @@ import '../bill910.css'
 // method (brand, last 4, expiry, Update card) with the next charge, Charges (nightly lead spend, monthly plan, setup
 // fee: date, amount, status), Paid ahead, Results, How you take leads, Pause or cancel. Founding lock in the plan.
 const money = usd()
-const MAX = MAX_DAILY
 const pct = v => (v == null ? '–' : `${Math.round(v * 100)}%`)
 const cost = v => (v == null ? '–' : money(Math.round(v)))
 
@@ -136,11 +135,11 @@ function ResultTiles({ rows }) {
 
 // P914 — the plan section's spend slider: $50 to $500 a day. As it moves, the plan follows its band, and the nightly
 // charge (spend + 12%) and the monthly plan update live. Nothing changes until Save; it applies from the next charge.
-const LO = PAID_MIN_DAILY
-function PlanSpend({ daily, onDaily, dirty, ok, onSave, onReset, forDay }) {
-  const v = Math.max(LO, Math.min(MAX, daily))
+// P920: the slider only moves inside the current plan's band (`tier`), so dragging can never change the monthly price.
+function PlanSpend({ tier, daily, onDaily, dirty, ok, onSave, onReset, forDay }) {
+  const { lo, hi } = bandOf(tier)
+  const v = Math.max(lo, Math.min(hi, daily))
   const night = nightlyFor('paid', v)
-  const tier = tierOf(v)
   const month = monthlyBill({ plan: 'paid', spend: { daily: v } })
   return (
     <div className="bl-spend">
@@ -148,9 +147,10 @@ function PlanSpend({ daily, onDaily, dirty, ok, onSave, onReset, forDay }) {
         <label htmlFor="bl-daily">Daily lead spend</label>
         <b className="tp-money" aria-live="polite">{money(v)}<small> / day</small></b>
       </div>
-      <input id="bl-daily" className="pb-range bl-range" type="range" min={LO} max={MAX} step={5} value={v}
-        style={{ '--w': (v - LO) / (MAX - LO) }} aria-valuetext={`${money(v)} a day, ${tier.label} plan`} onChange={e => onDaily(Number(e.target.value))} />
-      <div className="bl-spend-scale" aria-hidden="true"><small>{money(LO)}</small><small>{money(MAX)}</small></div>
+      <input id="bl-daily" className="pb-range bl-range" type="range" min={lo} max={hi} step={5} value={v}
+        style={{ '--w': hi > lo ? (v - lo) / (hi - lo) : 0 }} aria-valuetext={`${money(v)} a day, ${tier.label} plan`} onChange={e => onDaily(Number(e.target.value))} />
+      <div className="bl-spend-scale" aria-hidden="true"><small>{money(lo)}</small><small>{money(hi)}</small></div>
+      <p className="bl-band-note">The {tier.label} plan covers {bandText(tier)} a day. To spend outside that, switch plan below.</p>
       <dl className="bl-spend-live">
         <div><dt>Charged each night</dt><dd><b className="tp-money">{money(night.total)}</b><small>{money(v)} + {feeWords}</small></dd></div>
         <div><dt>Your plan</dt><dd><b>{tier.label}</b><small>{money(tier.monthly)} a month</small></dd></div>
@@ -163,6 +163,40 @@ function PlanSpend({ daily, onDaily, dirty, ok, onSave, onReset, forDay }) {
           <button type="button" className="tp-primary fx-accent" disabled={!ok} onClick={onSave}>Save</button>
         </div>
       )}
+    </div>
+  )
+}
+
+// P920 — Other plans: each other plan with its spend range and monthly price, and Switch to {plan}. Switching asks first
+// (what the plan becomes, the price, the range, where the daily spend lands), then saves; the slider then shows the new band.
+function OtherPlans({ tierNow, daily, onSwitch }) {
+  const [ask, setAsk] = useState(null)
+  const to = TIERS.find(t => t.key === ask)
+  const others = TIERS.filter(t => t.key !== tierNow.key)
+  if (to) {
+    const start = switchDaily(daily, to)
+    return (
+      <div className="bl-other is-confirm" role="alertdialog" aria-label={`Switch to ${to.label}`}>
+        <p className="bl-other-ask"><b>Your plan becomes {to.label}, {money(to.monthly)} a month, from your next bill.</b> Daily spend {bandText(to)}.</p>
+        <small className="bl-other-start">Your daily spend moves to {money(start)} a day. You can change it inside {to.label}.</small>
+        <div className="bl-spend-save">
+          <button type="button" className="tp-btn ov-ghost" onClick={() => setAsk(null)}>Keep {tierNow.label}</button>
+          <button type="button" className="tp-primary fx-accent" data-confirm-switch={to.key} onClick={() => { onSwitch(to, start); setAsk(null) }}>Switch to {to.label}</button>
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div className="bl-other">
+      <h3>Other plans</h3>
+      <ul className="bl-other-list">
+        {others.map(t => (
+          <li key={t.key} data-plan={t.key}>
+            <span className="tp-grow"><b>{t.label}</b><small>{bandText(t)} a day · <span className="tp-money">{money(t.monthly)}</span> a month</small></span>
+            <button type="button" className="tp-btn ov-ghost" onClick={() => setAsk(t.key)}>Switch to {t.label}</button>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
@@ -254,6 +288,12 @@ export default function Billing() {
     setTake(take)
     note(`Lead spend set to ${money(dailyTotal(spend))} a day, ${LEAD_MODES.find(m => m.key === take.mode).label.toLowerCase()}. Starts with the next unpaid day. Sample only, nothing was charged`)
   }
+  // P920: switching plan saves the new plan's spend (the plan follows the band); from the next bill, as Save does.
+  const switchPlan = (to, start) => {
+    setSpend({ daily: start })
+    setDraft({ daily: start })
+    note(`Your plan becomes ${to.label}, ${money(to.monthly)} a month, from your next bill. Daily spend ${money(start)}. Sample only, nothing was charged`)
+  }
   const lock = b.founding ? ['Founding price lock', `Until ${b.founding.until}`, `Founding agent #${b.founding.no}: your prices don’t change until then`] : null
   const next = unpaid
     ? { big: `${unpaid.day} first`, sub: `We try ${unpaid.day} again at 8 AM. ${n.forDay} is charged once it goes through` }
@@ -340,10 +380,11 @@ export default function Billing() {
         </ul>
       </section>
 
-      <Drawer open={panel === 'plan'} onClose={() => setPanel(null)} title="Change plan" sub={`Your plan follows your daily lead spend. Now ${tierNow.label}, ${money(daily)} a day`}>
+      <Drawer open={panel === 'plan'} onClose={() => setPanel(null)} title="Change plan" sub={`Now ${tierNow.label}, ${money(tierNow.monthly)} a month, ${money(daily)} a day. The slider stays inside this plan`}>
         <div className="bl910">
-          <PlanSpend daily={dailyTotal(spend)} onDaily={d => setDraft({ daily: d })} dirty={dailyTotal(spend) !== daily} ok={spendOk('paid', spend) && takeOk(take)}
+          <PlanSpend tier={tierNow} daily={dailyTotal(spend)} onDaily={d => setDraft({ daily: d })} dirty={dailyTotal(spend) !== daily} ok={spendOk('paid', spend) && takeOk(take)}
             onSave={() => { save(); setPanel(null) }} onReset={() => setDraft({ daily: Math.max(PAID_MIN_DAILY, daily) })} forDay={n.forDay} />
+          <OtherPlans tierNow={tierNow} daily={daily} onSwitch={switchPlan} />
         </div>
       </Drawer>
       <CardDrawer open={panel === 'card'} onClose={() => setPanel(null)} face={face} />

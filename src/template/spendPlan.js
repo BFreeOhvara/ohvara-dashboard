@@ -44,6 +44,17 @@ export function tierOf(daily) {
   return TIERS.find(t => d >= t.from && (t.to == null || d <= t.to)) || (d > (TIERS.at(-1).to ?? Infinity) ? TIERS.at(-1) : TIERS[0])
 }
 
+// P920: Change plan. The spend slider only moves inside the current plan's band, so dragging can never change the
+// monthly price. The slider steps by $5, so its ends are the first and last $5 step inside the band (Growth $76-200
+// runs $80 to $200). Switching plan moves the daily spend to the nearest spot inside the new band.
+export function bandOf(tier, max = MAX_DAILY) {
+  const lo = Math.max(PAID_MIN_DAILY, Math.ceil(tier.from / SLIDER.step) * SLIDER.step)
+  const hi = Math.min(max, Math.floor((tier.to ?? max) / SLIDER.step) * SLIDER.step)
+  return { lo, hi }
+}
+export const bandText = tier => `$${tier.from}–${tier.to ?? MAX_DAILY}`
+export const switchDaily = (daily, tier) => { const { lo, hi } = bandOf(tier); return Math.max(lo, Math.min(hi, Math.round(daily / SLIDER.step) * SLIDER.step)) }
+
 // Where a daily total sits on the tier bands (0..1 across 0..SLIDER.max), for the band marks on the slider.
 export const bandShare = v => Math.max(0, Math.min(1, v / SLIDER.max))
 

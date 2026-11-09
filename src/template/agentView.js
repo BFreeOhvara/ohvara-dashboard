@@ -18,10 +18,10 @@ export const AGENT_STATUSES = [
   { key: 'not_interested', label: 'Not interested', tone: 'warn', empty: 'No one said no.', explain: 'They said no. Calls and texts stop. If they change their mind, move them to Follow up.' },
   { key: 'sold', label: 'Sold', tone: 'green', empty: 'Sales you mark show here.', explain: 'Sold. Each one is on Clients as Setting up.' },
 ]
-// P913: No show is grey, Not interested took its apricot, Closed is coral and a live call lilac: no two share a colour.
+// P913: No show is grey, Not interested took its apricot, Closed is coral, a live call is Booked's blue (P920: it is a booking that happened right now).
 export const CLOSED_STATUS = { key: 'closed', label: 'Closed', tone: 'rose', empty: 'Nothing closed out.', explain: 'Our team couldn’t reach them after the day 30, 60 and 90 check-ins, they opted out, or the number was wrong. No more calls or texts.' }
 // P910: pinned above the board, never a column: a transfer ringing now, or one the agent took and hasn't marked.
-export const LIVE_STATUS = { key: 'live', label: 'Live call', tone: 'violet', empty: 'No live call right now.', explain: 'A live transfer: tap it during or after the call to pick how it went.' }
+export const LIVE_STATUS = { key: 'live', label: 'Live call', tone: 'blue', empty: 'No live call right now.', explain: 'A live transfer: tap it during or after the call to pick how it went.' }
 // Not on the board: the leads our team is still calling (new, being called, a missed transfer, a rebook after you moved a time).
 export const TEAM_STATUS = { key: 'team', label: 'Our team is calling', tone: 'violet', empty: 'No one being called.', explain: 'New leads our team is calling. Nothing for you to do: they land on Booked.' }
 export const ALL_AGENT_STATUSES = [...AGENT_STATUSES, CLOSED_STATUS, LIVE_STATUS, TEAM_STATUS]

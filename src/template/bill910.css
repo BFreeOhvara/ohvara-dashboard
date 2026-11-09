@@ -106,3 +106,17 @@
   .bl910 .bl-charges > li > .tp-chip { grid-column: 2 / -1; justify-self: start; }
   .bl910 .bl-ch-what b { white-space: normal; }
 }
+
+/* P920 — Change plan: the band note under the slider, and Other plans (each other plan, its range and price, Switch to) */
+.bl910 .bl-band-note { margin: 2px 0 0; font-size: 12px; color: var(--ov-mid); }
+.bl910 .bl-other { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.bl910 .bl-other h3 { margin: 0; font-size: 14px; font-weight: 600; color: var(--ov-hi); }
+.bl910 .bl-other-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.bl910 .bl-other-list > li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--bg-surface) 38%, transparent); box-shadow: inset 0 0 0 1px var(--ov-line); }
+.bl910 .bl-other-list b { display: block; font-size: 14px; font-weight: 600; color: var(--ov-hi); }
+.bl910 .bl-other-list small { display: block; font-size: 12px; color: var(--ov-mid); }
+.bl910 .bl-other.is-confirm { padding: 14px; border-radius: 14px; background: color-mix(in srgb, var(--bg-surface) 38%, transparent); box-shadow: inset 0 0 0 1px var(--ov-line); }
+.bl910 .bl-other-ask { margin: 0; font-size: 14px; line-height: 1.45; color: var(--ov-hi); }
+.bl910 .bl-other-ask b { font-weight: 600; }
+.bl910 .bl-other-start { font-size: 12px; color: var(--ov-mid); }
+@media (max-width: 560px) { .bl910 .bl-other-list > li { flex-wrap: wrap; } }

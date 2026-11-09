@@ -77,7 +77,7 @@ test('To-dos: empty is All caught up; full lists real admin jobs, one action eac
 test('agent Billing: the plan section has a $50 to $500 spend slider; plan and charges follow it live', () => {
   const b = read('./template/screens/Billing.jsx')
   assert.match(b, /function PlanSpend\(/)
-  assert.match(b, /type="range" min=\{LO\} max=\{MAX\}/)
+  assert.match(b, /type="range" min=\{lo\} max=\{hi\}/)
   assert.match(b, /Applies from the next charge/)
   assert.equal(PAID_MIN_DAILY, 50); assert.equal(MAX_DAILY, 500)
   assert.equal(nightlyFor('paid', 120).total, 134.4) // spend + 12%
