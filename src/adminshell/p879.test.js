@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
   isRouted, median, clockS, staffing, deskAlerts, DESK_VAS, DESK_QUEUE, qaScore, reReviewerFor, QA_REVIEWS, sheetTotals, dayHours,
-  canWork, ONBOARD_STEPS, pilotOf, pilotLog, adAlerts, reviewHours, pilotTotals, PILOT_ROWS, ownerOk, vaCostLine, consentOf, assignable, daysLeft,
+  canWork, ONBOARD_STEPS, adAlerts, reviewHours, ownerOk, consentOf, assignable, daysLeft,
 } from './p879.js'
 
 const src = f => readFileSync(new URL(f, import.meta.url), 'utf8')
@@ -46,13 +46,6 @@ test('P879 onboarding: no real calls until every step is done', () => {
   assert.equal(canWork({ done: ONBOARD_STEPS.length - 1 }), false)
 })
 
-test('P879 pilot: per agent, off by default, every change logged before and after', () => {
-  assert.equal(pilotOf('ag-dana').on, true)
-  assert.equal(pilotOf('ag-nobody').on, false)
-  assert.deepEqual(pilotLog('Brayden', 'Pilot', 'Off', 'On', 'Now'), { at: 'Now', who: 'Brayden', field: 'Pilot', before: 'Off', after: 'On' })
-  assert.equal(vaCostLine(90, 8), 12)
-})
-
 test('P879 ad alerts: rejected, or in review over 24 h', () => {
   assert.ok(reviewHours({ at: 'Nov 5, 9:40 AM' }) > 24)
   const a = adAlerts()
@@ -62,15 +55,10 @@ test('P879 ad alerts: rejected, or in review over 24 h', () => {
   assert.equal(adAlerts({ x: { status: 'in_review', at: 'Nov 6, 9:00 AM' } }).length, 0)
 })
 
-test('P879 pilot results: sample leads left out; delivered vs offered; owner rule at a third', () => {
-  const t = pilotTotals(PILOT_ROWS)
-  assert.equal(t.leads, 28 + 7 + 21 + 4 + 14) // the 3 test leads are excluded
-  assert.equal(t.transfers, 7); assert.equal(t.offered, 9)
-  assert.equal(t.perLead, Math.round((2180 / 74) * 100) / 100)
-  assert.equal(t.revenue, 0); assert.equal(t.vaPct, null); assert.equal(ownerOk(t), false)
-  assert.equal(ownerOk(pilotTotals(PILOT_ROWS, { membership: 5400 })), true)
-  assert.equal(ownerOk(pilotTotals(PILOT_ROWS, { membership: 300 })), false)
-  assert.equal(pilotTotals(PILOT_ROWS, { type: 'live' }).leads, 11)
+test('P879 owner rule: VA cost at or under a third of revenue', () => {
+  assert.equal(ownerOk({ revenue: 0, vaCost: 0 }), false)
+  assert.equal(ownerOk({ revenue: 300, vaCost: 100 }), true)
+  assert.equal(ownerOk({ revenue: 300, vaCost: 101 }), false)
 })
 
 test('P879 consent proof and Unassigned picker', () => {
@@ -88,12 +76,12 @@ test('P879 screens carry the new pieces', () => {
   // P913: Live desk, Quality and Records are gone from Fulfillment.
   for (const k of ['desk', 'quality', 'records']) assert.doesNotMatch(team, new RegExp(`\\['${k}',`))
   assert.match(team, /<HoursPay \/>/); assert.doesNotMatch(team, /a confirmed cancellation/)
-  assert.match(src('./screens/Agents.jsx'), /<PilotBlock[^>]*agent=\{a\}/)
+  assert.doesNotMatch(src('./screens/Agents.jsx'), /PilotBlock/) // P914: no pilot
   assert.match(src('./screens/Agents.jsx'), /<CampaignBlock agent=\{a\}/)
-  assert.match(src('./screens/Billing.jsx'), /\['pilot', 'Pilot results'\]/)
+  assert.match(src('./screens/Billing.jsx'), /\['results', 'Agent results'\]/)
   assert.match(src('./screens/Leads.jsx'), /<ConsentProof lead=\{l\}/)
   assert.match(src('./screens/Leads.jsx'), /<UnassignedBlock/)
   assert.match(src('./screens/Settings.jsx'), /\['compliance', 'Compliance'/)
-  assert.match(src('./screens/Pilot879.jsx'), /<EngineSlot \/>/) // campaign status is an engine slot
+  assert.match(src('./screens/Campaign879.jsx'), /<EngineSlot \/>/) // campaign status is an engine slot
   assert.match(src('./screens/Overview.jsx'), /adAlerts\(\)/)
 })

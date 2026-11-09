@@ -6,8 +6,7 @@ import assert from 'node:assert/strict'
 import { readFileSync, globSync } from 'node:fs'
 import { BOOK, BILLING_SETTINGS, PRICES, SETTINGS, bandText, nightlyCharge, servicingOnlyPrice } from './lib/priceBook.js'
 import { tierOf, monthlyBill, spendOk, nightlyFor, addedQuote, MAX_DAILY, SLIDER, INCLUDED_ADDED } from './template/spendPlan.js'
-import { PLANS, moneyFor, admSnapshot, PERIODS } from './adminshell/data.js'
-import { pilotTotals, PILOT_ROWS } from './adminshell/p879.js'
+import { PLANS, moneyFor, admSnapshot, PERIODS, agentResults } from './adminshell/data.js'
 
 const SQL = readFileSync('supabase/migrations/249_final_pricing.sql', 'utf8')
 
@@ -55,7 +54,6 @@ test('spend is $50 to $500 a day; an admin can raise one agent', () => {
   assert.equal(spendOk('paid', { daily: 50 }), true)
   assert.equal(spendOk('paid', { daily: 500 }), true)
   assert.equal(spendOk('paid', { daily: 505 }), false)
-  assert.equal(spendOk('pilot', { daily: 505 }), false, 'the max holds in the pilot too')
   assert.equal(spendOk('paid', { daily: 700 }, 750), true, 'admin override')
   // The server holds the same line: a trigger on agent_lead_spend, raised by hand per agent.
   assert.match(SQL, /create constraint trigger lead_spend_max_guard/)
@@ -66,7 +64,7 @@ test('spend is $50 to $500 a day; an admin can raise one agent', () => {
 test('each night the card is charged tomorrow\'s spend x 1.12; what wasn\'t spent comes off with its 12%', () => {
   assert.deepEqual(nightlyCharge({ daily: 100 }), { spend: 100, credit: 0, net: 100, fee: 12, total: 112, rate: 0.12 })
   assert.equal(nightlyFor('paid', 100).total, 112)
-  assert.equal(nightlyFor('pilot', 100).total, 100, 'pilot agents pay lead spend only')
+  assert.equal(nightlyFor('pilot', 100).total, 112, 'P914: no pilot, every agent pays the 12%')
   // True-up: $10 not spent yesterday → tonight is $90 + 12% = $100.80.
   assert.equal(nightlyFor('paid', 100, 10).total, 100.8)
   assert.equal(nightlyFor('paid', 50, 60).total, 0, 'credit covers the night')
@@ -88,7 +86,6 @@ test('lead plans include every policy sold plus 50 added clients; Add clients sh
   assert.deepEqual([addedQuote(b, 10).change, addedQuote(b, 11).change, addedQuote(b, 110).change], [0, 200, 200])
   assert.equal(addedQuote(b, 111).change, 400)
   assert.equal(addedQuote({ ...b, products: 'servicing', clients: { total: 95 } }, 10).change, 200)
-  assert.equal(addedQuote({ ...b, plan: 'pilot' }, 500), null, 'nothing changes in the pilot')
   const bill = monthlyBill({ plan: 'paid', spend: { daily: 100 }, clients: { added: 120 } })
   assert.deepEqual([bill.over, bill.extra], [70, 200])
   assert.match(readFileSync('src/template/AddClients891.jsx', 'utf8'), /<AddedCost billing=\{billing\} adding=\{ready\} \/>/)
@@ -102,18 +99,19 @@ test('the founding lock: the first 20 paying agents keep these prices for 12 mon
   assert.match(billing, /\['Founding price lock', `Until \$\{b\.founding\.until\}`/) // P910 Billing rebuild
 })
 
-test('admin revenue and the pilot results keep the plan fee and the 12% apart', () => {
+test('admin revenue and Agent results keep the plan fee and the 12% apart', () => {
   const s = admSnapshot()
   for (const [period] of PERIODS) {
     const p = moneyFor(s, period)
     assert.equal(p.leadFee, Math.round(p.budgets * 0.12), period)
     assert.equal(p.inTotal, p.leadFee + p.servicing + p.setup, period) // P913: lead spend passes to Meta, in no total
   }
-  const t = pilotTotals(PILOT_ROWS, { membership: 1800 })
-  assert.equal(t.planFee, 1800)
-  assert.equal(t.leadFee, Math.round(t.spend * 0.12 * 100) / 100)
-  assert.equal(t.revenue, t.planFee + t.leadFee)
-  assert.equal(pilotTotals(PILOT_ROWS).leadFee, 0, 'pilot agents pay no 12%')
+  // P914: Agent results (was Pilot results). Per agent: what they paid, minus VA, AI and card fees = what Ohvara kept;
+  // the paid column adds up to the period's plan fees + 12% + setup (lead spend passes to Meta, shown apart).
+  const r = agentResults(s, 'week')
+  for (const a of r.rows) assert.equal(a.kept, a.paid - a.va - a.ai - a.fees, a.name)
+  const p = moneyFor(s, 'week')
+  assert.ok(Math.abs(r.total.paid - (p.servicing + p.leadFee + p.setup)) <= r.rows.length, 'paid adds up (rounding per agent)')
   assert.match(SQL, /create or replace function public\.admin_billing_revenue\(/)
 })
 

@@ -9,7 +9,7 @@ import {
 import { useTheme } from '../../hooks/useTheme'
 import { Drawer, Avatar, PillTabs, useAccount, useNote, initials } from '../kit'
 import { avatarHue } from '../avatarHue'
-import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit } from '../motion'
+import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit, useKeep } from '../motion'
 import { armEntrance } from '../../adminshell/entrance'
 import Palette from '../Palette'
 import { LiveClock } from '../Clock'
@@ -41,6 +41,7 @@ import './ful.css'
 import MoreBelow from '../MoreBelow'
 import { useMessagesToggle } from '../msgToggle'
 import '../p911.css'
+import '../shell914.css'
 import '@fontsource/urbanist/500.css'
 import '@fontsource/urbanist/600.css'
 import '@fontsource/urbanist/700.css'
@@ -70,10 +71,11 @@ function BellDrawer({ open, onClose }) {
 function LogCall({ open, onClose }) {
   const { data: day } = useFulDay()
   const navigate = useNavigate()
-  if (!open) return null
+  const keep = useKeep(open)
+  if (!keep) return null
   const pick = id => { onClose(); navigate(fp('schedule', id)) }
   return (
-    <Drawer open center onClose={onClose} title="Log a call" sub="Pick the call. Its result is saved on the call.">
+    <Drawer open={open} center onClose={onClose} title="Log a call" sub="Pick the call. Its result is saved on the call.">
       <ul className="tp-list">
         {day.today.map(k => (
           <li key={k.id}>
@@ -113,9 +115,10 @@ export function BookForAgent({ open, onClose, person = null }) {
   const appts = useAgentAppts(agent)
   const slots = ag ? agentSlots({ date: clock.isoOf(date), clocks: APPT_CLOCKS, clientTz: zone.tz, appts, length: ag.appt?.length, buffer: ag.appt?.buffer, hours: { tz: ag.tz, open: ag.open, close: ag.close, days: ag.days } }) : []
   const pick = licensed ? slots.find(x => x.clock === time && x.open && x.iso >= clock.nowIso) : null
-  if (!open) return null
+  const keep = useKeep(open)
+  if (!keep) return null
   if (!who || !ag) {
-    return <Drawer open center onClose={onClose} title="Book for an agent" sub={who ? 'No agents yet.' : 'Nobody on the line.'}><p className="fx-calm">{who ? 'Agents you serve show here once they join.' : 'Book a caller with an agent from the call, when the transfer does not connect.'}</p></Drawer>
+    return <Drawer open={open} center onClose={onClose} title="Book for an agent" sub={who ? 'No agents yet.' : 'Nobody on the line.'}><p className="fx-calm">{who ? 'Agents you serve show here once they join.' : 'Book a caller with an agent from the call, when the transfer does not connect.'}</p></Drawer>
   }
   const gap = (ag.appt?.length || DEFAULT_APPT_MIN) + (ag.appt?.buffer || 0)
   const save = () => {
@@ -124,7 +127,7 @@ export function BookForAgent({ open, onClose, person = null }) {
     onClose()
   }
   return (
-    <Drawer open center onClose={onClose} title="Book for an agent" sub={<>It goes on the agent's calendar inside their hours. <HelpDot lesson="booking" inline /></>}
+    <Drawer open={open} center onClose={onClose} title="Book for an agent" sub={<>It goes on the agent's calendar inside their hours. <HelpDot lesson="booking" inline /></>}
       footer={<><button type="button" className="tp-primary fx-accent" disabled={!pick} onClick={save}><CalendarCheck size={16} />Book it</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
       <p className="tp-mid">{who.name}{who.city ? ` · ${who.city}, ${who.state}` : ''}</p>
       <div className="tp-field"><span>Agent</span>
@@ -140,9 +143,10 @@ export function BookForAgent({ open, onClose, person = null }) {
 }
 
 function Help({ open, onClose, onBug }) {
-  if (!open) return null
+  const keep = useKeep(open)
+  if (!keep) return null
   return (
-    <Drawer open center onClose={onClose} title="Help and support" sub="Ask an agent about a client, or the Ohvara team about anything else.">
+    <Drawer open={open} center onClose={onClose} title="Help and support" sub="Ask an agent about a client, or the Ohvara team about anything else.">
       <ul className="tp-list">
         {/* P876: Report a bug, the same pop-up in all three portals (ReportBug) */}
         <li><button type="button" className="fx-mrow" onClick={() => { onClose(); onBug() }}><Bug size={17} aria-hidden="true" /><span className="tp-grow"><b>Report a bug</b><small>Something broken or not working right</small></span><ChevronRight size={15} aria-hidden="true" /></button></li>
@@ -213,9 +217,11 @@ function ActionMenu({ open, onClose, at, items, back }) {
     window.addEventListener('keydown', onKey)
     return () => { cancelAnimationFrame(t); window.removeEventListener('keydown', onKey) }
   }, [open, onClose, back])
-  if (!open) return null
+  // P914: plays its way out like the avatar menu (fx-menu-out)
+  const [shown, leaving] = useExit(open, 200)
+  if (!shown) return null
   return (
-    <div className="tp fx-layer fx-menu-layer" role="presentation">
+    <div className={`tp fx-layer fx-menu-layer${leaving ? ' is-leaving' : ''}`} role="presentation">
       <button type="button" className="fx-scrim is-clear tp-bare" aria-label="Close menu" tabIndex={-1} onClick={onClose} />
       <section ref={ref} className="fx-menu fx-cmenu fs-cmenu" role="menu" aria-label="Calls and more" style={at || undefined}>
         <p className="fx-cmenu-h">Calls and more</p>
@@ -293,6 +299,9 @@ export default function FulFrame() {
   const trainLeft = trainSum.left
   const close = useCallback(() => setPanel(null), [])
   const open = which => e => { wig.onClick(e); setPanel(which) }
+  // P914: the avatar toggles its menu (a second click closes it, with the menu's close animation), as on the agent side
+  const toggleMenu = e => { wig.onClick(e); setPanel(p => (p === 'menu' ? null : 'menu')) }
+  const menuOn = panel === 'menu'
   const flipTheme = e => { wig.onClick(e); setTheme(theme === 'dark' ? 'light' : 'dark') }
   const tabCount = { servicing: day.tasks.overdue.length }
   const left = day.today.filter(openItem).length
@@ -419,25 +428,25 @@ export default function FulFrame() {
   )
 
   return (
-    <div className={`tp tp-app fx fs is-${layout}${msg.closing ? ' is-msg-closing' : ''}`} ref={appRef}>
+    <div className={`tp tp-app fx fs is-${layout}`} ref={appRef}>
       <div className="tp-sky" aria-hidden="true"><i /><i /><i /></div>
 
-      <header className="tp-phone-top fx-ptop">
+      <header className={`tp-phone-top fx-ptop${menuOn ? ' is-menu' : ''}`}>
         <Link to={fp('overview')} className="fx-brand" aria-label="Ohvara home"><OhvaraMark height={28} back="var(--ov-mark-back)" front="var(--ov-mark-front)" className="fx-mark" /></Link>
         <span className="tp-grow" />
         {phoneIcon('fx-ib fs-top-phone')}
         {tops}
-        <button type="button" className={`fx-me tp-wig av-${avatarHue(account.name)}`} aria-label="Menu" {...wig} onClick={open('menu')}>{initials(account.name).toUpperCase()}</button>
+        <button type="button" className={`fx-me tp-wig av-${avatarHue(account.name)}`} aria-label="Menu" aria-haspopup="dialog" aria-expanded={menuOn} {...wig} onClick={toggleMenu}>{initials(account.name).toUpperCase()}</button>
       </header>
 
       <Link to={fp('overview')} className="fx-brand fx-brand-page" aria-label="Ohvara home"><OhvaraMark height={30} back="var(--ov-mark-back)" front="var(--ov-mark-front)" className="fx-mark" /><b>ohvara</b></Link>
-      <header className="tp-top fx-top">
+      <header className={`tp-top fx-top${menuOn ? ' is-menu' : ''}`}>
         <span className="fx-top-gap" aria-hidden="true" />
         <PillTabs as="nav" label="Pages" className="tp-tabs fx-tabs" itemClass="tp-tab fx-tab" value={FUL_TABS.some(([k]) => k === active) ? active : null} persistKey="ful-tabs"
           items={FUL_TABS.map(([k, label]) => ({ key: k, to: fp(k), label, extra: tabCount[k] > 0 ? <span className="fx-tb">{tabCount[k]}</span> : null }))} />
         <div className="fx-tr">
           {tops}
-          <button type="button" className={`tp-me fx-me tp-wig av-${avatarHue(account.name)}`} aria-label={`Your account, ${account.name}`} aria-expanded={panel === 'menu'} {...wig} onClick={open('menu')}>{initials(account.name).toUpperCase()}</button>
+          <button type="button" className={`tp-me fx-me tp-wig av-${avatarHue(account.name)}`} aria-label={`Your account, ${account.name}`} aria-haspopup="dialog" aria-expanded={menuOn} {...wig} onClick={toggleMenu}>{initials(account.name).toUpperCase()}</button>
         </div>
       </header>
 
@@ -491,7 +500,7 @@ export default function FulFrame() {
         {['overview', 'clients'].map(k => { const I = ICONS[k]; return <Link key={k} to={fp(k)} className={`fx-btab${active === k ? ' is-on' : ''}`}><I size={20} aria-hidden="true" />{k === 'overview' ? 'Overview' : 'Clients'}</Link> })}
         <button type="button" className="fx-btab is-plus" aria-label="Calls and more" aria-haspopup="menu" aria-expanded={panel === 'create'} onClick={openCreate}><span className="fx-bplus"><Plus size={24} aria-hidden="true" />{left > 0 && <span className="fx-badge" aria-hidden="true">{left}</span>}</span>Calls</button>
         <Link to={fp('schedule')} className={`fx-btab${active === 'schedule' ? ' is-on' : ''}`}><CalendarDays size={20} aria-hidden="true" />Schedule</Link>
-        <button type="button" className="fx-btab" aria-label="More" onClick={open('menu')}><Ellipsis size={20} aria-hidden="true" />More</button>
+        <button type="button" className="fx-btab" aria-label="More" aria-expanded={menuOn} onClick={toggleMenu}><Ellipsis size={20} aria-hidden="true" />More</button>
       </nav>
 
       {panel === 'search' && <Palette onClose={close} pages={PAGES} rows={rows} placeholder="Search clients, booked calls, servicing, pages" />}

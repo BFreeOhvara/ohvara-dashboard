@@ -25,9 +25,9 @@ export const SETUP_STEPS = [
 
 // The ticket board's columns, left to right.
 export const SETUP_STAGES = [
-  { key: 'new', label: 'New ticket', tone: 'blue', empty: 'No new paid agents.' },
-  { key: 'campaign', label: 'Campaign', tone: 'teal', empty: 'No campaign being made.' },
-  { key: 'checks', label: 'Launch checks', tone: 'violet', empty: 'Nobody waiting on launch checks.' },
+  { key: 'new', label: 'New ticket', tone: 'mute', empty: 'No new paid agents.' },
+  { key: 'campaign', label: 'Campaign', tone: 'blue', empty: 'No campaign being made.' },
+  { key: 'checks', label: 'Launch checks', tone: 'teal', empty: 'Nobody waiting on launch checks.' },
   { key: 'live', label: 'Done this week', tone: 'green', empty: 'No tickets done this week.' },
 ]
 

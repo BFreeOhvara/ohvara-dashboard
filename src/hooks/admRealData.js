@@ -109,7 +109,6 @@ export function useAdmRealActions() {
     const rpc = (fn, args) => run(supabase.rpc(fn, args))
     return {
       assignLead: (id, agentId) => rpc('admin_assign_lead', { p_lead: id, p_agent: agentId }),
-      setLeadStage: notYet('Changing a lead stage from admin'),
       setAgentActive: (id, on) => run(supabase.from('agent_lead_settings').update({ active: on, updated_at: new Date().toISOString() }).eq('agent_id', id)),
       setAgentSpend: notYet('Changing a weekly lead budget from admin'),
       setServicing: (id, on) => run(supabase.from('profiles').update({ has_servicing: on }).eq('id', id)),

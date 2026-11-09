@@ -1,14 +1,15 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { CircleCheck, Landmark, ArrowUpRight, CreditCard, MessageSquare, RotateCw, Wallet, Megaphone, Headset, Receipt, BadgeDollarSign, PiggyBank, Pencil, History, Bot } from 'lucide-react'
-import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, useAdmSettings, useAdmSource, PLANS, PERIODS, SETUP_FEE, CARD_FEE, AI_RATE } from '../data'
+import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, useAdmSettings, useAdmSource, useAdmAgentResults, PLANS, PERIODS, SETUP_FEE, CARD_FEE, AI_RATE } from '../data'
 import { PRICES } from '../../lib/priceBook.js'
 import { Avatar, Chip, PillTabs, SampleTag, Seg, Switch, useNote } from '../../template/kit'
 import { CountUp, usd } from '../../template/motion'
 import { Tile } from '../kit'
 import { ap } from '../paths'
 import { BILL_WORD, BANK_WORD } from '../words'
-import { PilotResults } from './Pilot879'
+import { OWNER_LIMIT } from '../p879'
+import '../p879.css'
 
 // P866 — the tab and page read Revenue (Brayden didn't like Money). P864 — Money (it was Billing & revenue): at the top, for This week / This month / Last month, what came in (what agents
 // paid), what it cost (ad spend, VA payouts, card fees, tools), the profit, and the owners' split (Brayden and Jordan,
@@ -18,6 +19,56 @@ import { PilotResults } from './Pilot879'
 // past runs, the Stripe balance and the pause switch). Sample amounts and prices.
 const money = usd()
 const money2 = usd(true)
+
+// P914 — the stage grows to fit the view: its top stays put and its bottom eases to the new height, so nothing scrolls
+// inside it and the mouse wheel always scrolls the page (the old fixed-height box trapped the wheel on By week).
+function Grow({ children }) {
+  const inner = useRef(null)
+  const [h, setH] = useState(null)
+  useLayoutEffect(() => {
+    const el = inner.current
+    if (!el) return undefined
+    const set = () => setH(el.offsetHeight)
+    set()
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const ro = new ResizeObserver(set)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  return <div className="adm-rev-grow" style={h == null ? undefined : { height: h }}><div ref={inner}>{children}</div></div>
+}
+
+// P914 — Agent results (was Pilot results): per agent, what they paid Ohvara, the VA and AI cost of working their leads
+// and clients, card fees and what Ohvara kept. Lead spend passed to Meta is shown apart and is in no total.
+function AgentResults({ period }) {
+  const { data: r } = useAdmAgentResults(period)
+  const src = useAdmSource()
+  const t = r.total
+  const ok = t.paid > 0 && t.va / t.paid <= OWNER_LIMIT
+  return (
+    <div className="adm-rev-view">
+      <div className="adm-res-head">
+        <span className="tp-grow"><b>Per agent, {PERIODS.find(x => x[0] === period)[1].toLowerCase()}</b><small>Paid = plan fee + {Math.round(PRICES.leadFee * 100)}% of lead spend + setup. Kept = paid − VA − AI − card fees.</small></span>
+        <Chip tone={ok ? 'green' : 'warn'}>{t.vaPct == null ? 'No revenue yet' : `VA ${t.vaPct}% of revenue · rule ${Math.round(OWNER_LIMIT * 100)}% or less`}</Chip>
+        {src !== 'real' && <SampleTag>Sample</SampleTag>}
+      </div>
+      <div className="p879-scroll" role="region" aria-label="Agent results" tabIndex={0}>
+        <table className="p879-tbl adm-res-tbl">
+          <thead><tr>{['Agent', 'Paid Ohvara', 'VA cost', 'AI cost', 'Card fees', 'Ohvara kept', 'Lead spend (to Meta)'].map(h => <th key={h} scope="col">{h}</th>)}</tr></thead>
+          <tbody>{r.rows.map(x => (
+            <tr key={x.id}>
+              <th scope="row"><Link to={ap('agents', x.id)}>{x.name}</Link><small>{x.comped ? 'Comped' : x.plan}</small></th>
+              <td>{money(x.paid)}</td><td>{x.va ? `−${money(x.va)}` : money(0)}</td><td>{x.ai ? `−${money(x.ai)}` : money(0)}</td><td>{x.fees ? `−${money(x.fees)}` : money(0)}</td>
+              <td className={x.kept < 0 ? 'is-loss' : 'is-kept'}>{money(x.kept)}</td><td className="is-out">{money(x.leadSpend)}</td>
+            </tr>
+          ))}</tbody>
+          <tfoot><tr><th scope="row">All agents</th><td>{money(t.paid)}</td><td>−{money(t.va)}</td><td>−{money(t.ai)}</td><td>−{money(t.fees)}</td><td className={t.kept < 0 ? 'is-loss' : 'is-kept'}>{money(t.kept)}</td><td className="is-out">{money(t.leadSpend)}</td></tr></tfoot>
+        </table>
+      </div>
+      <p className="adm-rev-out"><Headset size={14} aria-hidden="true" />VA pay and AI minutes are shared out by each agent's leads and clients worked until team time is recorded per agent.</p>
+    </div>
+  )
+}
 
 // P913 — By week: the one main chart. Revenue = plan fees + the 12% fee + setup fees, stacked per week. Agent lead
 // spend is never in it: it's the agents' money passed to Meta, named on its own line under the chart.
@@ -220,9 +271,9 @@ function Payouts() {
 }
 
 // P913 — one page, top to bottom: the period, the headline numbers, one stage that holds the main chart (By week) or
-// another view (Pilot results, Agent billing, Payouts), then the breakdown. The stage has one fixed height and place:
-// switching views changes only what's inside it (a long view scrolls inside), so nothing below moves or resizes.
-const VIEWS = [['revenue', 'By week'], ['pilot', 'Pilot results'], ['agents', 'Agent billing'], ['payouts', 'Payouts']]
+// another view (Agent results, Agent billing, Payouts), then the breakdown. P914: the stage's top stays put and it grows
+// to fit the view (Grow), so nothing scrolls inside it.
+const VIEWS = [['revenue', 'By week'], ['results', 'Agent results'], ['agents', 'Agent billing'], ['payouts', 'Payouts']]
 export default function Billing() {
   const [sp, setSp] = useSearchParams()
   const { data: m } = useAdmMoney()
@@ -244,12 +295,14 @@ export default function Billing() {
       <section className="fx-tile adm-rev-stage" style={{ '--i': 1 }} aria-label="Revenue views">
         <PillTabs label="Revenue details" className="fx-ptabs adm-pagetabs" itemClass="fx-ptab" value={tab} onChange={t => put('tab', t, 'revenue')}
           items={VIEWS.map(([k, label]) => ({ key: k, label, count: k === 'agents' && m.failed.length ? m.failed.length : undefined }))} />
-        <div className="adm-rev-body" key={tab} role="tabpanel" tabIndex={0}>
-          {tab === 'revenue' && <Revenue />}
-          {tab === 'pilot' && <PilotResults />}
-          {tab === 'agents' && <AgentBills />}
-          {tab === 'payouts' && <Payouts />}
-        </div>
+        <Grow>
+          <div className="adm-rev-body" key={tab} role="tabpanel">
+            {tab === 'revenue' && <Revenue />}
+            {tab === 'results' && <AgentResults period={period} />}
+            {tab === 'agents' && <AgentBills />}
+            {tab === 'payouts' && <Payouts />}
+          </div>
+        </Grow>
       </section>
       <Breakdown p={p} />
     </div>

@@ -81,7 +81,10 @@
 .adm-rev-head b { font-family: var(--font-mono); font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; }
 .adm-rev-head em { font-style: normal; font-size: 12px; opacity: .8; }
 .adm-rev-stage { display: flex; flex-direction: column; gap: 10px; }
-.adm-rev-stage .adm-rev-body { height: 420px; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+/* P914: the stage's top stays put and its bottom grows to fit the view (Grow in Billing.jsx animates the height), so
+   nothing scrolls inside it and the mouse wheel always scrolls the page. */
+.adm-rev-grow { overflow: clip; overflow-clip-margin: 16px; transition: height .32s cubic-bezier(.22, 1, .36, 1); }
+@media (prefers-reduced-motion: reduce) { .adm-rev-grow { transition: none; } }
 .adm-rev-break { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .adm-rev-break dl { margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .adm-rev-break dl > div { display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; }
@@ -105,7 +108,6 @@
 @media (max-width: 599.98px) {
   .adm-rev-head b { font-size: 19px; }
   .adm-rev-break { grid-template-columns: minmax(0, 1fr); }
-  .adm-rev-stage .adm-rev-body { height: 480px; }
   .adm-rev-chart { height: 180px; gap: 4px; }
 }
 

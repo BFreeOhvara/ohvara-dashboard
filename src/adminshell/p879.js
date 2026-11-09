@@ -1,7 +1,7 @@
 import { PRICES, bandText } from '../lib/priceBook.js'
 // P879 — the admin pieces the hole check found missing, as plain sample data and small pure rules (no React, so
 // node --test runs them). Screens: Fulfillment team (Live desk, Time off, Hours & pay, Quality, Records, Holidays),
-// the agent drawer (Pilot, Campaign), Revenue (Pilot results), Leads (consent proof, Unassigned), Settings
+// the agent drawer (Campaign), Leads (consent proof, Unassigned), Settings
 // (Compliance), Overview (ad alerts). Sample only: nothing here is read from or written to the backend yet (858/852
 // wire it). GoHighLevel-powered pieces carry the engine-slot pill.
 
@@ -126,17 +126,9 @@ export const RECORDS = [
 ]
 export const trend = xs => (xs.length < 2 ? 0 : xs.at(-1) - xs[0])
 
-// ---------- Pilot per agent, VA cost line, pilot to paid (N-G-01, N-G-08, Q64) ----------
-export const PILOT = {
-  'ag-dana': { on: true, start: 'Oct 26', note: 'First pilot agent. Both lead types.', vaCost: true, toPaid: null },
-  'ag-priya': { on: true, start: 'Nov 2', note: 'Florida and Georgia.', vaCost: false, toPaid: { plan: 'Growth', date: 'Mon, Nov 30', accepted: false, reminders: ['7 days', '3 days', '1 day'] } },
-  'ag-james': { on: true, start: 'Nov 2', note: '', vaCost: true, toPaid: null },
-}
-export const pilotOf = id => PILOT[id] || { on: false, start: '', note: '', vaCost: false, toPaid: null }
+// ---------- Paid plans ----------
 // P901: the three packages from the price book (version 2).
 export const PAID_PLANS = PRICES.tiers.map(t => ({ value: t.label, label: `${t.label} · ${bandText(t)} · $${t.monthly.toLocaleString('en-US')} a month` }))
-// The log line for any pilot change, kept with before and after.
-export const pilotLog = (who, field, before, after, at = 'Today') => ({ at, who, field, before: String(before), after: String(after) })
 
 // ---------- Campaign status and ad alerts, engine slots (N-A-02, N-A-04) ----------
 export const CAMPAIGN = {
@@ -160,39 +152,12 @@ export function adAlerts(campaigns = CAMPAIGN) {
   })
 }
 
-// ---------- Pilot results and the owner rule (N-G-30, N-J-44, owner rule) ----------
-// Sample pilot numbers per agent and lead type. Sample leads (not from a real ad) are excluded from every total.
-export const PILOT_ROWS = [
-  { agent: 'Dana Walker', state: 'TX', week: 'Nov 2', type: 'appointment', spend: 700, leads: 28, reached: 21, booked: 10, transfers: 0, offered: 0, shows: 6, sales: 3, vaMin: 610, revenue: 0, sample: false },
-  { agent: 'Dana Walker', state: 'TX', week: 'Nov 2', type: 'live', spend: 385, leads: 7, reached: 7, booked: 1, transfers: 5, offered: 6, shows: 5, sales: 2, vaMin: 140, revenue: 0, sample: false },
-  { agent: 'Priya Shah', state: 'FL', week: 'Nov 2', type: 'appointment', spend: 525, leads: 21, reached: 15, booked: 7, transfers: 0, offered: 0, shows: 4, sales: 1, vaMin: 470, revenue: 0, sample: false },
-  { agent: 'Priya Shah', state: 'GA', week: 'Nov 2', type: 'live', spend: 220, leads: 4, reached: 4, booked: 1, transfers: 2, offered: 3, shows: 2, sales: 1, vaMin: 80, revenue: 0, sample: false },
-  { agent: 'James Okafor', state: 'GA', week: 'Nov 2', type: 'appointment', spend: 350, leads: 14, reached: 9, booked: 4, transfers: 0, offered: 0, shows: 3, sales: 1, vaMin: 330, revenue: 0, sample: false },
-  { agent: 'Test lead', state: 'TX', week: 'Nov 2', type: 'appointment', spend: 0, leads: 3, reached: 3, booked: 3, transfers: 0, offered: 0, shows: 0, sales: 0, vaMin: 20, revenue: 0, sample: true },
-]
+// ---------- The owner rule ----------
+// P914: Pilot results became Agent results (adminshell/data.js agentResults); the pilot sample rows are gone.
 export const VA_RATE = 8 // $ an hour (Q44)
 export const per = (a, b) => (b ? Math.round((a / b) * 100) / 100 : null)
-export function pilotTotals(rows, { type = 'all', rate = VA_RATE, membership = 0 } = {}) {
-  const r = rows.filter(x => !x.sample && (type === 'all' || x.type === type))
-  const sum = k => r.reduce((t, x) => t + x[k], 0)
-  const spend = sum('spend'); const leads = sum('leads'); const booked = sum('booked'); const transfers = sum('transfers'); const sales = sum('sales')
-  const vaMin = sum('vaMin'); const vaCost = Math.round((vaMin / 60) * rate * 100) / 100
-  // In the pilot agents pay lead spend only (all to their ads). Once paid plans start, revenue is the plan fees plus
-  // 12% of lead spend (P909), kept as two numbers.
-  const planFee = membership
-  const leadFee = membership ? Math.round(spend * PRICES.leadFee * 100) / 100 : 0
-  const revenue = planFee + leadFee + sum('revenue')
-  const ownerTake = Math.round((revenue - vaCost) * 100) / 100
-  return {
-    spend, leads, reached: sum('reached'), booked, transfers, offered: sum('offered'), shows: sum('shows'), sales, vaMin, vaHours: Math.round((vaMin / 60) * 10) / 10, vaCost,
-    perLead: per(spend, leads), perBooked: per(spend, booked), perTransfer: per(spend, transfers), perShow: per(spend, sum('shows')), perSale: per(spend, sales),
-    pickup: per(transfers, sum('offered')), planFee, leadFee, revenue, ownerTake, vaPct: revenue ? Math.round((vaCost / revenue) * 1000) / 10 : null,
-  }
-}
 export const OWNER_LIMIT = 1 / 3 // VA cost at or under a third of revenue
 export const ownerOk = t => t.revenue > 0 && t.vaCost / t.revenue <= OWNER_LIMIT
-// The optional VA cost line per agent: VA hours on that agent's leads and clients × the hourly rate, at cost.
-export const vaCostLine = (vaMin, rate = VA_RATE) => Math.round((vaMin / 60) * rate * 100) / 100
 
 // ---------- Consent proof and Unassigned (N-A-19, N-B-02, N-A-11, N-B-21, N-J-12) ----------
 export function consentOf(lead) {

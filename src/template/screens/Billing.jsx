@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Layers, CreditCard, Check, PauseCircle, PlayCircle, LogOut, Phone, CalendarClock, Clock, CircleAlert, Wallet, CalendarCheck2, Users, BadgeCheck, Target } from 'lucide-react'
-import { useSampleBilling, useSampleActions, useSampleSettings, useSampleAppointments } from '../data'
+import { useSampleBilling, useSampleActions, useSampleAppointments } from '../data'
 import { Chip, Drawer, Field, Money, SampleTag, Seg, useNote } from '../kit'
 import { Select } from '../Select'
 import { usd } from '../motion'
-import { SpendSliders, SpendSummary, TakeLeads } from '../PlanBuilder'
-import { bought, vaCost, tierOf, dailyTotal, spendOk, openSlotsPerWeek, nightlyFor, feeWords, FEE_WHY, SETUP_FEE, MAX_DAILY } from '../spendPlan'
+import { SpendSummary, TakeLeads } from '../PlanBuilder'
+import { bought, tierOf, dailyTotal, spendOk, nightlyFor, monthlyBill, feeWords, SETUP_FEE, MAX_DAILY, PAID_MIN_DAILY } from '../spendPlan'
 import { LEAD_MODES, liveHoursText, takeOk } from '../../lib/leadSplit'
 import { TalkDrawer } from '../Talk'
 import '../p878.css'
@@ -16,11 +16,11 @@ import '../bill910.css'
 // P878 — Billing, from the hole check (N-G-02, N-G-09, N-H-28, N-A-23, N-A-30, N-I-03, N-I-05). Sample only: nothing is
 // charged. P909: the prices are final (price book version 3). P889: one daily spend and How you take leads (Appointments only, or Appointments +
 // live transfers with live-call hours); the form/call split behind it is never shown. Lead spend is charged to the
-// card each night for the next day; what the ads didn't spend comes off the next night's charge. Two ways to be billed:
-//   Pilot: only lead spend. No plan, setup or 12% lines. An optional team-time line (admin switches it).
-//   Paid:  a plan by daily spend band + the lead spend + 12% of it. The plan shows live as the slider moves and
-//          changes from the next bill. Founding agents see their price lock and its end date.
-// Preview the paid plan with ?plan=paid, a declined card with ?billing=failed, no card with ?card=none.
+// card each night for the next day; what the ads didn't spend comes off the next night's charge. One way to be billed
+// (P914: no pilot, every agent pays from day one): a plan by daily spend band + the lead spend + 12% of it. Founding
+// agents see their price lock and its end date. Preview a declined card with ?billing=failed, no card with ?card=none.
+// P914: the plan section's daily lead spend is a slider ($50 to $500): the plan follows the band as it moves, with the
+// nightly charge (spend + 12%) and the monthly plan live; Save applies it from the next charge.
 // P910: rebuilt simple for the final model: plan, daily spend + 12%, the paid-ahead days, card on file, next charge,
 // setup fee, founding lock; the results (spent, booked, shows, sold, cost per sale) as colour-coded tiles. One paid day
 // is always in hand: each evening the day after tomorrow is charged (spendPlan.js nightly).
@@ -41,7 +41,7 @@ function pauseDays(from = new Date()) {
     return { label: x.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }), iso }
   })
 }
-function PauseDrawer({ open, onClose, b, appts }) {
+function PauseDrawer({ open, onClose, appts }) {
   const { pause } = useSampleActions()
   const note = useNote()
   const [mode, setMode] = useState('dates')
@@ -61,10 +61,10 @@ function PauseDrawer({ open, onClose, b, appts }) {
       {mode === 'dates' && <Field label="Resume on" hint="Lead spend starts again by itself that morning. We remind you 2 days before."><Select label="Resume on" value={until} onChange={setUntil} options={days.map(x => x.label)} /></Field>}
       <div className="sp-effects">
         <div><h3>Stops</h3><ul><li>Your lead spend: none is used while you{'’'}re paused</li><li>New leads</li><li>Live calls ringing you</li></ul></div>
-        <div><h3>Keeps going</h3><ul><li>Appointments already booked ({inPause.length}). Keep them, or move them from Calendar</li><li>Leads the team is already reaching</li><li>Servicing for every client</li>{b.plan !== 'pilot' && <li>Your membership: it keeps charging as usual</li>}</ul></div>
+        <div><h3>Keeps going</h3><ul><li>Appointments already booked ({inPause.length}). Keep them, or move them from Calendar</li><li>Leads the team is already reaching</li><li>Servicing for every client</li><li>Your membership: it keeps charging as usual</li></ul></div>
       </div>
       {inPause.length > 0 && <ul className="fx-rows">{inPause.map(a => <li key={a.id} className="fx-row is-flat"><span className="fx-row-ic"><CalendarClock size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{a.who}</b><small>{a.day}, Nov {a.date}, {a.time}</small></span><Chip tone="blue">Still on</Chip></li>)}</ul>}
-      <p className="tp-sub">{b.plan === 'pilot' ? 'Nothing is charged for the days you’re paused.' : 'No lead spend is charged while you’re paused. Your plan keeps charging, so servicing never stops.'} Any credit waits and comes off your first charge when you{'’'}re back.</p>
+      <p className="tp-sub">No lead spend is charged while you’re paused. Your plan keeps charging, so servicing never stops. Any credit waits and comes off your first charge when you{'’'}re back.</p>
     </Drawer>
   )
 }
@@ -97,9 +97,9 @@ function CancelDrawer({ open, onClose, b, onPause, onTalk }) {
           <div><h3>When</h3><ul><li>Ends Sun, Nov 8, the end of this week</li><li>New leads stop then; booked appointments stay on your calendar</li></ul></div>
           <div><h3>After that</h3><ul><li>The team stops servicing your clients</li><li>Your portal stays open for 30 days to download your book</li></ul></div>
         </div>
-        <div className="pb-row"><span>Final bill</span><b className="tp-money">{b.plan === 'pilot' ? 'Nothing more' : 'This month, as usual'}</b></div>
+        <div className="pb-row"><span>Final bill</span><b className="tp-money">This month, as usual</b></div>
         <div className="pb-row"><span>Unspent lead spend credit, refunded</span><b className="tp-money">{money(b.nightNow.credit * (1 + b.nightNow.tonight.rate))}</b></div>
-        {b.plan !== 'pilot' && <p className="tp-sub">The {money(SETUP_FEE)} setup fee isn{'’'}t refunded.</p>}
+        <p className="tp-sub">The {money(SETUP_FEE)} setup fee isn{'’'}t refunded.</p>
         <label className="tp-check"><input type="checkbox" checked={sure} onChange={e => setSure(e.target.checked)} /><span>I understand my leads and servicing stop on Sun, Nov 8.</span></label>
         <p className="tp-sub">We email you a confirmation. You can come back any time.</p>
       </>}
@@ -130,6 +130,39 @@ function ResultTiles({ rows }) {
   )
 }
 
+// P914 — the plan section's spend slider: $50 to $500 a day. As it moves, the plan follows its band, and the nightly
+// charge (spend + 12%) and the monthly plan update live. Nothing changes until Save; it applies from the next charge.
+const LO = PAID_MIN_DAILY
+function PlanSpend({ daily, onDaily, dirty, ok, onSave, onReset, forDay }) {
+  const v = Math.max(LO, Math.min(MAX, daily))
+  const night = nightlyFor('paid', v)
+  const tier = tierOf(v)
+  const month = monthlyBill({ plan: 'paid', spend: { daily: v } })
+  return (
+    <div className="bl-spend">
+      <div className="bl-spend-h">
+        <label htmlFor="bl-daily">Daily lead spend</label>
+        <b className="tp-money" aria-live="polite">{money(v)}<small> / day</small></b>
+      </div>
+      <input id="bl-daily" className="pb-range bl-range" type="range" min={LO} max={MAX} step={5} value={v}
+        style={{ '--w': (v - LO) / (MAX - LO) }} aria-valuetext={`${money(v)} a day, ${tier.label} plan`} onChange={e => onDaily(Number(e.target.value))} />
+      <div className="bl-spend-scale" aria-hidden="true"><small>{money(LO)}</small><small>{money(MAX)}</small></div>
+      <dl className="bl-spend-live">
+        <div><dt>Charged each night</dt><dd><b className="tp-money">{money(night.total)}</b><small>{money(v)} + {feeWords}</small></dd></div>
+        <div><dt>Your plan</dt><dd><b>{tier.label}</b><small>{money(tier.monthly)} a month</small></dd></div>
+        <div><dt>About a month</dt><dd><b className="tp-money">{money(month.total)}</b><small>Plan + spend + {feeWords}</small></dd></div>
+      </dl>
+      {dirty && (
+        <div className="bl-spend-save">
+          <small className="tp-grow">Applies from the next charge, for {forDay}. Days already paid keep their spend.</small>
+          <button type="button" className="tp-btn ov-ghost" onClick={onReset}>Reset</button>
+          <button type="button" className="tp-primary fx-accent" disabled={!ok} onClick={onSave}>Save</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // P910 — one paid day in hand: today and tomorrow are paid; each evening the day after tomorrow is charged. A day that
 // isn't paid when it starts brings no new leads (the ads never run on it).
 function PaidAhead({ days }) {
@@ -148,43 +181,37 @@ function PaidAhead({ days }) {
 
 export default function Billing() {
   const { data: b } = useSampleBilling()
-  const { data: settings } = useSampleSettings()
   const { data: appts } = useSampleAppointments()
   const { setSpend, setTake, resume, keepPlan, addCard, fixCard } = useSampleActions()
   const note = useNote()
   const { hash } = useLocation()
   // P893: Results lives here now; /activity?view=results lands on it (#results)
   useEffect(() => { if (hash === '#results') document.getElementById('results')?.scrollIntoView({ block: 'start' }) }, [hash])
-  const [spend, setDraft] = useState({ daily: dailyTotal(b.spend) })
+  const [spend, setDraft] = useState({ daily: Math.max(PAID_MIN_DAILY, dailyTotal(b.spend)) })
   const [take, setTakeDraft] = useState(b.take)
   const [range, setRange] = useState('week')
   const [panel, setPanel] = useState(null)
   const dirty = dailyTotal(spend) !== dailyTotal(b.spend) || JSON.stringify(take) !== JSON.stringify(b.take)
-  const pilot = b.plan === 'pilot'
   const n = b.nightNow
   const noCard = b.card && !b.card.onFile && b.products !== 'servicing'
-  const va = pilot ? vaCost(b.va) : 0
   const tierNow = tierOf(dailyTotal(b.spend))
   const tierNew = tierOf(dailyTotal(spend))
-  const open = openSlotsPerWeek(settings.week)
   const daily = dailyTotal(b.spend)
-  const perDay = nightlyFor(b.plan, daily).total
   const unpaid = n.ahead.find(d => d.status === 'failed')
   const running = !b.paused && !b.cancel && !noCard
   const save = () => {
-    if (!spendOk(b.plan, spend) || !takeOk(take)) return
+    if (!spendOk('paid', spend) || !takeOk(take)) return
     setSpend(spend)
     setTake(take)
     note(`Lead spend set to ${money(dailyTotal(spend))} a day, ${LEAD_MODES.find(m => m.key === take.mode).label.toLowerCase()}. Starts with the next unpaid day. Sample only, nothing was charged`)
   }
   const rows = [
-    ['Plan', pilot ? 'Pilot · no plan fee' : `${tierNow.label} · ${money(tierNow.monthly)} a month`, pilot ? 'You pay only your lead spend' : `Next bill ${b.nextBill}. Covers the team, servicing, portal and app`],
-    ['Daily lead spend', pilot ? `${money(daily)} a day` : `${money(daily)} + ${feeWords} = ${money(perDay)} a day`, pilot ? 'Charged one day ahead' : `${feeWords} ${FEE_WHY}`],
+    ['Plan', `${tierNew.label} · ${money(tierNew.monthly)} a month`, tierNew.key !== tierNow.key ? `From your next bill, ${b.nextBill} (now ${tierNow.label}). Covers the team, servicing, portal and app` : `Next bill ${b.nextBill}. Covers the team, servicing, portal and app`],
     unpaid
       ? ['Next charge', `${unpaid.day} first`, `We try ${unpaid.day} again at 8 AM. ${n.forDay} is charged once it goes through`]
       : ['Next charge', `${money(n.tonight.total)} · ${b.nightly.at}`, `For ${n.forDay}${n.tonight.credit > 0 ? ` · ${money(n.tonight.credit)} credit used` : ''}`],
     ['Card on file', b.card?.onFile ? b.card.label : 'No card yet', b.card?.onFile ? 'Shows on your statement as OHVARA LEADS' : 'Leads start once a card is on file'],
-    ...(pilot ? [] : [['Setup fee', `${money(SETUP_FEE)} one time`, b.setupPaid ? `Paid ${b.setupPaid}. Not refunded` : 'Paid when your plan starts. Not refunded']]),
+    ['Setup fee', `${money(SETUP_FEE)} one time`, b.setupPaid ? `Paid ${b.setupPaid}. Not refunded` : 'Paid when your plan starts. Not refunded'],
     ...(b.founding ? [['Founding price lock', `Until ${b.founding.until}`, `Founding agent #${b.founding.no}: your prices don’t change until then`]] : []),
   ]
   return (
@@ -202,9 +229,12 @@ export default function Billing() {
         </section>
       )}
 
-      <section className="fx-tile is-fill is-blue fx-s7 bl-plan" style={{ '--i': 0 }} aria-label={pilot ? 'Your pilot' : 'Your plan'} data-fold>
-        <header className="fx-tile-h"><span className="tp-grow"><h2>{pilot ? 'Pilot · lead spend only' : `Plan · ${tierNow.label}`}</h2><p>Month to month. Cancel anytime</p></span><SampleTag /></header>
-        <dl className="bl-rows">{rows.map(([k, v, sub]) => <div key={k}><dt>{k}</dt><dd><b>{v}</b><small>{sub}</small></dd></div>)}</dl>
+      <section className="fx-tile is-fill is-blue fx-s7 bl-plan" style={{ '--i': 0 }} aria-label="Your plan" data-fold>
+        <header className="fx-tile-h"><span className="tp-grow"><h2>Plan · {tierNew.label}</h2><p>Month to month. Cancel anytime</p></span><SampleTag /></header>
+        <dl className="bl-rows">{rows.slice(0, 1).map(([k, v, sub]) => <div key={k}><dt>{k}</dt><dd><b>{v}</b><small>{sub}</small></dd></div>)}</dl>
+        <PlanSpend daily={dailyTotal(spend)} onDaily={d => setDraft({ daily: d })} dirty={dailyTotal(spend) !== daily} ok={spendOk('paid', spend) && takeOk(take)} onSave={save}
+          onReset={() => setDraft({ daily: Math.max(PAID_MIN_DAILY, daily) })} forDay={n.forDay} />
+        <dl className="bl-rows">{rows.slice(1).map(([k, v, sub]) => <div key={k}><dt>{k}</dt><dd><b>{v}</b><small>{sub}</small></dd></div>)}</dl>
       </section>
 
       <section className="fx-tile fx-s5 bl-paid" style={{ '--i': 1 }} aria-label="Paid ahead">
@@ -219,20 +249,18 @@ export default function Billing() {
       <section className="fx-tile fx-s12 bl-results" id="results" style={{ '--i': 2 }} aria-label="Results">
         <header className="fx-tile-h"><span className="tp-grow"><h2>Results</h2><p>What your lead spend bought</p></span><Seg label="Range" value={range} onChange={setRange} options={[{ key: 'week', label: 'This week' }, { key: 'month', label: 'This month' }]} /></header>
         <ResultTiles rows={b.bought[range]} />
-        {pilot && b.va.on && <p className="sp-plain">Team time on your leads and clients this week: {b.va.hours} hours at {money(b.va.rate)} an hour, at cost: <b className="tp-money">{money(va)}</b></p>}
       </section>
 
-      <section className="fx-tile fx-s12 pb-tile" style={{ '--i': 3 }} aria-label="Your daily lead spend">
-        <header className="fx-tile-h"><span className="tp-grow"><h2>Your daily lead spend</h2><p>{pilot ? 'One daily amount, charged a day ahead.' : `One daily amount plus ${feeWords}, charged a day ahead. Your plan follows it.`} Up to {money(MAX)} a day.</p></span></header>
+      {/* P914: the spend slider moved up into the plan section; this keeps How you take leads and the month's picture. */}
+      <section className="fx-tile fx-s12 pb-tile" style={{ '--i': 3 }} aria-label="How you take leads">
+        <header className="fx-tile-h"><span className="tp-grow"><h2>How you take leads</h2><p>{money(dailyTotal(spend))} a day plus {feeWords}, charged a day ahead. Set the spend in your plan above.</p></span></header>
         <div className="pb-grid">
           <div className="sp-col">
-            <SpendSliders spend={spend} onSpend={setDraft} plan={b.plan} mode={take.mode} id="bill" openSlots={open} />
             <TakeLeads take={take} onTake={setTakeDraft} id="bill-take" />
           </div>
-          <SpendSummary spend={spend} plan={b.plan} products={b.products} vaAmount={va}>
-            {!pilot && tierNew.key !== tierNow.key && <p className="pb-note">That moves you to {tierNew.label}. The new plan applies from your next bill, {b.nextBill}.</p>}
-            <p className="pb-note">{dirty ? `Days already paid keep their spend. The new spend starts with ${n.forDay}, charged tonight.` : b.pending ? b.pending.starts : 'Change it any day. It starts with the next day not yet paid.'}</p>
-            <button type="button" className="tp-primary fx-accent" disabled={!dirty || !spendOk(b.plan, spend) || !takeOk(take)} onClick={save}>Save lead spend</button>
+          <SpendSummary spend={spend} plan="paid" products={b.products}>
+            <p className="pb-note">{dirty ? `Days already paid keep their spend. The change starts with ${n.forDay}, charged tonight.` : b.pending ? b.pending.starts : 'Change it any day. It starts with the next day not yet paid.'}</p>
+            <button type="button" className="tp-primary fx-accent" disabled={!dirty || !spendOk('paid', spend) || !takeOk(take)} onClick={save}>Save</button>
           </SpendSummary>
         </div>
       </section>
@@ -243,7 +271,7 @@ export default function Billing() {
           <li><button type="button" className="fx-mrow" onClick={() => setPanel('pause')} disabled={!!b.cancel}><PauseCircle size={17} aria-hidden="true" /><span className="tp-grow"><b>{b.paused ? 'Change the pause' : 'Pause leads'}</b><small>Holidays, a full calendar, a break</small></span></button></li>
           <li><button type="button" className="fx-mrow" onClick={() => setPanel('talk')}><Phone size={17} aria-hidden="true" /><span className="tp-grow"><b>Talk to someone</b><small>About your spend, your plan, anything</small></span></button></li>
           <li><button type="button" className="fx-mrow" onClick={() => note('Payment method changes are not open yet')}><CreditCard size={17} aria-hidden="true" /><span className="tp-grow"><b>Card</b><small>{b.card?.onFile ? `${b.card.label} · OHVARA LEADS` : 'No card yet'}</small></span></button></li>
-          <li><button type="button" className="fx-mrow" onClick={() => setPanel('cancel')} disabled={!!b.cancel}><LogOut size={17} aria-hidden="true" /><span className="tp-grow"><b>Cancel your plan</b><small>Unspent credit is refunded{pilot ? '' : `; the ${money(SETUP_FEE)} setup fee isn’t`}</small></span></button></li>
+          <li><button type="button" className="fx-mrow" onClick={() => setPanel('cancel')} disabled={!!b.cancel}><LogOut size={17} aria-hidden="true" /><span className="tp-grow"><b>Cancel your plan</b><small>Unspent credit is refunded; the {money(SETUP_FEE)} setup fee isn’t</small></span></button></li>
         </ul>
       </section>
 
@@ -252,7 +280,7 @@ export default function Billing() {
         <ul className="fx-rows fx-hist">{b.history.map(h => <li key={h.id} className="fx-row is-flat"><span className="fx-row-ic"><Layers size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{h.label}</b><small>{h.at}</small></span><Money v={h.amount} /></li>)}</ul>
       </section>
 
-      <PauseDrawer open={panel === 'pause'} onClose={() => setPanel(null)} b={b} appts={appts} />
+      <PauseDrawer open={panel === 'pause'} onClose={() => setPanel(null)} appts={appts} />
       <CancelDrawer open={panel === 'cancel'} onClose={() => setPanel(null)} b={b} onPause={() => setPanel('pause')} onTalk={() => setPanel('talk')} />
       <TalkDrawer open={panel === 'talk'} onClose={() => setPanel(null)} topic="My plan or billing" />
     </div>

@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { AGENT_STATUSES, agentStatusOf, agentChip, countByStatus, agentEvents } from './template/agentView.js'
 import { seedEvents, applyMove, SAMPLE_NOW } from './template/leadLifecycle.js'
-import { TIERS, tierOf, expected, monthlyBill, spendOk, nightly, vaCost, bought, slotsNeeded, openSlotsPerWeek, weekVsUsual, dailyTotal } from './template/spendPlan.js'
+import { TIERS, tierOf, expected, monthlyBill, spendOk, nightly, bought, slotsNeeded, openSlotsPerWeek, weekVsUsual, dailyTotal } from './template/spendPlan.js'
 import { EMPTY_SUBMIT, EMPTY_SPOUSE, missingFields, buildSubmission } from './template/submitModel.js'
 import { clearUnknownCarriers } from './lib/carriers/catalog.js'
 
@@ -54,21 +54,18 @@ test('the audit row on a changed outcome is on the agent timeline', () => {
   assert.equal(agentEvents(back).at(-1).audit, true)
 })
 
-test('membership tiers follow total daily spend, and the pilot pays lead spend only', () => {
+test('membership tiers follow total daily spend; every agent pays from day one (P914: no pilot)', () => {
   // P909: three plans by daily spend band, final prices (price book version 3), plus 12% of lead spend.
   assert.deepEqual([0, 50, 75, 76, 100, 200, 201, 500].map(d => tierOf(d).key), ['starter', 'starter', 'starter', 'growth', 'growth', 'growth', 'pro', 'pro'])
   assert.deepEqual(TIERS.map(t => t.monthly), [699, 1499, 2999])
   const spend = { appts: 60, live: 40 }
   assert.equal(dailyTotal(spend), 100)
-  const pilot = monthlyBill({ plan: 'pilot', spend })
-  assert.equal(pilot.membership, 0)
-  assert.equal(pilot.total, pilot.leadSpend)
   const paid = monthlyBill({ plan: 'paid', spend })
   assert.equal(paid.tier.key, 'growth')
   assert.equal(paid.fee, Math.round(paid.leadSpend * 0.12))
   assert.equal(paid.total, paid.leadSpend + paid.fee + 1499)
   assert.equal(monthlyBill({ plan: 'paid', spend, products: 'servicing' }).total, 499)
-  assert.equal(spendOk('pilot', { appts: 5, live: 0 }), true)
+  assert.equal(spendOk('paid', { appts: 5, live: 0 }), false) // P914: the $50 floor holds for everyone
   assert.equal(spendOk('paid', { appts: 30, live: 15 }), false)
   assert.equal(spendOk('paid', { appts: 50, live: 0 }), true)
   assert.equal(spendOk('paid', { daily: 505 }), false)
@@ -83,15 +80,13 @@ test('what the spend is expected to buy is a range, and zero buys nothing', () =
   assert.equal(expected({ appts: 0, live: 0 }).soldMonth.high, 0)
 })
 
-test('the nightly charge, the pilot VA cost line, and what each type bought', () => {
-  // P909: tonight's charge is tomorrow's spend + 12% (pilot: no 12%); what Meta didn't spend comes off it.
+test('the nightly charge and what each type bought', () => {
+  // P909: tonight's charge is tomorrow's spend + 12%; what Meta didn't spend comes off it.
   const n = nightly({ nights: [{ spend: 100, delivered: 90, status: 'paid' }, { spend: 100, status: 'failed' }] }, { daily: 100 }, 'paid')
   assert.equal(n.credit, 10)
   assert.equal(n.tonight.total, 100.8)
   assert.equal(n.failed, true)
-  assert.equal(nightly({ nights: [] }, { daily: 100 }, 'pilot').tonight.total, 100)
-  assert.equal(vaCost({ on: true, hours: 6.5, rate: 8 }), 52)
-  assert.equal(vaCost({ on: false, hours: 6.5, rate: 8 }), 0)
+  assert.equal(nightly({ nights: [] }, { daily: 100 }, 'paid').tonight.total, 112)
   // P889: one line. Booked and transferred apart; old per-type rows add up.
   const r = bought({ spent: 500, leads: 16, booked: 4, offered: 4, transferred: 2, showed: 2, sold: 2, premium: 1900 })
   assert.deepEqual([r.perLead, r.perHandled, r.perSale, r.showRate, r.pickup, r.closeRate], [31.25, 500 / 6, 250, 0.5, 0.5, 0.5])

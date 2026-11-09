@@ -170,8 +170,8 @@ export default function Settings() {
             <Head title="Billing" sub="Your plan and where receipts go. Change your lead spend on the Billing page." />
             <div className="fx-billsum">
               <div><small>Lead spend a day</small><b className="tp-money">{money(dailyTotal(billing.spend))}</b></div>
-              <div><small>{billing.plan === 'pilot' ? 'Plan' : 'Membership'}</small><b>{billing.plan === 'pilot' ? 'Pilot' : tierOf(dailyTotal(billing.spend)).label}</b></div>
-              <div><small>{billing.plan === 'pilot' ? 'Next top-up' : 'Next bill'}</small><b>{billing.plan === 'pilot' ? billing.wallet.next : billing.nextBill}</b></div>
+              <div><small>Membership</small><b>{tierOf(dailyTotal(billing.spend)).label}</b></div>
+              <div><small>Next bill</small><b>{billing.nextBill}</b></div>
             </div>
             <div className="fx-form-grid">
               <Field label="Receipts go to"><input type="email" value={bDraft.email} onChange={e => setBDraft({ ...bDraft, email: e.target.value })} /></Field>

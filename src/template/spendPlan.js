@@ -1,11 +1,11 @@
-// P878 — lead spend, the pilot and membership tiers (brain/ohvara/How Ohvara Works.md "Pricing direction" and the
+// P878 — lead spend and membership tiers (brain/ohvara/How Ohvara Works.md "Pricing direction" and the
 // P875 decisions). Pure functions, no imports, so Billing, Setup, Results and the tests share one set of numbers.
 // P909: the prices are final (price book version 3, src/lib/priceBook.js): a plan by daily spend band, plus 12% of
-// lead spend, charged nightly to the card on file. The planning estimates stay drafts until pilot data replaces them.
+// lead spend, charged nightly to the card on file. The planning estimates stay drafts until real data replaces them.
 //
 // The model (P889, one lead product): the agent sets ONE daily spend and How you take leads (Appointments only, or
-// Appointments + live transfers with live-call hours). 100% of it goes to finding their leads. Pilot agents pay only
-// that spend. Paid agents pay a monthly plan by daily spend band plus 12% of the spend. Spend is charged each night
+// Appointments + live transfers with live-call hours). 100% of it goes to finding their leads. P914: no pilot,
+// every agent pays from day one: a monthly plan by daily spend band plus 12% of the spend. Spend is charged each night
 // for the next day (P909); what the ads didn't spend comes off the next night's charge. The form/call split behind it is admin only (src/lib/leadSplit.js); at
 // launch call ads are off (P901), so all spend goes to form ads and live transfers come from form leads.
 // spend = { daily } dollars a day. The old per-type shape { appts, live } still reads (dailyTotal adds them up).
@@ -13,7 +13,7 @@
 import { PRICES, SETTINGS, nightlyCharge, extraClients } from '../lib/priceBook.js'
 import { effectiveSplit, SPLIT_RULES } from '../lib/leadSplit.js'
 
-// Planning estimates (drafts, replaced by pilot data).
+// Planning estimates (drafts, replaced by real data).
 export const EST = {
   // ready: of the form leads a transfer agent gets, the share ready to talk now inside live-call hours (transferred
   // live after Check agent instead of booked). P901: with call ads off, every live transfer comes from these.
@@ -78,24 +78,23 @@ export function openSlotsPerWeek(week) {
 }
 export const roomFor = (spend, week, booked = 0, mode) => openSlotsPerWeek(week) - booked >= slotsNeeded(spend, mode)
 
-// The monthly bill, about a month (30.4 days). Pilot: lead spend only. Paid: plan + lead spend + 12% of it, plus extra
+// The monthly bill, about a month (30.4 days): plan + lead spend + 12% of it, plus extra
 // clients (lead plans: added clients over 50; servicing only: clients over 100). clients = { added, total }.
-export function monthlyBill({ plan, spend, products = 'both', clients = null }) {
+export function monthlyBill({ spend, products = 'both', clients = null }) {
   const leadSpend = Math.round(dailyTotal(spend) * 30.4)
   if (products === 'servicing') {
     const x = extraClients(clients?.total ?? 0, PRICES.servicingBase)
     return { leadSpend: 0, fee: 0, membership: SERVICING_ONLY, extra: x.extra, over: x.over, total: SERVICING_ONLY + x.extra, tier: null }
   }
-  if (plan === 'pilot') return { leadSpend, fee: 0, membership: 0, extra: 0, over: 0, total: leadSpend, tier: null }
   const tier = tierOf(dailyTotal(spend))
   const fee = Math.round(leadSpend * LEAD_FEE)
   const x = extraClients(clients?.added ?? 0, INCLUDED_ADDED)
   return { leadSpend, fee, membership: tier.monthly, extra: x.extra, over: x.over, total: tier.monthly == null ? null : leadSpend + fee + tier.monthly + x.extra, tier }
 }
 
-// Add clients (P909): what adding n more does to the bill. Pilot agents pay no plan, so nothing changes for them.
+// Add clients (P909): what adding n more does to the bill.
 export function addedQuote(b, n) {
-  if (!b || b.plan === 'pilot') return null
+  if (!b) return null
   const svc = b.products === 'servicing'
   const included = svc ? PRICES.servicingBase : INCLUDED_ADDED
   const now = svc ? b.clients?.total ?? 0 : b.clients?.added ?? 0
@@ -104,11 +103,11 @@ export function addedQuote(b, n) {
   return { servicingOnly: svc, included, now, after, change, step: PRICES.servicingStep, stepPrice: PRICES.servicingStepPrice }
 }
 
-// Tonight's charge for tomorrow at a daily spend (pilot: no 12%).
-export const nightlyFor = (plan, daily, credit = 0) => nightlyCharge({ daily, credit, rate: plan === 'pilot' ? 0 : LEAD_FEE })
+// Tonight's charge for tomorrow at a daily spend: the spend + 12%. (plan is kept in the signature; every plan is paid.)
+export const nightlyFor = (plan, daily, credit = 0) => nightlyCharge({ daily, credit, rate: LEAD_FEE })
 
-// Paid plans: lead spend can't go under the daily minimum. Nobody goes over the max (an admin can raise one agent).
-export const spendOk = (plan, spend, max = MAX_DAILY) => dailyTotal(spend) <= max && (plan === 'pilot' || dailyTotal(spend) >= PAID_MIN_DAILY)
+// Lead spend can't go under the daily minimum. Nobody goes over the max (an admin can raise one agent).
+export const spendOk = (plan, spend, max = MAX_DAILY) => dailyTotal(spend) <= max && dailyTotal(spend) >= PAID_MIN_DAILY
 
 // A spend change starts at midnight on the agent's clock; a tier change starts with the next bill.
 export const startsText = nextDay => `Starts ${nextDay} at 12:00 AM your time`
@@ -130,9 +129,6 @@ export function bought(rows) {
     showRate: r.booked ? r.showed / r.booked : null, pickup: r.offered ? r.transferred / r.offered : null, closeRate: talked ? r.sold / talked : null,
   }
 }
-
-// The optional pilot VA cost line (admin turns it on per agent): team hours on this agent × the hourly rate, at cost.
-export const vaCost = va => (va?.on ? Math.round(va.hours * va.rate * 100) / 100 : 0)
 
 // P909: lead spend is charged night by night. nights = [{ day, spend, delivered, status }] the last few days; credit =
 // what was charged and not spent (comes off tonight's charge, with its 12%).

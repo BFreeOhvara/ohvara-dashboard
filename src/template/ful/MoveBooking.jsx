@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { CalendarClock, MessageSquareText } from 'lucide-react'
 import { Drawer, useNote } from '../kit'
+import { useKeep } from '../motion'
 import { SlotPick } from '../SlotPick'
 import { useClientZone } from '../useClientZone'
 import { vaSlots, zoneAbbr, clocksBetween } from '../../lib/callSlots'
@@ -22,7 +23,8 @@ export function MoveBooking({ open, onClose, name, state, city, tz, exceptId, on
   const clocks = zone.tz ? CLIENT_DAY : []
   const slots = vaSlots({ date: isoOf(day), clocks, clientTz: zone.tz, team: book.team, calls: book.calls, load: book.load, prefer: book.me, exceptId })
   const pick = slots.find(x => x.clock === time && x.open && x.iso >= nowIso)
-  if (!open) return null
+  const keep = useKeep(open)
+  if (!keep) return null
   const first = String(name || '').split(' ')[0] || 'The client'
   const save = () => {
     const mine = pick.va.id === book.me
@@ -31,7 +33,7 @@ export function MoveBooking({ open, onClose, name, state, city, tz, exceptId, on
     onClose()
   }
   return (
-    <Drawer open center onClose={onClose} title="Move this call" sub={`${name} · the client's time`}
+    <Drawer open={open} center onClose={onClose} title="Move this call" sub={`${name} · the client's time`}
       footer={<button type="button" className="tp-primary fx-accent" disabled={!pick} onClick={save}><CalendarClock size={16} />Move it</button>}>
       <SlotPick days={bookDays} day={day} onDay={d => { setDay(d); setTime('') }} slots={slots} value={time} onPick={setTime} zone={zone} place={[city, state].filter(Boolean).join(', ')}
         viewerTz={book.viewerTz} mine={book.me} notBefore={nowIso} showVa label="New time" hint="Inside the team’s hours. Greyed-out times have no VA free." />

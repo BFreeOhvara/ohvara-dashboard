@@ -103,9 +103,9 @@ test('one paid day ahead: today and tomorrow paid, tonight charges the day after
   assert.equal(adsRunOn(declined, 'Tue, Nov 3'), false)
   assert.equal(paidAhead(declined)[1].status, 'failed')
   assert.equal(paidAhead(declined)[2].status, 'held') // no new day is charged while a decline is open
-  assert.equal(nightly(declined, { daily: 100 }, 'pilot').failed, true)
+  assert.equal(nightly(declined, { daily: 100 }, 'paid').failed, true)
   // Unspent credit only counts days already run.
-  assert.equal(nightly({ ...n, nights: [{ day: 'Sun', spend: 100, delivered: 90, status: 'paid' }, ...n.nights] }, { daily: 100 }, 'pilot').credit, 10)
+  assert.equal(nightly({ ...n, nights: [{ day: 'Sun', spend: 100, delivered: 90, status: 'paid' }, ...n.nights] }, { daily: 100 }, 'paid').credit, 10)
 })
 
 test('the P910 migration (not applied): two days ahead, never run an unpaid day, a payment settles only its day', () => {

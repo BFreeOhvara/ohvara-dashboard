@@ -10,7 +10,7 @@ import { hourText } from '../../lib/priceBook'
 import { Dropdown, DField, EngineSlot } from '../kit'
 import { ap } from '../paths'
 import { BILL_WORD, STAGE_WORD, stageTone } from '../words'
-import { PilotBlock, CampaignBlock } from './Pilot879'
+import { CampaignBlock } from './Campaign879'
 import { SplitBlock } from './Split889'
 
 // P849 — Agents: every agent, their plan and weekly lead budget, whether they take live transfers, this week's results
@@ -41,7 +41,7 @@ function AgentCosts({ id }) {
 // P906 — plan and budget, on the final pricing (P909): the plan from the daily spend band, daily spend + 12%, days paid
 // ahead, the card on file and its last charge, Pause, the setup fee, the founding lock and the next charge. An admin can
 // change the daily spend (up to the max, or raise the max for this one agent), pause lead spend, and comp the account.
-// The pilot switch is the Pilot block right under it. Sample until the billing backend is wired.
+// P914: no pilot, every agent pays from day one. Sample until the billing backend is wired.
 function PlanBudget({ a }) {
   const { data: st } = useAdmSettings()
   const { setAgentSpend, setAgentPaused, setComped, setMaxDaily } = useAdmActions()
@@ -136,7 +136,6 @@ function AgentDrawer({ id, onClose }) {
           <Switch on={a.active} label="Active for transfers" onChange={v => { setAgentActive(a.id, v); note(v ? `${a.name} takes live transfers` : `${a.name} is booking only`) }} /></div>
       </Block>
       <PlanBudget key={`pb-${a.id}-${a.spend}`} a={a} />
-      <PilotBlock key={`p-${a.id}`} agent={a} />
       <SplitBlock key={`s-${a.id}`} agent={a} />
       <CampaignBlock agent={a} />
       <Block title="This week"><Funnel w={a.week} /><AgentCosts id={a.id} /></Block>

@@ -106,9 +106,10 @@ test('header Messages icon: selected while open, a second click closes it to Ove
     const src = read(f)
     assert.match(src, /useMessagesToggle\(/, f)
     assert.match(src, /<NavLink to=\{(paths\.messages\(\)|fp\('messages'\))\} className=\{`fx-ib/, f)
-    assert.match(src, /is-msg-closing/, f)
+    assert.doesNotMatch(src, /is-msg-closing/, f) // P914: no page shrink; it goes to Overview with the normal page swap
   }
-  assert.match(read('./template/p911.css'), /\.fx \.fx-ib\.active \{/)
+  assert.match(read('./adminshell/AdminFrame.jsx'), /useMessagesToggle\(/) // P914: admin too
+  assert.match(read('./template/shell914.css'), /\.fx \.fx-ib\.active \{/)
 })
 
 test('Ohvara Support is pinned at the top and never hidden', () => {

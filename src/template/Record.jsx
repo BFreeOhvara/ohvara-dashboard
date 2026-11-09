@@ -12,7 +12,7 @@ export function RecordDrawer({ label, kicker, hero, stepper, children, actions, 
   const close = useCallback(() => {
     if (still()) { onClose(); return }
     setLeaving(true)
-    setTimeout(onClose, 180)
+    setTimeout(onClose, 220) // P914: the shared drawer play-out (shell914.css)
   }, [onClose])
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape') close() }

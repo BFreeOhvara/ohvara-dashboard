@@ -41,7 +41,8 @@ test('all three frames show it in the page head on Overview only, not the top ba
   for (const s of [agent, sampleVa, va, admin]) {
     assert.ok(s.indexOf('<LiveClock') > s.indexOf('<RollTitle') && s.indexOf('<LiveClock') < s.indexOf('<main'))
   }
-  const bar = admin.slice(admin.indexOf('<header className="tp-top'), admin.indexOf('</header>', admin.indexOf('<header className="tp-top')))
+  const top = admin.search(/<header className=\{?[`"]tp-top/) // P914: the class is a template (is-menu while the avatar menu is open)
+  const bar = admin.slice(top, admin.indexOf('</header>', top))
   assert.ok(bar.length > 100 && !bar.includes('LiveClock'))
   assert.doesNotMatch(src('./kit.jsx'), /adm-clock|ZONES/)
   assert.doesNotMatch(src('./admin.css'), /\.adm-clock/)

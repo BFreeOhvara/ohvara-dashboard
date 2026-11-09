@@ -1,0 +1,33 @@
+/* P914 — admin polish: Agent results on Revenue, read-only lead status, Overview To-dos. Tokens only (DESIGN.md v17). */
+
+/* Revenue › Agent results */
+.adm-res-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.adm-res-head .tp-grow { display: flex; flex-direction: column; gap: 2px; min-width: 220px; }
+.adm-res-head b { font-size: 14px; font-weight: 600; color: var(--ov-hi); }
+.adm-res-head small { font-size: 12px; color: var(--ov-mid); }
+.adm-res-tbl th[scope="row"] { display: flex; flex-direction: column; gap: 1px; }
+.adm-res-tbl th[scope="row"] a { color: var(--ov-hi); text-decoration: none; }
+.adm-res-tbl th[scope="row"] a:hover { text-decoration: underline; }
+.adm-res-tbl th[scope="row"] small { font-size: 11px; font-weight: 500; color: var(--ov-mute); }
+.adm-res-tbl td { font-family: var(--font-mono); }
+.adm-res-tbl td.is-kept { color: var(--ov-hi); font-weight: 700; }
+.adm-res-tbl td.is-loss { color: var(--sh-apricot); font-weight: 700; }
+.adm-res-tbl td.is-out { color: var(--ov-mute); }
+.adm-res-tbl tfoot th, .adm-res-tbl tfoot td { border-bottom: 0; border-top: 1px solid color-mix(in srgb, var(--ov-hi) 18%, transparent); font-weight: 700; color: var(--ov-hi); }
+.adm-res-tbl tfoot td.is-out { color: var(--ov-mute); font-weight: 500; }
+.adm-lstatus { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0; padding: 10px 12px; border-radius: 14px; font-size: 12.5px; color: var(--ov-mid); background: color-mix(in srgb, var(--ov-hi) 5%, transparent); }
+.adm-lstatus b { color: var(--ov-hi); }
+
+/* Overview › To-dos: one row per real admin job, its tone's dot, one action. Rows sit in the top band (the tile is
+   sized by the hero beside it, flow.css .fx-ovl-needs-in) so the next band still peeks; more wait behind Show all. */
+.adm-todos .fx-ovl-needs-in { gap: 10px; }
+.adm-todo-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.adm-todo { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 9px 10px; border-radius: 14px;
+  background: color-mix(in srgb, var(--cf, var(--bg-surface)) 46%, transparent); border: 1px solid color-mix(in srgb, var(--cs, var(--ov-hi)) 26%, transparent);
+  animation: fx-up .45s var(--fx-ease) both; animation-delay: calc(.2s + var(--i, 0) * 50ms); }
+.adm-todo-ic { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; color: var(--cbi, var(--ov-hi)); background: var(--cb, var(--bg-surface)); }
+.adm-todo .tp-grow { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.adm-todo b { font-size: 13.5px; font-weight: 600; color: var(--ov-hi); }
+.adm-todo small { font-size: 12px; color: var(--ov-mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-todo-go { flex: none; }
+.adm-todos.is-all .fx-ovl-needs-in { position: static; }

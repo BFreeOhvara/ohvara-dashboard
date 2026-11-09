@@ -56,15 +56,7 @@
   .sl-step.is-current .sl-dot { transition: box-shadow .3s ease; }
 }
 
-/* ── Header Messages icon (agent and VA shells): selected while Messages is open, like the rail's. ── */
-.fx .fx-ib.active { color: var(--sh-on-accent); background: var(--sh-acc); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3); }
-.fx .fx-ib.active .fx-badge { color: var(--sh-on-accent); background: var(--sh-acc); box-shadow: 0 0 0 2px var(--bg-surface); }
-/* The second click closes Messages: the icon presses, the page shrinks toward it as it leaves (P893's menu close). */
-.fx .fx-ib.is-closing { transform: scale(.9); transition: transform .16s var(--fx-ease, ease); }
-@media (prefers-reduced-motion: no-preference) {
-  .fx.is-msg-closing .fx-main.is-leaving, .fx.is-msg-closing .fx-head.is-leaving { transform-origin: 100% 0; animation: sl-msg-close .2s var(--fx-ease, ease) both; }
-}
-@keyframes sl-msg-close { to { opacity: 0; transform: scale(.96) translateY(-6px); } }
+/* Header Messages icon: moved to shell914.css (P914, every role). */
 
 /* ── Ohvara Support, pinned at the top of Messages ── */
 .tp-thread.is-support { position: relative; }

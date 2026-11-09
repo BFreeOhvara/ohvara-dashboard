@@ -63,12 +63,7 @@
 .pb-results { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 14px; min-width: 0; scroll-margin-top: 90px; }
 .pb-results > h2 { margin: 6px 0 0; font-size: 18px; font-weight: 600; color: var(--ov-hi); }
 
-/* Header avatar: hover says it's a button; while the menu is open it looks pressed, above the menu's click-away layer
-   so a second click closes it. */
-.fx .fx-me { cursor: pointer; transition: box-shadow .18s ease, transform .18s var(--fx-ease), filter .18s ease; }
-.fx .fx-me:hover { box-shadow: 0 0 0 3px color-mix(in srgb, var(--ov-hi) 16%, transparent); }
-.fx .fx-me[aria-expanded="true"] { transform: scale(.92); box-shadow: inset 0 2px 5px color-mix(in srgb, var(--sh-fi-stone, var(--ov-hi)) 45%, transparent), 0 0 0 3px color-mix(in srgb, var(--ov-hi) 28%, transparent); filter: brightness(.9); }
-.fx .fx-top.is-menu, .fx .fx-ptop.is-menu { z-index: 86; }
+/* Header avatar: moved to shell914.css (P914, every role). */
 
 /* P910 — Activity: the two boxes are one height, the window's (data-fold-fit sets --fold-h from 1000px wide). */
 .fx-actgrid[data-fold-fit] { grid-template-rows: minmax(0, 1fr); }

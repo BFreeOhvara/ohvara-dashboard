@@ -11,8 +11,8 @@
 //                                            charged by the next lead-spend run (every 15 minutes).
 //         setSpend(db, { appts, live })      P884 lead-spend set_spend (per type). Superseded by setLeadProduct.
 //         payNow(db) / pauseSpend(db, bool)  lead-spend pay_now / pause
-//         acceptPaid(db, termsVersion)       billing_accept_paid (pilot → paid notice)
-// Admin:  adminBilling(db, agentId), pilotSet, vaCostSet, toPaid, setupSet, adjustBalance, savePriceBook
+// Admin:  adminBilling(db, agentId), setupSet, adjustBalance, savePriceBook. P914: no pilot, so the pilot switch,
+//         the VA cost line and pilot → paid are gone (their functions refuse, migration p914_no_pilot.sql).
 // Shape:  toSampleBilling(view) maps the server view onto the sample billing shape the P878 Billing page draws.
 
 import { pricesOf, BOOK, hourText } from './priceBook.js'
@@ -58,9 +58,6 @@ export const saveSplitRules = (db, rules) => rpc(db, 'admin_lead_split_rules_sav
 })
 
 export const adminBilling = (db, agentId) => rpc(db, 'admin_billing_view', { p_agent: agentId })
-export const pilotSet = (db, agentId, { on, start = null, note = null }) => rpc(db, 'admin_billing_pilot_set', { p_agent: agentId, p_on: on, p_start: start, p_note: note })
-export const vaCostSet = (db, agentId, { on, rate = null }) => rpc(db, 'admin_billing_va_cost_set', { p_agent: agentId, p_on: on, p_rate_cents: rate == null ? null : toCents(rate) })
-export const toPaid = (db, agentId, start) => rpc(db, 'admin_billing_to_paid', { p_agent: agentId, p_start: start })
 export const setupSet = (db, agentId, { mode, fee = null, months = null }) =>
   rpc(db, 'admin_billing_setup_set', { p_agent: agentId, p_mode: mode, p_fee_cents: fee == null ? null : toCents(fee), p_min_months: months })
 export const adjustBalance = (db, agentId, dollars, reason) => rpc(db, 'admin_lead_spend_adjust', { p_agent: agentId, p_cents: toCents(dollars), p_reason: reason })
@@ -87,7 +84,7 @@ export function toSampleBilling(view) {
   const lp = view.lead_product || {}
   const st = view.state || {}
   return {
-    plan: view.plan === 'pilot' ? 'pilot' : 'paid',
+    plan: 'paid', // P914: no pilot
     products: view.products || 'both',
     spend: { daily: d(daily) || 0 },
     pending: next != null ? { daily: d(next), from: sp.next_from } : null,
@@ -105,13 +102,11 @@ export function toSampleBilling(view) {
     founding: view.founding?.active ? { no: view.founding.no, until: view.founding.until } : null,
     maxDaily: d(view.settings?.max_daily_cents) ?? null,
     clients: view.membership?.clients ? { total: view.membership.clients.total, sold: view.membership.clients.sold, added: view.membership.clients.added } : null,
-    va: view.va_cost ? { on: !!view.va_cost.on, hours: Math.round((view.va_cost.minutes / 60) * 10) / 10, rate: d(view.va_cost.rate_cents) } : { on: false, hours: 0, rate: 0 },
     status: st.status, leadSpend: st.lead_spend, runs: st,
     payment: { failed: st.lead_spend === 'stopped_payment' || st.status === 'past_due' || st.status === 'suspended' },
     paused: st.status === 'paused' ? {} : null,
     graceUntil: view.grace_until || null,
     membership: view.membership || null,
-    toPaid: view.to_paid || null,
     charges: (view.charges || []).map(c => ({ ...c, amount: d(c.cents) })),
     prices: pricesOf(view.price_book || BOOK),
   }

@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
-import { Search, PhoneIncoming, CalendarCheck, PhoneForwarded, PhoneOff, MapPin, Clock, Shuffle, Check } from 'lucide-react'
+import { Search, PhoneIncoming, CalendarCheck, PhoneForwarded, PhoneOff, MapPin, Clock, Shuffle, Check, Lock } from 'lucide-react'
 import { useAdmLeads, useAdmAgents, useAdmActions } from '../data'
 import { Avatar, Chip, Empty, Seg, useNote } from '../../template/kit'
-import { RecordDrawer, Block, Stepper } from '../../template/Record'
+import { RecordDrawer, Block } from '../../template/Record'
 import { Dropdown, DField } from '../kit'
 import { ap } from '../paths'
 import { LEAD_LANES, STAGE_WORD, KIND_WORD, FOLLOW_OWNER, MATCH_WORD, stageTone, followOwner, isUnassigned, awaitsResult } from '../words'
@@ -15,10 +15,9 @@ import { AiCallsView } from './AiCalls892'
 // tagged Our team; the agent's own callbacks are tagged Agent). A live call isn't a status: as on the agent side it
 // waits on Booked tagged "Live call · Mark result". A lead that matched no agent is not on this page: it raises the
 // admin alert (Unmatched913.jsx) with Assign. A card opens the lead at /admin/inbounds/:id, where an admin moves it to
-// another agent or changes its status. Sample only: nothing is routed or dialled for real.
+// another agent. P914: admins see the status but never change it (the agent, the AI caller and the workflows move it);
+// the history stays. Sample only: nothing is routed or dialled for real.
 const KIND_ICON = { appointment: CalendarCheck, live: PhoneForwarded, none: PhoneOff }
-// The statuses an admin can set from the drawer (a live call never had a booked time, so No show is not offered).
-const stepsFor = l => LEAD_LANES.filter(s => !(l.kind === 'live' && s.key === 'no_show')).map(s => ({ key: s.key, label: s.label }))
 
 function LeadCard({ l, i }) {
   const tone = stageTone(l.stage)
@@ -38,7 +37,7 @@ function LeadCard({ l, i }) {
 function LeadDrawer({ id, onClose }) {
   const { data: leads } = useAdmLeads()
   const { data: agents } = useAdmAgents()
-  const { assignLead, setLeadStage } = useAdmActions()
+  const { assignLead } = useAdmActions()
   const note = useNote()
   const l = leads.find(x => x.id === id)
   const [pick, setPick] = useState(null)
@@ -58,13 +57,13 @@ function LeadDrawer({ id, onClose }) {
         <p><MapPin size={13} aria-hidden="true" />{l.city}, {l.state} · {l.product}</p>
         <div className="fx-hero-bot"><b className="fx-hero-big tp-num">{l.phone}</b><Avatar name={l.name} tone={tone} /></div>
       </>}
-      stepper={none ? null : <Stepper label="Status" steps={stepsFor(l)} current={l.stage} onPick={s => { setLeadStage(l.id, s); note(`${l.name}: ${STAGE_WORD[s]}`) }} />}
       actions={none ? null : <>
         <button type="button" className="tp-primary fx-accent" onClick={move} disabled={!to || to === l.agent_id}><Shuffle size={16} />Move to this agent</button>
         <Link to={`${ap('messages')}?to=${l.agent_id}`} className="tp-btn ov-ghost">Message {l.agent.split(' ')[0]}</Link>
       </>}>
       {/* P879: Unassigned (no agent ID) gets its own block: the source ad, and only agents who can take it. */}
       {none && <UnassignedBlock lead={l} agents={agents} onAssign={a => { assignLead(l.id, a.id); note(`${l.name} assigned to ${a.name}. Logged.`) }} />}
+      {!none && <p className="adm-lstatus"><Lock size={13} aria-hidden="true" />Status: <b>{STAGE_WORD[l.stage]}</b>. The agent, the AI caller and the workflows move it; admins can see it, not change it.</p>}
       {!none && <Block title={`With ${l.agent}`} sub={awaitsResult(l) ? `${l.agent.split(' ')[0]} took the live call and hasn't marked how it went yet.` : 'Move it to another agent if needed.'}>
         <DField label="Agent"><Dropdown label="Agent" value={to} options={options} onChange={setPick} /></DField>
       </Block>}

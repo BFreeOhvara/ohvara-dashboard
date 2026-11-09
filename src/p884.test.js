@@ -7,7 +7,7 @@ import { readFileSync, globSync } from 'node:fs'
 import { BOOK_V1 as DRAFT_BOOK, BOOK, PRICES, pricesOf, tiersOf } from './lib/priceBook.js'
 import { TIERS, SERVICING_ONLY, PAID_MIN_DAILY, tierOf, monthlyBill } from './template/spendPlan.js'
 import { SETUP_FEE, CARD_FEE } from './adminshell/data.js'
-import { toSampleBilling, setSpend, loadBilling, pilotSet, adjustBalance } from './lib/leadSpend.js'
+import { toSampleBilling, setSpend, loadBilling, adjustBalance } from './lib/leadSpend.js'
 
 const SQL = readFileSync('supabase/migrations/237_billing_engine.sql', 'utf8')
 
@@ -32,7 +32,6 @@ test('every old price set now reads the one source (P909: version 3)', () => {
   assert.equal(CARD_FEE, PRICES.cardFee)
   assert.equal(tierOf(75).key, 'starter')
   assert.equal(monthlyBill({ plan: 'paid', spend: { appts: 100, live: 50 } }).membership, 1499)
-  assert.equal(monthlyBill({ plan: 'pilot', spend: { appts: 100, live: 50 } }).membership, 0)
 })
 
 test('no component carries a membership price of its own', () => {
@@ -59,8 +58,8 @@ test('a price book from the database shapes the same way', () => {
 
 test('toSampleBilling maps the server view onto the Billing page shape (dollars)', () => {
   const view = {
-    plan: 'pilot', products: 'both', balance_cents: 4000,
-    state: { status: 'pilot', lead_spend: 'running', ads: true, servicing: true },
+    plan: 'pilot', products: 'both', balance_cents: 4000, // P914: an old pilot row still reads as paid
+    state: { status: 'active', lead_spend: 'running', ads: true, servicing: true },
     spend: { appts: 6000, live: 4000, next: { appts: 8000, live: 4000 }, next_from: '2026-11-12' },
     week: { week_start: '2026-11-09', rolled_in_cents: 3500, collected_cents: 66500, types: { appts: { billed_cents: 30000 }, live: { billed_cents: 11200 } } },
     va_cost: { on: true, minutes: 390, rate_cents: 800, cents: 5200 },
@@ -68,7 +67,7 @@ test('toSampleBilling maps the server view onto the Billing page shape (dollars)
     price_book: { ...BOOK },
   }
   const b = toSampleBilling(view)
-  assert.equal(b.plan, 'pilot')
+  assert.equal(b.plan, 'paid')
   // P889: the agent gets one spend line; the old per-type view adds up.
   assert.deepEqual(b.spend, { daily: 100 })
   assert.deepEqual(b.pending, { daily: 120, from: '2026-11-12' })
@@ -78,7 +77,7 @@ test('toSampleBilling maps the server view onto the Billing page shape (dollars)
   assert.equal(b.wallet.rolled, 35)
   assert.equal(b.wallet.spent, 412)
   assert.equal(b.wallet.balance, 40)
-  assert.deepEqual(b.va, { on: true, hours: 6.5, rate: 8 })
+  assert.equal(b.va, undefined) // P914: no VA cost line
   assert.equal(b.payment.failed, false)
   assert.equal(b.charges[0].amount, 665)
   assert.equal(b.prices.tiers[1].monthly, 1499)
@@ -103,8 +102,6 @@ test('the client sends cents, calls the right RPCs and surfaces min_daily', asyn
   await assert.rejects(setSpend(db, { appts: 30 }), e => e.code === 'min_daily' && e.message === 'Pause instead?')
   await loadBilling(db)
   assert.deepEqual(calls.at(-1), ['rpc', 'my_billing', undefined])
-  await pilotSet(db, 'ag1', { on: true, note: 'first' })
-  assert.deepEqual(calls.at(-1), ['rpc', 'admin_billing_pilot_set', { p_agent: 'ag1', p_on: true, p_start: null, p_note: 'first' }])
   await adjustBalance(db, 'ag1', 12.34, 'refund a bad day')
   assert.deepEqual(calls.at(-1)[2], { p_agent: 'ag1', p_cents: 1234, p_reason: 'refund a bad day' })
 })

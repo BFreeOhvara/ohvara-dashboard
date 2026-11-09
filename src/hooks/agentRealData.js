@@ -287,7 +287,7 @@ export function useBillingReal() {
     const monthFrom = `${now.slice(0, 7)}-01`
     const daily = t => Math.round(((spend.find(r => r.inbound_type === t && !r.paused)?.weekly_cents || 0) / 7) / 100)
     const b = {
-      plan: 'pilot', products: profile?.has_servicing === false ? 'leads' : 'both',
+      plan: 'paid', products: profile?.has_servicing === false ? 'leads' : 'both',
       // P889: one daily spend (the old per-type rows add up until p889's lead_product_set is live).
       spend: { daily: daily('booked_appointment') + daily('live_call') }, pending: null, booked: 0, usual: 0,
       take: { mode: daily('live_call') > 0 ? 'both' : 'appts', hours: DEFAULT_LIVE_HOURS, tz: profile?.timezone || DEFAULT_TZ },

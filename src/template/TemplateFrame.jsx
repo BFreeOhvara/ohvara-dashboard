@@ -18,7 +18,7 @@ import { ReportBug } from './ReportBug'
 import { avatarHue } from './avatarHue'
 import ViewToggle from './ViewToggle'
 import { DataLoading, DataError } from './DataState'
-import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit } from './motion'
+import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit, useKeep } from './motion'
 import { armEntrance } from '../adminshell/entrance'
 import { paths, tabOf, titleOfLayout, layoutOf, isTemplateAddress } from './paths'
 import Palette from './Palette'
@@ -50,6 +50,7 @@ import './flow.css'
 import './palette.css'
 import './fit867.css'
 import './p893.css'
+import './shell914.css'
 import MoreBelow from './MoreBelow'
 import '@fontsource/urbanist/500.css'
 import '@fontsource/urbanist/600.css'
@@ -128,7 +129,8 @@ function BookCall({ open, onClose }) {
   const place = who?.city ? `${who.city}, ${who.state}` : who?.state || ''
   const slots = agentSlots({ date: isoOf(date), clocks: APPT_CLOCKS, clientTz: zone.tz, appts: events, hours: { tz: myTz, ...AGENT_HOURS } })
   const pick = slots.find(s => s.clock === time && s.open)
-  if (!open) return null
+  const keep = useKeep(open)
+  if (!keep) return null
   const ready = forFul ? callTimeReady(ct) && (kind !== 'cancellation' || oldCarrier.trim()) : !!pick
   const save = () => {
     if (!forFul) {
@@ -149,7 +151,7 @@ function BookCall({ open, onClose }) {
   }
   const sub = forFul ? 'Fulfillment makes this call. Times are the client’s time.' : 'It goes on your calendar. Times are the client’s time.'
   return (
-    <Drawer open center onClose={onClose} title="Book a call" sub={sub}
+    <Drawer open={open} center onClose={onClose} title="Book a call" sub={sub}
       footer={<><button type="button" className="tp-primary fx-accent" disabled={!ready} onClick={save}><CalendarCheck size={16} />{forFul && ct.mode !== 'exact' ? 'Send to fulfillment' : 'Book it'}</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
       <div className="tp-field"><span>What call</span>
         <Seg label="What call" role="radiogroup" className="fx-callkinds" value={kind} onChange={k => { setKind(k); setRef('') }} options={CALL_KINDS} />
@@ -184,11 +186,12 @@ function AddNote({ open, onClose }) {
   const note = useNote()
   const [ref, setRef] = useState('')
   const [text, setText] = useState('')
-  if (!open) return null
+  const keep = useKeep(open)
+  if (!keep) return null
   const c = clients.find(x => x.id === ref) || clients[0]
   const save = () => { clientAction(c.id, `Note: ${text.trim()}`); note(`Note added to ${c.client_first_name} ${c.client_last_name}`); setText(''); onClose() }
   return (
-    <Drawer open center onClose={onClose} title="Add a note to a client" sub="Only you and the team see it."
+    <Drawer open={open} center onClose={onClose} title="Add a note to a client" sub="Only you and the team see it."
       footer={<><button type="button" className="tp-primary fx-accent" disabled={!text.trim()} onClick={save}><StickyNote size={16} />Save note</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
       <Field label="Client"><Select label="Client" value={c?.id} onChange={setRef} options={clients.map(x => ({ value: x.id, label: `${x.client_first_name} ${x.client_last_name}` }))} /></Field>
       <Field label="Note"><textarea className="tp-input fx-ta" rows={4} placeholder="What should the team know?" value={text} onChange={e => setText(e.target.value)} /></Field>
@@ -205,7 +208,8 @@ function LogCall({ open, onClose }) {
   const [ref, setRef] = useState('')
   const [result, setResult] = useState(RESULTS[0])
   const [text, setText] = useState('')
-  if (!open) return null
+  const keep = useKeep(open)
+  if (!keep) return null
   const who = people.find(p => p.ref === ref) || people[0]
   const save = () => {
     const line = `Call logged: ${result}${text.trim() ? `. ${text.trim()}` : ''}`
@@ -216,7 +220,7 @@ function LogCall({ open, onClose }) {
     onClose()
   }
   return (
-    <Drawer open center onClose={onClose} title="Log a call" sub="A call you made outside Ohvara."
+    <Drawer open={open} center onClose={onClose} title="Log a call" sub="A call you made outside Ohvara."
       footer={<><button type="button" className="tp-primary fx-accent" onClick={save}><PhoneOutgoing size={16} />Log it</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
       <Field label="Who"><Select label="Who" value={who.ref} onChange={setRef} options={people.map(p => ({ value: p.ref, label: p.who, sub: p.kind === 'lead' ? 'Lead' : 'Client' }))} /></Field>
       <div className="tp-field"><span>How it went</span>
@@ -240,7 +244,8 @@ export function GetApp({ open, onClose }) {
     appQr(link).then(u => { if (on) setQr(u) }).catch(() => {})
     return () => { on = false }
   }, [open, link])
-  if (!open) return null
+  const keep = useKeep(open)
+  if (!keep) return null
   const live = !!(cfg?.ios || cfg?.android)
   const store = ({ key, label, sub }) => (
     <button key={key} type="button" className="fx-app-store" disabled={!cfg?.[key]} onClick={() => openExternal(cfg[key])}>
@@ -248,7 +253,7 @@ export function GetApp({ open, onClose }) {
     </button>
   )
   return (
-    <Drawer open center onClose={onClose} title="Get the phone app" sub={live ? 'Your portal on your phone, with alerts.' : STORES_SOON}>
+    <Drawer open={open} center onClose={onClose} title="Get the phone app" sub={live ? 'Your portal on your phone, with alerts.' : STORES_SOON}>
       <div className="fx-app">
         <span className="fx-app-qr">{qr ? <img src={qr} alt={`QR code for ${link}`} width={176} height={176} /> : null}</span>
         <p className="tp-sub">{live ? 'Point your phone camera at the code to get the app.' : 'Scan to open Ohvara on your phone.'}</p>
@@ -260,9 +265,10 @@ export function GetApp({ open, onClose }) {
 
 // Help and support: where to ask, and the one shortcut worth knowing.
 function Help({ open, onClose, onBug, onTalk }) {
-  if (!open) return null
+  const keep = useKeep(open)
+  if (!keep) return null
   return (
-    <Drawer open center onClose={onClose} title="Help and support" sub="Ask the team anything about a client or your account.">
+    <Drawer open={open} center onClose={onClose} title="Help and support" sub="Ask the team anything about a client or your account.">
       <TalkStatus />
       <ul className="tp-list">
         {/* P878 (N-I-01): a real person calls back, from any screen */}
@@ -286,10 +292,12 @@ function CreateMenu({ open, onClose, at, pick }) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
-  if (!open) return null
+  // P914: plays its way out like the avatar menu (fx-menu-out)
+  const [shown, leaving] = useExit(open, 200)
+  if (!shown) return null
   const row = (Icon, label, sub) => <><Icon size={17} aria-hidden="true" /><span className="tp-grow"><b>{label}</b><small>{sub}</small></span></>
   return (
-    <div className="tp fx-layer fx-menu-layer" role="presentation">
+    <div className={`tp fx-layer fx-menu-layer${leaving ? ' is-leaving' : ''}`} role="presentation">
       <button type="button" className="fx-scrim is-clear tp-bare" aria-label="Close menu" tabIndex={-1} onClick={onClose} />
       <section className="fx-menu fx-cmenu" role="menu" aria-label="Create" style={at || undefined}>
         <p className="fx-cmenu-h">Create</p>
@@ -360,9 +368,7 @@ function useHeadStats(page) {
     clients: [S(Users, clients.length - by('closed'), 'clients'), S(TriangleAlert, by('needs_attention'), 'to check', { chip: by('needs_attention') ? ['See who', 'warn'] : null }), S(ShieldCheck, by('protected'), 'protected', { chip: ['On time', 'up'] })],
     calendar: [S(CalendarDays, events.length, 'this week'), S(Clock3, events.filter(e => e.date === 2).length, 'today'), S(PhoneCall, events.filter(e => /call/i.test(e.label)).length, 'client calls')],
     activity: [S(History, activity.filter(a => a.at.startsWith('Today')).length, 'today'), S(CalendarDays, activity.length, 'this week'), S(MessageSquare, activity.filter(a => a.kind === 'text').length, 'texts sent for you')],
-    billing: billing.plan === 'pilot'
-      ? [S(Wallet, billing.nightNow.tonight.total, 'charged tonight', { fmt: money, chip: ['Pilot', 'blue'] }), S(Wallet, daily, 'lead spend a day', { fmt: money }), booked(S)]
-      : [S(Wallet, daily, 'lead spend a day', { fmt: money }), S(ShieldCheck, tierOf(daily).monthly || 0, `${tierOf(daily).label} a month`, { fmt: money }), booked(S)],
+    billing: [S(Wallet, daily, 'lead spend a day', { fmt: money }), S(ShieldCheck, tierOf(daily).monthly || 0, `${tierOf(daily).label} a month`, { fmt: money }), booked(S)],
     // P843: no weekly submit count or 'no weekly limit' (old plan language): what is in servicing now
     submit: [S(ShieldCheck, clients.length - by('closed'), 'clients in servicing'), S(FileUp, by('working'), 'working', { chip: by('working') ? ['Team on it', 'blue'] : null }), S(Users, by('protected'), 'protected', { chip: ['On time', 'up'] })],
     settings: [S(Bell, settings.notifications.filter(n => n.push).length, 'alerts switched on'), S(CalendarDays, settings.hours.days.length, 'working days'), S(Users, clients.length, 'clients in your book')],
@@ -385,7 +391,8 @@ export default function TemplateFrame() {
   const { data: settings } = useSampleSettings()
   const { data: billing } = useSampleBilling()
   const stats = useHeadStats(layout)
-  // P911: the top-right Messages icon shows selected while Messages is open; a second click closes it to Overview.
+  // P911/P914: the top-right Messages icon shows selected while Messages is open; a second click goes back to Overview
+  // with the same page swap as a nav tab.
   const msg = useMessagesToggle(layoutOf(pathname) === 'messages', paths.home())
   const status = useDataStatus()
   const source = useDataSource()
@@ -440,7 +447,7 @@ export default function TemplateFrame() {
   }, [])
 
   return (
-    <div className={`tp tp-app fx is-${layout}${msg.closing ? ' is-msg-closing' : ''}`} ref={appRef}>
+    <div className={`tp tp-app fx is-${layout}`} ref={appRef}>
       <div className="tp-sky" aria-hidden="true"><i /><i /><i /></div>
 
       <header className={`tp-phone-top fx-ptop${menuOn ? ' is-menu' : ''}`}>

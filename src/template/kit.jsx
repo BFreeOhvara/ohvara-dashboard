@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { X, Check } from 'lucide-react'
 import { useStretchPill } from '../hooks/useStretchPill'
 import { hueFor } from './avatarHue'
-import { useExit } from './motion'
+import { useExit, still } from './motion'
 
 // Small pieces every template screen shares. Drawers, modals and the note are portaled to document.body: the
 // page ease-in wrapper keeps a transform, which would pin position: fixed to the wrapper instead of the window.
@@ -37,28 +37,41 @@ export function NoteProvider({ children }) {
   )
 }
 
+// P914: a drawer or pop-up never just vanishes. X, Escape and clicking outside play its way out first (one shared
+// motion, shell914.css), then call onClose, so it slides out even when the caller unmounts it on close. A caller that
+// closes it from its own button (Cancel, Save) keeps it on screen for the play-out with useKeep(open) below.
 export function Drawer({ open, onClose, center = false, title: t, sub: s, children: c, footer: f }) {
   const [shown, leaving] = useExit(open)
+  const [shutting, setShutting] = useState(false)
+  const timer = useRef(0)
+  useEffect(() => () => clearTimeout(timer.current), [])
+  const shut = useCallback(() => {
+    if (still()) { onClose(); return }
+    if (timer.current) return
+    setShutting(true)
+    timer.current = setTimeout(() => { timer.current = 0; setShutting(false); onClose() }, 220)
+  }, [onClose])
   // While it plays out it keeps showing what it showed while open (callers often clear that state on close). Kept
   // with React's "adjust state during render" pattern: it re-renders at once with the same props, so it settles.
   const [held, setHeld] = useState({ t, s, c, f })
-  if (open && (held.t !== t || held.s !== s || held.c !== c || held.f !== f)) setHeld({ t, s, c, f })
-  const { t: title, s: sub, c: children, f: footer } = open ? { t, s, c, f } : held
+  if (open && !shutting && (held.t !== t || held.s !== s || held.c !== c || held.f !== f)) setHeld({ t, s, c, f })
+  const { t: title, s: sub, c: children, f: footer } = open && !shutting ? { t, s, c, f } : held
   useEffect(() => {
     if (!open) return undefined
-    const onKey = e => { if (e.key === 'Escape') onClose() }
+    const onKey = e => { if (e.key === 'Escape') shut() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  }, [open, shut])
   if (!shown) return null
+  const out = leaving || shutting
   return createPortal(
-    <div className={`tp tp-layer${leaving ? ' is-leaving' : ''}`} role="presentation">
-      <button type="button" className="tp-scrim tp-bare" aria-label="Close" tabIndex={leaving ? -1 : undefined} onClick={onClose} />
+    <div className={`tp tp-layer${out ? ' is-leaving' : ''}`} role="presentation">
+      <button type="button" className="tp-scrim tp-bare" aria-label="Close" tabIndex={out ? -1 : undefined} onClick={shut} />
       <section className={`tp-sheet ov-card${center ? ' is-center' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
         <header className="tp-sheet-h">
           <div className="tp-grow"><h2 className="tp-h2">{title}</h2>{sub && <p className="tp-sub">{sub}</p>}</div>
           {/* The record drawer's round X: turns a quarter on hover (flow.css .fx-x) */}
-          <button type="button" className="fx-x" aria-label="Close" onClick={onClose}><X size={18} /></button>
+          <button type="button" className="fx-x" aria-label="Close" onClick={shut}><X size={18} /></button>
         </header>
         <div className="tp-sheet-b">{children}</div>
         {footer && <footer className="tp-sheet-f">{footer}</footer>}

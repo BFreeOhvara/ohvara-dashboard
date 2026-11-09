@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { CheckCircle2, Paperclip, Send, X } from 'lucide-react'
 import { Drawer, Field, useAccount } from './kit'
+import { useKeep } from './motion'
 import { bugContext, bugText, addSampleBug } from './bugReport'
 import { sendBugReport } from '../lib/sendBugReport'
 import './reportbug.css'
@@ -12,11 +13,12 @@ import './reportbug.css'
 const MAX_FILE = 10 * 1024 * 1024
 
 export function ReportBug({ open, onClose, role }) {
-  if (!open) return null
-  return <Form onClose={onClose} role={role} />
+  const keep = useKeep(open)
+  if (!keep) return null
+  return <Form open={open} onClose={onClose} role={role} />
 }
 
-function Form({ onClose, role }) {
+function Form({ open, onClose, role }) {
   const account = useAccount()
   const [happened, setHappened] = useState('')
   const [expected, setExpected] = useState('')
@@ -41,14 +43,14 @@ function Form({ onClose, role }) {
 
   if (state === 'sent') {
     return (
-      <Drawer open center onClose={onClose} title="Report a bug" footer={<button type="button" className="tp-primary fx-accent" data-first onClick={onClose}>Done</button>}>
+      <Drawer open={open} center onClose={onClose} title="Report a bug" footer={<button type="button" className="tp-primary fx-accent" data-first onClick={onClose}>Done</button>}>
         <p className="fx-bug-thanks"><CheckCircle2 size={18} aria-hidden="true" /><b>Thanks, we've got it.</b></p>
         <p className="tp-sub">The Ohvara team sees it in Bug reports.</p>
       </Drawer>
     )
   }
   return (
-    <Drawer open center onClose={onClose} title="Report a bug" sub="Tell us what went wrong. We add the page, the time, your browser and screen size for you."
+    <Drawer open={open} center onClose={onClose} title="Report a bug" sub="Tell us what went wrong. We add the page, the time, your browser and screen size for you."
       footer={<><button type="button" className="tp-primary fx-accent" disabled={!ready} onClick={send}><Send size={15} />{state === 'sending' ? 'Sending…' : 'Send'}</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
       <Field label="What happened?"><textarea className="tp-input fx-ta" rows={3} autoFocus value={happened} onChange={e => setHappened(e.target.value)} placeholder="What you were doing, and what went wrong" /></Field>
       <Field label="What did you expect?" hint="Optional"><textarea className="tp-input fx-ta" rows={2} value={expected} onChange={e => setExpected(e.target.value)} placeholder="What should have happened" /></Field>

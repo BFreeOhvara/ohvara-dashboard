@@ -60,7 +60,9 @@ test('an unmatched lead raises the admin alert with Assign, not an Unassigned se
   assert.match(alert, /role="alert"/)
   assert.match(alert, />Assign</)
   assert.doesNotMatch(src('./screens/Leads.jsx'), /<Unassigned |UserX/)
-  assert.match(src('./screens/Overview.jsx'), /<UnmatchedAlert \/>/)
+  // P914: on Overview the unmatched lead is a To-do row with Assign (todos.js), not a separate alert.
+  assert.match(src('./screens/Overview.jsx'), /adminTodos\(\{[^)]*unassigned/)
+  assert.match(src('./todos.js'), /action: 'Assign'/)
   assert.match(src('./AdminFrame.jsx'), /<UnmatchedAlert onDone=\{onClose\} \/>/)
 })
 
@@ -127,7 +129,9 @@ test('revenue: lead spend is never Ohvara money; one page that never moves when 
   const b = src('./screens/Billing.jsx')
   assert.match(b, /Agent lead spend \(passed to Meta\)/)
   assert.match(b, /className="adm-rev-body" key=\{tab\}/)
-  assert.match(src('./p913.css'), /\.adm-rev-stage \.adm-rev-body \{ height: 420px;/)
+  // P914: no fixed height and no inner scroll: the box grows to fit each view (Grow), so the wheel scrolls the page.
+  assert.doesNotMatch(src('./p913.css'), /\.adm-rev-stage \.adm-rev-body \{ height:/)
+  assert.match(b, /<Grow>/)
   assert.doesNotMatch(b, /function MoneyTop|function Waterfall/)
 })
 

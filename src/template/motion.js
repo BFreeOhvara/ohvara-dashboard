@@ -88,3 +88,7 @@ export function useExit(open, ms = 220) {
   }, [leaving, ms])
   return [open || leaving, leaving && !open]
 }
+
+// P914: for a component that renders <Drawer open={open}> only while open (it returns null when closed): keep it
+// mounted for the Drawer's play-out (kit.jsx Drawer). `if (!useKeep(open)) return null`, then pass open={open}.
+export const useKeep = open => useExit(open)[0]

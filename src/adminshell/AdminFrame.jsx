@@ -10,7 +10,7 @@ import { Drawer, Avatar, Field, Seg, PillTabs, useAccount, useNote, initials } f
 import ViewToggle from '../template/ViewToggle'
 import { ReportBug } from '../template/ReportBug'
 import { avatarHue } from '../template/avatarHue'
-import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit } from '../template/motion'
+import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit, useKeep } from '../template/motion'
 import { armEntrance } from './entrance'
 import Palette from '../template/Palette'
 import { OhvaraMark } from '../components/ui/OhvaraMark'
@@ -32,6 +32,9 @@ import '../template/palette.css'
 import './admin.css'
 import './p906.css'
 import './p913.css'
+import '../template/shell914.css'
+import './p914.css'
+import { useMessagesToggle } from '../template/msgToggle'
 import { UnmatchedAlert } from './screens/Unmatched913'
 import '@fontsource/urbanist/500.css'
 import '@fontsource/urbanist/600.css'
@@ -67,7 +70,8 @@ export function AddSomeone({ open, onClose }) {
   const [via, setVia] = useState('email')
   const [name, setName] = useState('')
   const [to, setTo] = useState('')
-  if (!open) return null
+  const keep = useKeep(open)
+  if (!keep) return null
   const textOff = !settings.switches.invite_sms_live
   const ready = name.trim().length > 1 && (via === 'link' || to.trim().length > 4)
   const send = () => {
@@ -76,7 +80,7 @@ export function AddSomeone({ open, onClose }) {
     setName(''); setTo(''); onClose()
   }
   return (
-    <Drawer open center onClose={onClose} title="Add a VA" sub="They get a link to set a password and land on the Fulfillment side."
+    <Drawer open={open} center onClose={onClose} title="Add a VA" sub="They get a link to set a password and land on the Fulfillment side."
       footer={<><button type="button" className="tp-primary fx-accent" disabled={!ready} onClick={send}>{via === 'link' ? <Copy size={16} /> : <UserPlus size={16} />}{via === 'link' ? 'Copy the link' : 'Send invite'}</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
       <Field label="Full name"><input value={name} onChange={e => setName(e.target.value)} placeholder="First and last name" /></Field>
       <div className="tp-field"><span>Send it by</span>
@@ -92,9 +96,10 @@ export function AddSomeone({ open, onClose }) {
 // Route a lead (P913): the leads that matched no agent (no agent ID and no Meta campaign ID), with Assign.
 function RouteLead({ open, onClose }) {
   const { data: day } = useAdmDay()
-  if (!open) return null
+  const keep = useKeep(open)
+  if (!keep) return null
   return (
-    <Drawer open center onClose={onClose} title="Route a lead" sub={day.unassigned.length ? 'Pick an agent for each.' : 'Every lead matched an agent by its ad link or its campaign.'}>
+    <Drawer open={open} center onClose={onClose} title="Route a lead" sub={day.unassigned.length ? 'Pick an agent for each.' : 'Every lead matched an agent by its ad link or its campaign.'}>
       <UnmatchedAlert onDone={onClose} />
     </Drawer>
   )
@@ -104,9 +109,10 @@ function RouteLead({ open, onClose }) {
 function GiveCall({ open, onClose }) {
   const { data: day } = useAdmDay()
   const navigate = useNavigate()
-  if (!open) return null
+  const keep = useKeep(open)
+  if (!keep) return null
   return (
-    <Drawer open center onClose={onClose} title="Give a call" sub={day.late.length ? 'Calls past their time. Pick one to give it to someone free.' : 'No call is past its time.'}>
+    <Drawer open={open} center onClose={onClose} title="Give a call" sub={day.late.length ? 'Calls past their time. Pick one to give it to someone free.' : 'No call is past its time.'}>
       <ul className="tp-list">
         {day.late.map(c => (
           <li key={c.id}><button type="button" className="fx-mrow" onClick={() => { onClose(); navigate(`${ap('team')}?call=${c.id}`) }}>
@@ -119,9 +125,10 @@ function GiveCall({ open, onClose }) {
 }
 
 function Help({ open, onClose, onBug }) {
-  if (!open) return null
+  const keep = useKeep(open)
+  if (!keep) return null
   return (
-    <Drawer open center onClose={onClose} title="Help and support" sub="Where things live on the admin side.">
+    <Drawer open={open} center onClose={onClose} title="Help and support" sub="Where things live on the admin side.">
       <ul className="tp-list">
         {/* P876: Report a bug, the same pop-up in all three portals (ReportBug) */}
         <li><button type="button" className="fx-mrow" onClick={() => { onClose(); onBug() }}><Bug size={17} aria-hidden="true" /><span className="tp-grow"><b>Report a bug</b><small>Something broken in the admin side</small></span><ChevronRight size={15} aria-hidden="true" /></button></li>
@@ -217,6 +224,12 @@ export default function AdminFrame({ preview = false }) {
   const ghlRow = useGhlRow()
   const close = useCallback(() => setPanel(null), [])
   const open = which => e => { wig.onClick(e); setPanel(which) }
+  // P914: the avatar toggles its menu (a second click closes it, with the menu's close animation), as on the agent side
+  const toggleMenu = e => { wig.onClick(e); setPanel(p => (p === 'menu' ? null : 'menu')) }
+  const menuOn = panel === 'menu'
+  // P914: the top-right Messages icon shows selected while Messages is open; a second click goes back to Overview
+  // with the same page swap as a nav tab.
+  const msg = useMessagesToggle(active === 'messages', ap('overview'))
   const flipTheme = e => { wig.onClick(e); setTheme(theme === 'dark' ? 'light' : 'dark') }
   const tabs = ADM_TABS
   const tabCount = { leads: day.unassigned.length, billing: day.failed.length }
@@ -254,7 +267,7 @@ export default function AdminFrame({ preview = false }) {
 
   const tops = (
     <>
-      <Link to={ap('messages')} className="fx-ib tp-wig" aria-label="Messages" {...wig}><MessageSquare size={18} />{day.unread > 0 && <span className="fx-badge">{day.unread}</span>}</Link>
+      <NavLink to={ap('messages')} className={`fx-ib tp-wig${msg.closing ? ' is-closing' : ''}`} aria-label={active === 'messages' ? 'Close Messages' : 'Messages'} {...wig} onClick={e => { wig.onClick?.(e); msg.onClick(e) }}><MessageSquare size={18} />{day.unread > 0 && <span className="fx-badge">{day.unread}</span>}</NavLink>
       <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} /><span className="fx-badge">{Math.min(9, day.needs)}</span></button>
     </>
   )
@@ -264,21 +277,21 @@ export default function AdminFrame({ preview = false }) {
     <div className={`tp tp-app fx adm is-${layout}`} ref={appRef}>
       <div className="tp-sky" aria-hidden="true"><i /><i /><i /></div>
 
-      <header className="tp-phone-top fx-ptop">
+      <header className={`tp-phone-top fx-ptop${menuOn ? ' is-menu' : ''}`}>
         <Link to={ap('overview')} className="fx-brand" aria-label="Ohvara home"><OhvaraMark height={28} back="var(--ov-mark-back)" front="var(--ov-mark-front)" className="fx-mark" /></Link>
         <span className="tp-grow" />
         {tops}
-        <button type="button" className={`fx-me tp-wig av-${avatarHue(me)}`} aria-label="Menu" {...wig} onClick={open('menu')}>{initials(me).toUpperCase()}</button>
+        <button type="button" className={`fx-me tp-wig av-${avatarHue(me)}`} aria-label="Menu" aria-haspopup="dialog" aria-expanded={menuOn} {...wig} onClick={toggleMenu}>{initials(me).toUpperCase()}</button>
       </header>
 
       <Link to={ap('overview')} className="fx-brand fx-brand-page" aria-label="Ohvara home"><OhvaraMark height={30} back="var(--ov-mark-back)" front="var(--ov-mark-front)" className="fx-mark" /><b>ohvara</b></Link>
-      <header className="tp-top fx-top">
+      <header className={`tp-top fx-top${menuOn ? ' is-menu' : ''}`}>
         <span className="fx-top-gap" aria-hidden="true" />
         <PillTabs as="nav" label="Pages" className="tp-tabs fx-tabs adm-tabs" itemClass="tp-tab fx-tab" value={tabs.some(([k]) => k === active) ? active : null} persistKey="adm-tabs"
           items={tabs.map(([k, label]) => ({ key: k, to: ap(k), label, extra: tabCount[k] > 0 ? <span className="fx-tb is-circle" aria-label={`${tabCount[k]} waiting`}>{tabCount[k]}</span> : null }))} />
         <div className="fx-tr">
           {tops}
-          <button type="button" className={`tp-me fx-me tp-wig av-${avatarHue(me)}`} aria-label={`Your account, ${me}`} aria-expanded={panel === 'menu'} {...wig} onClick={open('menu')}>{initials(me).toUpperCase()}</button>
+          <button type="button" className={`tp-me fx-me tp-wig av-${avatarHue(me)}`} aria-label={`Your account, ${me}`} aria-haspopup="dialog" aria-expanded={menuOn} {...wig} onClick={toggleMenu}>{initials(me).toUpperCase()}</button>
         </div>
       </header>
 
@@ -327,7 +340,7 @@ export default function AdminFrame({ preview = false }) {
         {['overview', 'leads'].map(k => { const I = ICONS[k]; return <Link key={k} to={ap(k)} className={`fx-btab${active === k ? ' is-on' : ''}`}><I size={20} aria-hidden="true" />{ADM_LABELS[k]}</Link> })}
         <button type="button" className="fx-btab is-plus" aria-label="Add a VA" onClick={() => setPanel('add')}><span className="fx-bplus"><Plus size={22} aria-hidden="true" /></span>Add</button>
         <Link to={ap('team')} className={`fx-btab${active === 'team' ? ' is-on' : ''}`}><Headset size={20} aria-hidden="true" />Team</Link>
-        <button type="button" className="fx-btab" aria-label="More" onClick={open('menu')}><Ellipsis size={20} aria-hidden="true" />More</button>
+        <button type="button" className="fx-btab" aria-label="More" aria-expanded={menuOn} onClick={toggleMenu}><Ellipsis size={20} aria-hidden="true" />More</button>
       </nav>
 
       {panel === 'search' && <Palette onClose={close} pages={pages} rows={rows} placeholder="Search clients, agents, VAs, leads, pages" />}

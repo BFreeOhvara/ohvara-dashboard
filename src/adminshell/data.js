@@ -631,6 +631,46 @@ export function moneyFor(s, period) {
     ads, vaPay, runs, fees, ai, aiMins, costTotal, profit, split, splitChanged: s.settings.split.changed,
   }
 }
+// P914 — Agent results (was Pilot results; there is no pilot, every agent pays from day one). Per agent for the period:
+// what they paid Ohvara (their plan fee + 12% of their lead spend + a setup fee if they joined then), their lead spend
+// passed to Meta (in no total), the VA and AI cost of working their leads and clients, card fees, and what Ohvara kept.
+// Every column is the period's total (moneyFor) shared out, so the rows add up to the Revenue page: plan fees by plan
+// price, the 12% and lead spend by each agent's leads, VA pay and AI minutes by each agent's leads + clients worked.
+export function agentResults(s, period) {
+  const p = moneyFor(s, period)
+  const cur = period === 'last' ? 'last' : 'now'
+  const planOf = a => (a.comped || a.billing.status === 'past_due' ? 0 : PLANS[a.plan].price)
+  const planAll = s.agents.reduce((t, a) => t + planOf(a), 0) || 1
+  const spendOf = a => s.leads.filter(l => l.agent_id === a.id).reduce((t, l) => t + (LEAD_PRICE[l.kind] ?? LEAD_PRICE.appointment), 0)
+  const spendAll = s.agents.reduce((t, a) => t + spendOf(a), 0) || 1
+  const workOf = a => s.leads.filter(l => l.agent_id === a.id).length + s.clients.filter(c => c.agent_id === a.id).length
+  const workAll = s.agents.reduce((t, a) => t + workOf(a), 0) || 1
+  const setupOf = a => s.setupFees.filter(f => f.agent === a.name && (f.period === 'last') === (cur === 'last')).length * SETUP_FEE
+  const rows = s.agents.map(a => {
+    const sp = spendOf(a) / spendAll
+    const wk = workOf(a) / workAll
+    const paid = Math.round(p.servicing * (planOf(a) / planAll) + p.leadFee * sp) + setupOf(a)
+    const leadSpend = Math.round(p.leadSpend * sp)
+    const va = Math.round(p.vaPay * wk)
+    const ai = Math.round(p.ai * wk)
+    const fees = Math.round((paid + leadSpend) * CARD_FEE)
+    const kept = paid - va - ai - fees
+    return { id: a.id, name: a.name, plan: PLANS[a.plan].label, comped: !!a.comped, paid, leadSpend, va, ai, fees, kept, vaPct: paid > 0 ? Math.round((va / paid) * 100) : null }
+  })
+  // Agents still in Setup who paid their setup fee this period aren't on the agent list yet: one row each, so the
+  // Paid column adds up to the Revenue page.
+  const named = new Set(s.agents.map(a => a.name))
+  for (const f of s.setupFees.filter(x => !named.has(x.agent) && (x.period === 'last') === (cur === 'last'))) {
+    const fees = Math.round(SETUP_FEE * CARD_FEE)
+    rows.push({ id: f.id, name: f.agent, plan: 'In setup', comped: false, paid: SETUP_FEE, leadSpend: 0, va: 0, ai: 0, fees, kept: SETUP_FEE - fees, vaPct: 0 })
+  }
+  rows.sort((x, y) => y.paid - x.paid)
+  const sum = k => rows.reduce((t, r) => t + r[k], 0)
+  const total = { paid: sum('paid'), leadSpend: sum('leadSpend'), va: sum('va'), ai: sum('ai'), fees: sum('fees'), kept: sum('kept') }
+  total.vaPct = total.paid > 0 ? Math.round((total.va / total.paid) * 100) : null
+  return { rows, total }
+}
+export function useAdmAgentResults(period = 'week') { const s = useS(); return okS(s, agentResults(s, period)) }
 export function useAdmPeriod(period = 'week') { const s = useS(); return okS(s, moneyFor(s, period)) }
 export function useAdmDraws() {
   const s = useS()
@@ -685,7 +725,6 @@ const SAMPLE_ACTIONS = {
       const kind = l.stage === 'unassigned' ? 'appointment' : l.kind
       return { leads: patchById(s.leads, id, { agent_id: agentId, stage, kind, matchedBy: l.agent_id ? l.matchedBy : 'admin', log: [...l.log, `Assigned to ${nameOf(s, agentId)} at ${stamp()}`] }), ...audit(s, l.agent_id ? 'Moved a lead' : 'Assigned a lead', `${l.name} to ${nameOf(s, agentId)}`) }
     }),
-    setLeadStage: (id, stage) => set(s => { const l = s.leads.find(x => x.id === id); return { leads: patchById(s.leads, id, { stage, owner: stage === 'follow_up' ? l.owner || 'agent' : null, premium: stage === 'sold' ? l.premium || 60 : 0 }), ...audit(s, 'Changed a lead status', `${l.name}: ${stage.replace('_', ' ')}`) } }),
     // Agents
     setAgentActive: (id, on) => set(s => ({ agents: patchById(s.agents, id, { active: on, onDuty: on && s.agents.find(a => a.id === id).onDuty }), ...audit(s, on ? 'Turned live transfers on' : 'Turned live transfers off', nameOf(s, id)) })),
     // P906: daily lead spend (the plan follows its band from the next monthly bill), and pausing lead spend.

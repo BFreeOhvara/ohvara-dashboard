@@ -9,7 +9,7 @@ import { phoneComplete, formatPhone } from '../phoneMask'
 import '../p878.css'
 
 // P878 — sign-up (N-H-02, N-H-31): are you a licensed agent first (no: a plain stop, no account); then name, email,
-// mobile and password; then a code to the email and one to the mobile. During the pilot the only cost is lead spend.
+// mobile and password; then a code to the email and one to the mobile. P914: no pilot; every agent pays from day one.
 // Sample only: no account is made and no code is sent (any 6 digits pass).
 const okCode = c => /^\d{6}$/.test(c)
 
@@ -57,7 +57,7 @@ export default function Signup() {
               <Field label="Email"><input className={bad('email') ? 'tp-danger' : ''} type="email" value={f.email} onChange={set('email')} autoComplete="email" placeholder="you@example.com" /></Field>
               <Field label="Mobile number" hint="Live calls and alerts come to this phone."><PhoneInput invalid={bad('phone')} value={f.phone} onChange={d => setF({ ...f, phone: d })} autoComplete="tel-national" /></Field>
               <Field label="Password" hint="At least 8 characters."><input className={bad('password') ? 'tp-danger' : ''} type="password" value={f.password} onChange={set('password')} autoComplete="new-password" /></Field>
-              <div className="tp-plan"><span className="tp-grow"><b>During the pilot you pay only your lead spend</b><p className="tp-sub">You set it per day and change it any time. It{'’'}s charged to your card each night for the next day; anything not spent comes off the next charge.</p></span><SampleTag>Pilot</SampleTag></div>
+              <div className="tp-plan"><span className="tp-grow"><b>A plan that follows your daily lead spend</b><p className="tp-sub">You set the spend per day ($50 to $500) and change it any time. Each night your card is charged the next day{'’'}s spend plus 12%; anything not spent comes off the next charge. Your plan is billed monthly.</p></span><SampleTag /></div>
               <ul className="tp-list">{data.covers.map(c => <li key={c} className="tp-row tp-sub" style={{ minHeight: 26 }}><Check size={14} />{c}</li>)}</ul>
               <label className="tp-check"><input type="checkbox" checked={agree} onChange={e => setAgree(e.target.checked)} /><span>Agreement checkbox, wording pending</span></label>
               <Pending>Terms, privacy and text-message consent wording pending</Pending>

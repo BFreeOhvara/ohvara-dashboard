@@ -257,7 +257,7 @@ const seed = {
   // P878: Talk to someone requests (N-I-01), feedback on the team (N-F-43), blocked days (N-C-38), setup progress (N-H-05).
   talks: [], feedback: [], blocks: [], setup: null,
   settings: {
-    profile: { name: 'Dana Whitfield', email: 'dana.whitfield@example.com', phone: '(214) 555-0100', plan: 'Pilot · lead spend only' },
+    profile: { name: 'Dana Whitfield', email: 'dana.whitfield@example.com', phone: '(214) 555-0100', plan: 'Growth plan' },
     hours: { start: '9:00 AM', end: '6:00 PM', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] },
     // P878: hours per weekday on the agent's confirmed zone; the calendar link (busy times both ways); the licence.
     week: DEFAULT_WEEK, zoneConfirmed: true,
@@ -288,12 +288,12 @@ const seed = {
     ],
   },
   // cancellations: the old cancellation plan, shown only for an agent already on one (this sample agent is not).
-  // P878: the pilot (lead spend only) or a paid plan (a plan by daily spend + lead spend + 12%). P909: prices are final
+  // P878/P914: one way to pay, from day one: a plan by daily spend + lead spend + 12% (no pilot). P909: prices are final
   // (price book v3) and lead spend is charged each night for the next day; nights = the last charges (spend charged,
   // what the ads spent; today's isn't in yet). ?billing=failed: last night's card was declined. P889: one daily spend + how they take leads (take); bought = what the spend
   // bought this week and this month, booked and transferred apart. ?take=appts previews Appointments only.
   billing: {
-    plan: param('plan') === 'paid' ? 'paid' : 'pilot', products: 'both',
+    plan: 'paid', products: 'both',
     spend: { daily: 100 }, pending: null,
     take: { mode: param('take') === 'appts' ? 'appts' : 'both', hours: DEFAULT_LIVE_HOURS, tz: 'America/Chicago' },
     booked: sampleAgent().none ? 0 : 4, usual: 5,
@@ -309,9 +309,8 @@ const seed = {
       ],
     },
     card: { label: 'Visa ending 4242', onFile: param('card') !== 'none' },
-    founding: param('plan') === 'paid' ? { no: 7, until: 'Nov 8, 2027' } : null,
+    founding: { no: 7, until: 'Nov 8, 2027' },
     clients: { total: 38, sold: 26, added: 12 },
-    va: { on: true, hours: 6.5, rate: 8 },
     bought: {
       week: { spent: 500, leads: 16, reached: 13, booked: 4, offered: 3, transferred: 2, showed: 2, sold: 2, premium: 1927.8 },
       month: { spent: 2200, leads: 67, reached: 53, booked: 18, offered: 12, transferred: 9, showed: 11, sold: 7, premium: 7395 },

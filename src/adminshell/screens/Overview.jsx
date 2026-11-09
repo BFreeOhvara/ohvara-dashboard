@@ -1,22 +1,24 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, Check, Hand, CreditCard, PhoneCall, Radio, Megaphone, ChevronDown, ChevronUp } from 'lucide-react'
-import { useAdmDay, useAdmMoney, useAdmAgents, useAdmDesk, useAdmCosts } from '../data'
+import { ArrowUpRight, Check, Hand, CreditCard, PhoneCall, Radio, Megaphone, ChevronDown, ChevronUp, Shuffle, Rocket, CalendarOff } from 'lucide-react'
+import { useAdmDay, useAdmMoney, useAdmAgents, useAdmDesk, useAdmCosts, useAdmSetup, useAdmRota, useAdmVas, SHIFT_MIN, dateText } from '../data'
 import { Avatar } from '../../template/kit'
 import { CountUp, usd } from '../../template/motion'
 import { Tile, EngineSlot } from '../kit'
 import { useGhlRow } from '../useGhlRow'
 import { ap } from '../paths'
 import { adAlerts } from '../p879'
-import { UnmatchedAlert } from './Unmatched913'
+import { adminTodos, shortCover } from '../todos'
 
 // P849 — the admin Overview: the whole business at a glance on the Solvik shape (head stats, one dominant tile, a
 // right column, colour carried by a few filled tiles). Dominant tile = leads this week as a funnel (in, booked,
 // transferred, sold) with a bar per day; under it, who is on shift today (butter) and revenue this week (sage); the
-// right column = what needs an admin, as stage-coloured cards; along the bottom, the agents. Sample info only.
-// P906: "transferred" reads Live calls; no missed transfers (a missed one bounces back and is booked); Needs you shows
-// what fits with "Show all" instead of a box cut off mid-card, and the page itself scrolls.
-const NEEDS_SHOWN = 4
+// right column = the admin's To-dos (P914); along the bottom, the agents. Sample info only.
+// P906: "transferred" reads Live calls; no missed transfers (a missed one bounces back and is booked).
+// P914: "Needs you" is To-dos: a clean list of real admin jobs (todos.js), each with one action; what fits shows, the
+// rest wait behind "Show all" (never cut off). Empty: All caught up.
+const TODOS_SHOWN = 5
+const TODO_ICON = { lead: Shuffle, card: CreditCard, launch: Rocket, cover: CalendarOff, late: Hand, ad: Megaphone }
 const money = usd()
 const cents = usd(true)
 
@@ -33,14 +35,14 @@ function CostLine({ costs, row }) {
   )
 }
 
-function Need({ to, tone, icon: Icon, kicker, title, sub, i }) {
+function Todo({ t, i }) {
+  const Icon = TODO_ICON[t.kind] || Check
   return (
-    <article className={`fx-card fx-ncard is-${tone}`} style={{ '--i': i }}>
-      <Link to={to} className="fx-cover" aria-label={`${kicker}: ${title}`} />
-      <span className="fx-ncard-k"><Icon size={13} aria-hidden="true" />{kicker}</span>
-      <h3>{title}</h3>
-      <p>{sub}</p>
-    </article>
+    <li className={`adm-todo is-${t.tone}`} style={{ '--i': i }}>
+      <span className="adm-todo-ic"><Icon size={15} aria-hidden="true" /></span>
+      <span className="tp-grow"><b>{t.title}</b><small>{t.sub}</small></span>
+      <Link to={t.to} className="fx-pillbtn adm-todo-go">{t.action}</Link>
+    </li>
   )
 }
 
@@ -78,20 +80,22 @@ export default function Overview() {
   const { data: desk } = useAdmDesk()
   const { data: costs } = useAdmCosts()
   const row = useGhlRow()
-  const [allNeeds, setAllNeeds] = useState(false)
-  // P913: the unmatched-lead alert takes the top of Needs you; the other cards wait behind "Show all" (never cut off)
-  const shown = day.unassigned.length ? 0 : NEEDS_SHOWN
+  const { data: pipeline } = useAdmSetup()
+  const { data: rota } = useAdmRota()
+  const { data: vas } = useAdmVas()
+  const [allTodos, setAllTodos] = useState(false)
   const w = day.week
   const steps = [['in', 'Came in', w.in], ['booked', 'Booked', w.booked], ['transferred', 'Live calls', w.transferred], ['sold', 'Sold', w.sold]]
   const top = Math.max(4, ...day.byDay.map(d => d.in))
   const revTop = Math.max(1, ...m.days.map(x => x.revenue))
   const k = n => (n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : money(n))
-  const needs = [
-    ...day.late.map(c => ({ id: c.id, to: `${ap('team')}?call=${c.id}`, tone: 'warn', icon: Hand, kicker: 'Call past its time', title: c.client, sub: `${c.time} · give it to someone free` })),
-    ...day.failed.map(a => ({ id: a.id, to: `${ap('billing')}?tab=agents`, tone: 'blue', icon: CreditCard, kicker: 'Payment failed', title: a.name, sub: `${a.billing.failed.what} · ${money(a.billing.failed.amount)}` })),
-    // P879 (N-A-04): an ad rejected, or in review over 24 h, from the engine (sample until 858 + GoHighLevel).
-    ...(day.real ? [] : adAlerts()).map(x => ({ id: `ad-${x.agent}`, to: ap('agents', x.agent), tone: 'warn', icon: Megaphone, kicker: x.kind === 'rejected' ? 'Ad rejected' : 'Ad in review', title: agents.find(a => a.id === x.agent)?.name || 'An agent', sub: x.text })),
-  ]
+  const ahead = Object.keys(rota.rota || {}).map(Number).filter(d => Number.isFinite(d) && d >= day.today).sort((a, b) => a - b).slice(0, 10)
+  const cover = shortCover({ rota: rota.rota, dayOff: rota.dayOff, days: ahead, min: SHIFT_MIN, nameOf: id => (vas.find(v => v.id === id)?.name || 'A VA').split(' ')[0] })
+  // P879 (N-A-04): an ad rejected, or in review over 24 h, from the engine (sample until 858 + GoHighLevel).
+  const todos = adminTodos({
+    unassigned: day.unassigned, pipeline, failed: day.failed, cover, late: day.late, ads: day.real ? [] : adAlerts(),
+    ap, money, dayText: dateText, agentName: id => agents.find(a => a.id === id)?.name || 'An agent',
+  })
   const onShift = day.onShift.map(v => ({ ...v, calls: desk.filter(c => c.va_id === v.id) }))
   const todayCalls = desk.length
   const done = desk.filter(c => ['cancelled', 'no_answer'].includes(c.status)).length
@@ -116,18 +120,17 @@ export default function Overview() {
         </Tile>
 
         <div className="fx-ovl-side">
-          <section className={`fx-tile is-deep fx-ovl-needs${allNeeds ? ' is-all' : ''}`} style={{ '--i': 4 }} aria-label="Needs you">
+          <section className={`fx-tile is-deep fx-ovl-needs adm-todos${allTodos ? ' is-all' : ''}`} style={{ '--i': 4 }} aria-label="To-dos">
             <div className="fx-ovl-needs-in">
               <header className="fx-tile-h">
-                <span className="tp-grow"><h2>Needs you</h2><p>{needs.length + day.unassigned.length ? `${needs.length + day.unassigned.length} things, oldest money first` : 'Nothing waiting'}</p></span>
+                <span className="tp-grow"><h2>To-dos</h2><p>{todos.length ? `${todos.length} to do` : 'Nothing waiting'}</p></span>
               </header>
-              <UnmatchedAlert />
-              {(needs.length > 0 && (shown > 0 || allNeeds))
-                ? <div className="fx-ncards adm-needs">{(allNeeds ? needs : needs.slice(0, shown)).map((n, i) => <Need key={`${n.kicker}-${n.id}`} {...n} i={i} />)}</div>
-                : !needs.length && !day.unassigned.length && <p className="fx-calm"><Check size={16} aria-hidden="true" />Nothing needs an admin right now.</p>}
-              {needs.length > shown && (
-                <button type="button" className="fx-pillbtn fx-self adm-needs-more" aria-expanded={allNeeds} onClick={() => setAllNeeds(v => !v)}>
-                  {allNeeds ? <>Show fewer<ChevronUp size={14} /></> : <>Show all {needs.length}<ChevronDown size={14} /></>}
+              {todos.length
+                ? <ul className="adm-todo-list">{(allTodos ? todos : todos.slice(0, TODOS_SHOWN)).map((t, i) => <Todo key={t.id} t={t} i={i} />)}</ul>
+                : <p className="fx-calm"><Check size={16} aria-hidden="true" />All caught up.</p>}
+              {todos.length > TODOS_SHOWN && (
+                <button type="button" className="fx-pillbtn fx-self adm-needs-more" aria-expanded={allTodos} onClick={() => setAllTodos(v => !v)}>
+                  {allTodos ? <>Show fewer<ChevronUp size={14} /></> : <>Show all {todos.length}<ChevronDown size={14} /></>}
                 </button>
               )}
             </div>
