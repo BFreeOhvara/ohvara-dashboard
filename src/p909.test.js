@@ -107,7 +107,7 @@ test('admin revenue and the pilot results keep the plan fee and the 12% apart', 
   for (const [period] of PERIODS) {
     const p = moneyFor(s, period)
     assert.equal(p.leadFee, Math.round(p.budgets * 0.12), period)
-    assert.equal(p.inTotal, p.budgets + p.leadFee + p.servicing + p.setup, period)
+    assert.equal(p.inTotal, p.leadFee + p.servicing + p.setup, period) // P913: lead spend passes to Meta, in no total
   }
   const t = pilotTotals(PILOT_ROWS, { membership: 1800 })
   assert.equal(t.planFee, 1800)

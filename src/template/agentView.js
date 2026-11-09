@@ -13,12 +13,13 @@ import { followUpSlot, instantOf, zoneOf, minuteOf, dateOf } from '../lib/callSl
 // Not interested. Unmarked after its day, it's also a to-do (leadLifecycle.js needsYouNow).
 export const AGENT_STATUSES = [
   { key: 'booked', label: 'Booked', tone: 'blue', empty: 'No appointments booked yet.', explain: 'On your calendar, plus live calls waiting for a result. Once the time has passed, mark the result.' },
-  { key: 'no_show', label: 'No show', tone: 'warn', empty: 'No missed appointments.', explain: 'They didn’t pick up at the booked time. We text them a one-tap link to rebook and our team calls to book them again; when they rebook, they go back to Booked.' },
+  { key: 'no_show', label: 'No show', tone: 'mute', empty: 'No missed appointments.', explain: 'They didn’t pick up at the booked time. We text them a one-tap link to rebook and our team calls to book them again; when they rebook, they go back to Booked.' },
   { key: 'follow', label: 'Follow up', tone: 'teal', empty: 'No follow-ups set.', explain: 'Not sold yet. Your follow-up call is on your calendar; they get a reminder text the day before and that morning.' },
-  { key: 'not_interested', label: 'Not interested', tone: 'mute', empty: 'No one said no.', explain: 'They said no. Calls and texts stop. If they change their mind, move them to Follow up.' },
+  { key: 'not_interested', label: 'Not interested', tone: 'warn', empty: 'No one said no.', explain: 'They said no. Calls and texts stop. If they change their mind, move them to Follow up.' },
   { key: 'sold', label: 'Sold', tone: 'green', empty: 'Sales you mark show here.', explain: 'Sold. Each one is on Clients as Setting up.' },
 ]
-export const CLOSED_STATUS = { key: 'closed', label: 'Closed', tone: 'mute', empty: 'Nothing closed out.', explain: 'Our team couldn’t reach them after the day 30, 60 and 90 check-ins, they opted out, or the number was wrong. No more calls or texts.' }
+// P913: No show is grey, Not interested took its apricot, Closed is coral and a live call lilac: no two share a colour.
+export const CLOSED_STATUS = { key: 'closed', label: 'Closed', tone: 'rose', empty: 'Nothing closed out.', explain: 'Our team couldn’t reach them after the day 30, 60 and 90 check-ins, they opted out, or the number was wrong. No more calls or texts.' }
 // P910: pinned above the board, never a column: a transfer ringing now, or one the agent took and hasn't marked.
 export const LIVE_STATUS = { key: 'live', label: 'Live call', tone: 'violet', empty: 'No live call right now.', explain: 'A live transfer: tap it during or after the call to pick how it went.' }
 // Not on the board: the leads our team is still calling (new, being called, a missed transfer, a rebook after you moved a time).
@@ -47,7 +48,8 @@ export function agentStatusOf(l) {
   if (l.stage === 'ringing' || isLiveCall(l)) return 'live'
   if (l.stage === 'booked' || l.stage === 'showed') return 'booked'
   if (l.stage === 'no_show') return 'no_show'
-  if (l.stage === 'follow_up') return 'follow'
+  // P913: a follow-up our team owns (the AI or the no-answer cadence) is never on the agent's board.
+  if (l.stage === 'follow_up') return l.owner === 'team' ? 'team' : 'follow'
   if (l.stage === 'sold') return 'sold'
   return 'team' // new, calling, missed, rebooking
 }

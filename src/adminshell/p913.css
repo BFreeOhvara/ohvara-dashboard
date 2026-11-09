@@ -1,0 +1,133 @@
+/* P913 — admin fixes from Brayden's walk-through: the unmatched-lead alert, the Follow up owner tag, the Setup launch
+   checks ("seatbelt"), the Overview week grids, Fulfillment's calendar and Revenue's one-page layout.
+   Colours are theme tokens only (src/index.css shell palette). */
+
+/* Leads: the Follow up owner tag (Our team / Agent) */
+.fx .fx-tag.adm-owner { margin-left: auto; }
+.fx .fx-tag.adm-owner.is-team { background: color-mix(in srgb, var(--sh-ink) 10%, transparent); color: var(--ov-hi); }
+
+/* The unmatched-lead alert (Overview Needs you, the bell, Route a lead) */
+.adm-unmatched { display: flex; flex-direction: column; gap: 8px; margin: 0 0 10px; padding: 12px; border-radius: 14px; background: var(--sh-f-apricot); color: var(--sh-fi-apricot); }
+.adm-unmatched-h { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; }
+.adm-unmatched-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.adm-unmatched-rows > li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--sh-base) 55%, transparent); color: var(--ov-hi); }
+.adm-unmatched-who { flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; gap: 2px; color: inherit; text-decoration: none; }
+.adm-unmatched-who small { font-size: 12px; color: var(--ov-mid); }
+.adm-unmatched-who .adm-unmatched-why { color: var(--ov-hi); }
+.adm-unmatched .adm-dd-sm { min-width: 160px; }
+@media (max-width: 599.98px) {
+  .adm-unmatched-rows > li > :is(.adm-dd-sm, .tp-primary) { flex: 1 1 100%; justify-content: center; }
+}
+
+/* Setup: the launch checks. Turn campaign on stays locked until every tick passes. */
+.adm-checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.adm-checks > li { display: flex; align-items: flex-start; gap: 10px; padding: 9px 10px; border-radius: 12px; background: color-mix(in srgb, var(--ov-hi) 5%, transparent); }
+.adm-checks > li > svg { flex: none; margin-top: 2px; }
+.adm-checks > li.is-ok > svg { color: var(--sh-sage); }
+.adm-checks > li.is-bad { background: color-mix(in srgb, var(--sh-apricot) 16%, transparent); }
+.adm-checks > li.is-bad > svg { color: var(--sh-apricot); }
+.adm-checks b { display: block; font-size: 13.5px; font-weight: 600; }
+.adm-checks small { display: block; font-size: 12.5px; color: var(--ov-mid); }
+.adm-checks .is-bad small { color: var(--ov-hi); }
+.adm-checks-n { font-variant-numeric: tabular-nums; }
+.adm-launch-lock { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ov-mid); }
+.adm-paused { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 8px; padding: 10px 12px; border-radius: 12px; background: var(--sh-f-apricot); color: var(--sh-fi-apricot); font-size: 13px; }
+.adm-paused > svg { flex: none; margin-top: 2px; }
+
+/* Overview: Leads this week and Revenue this week as a clean grid, one equal cell per day Mon to Sun */
+.adm-weekgrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 4px 0 6px; }
+.adm-weekgrid > li { list-style: none; display: grid; grid-template-rows: 18px 1fr 18px; gap: 4px; min-width: 0; height: 132px; padding: 6px 4px; border-radius: 10px; background: color-mix(in srgb, var(--ov-hi) 5%, transparent); text-align: center; }
+.adm-weekgrid > li.is-today { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ov-hi) 30%, transparent); }
+.adm-weekgrid b { font-size: 12.5px; font-weight: 700; line-height: 18px; }
+.adm-weekgrid small { font-size: 11.5px; line-height: 18px; color: var(--ov-mid); }
+.adm-weekgrid .adm-wg-bar { position: relative; align-self: stretch; justify-self: center; width: min(28px, 70%); }
+.adm-weekgrid .adm-wg-bar > i { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--h, 0) * 100%); border-radius: 6px; background: var(--wg-in, color-mix(in srgb, var(--ov-hi) 16%, transparent)); }
+.adm-weekgrid .adm-wg-bar > i > em { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--h, 0) * 100%); border-radius: 6px; background: var(--wg-part, var(--ov-data-a)); }
+.adm-ov-rev .adm-weekgrid > li { height: 104px; background: color-mix(in srgb, var(--sh-base) 30%, transparent); }
+.adm-ov-rev .adm-weekgrid { --wg-in: color-mix(in srgb, var(--sh-fi-sage) 45%, transparent); --wg-part: var(--sh-fi-sage); }
+.adm-ov-rev .adm-weekgrid small, .adm-ov-rev .adm-weekgrid b { color: inherit; }
+@media (max-width: 599.98px) {
+  .adm-weekgrid { gap: 4px; }
+  .adm-weekgrid > li { height: 112px; padding: 5px 2px; }
+  .adm-weekgrid b { font-size: 11.5px; }
+}
+
+/* Fulfillment: today's booked calls, the bigger calendar, day headers and rows as buttons */
+.adm-today-cal { display: flex; flex-direction: column; gap: 6px; }
+.adm-today-cal > li { list-style: none; display: grid; grid-template-columns: 74px 1fr; gap: 10px; align-items: stretch; }
+.adm-today-cal .adm-tc-t { font-size: 12.5px; font-weight: 700; padding-top: 10px; font-variant-numeric: tabular-nums; color: var(--ov-mid); }
+.adm-today-cal .adm-tc-row { display: flex; flex-wrap: wrap; gap: 6px; min-height: 44px; padding: 6px; border-radius: 12px; background: color-mix(in srgb, var(--ov-hi) 4%, transparent); }
+.adm-today-cal .adm-tc-row.is-now { box-shadow: inset 0 0 0 1.5px var(--sh-sky); }
+.fx .adm-big-cal[data-fold-fit] > .fx-week.is-week .tp-tgrid-b { min-height: 560px; } /* fills the window, never shorter than the old 560 */
+.adm-dayhead { appearance: none; border: 0; font: inherit; cursor: pointer; border-radius: 10px; padding: 6px 4px; background: color-mix(in srgb, var(--ov-hi) 6%, transparent); color: var(--ov-hi); transition: background .15s ease; }
+.adm-dayhead:hover { background: color-mix(in srgb, var(--ov-hi) 12%, transparent); }
+.adm-dayhead.is-today { background: var(--sh-f-sky); color: var(--sh-fi-sky); }
+.adm-dayhead.is-on { box-shadow: inset 0 0 0 2px var(--sh-sky); }
+.adm-rowbtn { appearance: none; border: 0; font: inherit; cursor: pointer; text-align: left; border-radius: 8px; background: transparent; color: inherit; }
+.adm-rowbtn:hover { background: color-mix(in srgb, var(--ov-hi) 7%, transparent); }
+
+/* Fulfillment: days off without approvals */
+.adm-allow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.adm-allow input { width: 72px; }
+.adm-off-row .adm-off-left { font-size: 12.5px; color: var(--ov-mid); }
+
+/* Revenue: one page that reads top to bottom. Switching views never moves or resizes anything. */
+.adm-rev { display: flex; flex-direction: column; gap: 12px; }
+.adm-rev-head { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.adm-rev-head > div { display: flex; flex-direction: column; gap: 4px; padding: 14px; border-radius: 16px; background: color-mix(in srgb, var(--ov-hi) 5%, transparent); min-width: 0; }
+.adm-rev-head > div.is-main { background: var(--sh-f-sage); color: var(--sh-fi-sage); }
+.adm-rev-head > div.is-out { background: color-mix(in srgb, var(--ov-hi) 3%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ov-hi) 14%, transparent); }
+.adm-rev-head small { font-size: 12px; font-weight: 600; opacity: .85; }
+.adm-rev-head b { font-family: var(--font-mono); font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; }
+.adm-rev-head em { font-style: normal; font-size: 12px; opacity: .8; }
+.adm-rev-stage { display: flex; flex-direction: column; gap: 10px; }
+.adm-rev-stage .adm-rev-body { height: 420px; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.adm-rev-break { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.adm-rev-break dl { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.adm-rev-break dl > div { display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; }
+.adm-rev-break dd { margin: 0; font-family: var(--font-mono); }
+.adm-rev-break dl > div.is-total { padding-top: 6px; border-top: 1px solid color-mix(in srgb, var(--ov-hi) 14%, transparent); font-weight: 700; }
+.adm-rev-chart { display: grid; grid-template-columns: repeat(var(--n, 6), minmax(0, 1fr)); gap: 8px; align-items: end; height: 220px; padding: 8px 0 0; }
+.adm-rev-chart > li { list-style: none; display: grid; grid-template-rows: 18px 1fr 18px; gap: 4px; height: 100%; text-align: center; min-width: 0; }
+.adm-rev-chart .adm-wg-bar { position: relative; justify-self: center; width: min(44px, 70%); }
+.adm-rev-chart .adm-wg-bar > i { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 8px 8px 4px 4px; }
+.adm-rev-chart .is-plans { background: var(--sh-sage); }
+.adm-rev-chart .is-fee { background: var(--sh-sky); }
+.adm-rev-chart .is-setup { background: var(--sh-butter); }
+.adm-rev-chart b { font-size: 12px; font-weight: 700; font-family: var(--font-mono); }
+.adm-rev-chart small { font-size: 11.5px; color: var(--ov-mid); }
+.adm-rev-chart > li.is-now small { color: var(--ov-hi); font-weight: 700; }
+.adm-rev-key { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--ov-mid); }
+.adm-rev-key i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 3px; vertical-align: -1px; }
+@media (max-width: 999.98px) {
+  .adm-rev-head { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 599.98px) {
+  .adm-rev-head b { font-size: 19px; }
+  .adm-rev-break { grid-template-columns: minmax(0, 1fr); }
+  .adm-rev-stage .adm-rev-body { height: 480px; }
+  .adm-rev-chart { height: 180px; gap: 4px; }
+}
+
+/* P913 — pieces the components above use */
+.adm-big-cal .adm-week .tp-tgrid-h > .adm-dayhead { display: flex; flex-direction: column; align-items: center; gap: 1px; min-height: 52px; justify-content: center; }
+.adm-big-cal .adm-week .tp-tgrid-h > .adm-dayhead.is-today small { color: inherit; }
+.adm-week .tp-tcol .adm-hourbtn { position: absolute; left: 0; right: 0; z-index: 0; border-radius: 0; }
+.adm-week .tp-tcol .adm-hourbtn:focus-visible { outline: 2px solid var(--sh-sky); outline-offset: -2px; }
+.adm-today .adm-cal-vas { margin: 0 0 8px; }
+.adm-tc-call { height: auto; min-height: 32px; padding: 4px 12px; gap: 6px; flex-wrap: wrap; color: var(--ov-hi); background: color-mix(in srgb, var(--vf, var(--sh-sky)) 22%, transparent); border-color: transparent; }
+.adm-tc-call small { font-size: 11.5px; font-weight: 500; color: var(--ov-mid); }
+.adm-tc-call.is-done { opacity: .55; }
+.adm-tc-call.is-late { box-shadow: inset 0 0 0 2px var(--sh-f-apricot); }
+.adm-rev-head > div.is-loss b { color: var(--sh-apricot); }
+.adm-rev-sw { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 3px; vertical-align: -1px; }
+.adm-rev-key .is-plans { background: var(--sh-sage); } .adm-rev-key .is-fee { background: var(--sh-sky); } .adm-rev-key .is-setup { background: var(--sh-butter); }
+.adm-rev-view { display: flex; flex-direction: column; gap: 10px; }
+.adm-rev-out { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; padding: 10px 12px; border-radius: 12px; font-size: 13px; color: var(--ov-mid); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ov-hi) 14%, transparent); }
+.adm-rev-out b { color: var(--ov-hi); }
+.adm-rev-break > .fx-tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.adm-rev-break .adm-sum li.is-total { font-weight: 700; border-top: 1px solid color-mix(in srgb, var(--ov-hi) 14%, transparent); padding-top: 8px; }
+.adm-rev-stage .fx-ptabs { flex: none; }
+
+/* the VA filter row never stretches to fill the tile (it is a row of chips) */
+.adm-today > .adm-cal-vas { flex: none; }

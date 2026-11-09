@@ -10,21 +10,22 @@ import { tierOf } from '../template/spendPlan.js'
 // tonight's switches in Settings, and no AI → VA hand-off anywhere on admin.
 const src = p => readFileSync(new URL(p, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
 
-test('nav order: Overview · Agents · Fulfillment · Clients · Setup · Revenue, then the rest', () => {
-  assert.deepEqual(ADM_TABS.slice(0, 6).map(t => t[1]), ['Overview', 'Agents', 'Fulfillment', 'Clients', 'Setup', 'Revenue'])
+test('nav order (P913): Overview · Agents · Fulfillment · Leads · Clients · Setup · Revenue', () => {
+  assert.deepEqual(ADM_TABS.map(t => t[1]), ['Overview', 'Agents', 'Fulfillment', 'Leads', 'Clients', 'Setup', 'Revenue'])
 })
 
-test('lead statuses are the six, and leads with no agent are a list, not a status', () => {
-  assert.deepEqual(LEAD_LANES.map(l => l.label), ['Booked', 'No show', 'Follow up', 'Sold', 'Not interested', 'No answer'])
+test('lead statuses are the five (P913), and a lead with no agent is an alert, not a status', () => {
+  assert.deepEqual(LEAD_LANES.map(l => l.label), ['Booked', 'No show', 'Follow up', 'Sold', 'Not interested'])
+  assert.equal(new Set(LEAD_LANES.map(l => l.tone)).size, LEAD_LANES.length, 'no two statuses share a colour')
   const leads = admSnapshot().leads
   for (const l of leads.filter(x => !isUnassigned(x))) assert.ok(LEAD_STAGES.includes(l.stage), `${l.name}: ${l.stage}`)
   const un = leads.filter(isUnassigned)
-  assert.ok(un.length > 0, 'the sample has unassigned leads')
+  assert.equal(un.length, 1, 'the sample has one unmatched lead (it should almost never happen)')
   for (const old of ['needs_routing', 'transferred', 'not_sold', 'missed']) assert.ok(!leads.some(l => l.stage === old), old)
   // a live call waits on Booked with Mark result, like the agent side (P910)
   assert.ok(leads.some(awaitsResult))
   const leadsJsx = src('./screens/Leads.jsx')
-  assert.match(leadsJsx, /Unassigned/)
+  assert.doesNotMatch(leadsJsx, /<Unassigned |function Unassigned\(/) // P913: no Unassigned section on Leads
   assert.match(leadsJsx, /Mark result/)
   assert.doesNotMatch(leadsJsx, /Needs routing|Not sold|'Transferred'/)
 })

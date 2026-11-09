@@ -100,8 +100,8 @@ export function toInvite(r, now = Date.now()) {
 
 // ── leads ────────────────────────────────────────────────────────────────────
 // leads (typed inbound rows) → a Leads-board card. kind from inbound_product; stage from outcome / stage / reach.
-// P906: the admin statuses Booked · No show · Follow up · Sold · Not interested · No answer. No agent = 'unassigned'
-// (the Unassigned list, not a status). A live call (or a dropped transfer, which bounces back and is booked) is Booked
+// P913: the admin statuses Booked · No show · Follow up · Sold · Not interested. Never reached = a Follow up our team
+// owns (owner 'team', teamOwned). No agent = 'unassigned' (the admin alert, not a status). A live call (or a dropped transfer, which bounces back and is booked) is Booked
 // until the agent marks the result.
 export function leadStage(l) {
   if (!l.assigned_rep_id) return 'unassigned'
@@ -109,16 +109,19 @@ export function leadStage(l) {
   if (l.outcome === 'not_interested' || l.inbound_stage === 'lost') return 'not_interested'
   if (l.outcome === 'no_show' || l.inbound_stage === 'no_show') return 'no_show'
   if (l.outcome === 'follow_up' || l.inbound_stage === 'follow_up') return 'follow_up'
-  if (l.va_outcome === 'not_reached' || l.outcome === 'unreachable' || l.inbound_stage === 'unreachable') return 'no_answer'
+  if (teamOwned(l)) return 'follow_up'
   return 'booked'
 }
+// Never reached: the AI or the no-answer cadence is still trying, so the Follow up is our team's, not the agent's.
+export const teamOwned = l => l.va_outcome === 'not_reached' || l.outcome === 'unreachable' || l.inbound_stage === 'unreachable'
 export const ROUTE_WHY = {
-  missing: 'The ad link had no agent ID.', unknown: 'The agent ID in the ad link matches no agent.', inactive: 'The agent in the ad link is switched off.',
+  missing: 'No agent ID in the ad link and no Meta campaign ID.', unknown: 'The agent ID and the campaign ID match no agent.', inactive: 'The agent in the ad link is switched off.',
   unlicensed: 'The agent in the ad link is not licensed for this state.',
 }
 export function toLead(l, { clock, now = Date.now(), intake = {} } = {}) {
   const stage = leadStage(l)
-  const kind = stage === 'no_answer' ? 'none' : l.inbound_product === 'live_call' ? 'live' : 'appointment'
+  const team = stage === 'follow_up' && teamOwned(l) && l.outcome !== 'follow_up' && l.inbound_stage !== 'follow_up'
+  const kind = team ? 'none' : l.inbound_product === 'live_call' ? 'live' : 'appointment'
   const ms = Date.parse(l.created_at)
   const inWeek = clock && Number.isFinite(ms) && l.created_at.slice(0, 10) >= clock.weekStartIso
   const p = Number.isFinite(ms) ? partsOf(ms) : null
@@ -127,9 +130,10 @@ export function toLead(l, { clock, now = Date.now(), intake = {} } = {}) {
     id: l.id, name: l.contact_name || l.business_name || 'No name', phone: fmtPhone(l.phone), state: l.state || '', city: l.city || '',
     kind, product: l.lead_type === 'policy_help' ? 'Policy help call' : 'Mortgage protection', day: inWeek && p ? p.d : null, time: p?.time || '',
     came: whenText(l.created_at, now), source: l.lead_source === 'google' ? 'Google · live calls' : i?.meta_option === 'page_only' ? 'Meta · landing page' : 'Meta · form',
-    agent_id: l.assigned_rep_id || null, stage, premium: 0,
+    agent_id: l.assigned_rep_id || null, stage, owner: stage === 'follow_up' ? (team ? 'team' : 'agent') : null, premium: 0,
+    matchedBy: !l.assigned_rep_id ? null : i?.routing === 'campaign' ? 'campaign' : i?.routing === 'assigned' ? 'admin' : i ? 'link' : null,
     appt: kind === 'appointment' ? (l.appointment_at ? whenText(l.appointment_at, now) : 'not booked yet') : null,
-    note: stage === 'no_answer' ? 'Never reached.' : '', why: !l.assigned_rep_id && i?.routing ? ROUTE_WHY[i.routing] || '' : '', campaign: i?.campaign_id || '', agentRef: i?.agent_ref || '',
+    note: team ? 'Never reached. Our team keeps trying.' : '', why: !l.assigned_rep_id && i?.routing ? ROUTE_WHY[i.routing] || '' : '', campaign: i?.campaign_id || '', agentRef: i?.agent_ref || '',
     log: [], real: true,
   }
 }
@@ -276,6 +280,14 @@ export function toOnboard(p, ctx = {}) {
     id: p.id, name: nameOf(p), city: '', state: s?.states?.[0] || '', states: s?.states || [], lead: p.live_transfer_phone ? 'live' : 'appointment',
     spend: Math.round((p.leads_weekly_cents || 0) / 700), done, since: shortDate(p.created_at), liveOn: live ? whenText(live.done_at) : undefined, campaignReq: null,
     plan: done.includes('plan') ? planKey(p.billing_tier, Math.round((p.leads_weekly_cents || 0) / 100)) : null, real: true,
+    // P913: the launch checks from what the real records already hold; the link, campaign ID, test lead, test push and
+    // test call come from the backend prompt (until then those ticks stay open, so Turn campaign on stays locked).
+    agentRef: p.id,
+    launch: {
+      licence: !!p.npn, hours: p.working_hours_start || '', tz: p.timezone || '',
+      card: ['active', 'trialing'].includes(p.billing_status) ? 'Card on file' : '', cardFailed: p.billing_status === 'past_due' ? 'past due' : '',
+    },
+    paid: done.includes('paid') ? { on: shortDate(p.created_at), days: 2 } : null,
   }
 }
 

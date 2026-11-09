@@ -133,6 +133,8 @@ export function useAdmRealActions() {
       markLaunched: id => run(Promise.all(['campaign', 'budget', 'mapped', 'link', 'tracking', 'workflows']
         .map(k => supabase.rpc('admin_setup_tick', { p_agent: id, p_step: k, p_on: true }))).then(rs => rs.find(r => r.error) || rs[0])),
       markLive: id => rpc('admin_mark_live', { p_agent: id }),
+      // P913: the seatbelt's server half (enforcing every launch check, the campaign ID from GoHighLevel) is the backend prompt.
+      turnCampaignOn: notYet('Turning a campaign on'), placeTestCall: notYet('Placing a test call'),
       resendSetupInvite: notYet('Resending a setup invite'),
       giveCall: (callId, vaId) => rpc('admin_give_call', { p_policy: callId, p_to: vaId }),
       giveStep: notYet('Giving a servicing step to a VA'),

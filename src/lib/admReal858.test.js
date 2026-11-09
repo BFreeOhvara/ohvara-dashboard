@@ -60,7 +60,12 @@ test('leads: stage from outcome / transfer, kind from the product, unassigned wi
   assert.equal(leadStage({ assigned_rep_id: AG, inbound_product: 'live_call', transfer_status: 'connected' }), 'booked')
   assert.equal(leadStage({ assigned_rep_id: AG, outcome: 'no_show' }), 'no_show')
   assert.equal(leadStage({ assigned_rep_id: AG, inbound_stage: 'follow_up' }), 'follow_up')
-  assert.equal(leadStage({ assigned_rep_id: AG, va_outcome: 'not_reached' }), 'no_answer')
+  // P913: No answer is gone: never reached = a Follow up our team owns
+  assert.equal(leadStage({ assigned_rep_id: AG, va_outcome: 'not_reached' }), 'follow_up')
+  const team = toLead({ id: 't1', assigned_rep_id: AG, va_outcome: 'not_reached', created_at: '2026-11-06T15:00:00Z' }, { now: NOW })
+  assert.equal(team.owner, 'team')
+  assert.equal(team.kind, 'none')
+  assert.equal(toLead({ id: 't2', assigned_rep_id: AG, outcome: 'follow_up', created_at: '2026-11-06T15:00:00Z' }, { now: NOW }).owner, 'agent')
   assert.equal(leadStage({ assigned_rep_id: AG, inbound_product: 'booked_appointment' }), 'booked')
   const clock = realClock(NOW)
   const l = toLead({ id: 'l1', contact_name: 'Angela Moore', phone: '+15125558201', state: 'TX', inbound_product: 'booked_appointment', lead_type: 'mortgage_protection', lead_source: 'meta', assigned_rep_id: null, created_at: '2026-11-06T15:00:00Z' },
@@ -68,7 +73,7 @@ test('leads: stage from outcome / transfer, kind from the product, unassigned wi
   assert.equal(l.day, 6)
   assert.equal(l.kind, 'appointment')
   assert.equal(l.stage, 'unassigned')
-  assert.match(l.why, /matches no agent/)
+  assert.match(l.why, /match no agent/)
   assert.equal(l.agentRef, 'agent-42')
   assert.equal(l.source, 'Meta · landing page')
   const old = toLead({ id: 'l2', inbound_product: 'live_call', assigned_rep_id: null, created_at: '2026-10-01T15:00:00Z' }, { clock, now: NOW })
@@ -147,7 +152,7 @@ test('the whole store: same keys as the sample, and Money / Setup run on it with
   assert.equal(s.revenue.length + s.draws.length + s.setupFees.length + s.threads.length, 0)
   const m = moneyFor(s, 'week')
   assert.equal(m.ads, 50, 'ad spend is the real spend, not Connect\'s sample accounts')
-  assert.equal(m.tools, 0)
+  assert.equal(m.ai, 0, 'no sample AI minutes on real data')
   assert.equal(moneyFor(s, 'last').ads, 0)
   assert.equal(pipelineOf(s).length, 0) // P906: Setup holds paid agents only; this one hasn't paid
   assert.equal(s.connect.ads[0].spent, 50)

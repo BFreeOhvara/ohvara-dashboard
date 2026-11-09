@@ -27,7 +27,9 @@
 .fx .is-teal, .fx-layer .is-teal { --c: var(--ov-data-b); }
 .fx .is-green, .fx-layer .is-green { --c: var(--ov-st-cancelled); }
 .fx .is-mute, .fx-layer .is-mute { --c: var(--ov-st-noanswer); }
-.fx .is-violet, .fx-layer .is-violet { --c: var(--nt-purple); }
+/* P913: violet is lilac (was butter, the same as Follow up's teal); rose (coral) is the agent's Closed. */
+.fx .is-violet, .fx-layer .is-violet { --c: var(--sh-lilac); }
+.fx .is-rose, .fx-layer .is-rose { --c: var(--sh-coral); }
 .fx .is-up { --c: var(--ov-up); }
 
 /* Glass recipe, shared by the floating chrome */
@@ -520,7 +522,8 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 .tp .is-teal { --cf: var(--sh-f-butter); --ci: var(--sh-fi-butter); }
 .tp .is-green, .tp .is-up { --cf: var(--sh-f-sage); --ci: var(--sh-fi-sage); }
 .tp .is-mute { --cf: var(--sh-f-stone); --ci: var(--sh-fi-stone); }
-.tp .is-violet { --cf: var(--sh-f-butter); --ci: var(--sh-fi-butter); }
+.tp .is-violet { --cf: var(--sh-f-lilac); --ci: var(--sh-fi-lilac); }
+.tp .is-rose { --cf: var(--sh-f-coral); --ci: var(--sh-fi-coral); }
 
 /* Backdrop: a dark, neutral soft-focus scene (generated image, scripts/make-shell-backdrop.py), no hue glows */
 .tp-sky { background: linear-gradient(var(--sh-bd-dim), var(--sh-bd-dim)), var(--sh-bd-image) center / cover no-repeat, var(--ov-page); }
@@ -581,7 +584,7 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 @media (hover: hover) and (pointer: fine) {
   .fx-card:has(.fx-cover):hover { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 18px 30px -24px rgba(0, 0, 0, .6); border-color: color-mix(in srgb, var(--ci) 30%, transparent); }
 }
-.tp .tp-chip:is(.is-blue, .is-teal, .is-warn, .is-green, .is-mute, .is-violet) { color: var(--ci); background: var(--cf); }
+.tp .tp-chip:is(.is-blue, .is-teal, .is-warn, .is-green, .is-mute, .is-violet, .is-rose) { color: var(--ci); background: var(--cf); }
 .fx-delta { color: var(--ci, var(--ov-hi)); background: var(--cf, var(--ov-stub)); font-weight: 600; }
 .fx-row { background: color-mix(in srgb, var(--c, var(--ov-hi)) 12%, transparent); border-color: color-mix(in srgb, var(--c, var(--ov-hi)) 22%, transparent); }
 .fx-row-ic, .fx-feed-ic { color: var(--ci, var(--ov-hi)); background: var(--cf, var(--ov-stub)); }
@@ -712,7 +715,8 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 .tp .is-teal { --cf: var(--sh-cf-butter); --ci: var(--sh-ci); --cs: var(--sh-cs-butter); --csi: var(--sh-csi-butter); }
 .tp .is-green, .tp .is-up { --cf: var(--sh-cf-sage); --ci: var(--sh-ci); --cs: var(--sh-cs-sage); --csi: var(--sh-csi-sage); }
 .tp .is-mute { --cf: var(--sh-cf-stone); --ci: var(--sh-ci); --cs: var(--sh-cs-stone); --csi: var(--sh-csi-stone); }
-.tp .is-violet { --cf: var(--sh-cf-butter); --ci: var(--sh-ci); }
+.tp .is-violet { --cf: var(--sh-cf-lilac); --ci: var(--sh-ci); --cs: var(--sh-cs-lilac); --csi: var(--sh-csi-lilac); }
+.tp .is-rose { --cf: var(--sh-cf-coral); --ci: var(--sh-ci); --cs: var(--sh-f-coral); --csi: var(--sh-fi-coral); }
 .fx-week .tp-ev { --cf: var(--sh-cf-sky); --ci: var(--sh-ci); }
 .fx-week .tp-ev.client { --cf: var(--sh-cf-butter); --ci: var(--sh-ci); }
 
@@ -728,7 +732,7 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
   .fx-card:has(.fx-cover):hover { border-color: color-mix(in srgb, var(--ci) 22%, transparent); }
   [data-theme="light"] .fx-card:has(.fx-cover):hover { border-color: transparent; box-shadow: inset 0 1px 0 var(--sh-card-hl), 0 16px 28px -24px rgba(0, 0, 0, .28); }
 }
-.tp .tp-chip:is(.is-blue, .is-teal, .is-warn, .is-green, .is-mute, .is-violet), .fx-delta { box-shadow: inset 0 0 0 1px var(--sh-card-edge); }
+.tp .tp-chip:is(.is-blue, .is-teal, .is-warn, .is-green, .is-mute, .is-violet, .is-rose), .fx-delta { box-shadow: inset 0 0 0 1px var(--sh-card-edge); }
 
 /* Neutral selected state */
 .fx .fx-tab.is-on, [data-theme="light"] .fx .fx-tab.is-on { --sp-fill: var(--sh-sel); color: var(--sh-on-sel); background: var(--sh-sel); box-shadow: inset 0 1px 0 var(--sh-sel-edge); }
@@ -879,11 +883,13 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 /* Tones: --cb solid fill, --cbi its ink. Five hues: sky, apricot, sage, butter (+ stone neutral) */
 .tp .is-blue { --cb: var(--sh-f-sky); --cbi: var(--sh-fi-sky); }
 .tp .is-warn { --cb: var(--sh-f-apricot); --cbi: var(--sh-fi-apricot); }
-.tp :is(.is-teal, .is-violet) { --cb: var(--sh-f-butter); --cbi: var(--sh-fi-butter); --cs: var(--sh-cs-butter); --csi: var(--sh-csi-butter); }
+.tp .is-teal { --cb: var(--sh-f-butter); --cbi: var(--sh-fi-butter); --cs: var(--sh-cs-butter); --csi: var(--sh-csi-butter); }
+.tp .is-violet { --cb: var(--sh-f-lilac); --cbi: var(--sh-fi-lilac); --cs: var(--sh-cs-lilac); --csi: var(--sh-csi-lilac); }
+.tp .is-rose { --cb: var(--sh-f-coral); --cbi: var(--sh-fi-coral); --cs: var(--sh-f-coral); --csi: var(--sh-fi-coral); }
 .tp :is(.is-green, .is-up) { --cb: var(--sh-f-sage); --cbi: var(--sh-fi-sage); }
 .tp .is-mute { --cb: var(--sh-f-stone); --cbi: var(--sh-fi-stone); }
-.tp .tp-chip:is(.is-blue, .is-teal, .is-warn, .is-green, .is-up, .is-mute, .is-violet),
-.tp .fx-delta:is(.is-blue, .is-teal, .is-warn, .is-green, .is-up, .is-mute, .is-violet) { color: var(--cbi); background: var(--cb); box-shadow: none; font-weight: 600; }
+.tp .tp-chip:is(.is-blue, .is-teal, .is-warn, .is-green, .is-up, .is-mute, .is-violet, .is-rose),
+.tp .fx-delta:is(.is-blue, .is-teal, .is-warn, .is-green, .is-up, .is-mute, .is-violet, .is-rose) { color: var(--cbi); background: var(--cb); box-shadow: none; font-weight: 600; }
 
 /* The highlight: active top tab, rail active, primary buttons */
 .fx .fx-tab.is-on, [data-theme="light"] .fx .fx-tab.is-on { --sp-fill: var(--sh-acc); color: var(--sh-on-accent); background: var(--sh-acc); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 8px 18px -14px var(--sh-acc); }
@@ -1002,7 +1008,7 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 
 /* Colour balance per page: Activity's event types are solid in their hue; Billing's plan tile is its one colour-filled
    tile (the Booked blue) */
-.tp .fx-feed-ic:is(.is-blue, .is-teal, .is-warn, .is-green, .is-mute, .is-violet) { color: var(--cbi); background: var(--cb); }
+.tp .fx-feed-ic:is(.is-blue, .is-teal, .is-warn, .is-green, .is-mute, .is-violet, .is-rose) { color: var(--cbi); background: var(--cb); }
 .pb-plan .fx-split span { color: var(--ov-mid); }
 .pb-plan .fx-split b { color: var(--ov-hi); }
 .pb-plan .fx-split i { background: var(--ov-hi) !important; }

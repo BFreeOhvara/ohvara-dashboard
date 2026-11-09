@@ -1,19 +1,20 @@
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
-import { Search, PhoneIncoming, CalendarCheck, PhoneForwarded, PhoneOff, MapPin, Clock, Shuffle, Check, UserX } from 'lucide-react'
+import { Search, PhoneIncoming, CalendarCheck, PhoneForwarded, PhoneOff, MapPin, Clock, Shuffle, Check } from 'lucide-react'
 import { useAdmLeads, useAdmAgents, useAdmActions } from '../data'
 import { Avatar, Chip, Empty, Seg, useNote } from '../../template/kit'
 import { RecordDrawer, Block, Stepper } from '../../template/Record'
 import { Dropdown, DField } from '../kit'
 import { ap } from '../paths'
-import { LEAD_LANES, STAGE_WORD, KIND_WORD, stageTone, isUnassigned, awaitsResult } from '../words'
+import { LEAD_LANES, STAGE_WORD, KIND_WORD, FOLLOW_OWNER, MATCH_WORD, stageTone, followOwner, isUnassigned, awaitsResult } from '../words'
 import { ConsentProof, UnassignedBlock } from './Compliance879'
 import { AiCallsView } from './AiCalls892'
 
 // P849 — Leads (the inbounds page, on screen as Leads): every lead across every agent this week. P906: the board is
-// the admin statuses, Booked · No show · Follow up · Sold · Not interested · No answer. A live call isn't a status: as on
-// the agent side it waits on Booked tagged "Live call · Mark result". Leads with no agent ID sit in the Unassigned list
-// above the board with Assign (not a status). A card opens the lead at /admin/inbounds/:id, where an admin moves it to
+// the admin statuses. P913: Booked · No show · Follow up · Sold · Not interested (No answer is gone: those are Follow ups
+// tagged Our team; the agent's own callbacks are tagged Agent). A live call isn't a status: as on the agent side it
+// waits on Booked tagged "Live call · Mark result". A lead that matched no agent is not on this page: it raises the
+// admin alert (Unmatched913.jsx) with Assign. A card opens the lead at /admin/inbounds/:id, where an admin moves it to
 // another agent or changes its status. Sample only: nothing is routed or dialled for real.
 const KIND_ICON = { appointment: CalendarCheck, live: PhoneForwarded, none: PhoneOff }
 // The statuses an admin can set from the drawer (a live call never had a booked time, so No show is not offered).
@@ -22,40 +23,15 @@ const stepsFor = l => LEAD_LANES.filter(s => !(l.kind === 'live' && s.key === 'n
 function LeadCard({ l, i }) {
   const tone = stageTone(l.stage)
   const Icon = KIND_ICON[l.kind] || CalendarCheck
+  const owner = followOwner(l)
   return (
     <article className={`fx-card fx-lcard is-${tone}`} style={{ '--i': i }}>
       <Link to={ap('leads', l.id)} className="fx-cover" aria-label={`Open ${l.name}`} />
-      <div className="fx-lcard-top"><span className="fx-kind"><Icon size={13} aria-hidden="true" />{KIND_WORD[l.kind]}</span>{awaitsResult(l) && <span className="fx-tag">Mark result</span>}</div>
+      <div className="fx-lcard-top"><span className="fx-kind"><Icon size={13} aria-hidden="true" />{KIND_WORD[l.kind]}</span>{awaitsResult(l) && <span className="fx-tag">Mark result</span>}{owner && <span className={`fx-tag adm-owner is-${owner}`}>{FOLLOW_OWNER[owner]}</span>}</div>
       <h3>{l.name}</h3>
       <p>{l.product} · {l.city}, {l.state}</p>
       <div className="fx-lcard-bot"><span className="fx-big">{l.agent ? l.agent.split(' ')[0] : 'No agent'}</span><small className="adm-came">{l.came.replace('Today, ', '')}</small></div>
     </article>
-  )
-}
-
-// P906: leads with no agent ID. Not a status: a list with Assign, above the board.
-function Unassigned({ rows, agents }) {
-  const { assignLead } = useAdmActions()
-  const note = useNote()
-  const [pick, setPick] = useState({})
-  if (!rows.length) return null
-  return (
-    <section className="fx-tile adm-unassigned" style={{ '--i': 0 }} aria-label={`Unassigned, ${rows.length}`}>
-      <header className="fx-tile-h"><span className="tp-grow"><h2><UserX size={16} aria-hidden="true" /> Unassigned</h2><p>{rows.length} with no agent ID in the ad link. Assign each one; the AI then calls it and books it.</p></span></header>
-      <ul className="tp-list adm-rows">{rows.map(l => {
-        const fits = agents.filter(a => a.access && a.states.includes(l.state))
-        const options = (fits.length ? fits : agents).map(a => ({ value: a.id, label: a.name, sub: `Licensed in ${a.states.join(', ')}` }))
-        const to = pick[l.id] || options[0]?.value
-        return (
-          <li key={l.id} className="adm-step adm-un-row">
-            <Link to={ap('leads', l.id)} className="adm-who"><Avatar name={l.name} tone="warn" /><span className="tp-grow"><b>{l.name}</b><small>{l.product} · {l.city}, {l.state} · came {l.came.replace('Today, ', 'today ')}</small></span></Link>
-            {fits.length === 0 && <Chip tone="warn">Nobody licensed in {l.state}</Chip>}
-            <DField label="Agent"><Dropdown label={`Agent for ${l.name}`} value={to} options={options} onChange={v => setPick({ ...pick, [l.id]: v })} /></DField>
-            <button type="button" className="tp-primary fx-accent" disabled={!to} onClick={() => { assignLead(l.id, to); note(`${l.name} assigned to ${agents.find(a => a.id === to)?.name}. Logged.`) }}><Shuffle size={15} />Assign</button>
-          </li>
-        )
-      })}</ul>
-    </section>
   )
 }
 
@@ -77,7 +53,7 @@ function LeadDrawer({ id, onClose }) {
   return (
     <RecordDrawer label={l.name} kicker={`Lead · came in ${l.came}`} tone={tone} onClose={onClose}
       hero={<>
-        <div className="fx-hero-top"><span className="fx-when"><Clock size={13} aria-hidden="true" />{when}</span><Chip tone={tone}>{none ? 'Unassigned' : STAGE_WORD[l.stage]}</Chip>{awaitsResult(l) && <Chip tone="blue">Live call · Mark result</Chip>}</div>
+        <div className="fx-hero-top"><span className="fx-when"><Clock size={13} aria-hidden="true" />{when}</span><Chip tone={tone}>{none ? 'Not matched' : STAGE_WORD[l.stage]}</Chip>{followOwner(l) && <Chip tone="mute">{FOLLOW_OWNER[followOwner(l)]}</Chip>}{awaitsResult(l) && <Chip tone="blue">Live call · Mark result</Chip>}</div>
         <h2>{l.name}</h2>
         <p><MapPin size={13} aria-hidden="true" />{l.city}, {l.state} · {l.product}</p>
         <div className="fx-hero-bot"><b className="fx-hero-big tp-num">{l.phone}</b><Avatar name={l.name} tone={tone} /></div>
@@ -93,7 +69,7 @@ function LeadDrawer({ id, onClose }) {
         <DField label="Agent"><Dropdown label="Agent" value={to} options={options} onChange={setPick} /></DField>
       </Block>}
       <Block title="What we know">
-        <dl className="fx-facts">{[['Phone', l.phone], ['Came in', l.came], ['Type', KIND_WORD[l.kind]], ['From', l.source], ['Looking for', l.product], ['Agent', l.agent || 'No agent yet']].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+        <dl className="fx-facts">{[['Phone', l.phone], ['Came in', l.came], ['Type', KIND_WORD[l.kind]], ['From', l.source], ['Looking for', l.product], ['Agent', l.agent || 'Not matched'], ['Matched by', MATCH_WORD[l.matchedBy] || 'Nothing matched'], ['Agent ID in link', l.agentRef || 'None'], ['Meta campaign ID', l.campaignId || l.campaign || 'None']].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
         {l.note && <p className="tp-sub">{l.note}</p>}
       </Block>
       <ConsentProof lead={l} />
@@ -128,7 +104,6 @@ export default function Leads() {
   }
   const n = q.trim().toLowerCase()
   const match = l => (when === 'week' || l.day === 5) && (!n || `${l.name} ${l.city} ${l.phone} ${l.agent || ''}`.toLowerCase().includes(n))
-  const unassigned = leads.filter(l => isUnassigned(l) && match(l))
   const assigned = leads.filter(l => !isUnassigned(l))
   const shown = assigned.filter(l => match(l) && (kind === 'all' || l.kind === kind) && (agent === 'all' || l.agent_id === agent))
   const lanes = LEAD_LANES.filter(b => status === 'all' || b.key === status)
@@ -144,8 +119,7 @@ export default function Leads() {
         <Dropdown className="adm-dd-sm" label="Status" value={status} onChange={setStatus} options={[{ value: 'all', label: 'Every status' }, ...LEAD_LANES.map(b => ({ value: b.key, label: b.label, sub: `${assigned.filter(l => b.stages.includes(l.stage)).length} this week` }))]} />
         <Dropdown className="adm-dd-sm" label="Agent" value={agent} onChange={setAgent} options={[{ value: 'all', label: 'Every agent' }, ...agents.map(a => ({ value: a.id, label: a.name }))]} />
       </div>
-      <Unassigned rows={unassigned} agents={agents} />
-      <div className={`fx-board adm-board6${lanes.length === 1 ? ' is-one' : ''}`} role="region" aria-label="Leads by status">
+      <div className={`fx-board adm-board5${lanes.length === 1 ? ' is-one' : ''}`} role="region" aria-label="Leads by status">
         {lanes.map((b, li) => {
           const rows = shown.filter(l => b.stages.includes(l.stage)).slice().reverse()
           return (
@@ -160,7 +134,7 @@ export default function Leads() {
         })}
       </div>
       {id && <LeadDrawer id={id} onClose={() => navigate(ap('leads'))} />}
-      <p className="tp-sub adm-hint"><PhoneIncoming size={13} aria-hidden="true" /> The AI calls every new lead right away: a live transfer to the agent if they're free, else a booked appointment. A live call stays on Booked until the agent marks the result.</p>
+      <p className="tp-sub adm-hint"><PhoneIncoming size={13} aria-hidden="true" /> Every lead finds its agent by the agent ID in the ad link or its Meta campaign ID. The AI calls it right away: a live transfer to the agent if they're free, else a booked appointment. Follow up tagged Our team means the AI or the no-answer texts are still trying.</p>
     </div>
   )
 }

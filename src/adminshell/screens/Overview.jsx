@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, Check, Shuffle, Hand, CalendarOff, CreditCard, PhoneCall, Radio, Megaphone, ChevronDown, ChevronUp } from 'lucide-react'
-import { useAdmDay, useAdmMoney, useAdmAgents, useAdmDesk, useAdmCosts, dateText } from '../data'
+import { ArrowUpRight, Check, Hand, CreditCard, PhoneCall, Radio, Megaphone, ChevronDown, ChevronUp } from 'lucide-react'
+import { useAdmDay, useAdmMoney, useAdmAgents, useAdmDesk, useAdmCosts } from '../data'
 import { Avatar } from '../../template/kit'
 import { CountUp, usd } from '../../template/motion'
 import { Tile, EngineSlot } from '../kit'
 import { useGhlRow } from '../useGhlRow'
 import { ap } from '../paths'
 import { adAlerts } from '../p879'
+import { UnmatchedAlert } from './Unmatched913'
 
 // P849 — the admin Overview: the whole business at a glance on the Solvik shape (head stats, one dominant tile, a
 // right column, colour carried by a few filled tiles). Dominant tile = leads this week as a funnel (in, booked,
@@ -43,24 +44,29 @@ function Need({ to, tone, icon: Icon, kicker, title, sub, i }) {
   )
 }
 
-// This week's leads by day, with its key. In the hero on wide screens; its own tile on a phone (P867), so the phone's
-// first block is just the funnel and Needs you peeks below it.
+// P913 — this week as a clean grid: one equal cell per day, Mon to Sun, with the bar inside. A day with no data yet is
+// the same empty cell (no dashed blobs). Leads this week: came in, with the sold part. Revenue this week: the same.
+function WeekGrid({ cells, label }) {
+  return (
+    <ol className="adm-weekgrid" role="img" aria-label={label}>
+      {cells.map((c, i) => (
+        <li key={c.key} className={c.today ? 'is-today' : ''} style={{ '--i': i }}>
+          <b className="tp-num">{c.later ? '' : c.text}</b>
+          <span className="adm-wg-bar" aria-hidden="true"><i style={{ '--h': c.h }}><em style={{ '--h': c.part }} /></i></span>
+          <small>{c.name}</small>
+        </li>
+      ))}
+    </ol>
+  )
+}
+const leadCells = (day, top) => day.byDay.map(d => ({
+  key: d.day, name: d.name, later: d.later, today: d.day === day.today, text: d.in, h: d.later ? 0 : d.in / top, part: d.in ? d.sold / d.in : 0,
+}))
 function DayBars({ day, top }) {
   return (
     <>
-    <div className="adm-daybars" role="img" aria-label={day.byDay.map(d => `${d.name}: ${d.in} in, ${d.sold} sold`).join('. ')}>
-      {day.byDay.map((d, i) => (
-        <span key={d.day} className={d.later ? 'is-later' : ''} style={{ '--i': i }}>
-          <b className="tp-num">{d.later ? '' : d.in}</b>
-          <i style={{ '--h': d.in / top }}>
-            <em className="is-sold" style={{ '--h': d.in ? d.sold / d.in : 0 }} />
-            <em className="is-mid" style={{ '--h': d.in ? (d.booked + d.transferred - d.sold) / d.in : 0 }} />
-          </i>
-          <small>{d.name}</small>
-        </span>
-      ))}
-    </div>
-    <div className="fx-key"><span><i className="adm-k is-sold" />Sold</span><span><i className="adm-k is-mid" />Booked or live call</span><span><i className="adm-k is-in" />Came in</span></div>
+      <WeekGrid cells={leadCells(day, top)} label={day.byDay.map(d => `${d.name}: ${d.later ? 'not yet' : `${d.in} in, ${d.sold} sold`}`).join('. ')} />
+      <div className="fx-key"><span><i className="adm-k is-sold" />Sold</span><span><i className="adm-k is-in" />Came in</span></div>
     </>
   )
 }
@@ -73,14 +79,15 @@ export default function Overview() {
   const { data: costs } = useAdmCosts()
   const row = useGhlRow()
   const [allNeeds, setAllNeeds] = useState(false)
+  // P913: the unmatched-lead alert takes the top of Needs you; the other cards wait behind "Show all" (never cut off)
+  const shown = day.unassigned.length ? 0 : NEEDS_SHOWN
   const w = day.week
   const steps = [['in', 'Came in', w.in], ['booked', 'Booked', w.booked], ['transferred', 'Live calls', w.transferred], ['sold', 'Sold', w.sold]]
   const top = Math.max(4, ...day.byDay.map(d => d.in))
-  const revTop = Math.max(...m.weeks.map(x => x.plans + x.leads))
+  const revTop = Math.max(1, ...m.days.map(x => x.revenue))
+  const k = n => (n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : money(n))
   const needs = [
-    ...day.unassigned.map(l => ({ id: l.id, to: ap('leads', l.id), tone: 'warn', icon: Shuffle, kicker: 'Unassigned', title: l.name, sub: `No agent ID · ${l.product} · came ${l.came.replace('Today, ', '')}` })),
     ...day.late.map(c => ({ id: c.id, to: `${ap('team')}?call=${c.id}`, tone: 'warn', icon: Hand, kicker: 'Call past its time', title: c.client, sub: `${c.time} · give it to someone free` })),
-    ...day.requests.map(r => ({ id: r.id, to: `${ap('team')}?tab=requests`, tone: 'teal', icon: CalendarOff, kicker: 'Day off asked', title: r.va || 'A VA', sub: dateText(r.date) })),
     ...day.failed.map(a => ({ id: a.id, to: `${ap('billing')}?tab=agents`, tone: 'blue', icon: CreditCard, kicker: 'Payment failed', title: a.name, sub: `${a.billing.failed.what} · ${money(a.billing.failed.amount)}` })),
     // P879 (N-A-04): an ad rejected, or in review over 24 h, from the engine (sample until 858 + GoHighLevel).
     ...(day.real ? [] : adAlerts()).map(x => ({ id: `ad-${x.agent}`, to: ap('agents', x.agent), tone: 'warn', icon: Megaphone, kicker: x.kind === 'rejected' ? 'Ad rejected' : 'Ad in review', title: agents.find(a => a.id === x.agent)?.name || 'An agent', sub: x.text })),
@@ -112,12 +119,13 @@ export default function Overview() {
           <section className={`fx-tile is-deep fx-ovl-needs${allNeeds ? ' is-all' : ''}`} style={{ '--i': 4 }} aria-label="Needs you">
             <div className="fx-ovl-needs-in">
               <header className="fx-tile-h">
-                <span className="tp-grow"><h2>Needs you</h2><p>{needs.length ? `${needs.length} things, oldest money first` : 'Nothing waiting'}</p></span>
+                <span className="tp-grow"><h2>Needs you</h2><p>{needs.length + day.unassigned.length ? `${needs.length + day.unassigned.length} things, oldest money first` : 'Nothing waiting'}</p></span>
               </header>
-              {needs.length > 0
-                ? <div className="fx-ncards adm-needs">{(allNeeds ? needs : needs.slice(0, NEEDS_SHOWN)).map((n, i) => <Need key={`${n.kicker}-${n.id}`} {...n} i={i} />)}</div>
-                : <p className="fx-calm"><Check size={16} aria-hidden="true" />Nothing needs an admin right now.</p>}
-              {needs.length > NEEDS_SHOWN && (
+              <UnmatchedAlert />
+              {(needs.length > 0 && (shown > 0 || allNeeds))
+                ? <div className="fx-ncards adm-needs">{(allNeeds ? needs : needs.slice(0, shown)).map((n, i) => <Need key={`${n.kicker}-${n.id}`} {...n} i={i} />)}</div>
+                : !needs.length && !day.unassigned.length && <p className="fx-calm"><Check size={16} aria-hidden="true" />Nothing needs an admin right now.</p>}
+              {needs.length > shown && (
                 <button type="button" className="fx-pillbtn fx-self adm-needs-more" aria-expanded={allNeeds} onClick={() => setAllNeeds(v => !v)}>
                   {allNeeds ? <>Show fewer<ChevronUp size={14} /></> : <>Show all {needs.length}<ChevronDown size={14} /></>}
                 </button>
@@ -141,17 +149,11 @@ export default function Overview() {
             </ul>
           </Tile>
 
-          <Tile className="is-fill is-green adm-ov-rev" i={2} title="Revenue this week" sub={`Plans ${money(m.plans)} · leads ${money(m.leadsCharged)}`} to={ap('billing')} label="Open Revenue">
+          <Tile className="is-fill is-green adm-ov-rev" i={2} title="Revenue this week" sub={`Plans ${money(m.plans)} · 12% fee ${money(m.leadFee)} · setup ${money(m.setup)}`} to={ap('billing')} label="Open Revenue">
             <b className="fx-huge tp-money"><CountUp value={m.total} format={money} /></b>
-            <div className="adm-minibars" role="img" aria-label={m.weeks.map(x => `Week of ${x.wk}: ${money(x.plans + x.leads)}`).join(', ')}>
-              {m.weeks.map(x => (
-                <span key={x.wk} className={x.now ? 'is-now' : ''}>
-                  <i style={{ '--h': (x.plans + x.leads) / revTop }}><em style={{ '--h': x.plans / (x.plans + x.leads) }} /></i>
-                  <small>{x.wk.replace('Oct ', '').replace('Sep ', '').replace('Nov ', '')}</small>
-                </span>
-              ))}
-            </div>
-            <small className="adm-note">{money(m.lastWeek)} last week · {day.real ? 'from billing' : 'sample prices'}</small>
+            <WeekGrid label={m.days.map(x => `${x.name}: ${x.later ? 'not yet' : money(x.revenue)}`).join(', ')}
+              cells={m.days.map(x => ({ key: x.day, name: x.name, later: x.later, today: x.isToday, text: k(x.revenue), h: x.later ? 0 : x.revenue / revTop, part: x.revenue ? x.plans / x.revenue : 0 }))} />
+            <small className="adm-note">{money(m.lastWeek)} last week · lead spend ({money(m.leadSpend)}) passes to Meta and isn't counted · {day.real ? 'from billing' : 'sample prices'}</small>
           </Tile>
       </div>
 

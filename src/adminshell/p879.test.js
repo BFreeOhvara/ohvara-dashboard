@@ -85,7 +85,8 @@ test('P879 consent proof and Unassigned picker', () => {
 
 test('P879 screens carry the new pieces', () => {
   const team = src('./screens/Team.jsx')
-  for (const k of ['desk', 'quality', 'records']) assert.match(team, new RegExp(`\\['${k}',`))
+  // P913: Live desk, Quality and Records are gone from Fulfillment.
+  for (const k of ['desk', 'quality', 'records']) assert.doesNotMatch(team, new RegExp(`\\['${k}',`))
   assert.match(team, /<HoursPay \/>/); assert.doesNotMatch(team, /a confirmed cancellation/)
   assert.match(src('./screens/Agents.jsx'), /<PilotBlock[^>]*agent=\{a\}/)
   assert.match(src('./screens/Agents.jsx'), /<CampaignBlock agent=\{a\}/)

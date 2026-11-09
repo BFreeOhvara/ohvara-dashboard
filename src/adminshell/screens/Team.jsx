@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Hand, MessageSquare, CalendarOff, Check, X, Plus, ChevronRight, TriangleAlert, Phone, ShieldOff, ShieldCheck, Clock3, Headset } from 'lucide-react'
-import { useAdmVas, useAdmDesk, useAdmRota, useAdmActions, WEEK, NEXT_WEEK, TODAY, SHIFT_MIN, SHIFT_MAX, dayName } from '../data'
+import { Hand, MessageSquare, CalendarOff, Check, X, Plus, TriangleAlert, Phone, ShieldOff, ShieldCheck, Headset } from 'lucide-react'
+import { useAdmVas, useAdmDesk, useAdmRota, useAdmActions, useAdmSettings, WEEK, NEXT_WEEK, TODAY, SHIFT_MIN, SHIFT_MAX, dayName } from '../data'
 import { useAdmShifts } from '../../hooks/useVaShiftsAdmin'
 import { Avatar, Chip, Drawer, Empty, PillTabs, Seg, useNote } from '../../template/kit'
-import { DayBox, WeekStrip, WeekList } from '../../template/DayBox'
+import { WeekList } from '../../template/DayBox'
 import { useOpenDay, useStickyDay } from '../../template/useOpenDay'
 import { GRID_END, GRID_ROWS, GRID_START, lanes, minutesOf, rotaCell, shiftSpan, theirTime, vaHue, weekCalls } from '../calendar'
 import { RecordDrawer, Block } from '../../template/Record'
@@ -12,7 +12,8 @@ import { usd } from '../../template/motion'
 import { Dropdown, DField, Tile } from '../kit'
 import { ap } from '../paths'
 import { CALL_WORD, CALL_TONE, BANK_WORD } from '../words'
-import { LiveDesk, SwapsAndOpen, HoursPay, Quality, Records, Holidays } from './Team879'
+import { SwapsAndOpen, HoursPay, Holidays } from './Team879'
+import { DAYS_OFF_DEFAULT, daysUsed, daysLeft } from '../../lib/dayOff'
 
 // P849 — the Fulfillment team: today's desk (every VA's calls on one timeline, the calls past their time and Give to,
 // as admin_give_call does today), the weekly rota builder (two or three on shift every day; drag a VA onto a day, drag
@@ -58,10 +59,10 @@ function CallDrawer({ id, onClose }) {
   )
 }
 
-// P867 — Today is a calendar, the P854 look (the VA Schedule and the agent Calendar): This week / Next week, a week
-// strip, click a day (its header, a strip chip or empty space in its column) and the day box slides in. Every VA's
-// shifts and calls together, each VA in its own colour (the legend is the VA filter). Calls sit on the company clock
-// with the client's own time beside it when it differs. Under it, the calls that need a hand and who is free now.
+// P867 — the week calendar, the P854 look (the VA Schedule and the agent Calendar). P913 (Brayden's walk-through): it's
+// the Calendar tab now, bigger, with only This week · Next week and the VA filters on top (no day strip, no key, no
+// side panel). Day headers and hour rows are buttons: a header (or a row) opens that day across the full width, and
+// again goes back to the week. Today stays blue. Every VA's shifts and calls, each VA in its own colour.
 const WEEKS_ADM = [WEEK, NEXT_WEEK]
 const ALL_ADM_DAYS = [...WEEK, ...NEXT_WEEK]
 const HOURS_ADM = Array.from({ length: GRID_ROWS }, (_, i) => GRID_START + i)
@@ -72,13 +73,10 @@ function TeamCalendar({ openCall }) {
   const { data: desk } = useAdmDesk()
   const { data: vas } = useAdmVas()
   const { data: rotaData } = useAdmRota()
-  const { giveCall } = useAdmActions()
-  const note = useNote()
   const [weekPick, setWeek] = useState(0)
   const [who, setWho] = useState('all')
-  const [giveAll, setGiveAll] = useState(false)
   const { day, open, close } = useOpenDay(ALL_ADM_DAYS, { esc: true })
-  const { view, leaving } = useStickyDay(day)
+  const { view } = useStickyDay(day)
   const week = view != null ? (NEXT_WEEK.includes(view) ? 1 : 0) : weekPick
   const days = WEEKS_ADM[week]
   const cols = view != null ? [view] : days
@@ -88,37 +86,24 @@ function TeamCalendar({ openCall }) {
   const offOn = d => rotaData.dayOff.filter(x => x.date === d && x.status === 'approved').map(x => x.va_id)
   const shiftsOf = d => (rotaData.rota[d] || []).filter(id => (who === 'all' || id === who) && !offOn(d).includes(id)).map(id => vas.find(v => v.id === id)).filter(Boolean)
   const pickWeek = w => { setWeek(w); if (day != null) close() }
-  const headKey = d => e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(d) } }
-  const late = desk.filter(c => c.status === 'late')
-  const freeSoonest = vas.filter(v => v.onShift && !v.onCall).sort((a, b) => (a.today.total - a.today.done) - (b.today.total - b.today.done))[0]
-  const list = view != null ? callsOf(view) : []
-  const onDay = view != null ? shiftsOf(view) : []
   const label = d => `${dayName(d)}, Nov ${d}`
+  const toggle = d => (d === view ? close() : open(d))
 
   return (
     <>
       <div className="fx-tools adm-cal-tools">
         <Seg label="Week" value={week} onChange={pickWeek} options={[{ key: 0, label: 'This week' }, { key: 1, label: 'Next week' }]} />
-        <WeekStrip days={days} day={view} today={TODAY} onOpen={open} has={d => callsOf(d).length > 0} name={dayName} />
-      <div className="adm-cal-vas" role="radiogroup" aria-label="Show a VA">
-        <button type="button" role="radio" aria-checked={who === 'all'} className={`adm-vachip${who === 'all' ? ' is-on' : ''}`} onClick={() => setWho('all')}>Every VA</button>
-        {vas.map(v => (
-          <button key={v.id} type="button" role="radio" aria-checked={who === v.id} className={`adm-vachip is-${vaHue(vas, v.id)}${who === v.id ? ' is-on' : ''}`} onClick={() => setWho(w => (w === v.id ? 'all' : v.id))}>
-            <i aria-hidden="true" />{v.name.split(' ')[0]}
-          </button>
-        ))}
-        <span className="adm-cal-key"><i className="adm-cal-key-shift" aria-hidden="true" />Shift<i className="adm-cal-key-call" aria-hidden="true" />Call · Central time</span>
-      </div>
+        <VaFilter vas={vas} who={who} setWho={setWho} />
       </div>
 
       <WeekList days={days} today={TODAY} onOpen={open} name={dayName} itemsOf={callsOf} line={c => `${c.time} ${c.client}`} />
 
-      <div className="fx-grid adm-cal" data-fold data-fold-fit="320">
-        <section className={`fx-tile ${view != null ? 'fx-s8 is-day' : 'fx-s12 is-week'} fx-week adm-week`} style={{ '--i': 0, '--days': cols.length, '--rows': GRID_ROWS }} aria-label={view != null ? label(view) : (week ? 'Next week' : 'This week')}>
+      <div className="fx-grid adm-cal adm-big-cal" data-fold data-fold-fit="320">
+        <section className={`fx-tile fx-s12 ${view != null ? 'is-day' : 'is-week'} fx-week adm-week`} style={{ '--i': 0, '--days': cols.length, '--rows': GRID_ROWS }} aria-label={view != null ? label(view) : (week ? 'Next week' : 'This week')}>
           <div className="tp-tgrid-h"><span />{cols.map(d => (
-            <b key={d} role="button" tabIndex={0} aria-pressed={d === view} title={d === view ? 'Back to the week' : `Open ${dayName(d)} ${d}`} className={`${d === TODAY ? 'today' : ''}${d === view ? ' is-on' : ''}`} onClick={() => open(d)} onKeyDown={headKey(d)}>
+            <button key={d} type="button" aria-pressed={d === view} title={d === view ? 'Back to the week' : `Open ${dayName(d)} ${d}`} className={`adm-dayhead${d === TODAY ? ' today is-today' : ''}${d === view ? ' is-on' : ''}`} onClick={() => toggle(d)}>
               {dayName(d)} <span>{d}</span>{d === TODAY ? <small>Today</small> : <small className="adm-cal-n">{(rotaData.rota[d] || []).length} on</small>}
-            </b>
+            </button>
           ))}</div>
           <div className="tp-tgrid-b">
             <div className="tp-hours">{HOURS_ADM.map(h => <span key={h}>{hourLabel(h)}</span>)}</div>
@@ -127,7 +112,8 @@ function TeamCalendar({ openCall }) {
               const ln = lanes(dayCalls)
               const shifts = shiftsOf(d)
               return (
-                <div key={d} className={`tp-tcol adm-tcol${d === TODAY ? ' today' : ''}`} style={{ '--shifts': shifts.length }} onClick={e => { if (view == null && e.target === e.currentTarget) open(d) }}>
+                <div key={d} className={`tp-tcol adm-tcol${d === TODAY ? ' today' : ''}`} style={{ '--shifts': shifts.length }}>
+                  {HOURS_ADM.map((h, r) => <button key={h} type="button" className="adm-rowbtn adm-hourbtn" style={{ top: `${(r / GRID_ROWS) * 100}%`, height: `${100 / GRID_ROWS}%` }} aria-label={`${label(d)}, ${hourLabel(h)}${d === view ? ': back to the week' : ': open the day'}`} onClick={() => toggle(d)} />)}
                   {shifts.map((v, k) => {
                     const span = shiftSpan(v.hours)
                     if (!span) return null
@@ -151,51 +137,64 @@ function TeamCalendar({ openCall }) {
           </div>
         </section>
 
-        {view != null && (
-          <DayBox title={label(view)} sub={`${onDay.length} on shift · ${list.length} ${list.length === 1 ? 'call' : 'calls'}`} leaving={leaving} onClose={close}>
-            <h3 className="fx-h3">On shift</h3>
-            <ul className="fx-rows">
-              {onDay.map(v => <li key={v.id}><Link to={ap('team', v.id)} className={`fx-row adm-vrow is-${vaHue(vas, v.id)}`}><Avatar name={v.name} /><span className="tp-grow"><b>{v.name}</b><small>{v.hours}</small></span><ChevronRight size={16} aria-hidden="true" /></Link></li>)}
-              {onDay.length === 0 && <li className="tp-sub">Nobody on shift{who === 'all' ? '' : ' for this VA'}.</li>}
-            </ul>
-            <h3 className="fx-h3">Calls</h3>
-            <ul className="fx-rows">
-              {list.map(c => {
+      </div>
+
+    </>
+  )
+}
+
+// The VA filter: Every VA, or one VA (tap again for all). Each VA's colour is their calendar colour.
+function VaFilter({ vas, who, setWho }) {
+  return (
+    <div className="adm-cal-vas" role="radiogroup" aria-label="Show a VA">
+      <button type="button" role="radio" aria-checked={who === 'all'} className={`adm-vachip${who === 'all' ? ' is-on' : ''}`} onClick={() => setWho('all')}>Every VA</button>
+      {vas.map(v => (
+        <button key={v.id} type="button" role="radio" aria-checked={who === v.id} className={`adm-vachip is-${vaHue(vas, v.id)}${who === v.id ? ' is-on' : ''}`} onClick={() => setWho(w => (w === v.id ? 'all' : v.id))}>
+          <i aria-hidden="true" />{v.name.split(' ')[0]}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// P913 — Today is a calendar of the VAs' booked calls for today: one row per hour, each call a button in its VA's
+// colour (tap to open it). The current hour is outlined. "Needs a hand" and "Who is free" are gone (the other tabs
+// cover them).
+function TodayCalls({ openCall }) {
+  const { data: desk } = useAdmDesk()
+  const { data: vas } = useAdmVas()
+  const { data: rotaData } = useAdmRota()
+  const [who, setWho] = useState('all')
+  const calls = useMemo(() => weekCalls({ desk, rota: rotaData.rota, vas, today: TODAY, days: [TODAY] }).filter(c => c.day === TODAY), [desk, rotaData.rota, vas])
+  const shown = calls.filter(c => who === 'all' || c.va_id === who)
+  const nowH = Math.floor(NOW / 60)
+  return (
+    <section className="fx-tile adm-cal adm-today" style={{ '--i': 0 }} aria-label="Today's booked calls">
+      <header className="fx-tile-h">
+        <span className="tp-grow"><h2>Today's booked calls</h2><p>{dayName(TODAY)}, Nov {TODAY} · {shown.length} {shown.length === 1 ? 'call' : 'calls'}{who === 'all' ? '' : ` for ${vas.find(v => v.id === who)?.name.split(' ')[0]}`}</p></span>
+      </header>
+      <VaFilter vas={vas} who={who} setWho={setWho} />
+      <ol className="adm-today-cal">{HOURS_ADM.map(h => {
+        const inHour = shown.filter(c => Math.floor(minutesOf(c.time) / 60) === h)
+        return (
+          <li key={h}>
+            <span className="adm-tc-t">{hourLabel(h)}</span>
+            <div className={`adm-tc-row${h === nowH ? ' is-now' : ''}`}>
+              {inHour.map(c => {
                 const their = theirTime(c.time, c.state)
                 return (
-                  <li key={c.id}><button type="button" className={`fx-row adm-vrow is-${vaHue(vas, c.va_id)}`} onClick={() => openCall(c.id)}>
-                    <span className="tp-grow"><b>{c.time} · {c.client}</b><small>{c.va.split(' ')[0]} · {CALL_WORD[c.status]}{their ? ` · ${their} for the client` : ''}</small></span>
-                    {c.status === 'late' ? <span className="fx-pillbtn"><Hand size={13} />Give</span> : <ChevronRight size={16} aria-hidden="true" />}
-                  </button></li>
+                  <button key={c.id} type="button" className={`adm-vachip adm-tc-call is-${vaHue(vas, c.va_id)}${['cancelled', 'no_answer'].includes(c.status) ? ' is-done' : ''}${c.status === 'late' ? ' is-late' : ''}`}
+                    aria-label={`${c.time}${their ? ` (${their} for the client)` : ''}, ${c.client}, ${c.va}, ${CALL_WORD[c.status]}`} onClick={() => openCall(c.id)}>
+                    <i aria-hidden="true" /><b className="tp-num">{c.time}</b>{c.client}<small>{c.va.split(' ')[0]} · {CALL_WORD[c.status]}</small>
+                  </button>
                 )
               })}
-            </ul>
-            {list.length === 0 && <Empty title="No calls" sub="Nothing is booked for this day." />}
-          </DayBox>
-        )}
-      </div>
-
-      <div className="adm-two">
-        <Tile className={late.length ? 'is-fill is-warn' : ''} i={1} title="Need a hand" sub={late.length ? `${late.length} calls past their time, not started` : 'Nothing is past its time'}>
-          {late.length > 0 ? <>
-            <ul className="tp-list">{late.map(c => (
-              <li key={c.id}><button type="button" className="fx-mrow" onClick={() => openCall(c.id)}><Clock3 size={16} aria-hidden="true" /><span className="tp-grow"><b>{c.client}</b><small>{c.time} · {c.va}</small></span><span className="fx-pillbtn"><Hand size={13} />Give</span></button></li>
-            ))}</ul>
-            <button type="button" className="tp-primary sm fx-accent fx-self" onClick={() => setGiveAll(true)}><Hand size={14} />Give them all</button>
-          </> : <p className="fx-calm"><Check size={16} aria-hidden="true" />The desk is on time.</p>}
-        </Tile>
-        <Tile i={2} title="Who is free" sub="On shift and not on a call">
-          <ul className="tp-list">{vas.filter(v => v.onShift).map(v => (
-            <li key={v.id} className="fx-mrow"><Avatar name={v.name} /><span className="tp-grow"><b>{v.name}</b><small>{v.today.total - v.today.done} calls left · {v.steps} servicing steps</small></span><Chip tone={v.onCall ? 'teal' : 'green'}>{v.onCall ? 'On a call' : 'Free'}</Chip></li>
-          ))}</ul>
-        </Tile>
-      </div>
-
-      <Drawer open={giveAll} center onClose={() => setGiveAll(false)} title="Give them all" sub={`${late.length} calls past their time`}
-        footer={freeSoonest ? <><button type="button" className="tp-primary fx-accent" onClick={() => { late.forEach(c => giveCall(c.id, freeSoonest.id)); note(`${late.length} calls given to ${freeSoonest.name}`); setGiveAll(false) }}><Hand size={16} />Give all to {freeSoonest.name.split(' ')[0]}</button><button type="button" className="tp-btn ov-ghost" onClick={() => setGiveAll(false)}>Cancel</button></> : null}>
-        <p className="tp-mid">{freeSoonest ? `${freeSoonest.name} is free soonest. Or open one call to pick who.` : 'Nobody on shift is free. Open one call to pick who.'}</p>
-      </Drawer>
-    </>
+            </div>
+          </li>
+        )
+      })}</ol>
+      {calls.length === 0 && <Empty title="No calls today" sub="Nothing is booked for the team today." />}
+    </section>
   )
 }
 
@@ -295,32 +294,39 @@ function Rota() {
   )
 }
 
-function Requests() {
+// P913 — time off without approvals: each VA gets a set number of days off a month (an admin setting). They book
+// their own days; once they've used them up they can't book more (src/lib/dayOff.js). No approve or decline here.
+function TimeOff() {
   const data = useAdmShifts()
-  const { decideDayOff, dateText } = data
+  const { data: settings } = useAdmSettings()
+  const { saveSettings } = useAdmActions()
   const note = useNote()
-  const run = (p, done) => p.then(() => note(done), e => note(e?.message || 'That did not save. Try again.'))
-  const pending = data.dayOff.filter(d => d.status === 'pending')
-  const done = data.dayOff.filter(d => d.status !== 'pending')
+  const allowance = settings.daysOffPerMonth ?? DAYS_OFF_DEFAULT
+  const [n, setN] = useState(String(allowance))
+  const booked = data.dayOff.filter(d => d.status !== 'declined')
+  const team = data.team || []
+  const save = () => {
+    const v = Number(n)
+    if (!Number.isInteger(v) || v < 0 || v > 15) { note('Pick 0 to 15 days a month'); return }
+    saveSettings?.({ daysOffPerMonth: v })
+    note(`Each VA gets ${v} ${v === 1 ? 'day' : 'days'} off a month`)
+  }
   return (
     <div className="adm-two">
-      <Tile i={0} title="Day-off requests" sub={pending.length ? `${pending.length} to answer` : 'Nothing to answer'}>
-        <ul className="tp-list">{pending.map(r => {
-          const left = (data.rota[r.date] || []).filter(x => x !== r.va_id).length
-          const onShift = (data.rota[r.date] || []).includes(r.va_id)
-          return (
-            <li key={r.id} className="adm-req">
-              <Avatar name={r.va} />
-              <span className="tp-grow"><b>{r.va} · {dateText(r.date)}</b><small>{r.reason} · asked {r.asked}</small>
-                {onShift && left < SHIFT_MIN && <small className="adm-warn-t"><TriangleAlert size={12} aria-hidden="true" />Leaves {left} on shift. Add someone on the rota.</small>}</span>
-              <button type="button" className="tp-primary sm fx-accent" onClick={() => run(decideDayOff(r.id, true), `${r.va.split(' ')[0]} has ${dateText(r.date)} off`)}><Check size={14} />Approve</button>
-              <button type="button" className="tp-btn sm ov-ghost" onClick={() => run(decideDayOff(r.id, false), 'Request declined')}>Decline</button>
-            </li>
-          )
-        })}{pending.length === 0 && <li className="fx-calm"><Check size={16} aria-hidden="true" />All answered.</li>}</ul>
+      <Tile i={0} title="Days off each month" sub="VAs book their own days. When they've used them up, they can't book more.">
+        <div className="adm-allow">
+          <DField label="Days off a month, per VA"><input className="tp-input" inputMode="numeric" value={n} onChange={e => setN(e.target.value.replace(/\D/g, ''))} aria-label="Days off a month, per VA" /></DField>
+          <button type="button" className="tp-primary sm fx-accent" disabled={Number(n) === allowance} onClick={save}><Check size={14} />Save</button>
+        </div>
+        <ul className="tp-list">{team.map(v => {
+          const used = daysUsed(booked, v.id)
+          const left = daysLeft(booked, v.id, allowance)
+          return <li key={v.id} className="fx-mrow adm-off-row"><Avatar name={v.name} /><span className="tp-grow"><b>{v.name}</b><small className="adm-off-left">{used} of {allowance} used this month</small></span><Chip tone={left ? 'green' : 'mute'}>{left ? `${left} left` : 'All used'}</Chip></li>
+        })}</ul>
       </Tile>
-      <Tile i={1} title="Answered" sub={data.answeredSub}>
-        <ul className="tp-list">{done.map(r => <li key={r.id} className="fx-mrow"><Avatar name={r.va} /><span className="tp-grow"><b>{r.va}</b><small>{dateText(r.date)} · {r.reason}</small></span><Chip tone={r.status === 'approved' ? 'green' : 'mute'}>{r.status === 'approved' ? 'Approved' : 'Declined'}</Chip></li>)}</ul>
+      <Tile i={1} title="Booked days off" sub={booked.length ? `${booked.length} this month` : 'None booked'}>
+        <ul className="tp-list">{booked.map(r => <li key={r.id} className="fx-mrow"><Avatar name={r.va} /><span className="tp-grow"><b>{r.va}</b><small>{data.dateText(r.date)}{r.reason ? ` · ${r.reason}` : ''} · booked {r.asked}</small></span><Chip tone="blue">Off</Chip></li>)}
+          {booked.length === 0 && <li className="fx-calm"><Check size={16} aria-hidden="true" />Nobody is off this month.</li>}</ul>
       </Tile>
     </div>
   )
@@ -379,31 +385,27 @@ function VaDrawer({ id, onClose }) {
   )
 }
 
-// P879: Live desk, Quality and Records join; Day off is Time off (swaps and open shifts too); Pay is hourly from clock
-// in/out (Q76); the per-cancellation Pay tile is gone (Billing › Payouts and Settings › Pay rules still say per
-// cancellation until 858 rewires pay).
-const TABS = [['today', 'Today'], ['desk', 'Live desk'], ['rota', 'Rota'], ['requests', 'Time off'], ['pay', 'Hours & pay'], ['quality', 'Quality'], ['records', 'Records']]
+// P913: Today (today's booked calls) · Calendar (the week) · Rota · Time off (an allowance, no approvals) · Hours & pay.
+// Live desk, Quality and Records are gone. Pay is hourly from clock in/out (Q76).
+const TABS = [['today', 'Today'], ['calendar', 'Calendar'], ['rota', 'Rota'], ['requests', 'Time off'], ['pay', 'Hours & pay']]
 export default function Team() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [sp, setSp] = useSearchParams()
-  const rota = useAdmShifts()
   const tab = TABS.some(t => t[0] === sp.get('tab')) ? sp.get('tab') : 'today'
   const call = sp.get('call')
-  const pending = rota.dayOff.filter(d => d.status === 'pending').length
   const setTab = t => setSp(t === 'today' ? {} : { tab: t }, { replace: true })
+  const openCall = c => setSp(p => { const n = new URLSearchParams(p); n.set('call', c); return n }, { replace: true })
   return (
     <div className="tp-page fx-page adm-team">
       <PillTabs label="Fulfillment team" className="fx-ptabs adm-pagetabs" itemClass="fx-ptab" value={tab} onChange={setTab}
-        items={TABS.map(([k, label]) => ({ key: k, label, count: k === 'requests' && pending ? pending : undefined }))} />
+        items={TABS.map(([k, label]) => ({ key: k, label }))} />
       <div className="adm-tabpane" key={tab} role="tabpanel">
-        {tab === 'today' && <TeamCalendar openCall={c => setSp(p => { const n = new URLSearchParams(p); n.set('call', c); return n }, { replace: true })} />}
-        {tab === 'desk' && <LiveDesk />}
+        {tab === 'today' && <TodayCalls openCall={openCall} />}
+        {tab === 'calendar' && <TeamCalendar openCall={openCall} />}
         {tab === 'rota' && <><Rota /><Holidays /></>}
-        {tab === 'requests' && <><Requests /><SwapsAndOpen /></>}
+        {tab === 'requests' && <><TimeOff /><SwapsAndOpen /></>}
         {tab === 'pay' && <HoursPay />}
-        {tab === 'quality' && <Quality />}
-        {tab === 'records' && <Records />}
       </div>
       {call && <CallDrawer id={call} onClose={() => setSp(p => { const n = new URLSearchParams(p); n.delete('call'); return n }, { replace: true })} />}
       {id && <VaDrawer id={id} onClose={() => navigate(ap('team'))} />}

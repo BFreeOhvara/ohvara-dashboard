@@ -9,8 +9,8 @@ import { sampleGhlRow, syncFailed, engineState } from './engine.js'
 // P866: Setup is a top tab (everything to get a new client live); Connect is only the rail form; Money reads Revenue.
 const src = p => readFileSync(new URL(p, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
 
-test('the top tabs (P906): Overview · Agents · Fulfillment · Clients · Setup · Revenue · Leads', () => {
-  assert.deepEqual(ADM_TABS.map(t => t[1]), ['Overview', 'Agents', 'Fulfillment', 'Clients', 'Setup', 'Revenue', 'Leads'])
+test('the top tabs (P913): Overview · Agents · Fulfillment · Leads · Clients · Setup · Revenue', () => {
+  assert.deepEqual(ADM_TABS.map(t => t[1]), ['Overview', 'Agents', 'Fulfillment', 'Leads', 'Clients', 'Setup', 'Revenue'])
   assert.equal(ADM.setup, '/admin/setup')
   assert.equal(admPageOf('/admin/setup'), 'setup')
   assert.equal(admPageOf('/admin/setup/ob-carl'), 'setup') // a client's checklist drawer has its own address
@@ -53,8 +53,11 @@ test('the Setup page (P906): tickets for paying agents only, no adding by hand, 
   for (const a of ['Create campaign', 'Mark done', 'Open Meta Ads Manager', 'Open GoHighLevel']) assert.ok(s.includes(a), a)
   assert.match(s, /target="_blank" rel="noopener noreferrer"/)
   assert.match(s, /<EngineSlot settings=\{row\} \/>/)
-  assert.deepEqual(SETUP_STAGES.map(x => x.label), ['New ticket', 'Campaign', 'Test lead', 'Done this week'])
-  assert.deepEqual(SETUP_STEPS.map(x => x.key), ['states', 'campaign', 'on', 'test', 'live'])
+  // P913: the test lead moved into the launch checks; Campaign on is the locked Turn campaign on button.
+  assert.deepEqual(SETUP_STAGES.map(x => x.label), ['New ticket', 'Campaign', 'Launch checks', 'Done this week'])
+  assert.deepEqual(SETUP_STEPS.map(x => x.key), ['states', 'campaign', 'checks', 'on', 'live'])
+  assert.match(s, /Turn campaign on/)
+  assert.doesNotMatch(s, /\['states', 'on', 'test'\]\.includes/) // Campaign on is never a switch
 })
 
 test('the sample tickets: only paid agents, someone at every step, every % matches its ticks', () => {
@@ -83,12 +86,10 @@ test('stage, blocker and campaign request follow the checklist', () => {
   const failed = setupOf({ done: ['paid', 'states'], campaignReq: { status: 'failed', why: 'template missing' } })
   assert.equal(failed.warn, true)
   assert.match(failed.blocker, /template missing/)
-  assert.equal(setupOf({ done: ['paid', 'states', 'campaign'] }).stage, 'campaign') // created but not on yet
-  assert.equal(setupOf({ done: ['paid', 'states', 'campaign', 'on'] }).stage, 'test')
-  const ready = setupOf({ done: ['paid', 'states', 'campaign', 'on', 'test'] })
-  assert.equal(ready.canLive, true)
+  // P913: created → launch checks; on/live count only while every check passes (see launch913.test.js)
+  assert.equal(setupOf({ done: ['paid', 'states', 'campaign'] }).stage, 'checks')
+  assert.equal(setupOf({ done: ['paid', 'states', 'campaign', 'on'] }).stage, 'checks')
   assert.equal(setupOf({ done: ['paid', 'states', 'campaign', 'on'] }).canLive, false)
-  assert.equal(setupOf({ done: ['paid', ...SETUP_STEPS.map(x => x.key)] }).stage, 'live')
   assert.equal(stepsFor({ lead: 'appointment' }).length, stepsFor({ lead: 'live' }).length)
 })
 

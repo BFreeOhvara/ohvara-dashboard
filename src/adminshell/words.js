@@ -1,24 +1,30 @@
 // P849 — the Admin side's shared words and colours (no React, so component files only export components).
 // Tones are flow.css .is-<tone>: blue = sky, teal = butter, green = sage, warn = apricot, mute = stone.
 
-// P906 — the admin lead statuses, left to right on the Leads board: Booked · No show · Follow up · Sold · Not
-// interested · No answer (How Ohvara Works, "AI never hands a new lead to a VA"). A live call isn't a status: as on
-// the agent side, it waits on Booked tagged "Live call · Mark result" until the agent picks how it went. A missed
-// transfer bounces back and is booked, so it lands on Booked too. Leads with no agent aren't a status either: they sit
-// in the Unassigned list above the board (stage 'unassigned', no agent_id) until an admin assigns them.
+// P913 — the admin lead statuses, left to right on the Leads board: Booked · No show · Follow up · Sold · Not
+// interested (Brayden's walk-through, Nov 8). No answer is gone: a lead the AI or the no-answer texts are still trying
+// is a Follow up owned by Our team; a callback the agent set is a Follow up owned by the Agent (owner tag on the card).
+// Agents never see Our team follow-ups. No two statuses share a colour: No show is grey, Not interested took No
+// show's old apricot. A live call isn't a status: it waits on Booked tagged "Mark result". A lead that matched no agent
+// (no agent ID in the ad link and no Meta campaign ID that points at one) is not on the board at all: it raises an
+// admin alert with Assign (Unmatched913.jsx).
 export const LEAD_LANES = [
   { key: 'booked', label: 'Booked', tone: 'blue', stages: ['booked'], empty: 'No appointments booked.' },
-  { key: 'no_show', label: 'No show', tone: 'warn', stages: ['no_show'], empty: 'No missed appointments.' },
+  { key: 'no_show', label: 'No show', tone: 'mute', stages: ['no_show'], empty: 'No missed appointments.' },
   { key: 'follow_up', label: 'Follow up', tone: 'teal', stages: ['follow_up'], empty: 'No follow-ups set.' },
   { key: 'sold', label: 'Sold', tone: 'green', stages: ['sold'], empty: 'No sales yet this week.' },
-  { key: 'not_interested', label: 'Not interested', tone: 'mute', stages: ['not_interested'], empty: 'No one said no.' },
-  { key: 'no_answer', label: 'No answer', tone: 'violet', stages: ['no_answer'], empty: 'Everyone was reached.' },
+  { key: 'not_interested', label: 'Not interested', tone: 'warn', stages: ['not_interested'], empty: 'No one said no.' },
 ]
 export const LEAD_STAGES = LEAD_LANES.map(l => l.key)
-export const STAGE_WORD = { unassigned: 'No agent yet', booked: 'Booked', no_show: 'No show', follow_up: 'Follow up', sold: 'Sold', not_interested: 'Not interested', no_answer: 'No answer' }
+export const STAGE_WORD = { unassigned: 'Not matched', booked: 'Booked', no_show: 'No show', follow_up: 'Follow up', sold: 'Sold', not_interested: 'Not interested' }
 export const stageTone = stage => LEAD_LANES.find(l => l.stages.includes(stage))?.tone || 'warn'
-// No agent yet: the Unassigned list, never a lane.
+// Who owns a Follow up: 'team' (the AI or the no-answer cadence is still trying) or 'agent' (their own callback).
+export const FOLLOW_OWNER = { team: 'Our team', agent: 'Agent' }
+export const followOwner = l => (l.stage !== 'follow_up' ? null : l.owner === 'team' || l.kind === 'none' ? 'team' : 'agent')
+// No agent matched: an admin alert, never a lane.
 export const isUnassigned = l => !l.agent_id
+// How a lead found its agent: the agent ID in the ad link, or the Meta campaign ID (one campaign per agent).
+export const MATCH_WORD = { link: 'Agent ID in the ad link', campaign: 'Meta campaign ID', admin: 'Assigned by an admin' }
 // A live call the agent took, still waiting for its result (on Booked, tagged).
 export const awaitsResult = l => l.kind === 'live' && l.stage === 'booked'
 export const KIND_WORD = { appointment: 'Appointment', live: 'Live call', none: 'Not reached' }

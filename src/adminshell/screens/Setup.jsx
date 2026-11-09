@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   Unplug, ArrowRight, Send, BadgeCheck, Check, CircleDashed, MapPin, Megaphone, MessageSquareText, ShieldCheck,
-  PhoneForwarded, Globe, Link2, Copy, Workflow, Plug, History, Hourglass, ExternalLink, CreditCard, RotateCw,
+  PhoneForwarded, Globe, Link2, Copy, Workflow, Plug, History, Hourglass, ExternalLink, CreditCard, RotateCw, Lock, Power, CircleX, CircleCheck, PhoneOutgoing, PauseCircle,
 } from 'lucide-react'
 import { useAdmSetup, useAdmActions, useAdmConnect, useAdmAgents, useAdmSource, PLANS, PLAYBOOK, TRACKING, paidFor } from '../data'
 import { Chip, Empty, SampleTag, Switch, useNote } from '../../template/kit'
@@ -19,7 +19,7 @@ import { OWNERS, SETUP_STAGES, CAMPAIGN_REQ, readiness } from '../setup'
 // No adding agents or clients by hand: agents sign up and pay themselves, and appear here once they've paid. Each
 // ticket is a short checklist: states and spend checked → Meta campaign created from the template with their agent
 // ID ("Create campaign" sends the request through the GoHighLevel engine slot; its status comes back to the ticket) →
-// campaign on → first test lead received → done. Meta Ads Manager and GoHighLevel refuse to be shown inside other
+// every launch check passes (P913) → Turn campaign on → done. Meta Ads Manager and GoHighLevel refuse to be shown inside other
 // sites, so anything done there opens in a new tab from a button on the ticket. Below: is the system ready?
 const money = usd()
 const cents = usd(true)
@@ -111,6 +111,41 @@ function CampaignRequest({ c, row }) {
   )
 }
 
+// P913 — the seatbelt. Every launch check is a tick with what's wrong when it fails; Turn campaign on stays locked until
+// all pass. No skip button. A check that breaks after launch pauses the campaign and reopens the ticket here.
+function LaunchChecks({ c }) {
+  const { turnCampaignOn, placeTestCall } = useAdmActions()
+  const note = useNote()
+  const { list, ok, passed } = c.checks
+  const on = c.done.includes('on') && ok
+  const turnOn = () => {
+    if (!turnCampaignOn) { note('Turning a campaign on goes through GoHighLevel once it is connected'); return }
+    turnCampaignOn(c.id)
+    note(`${c.name}'s campaign is on (sample: nothing is sent)`)
+  }
+  const testCall = () => { placeTestCall?.(c.id); note(`AI test call placed to ${c.name}'s own number (sample)`) }
+  return (
+    <Block title="Launch checks" sub={<span className="adm-checks-n">{passed} of {list.length} pass</span>}>
+      {c.paused && <p className="adm-paused"><PauseCircle size={15} aria-hidden="true" /><span className="tp-grow"><b>Campaign paused, ticket reopened.</b> {c.checks.failed[0].why} It turns back on only once every check passes again.</span></p>}
+      <ul className="adm-checks" aria-label="Launch checks">{list.map(x => (
+        <li key={x.key} className={x.ok ? 'is-ok' : 'is-bad'}>
+          {x.ok ? <CircleCheck size={16} aria-label="Passes" /> : <CircleX size={16} aria-label="Fails" />}
+          <span className="tp-grow"><b>{x.label}</b><small>{x.text}</small></span>
+          {x.key === 'testCall' && !x.ok && c.launch?.testLead && <button type="button" className="fx-pillbtn" onClick={testCall}><PhoneOutgoing size={13} />Place test call</button>}
+        </li>
+      ))}</ul>
+      {on
+        ? <p className="adm-launch-lock"><Power size={14} aria-hidden="true" />Campaign on. It pauses by itself if a check breaks.</p>
+        : <div className="tp-row tp-wrap">
+          <button type="button" className="tp-primary fx-accent" disabled={!c.canLaunch} aria-disabled={!c.canLaunch} onClick={turnOn}>
+            {c.canLaunch ? <Power size={16} /> : <Lock size={16} />}Turn campaign on
+          </button>
+          {!c.canLaunch && <span className="adm-launch-lock"><Lock size={13} aria-hidden="true" />{ok ? 'Check their states and campaign first.' : `Locked until all ${list.length} checks pass. Admins can't skip one.`}</span>}
+        </div>}
+    </Block>
+  )
+}
+
 // C. The ticket: who paid, the checklist, the tools that open in a new tab, and the history.
 function SetupDrawer({ id, onClose, row }) {
   const { data: list } = useAdmSetup()
@@ -141,13 +176,15 @@ function SetupDrawer({ id, onClose, row }) {
             {s.done ? <Check size={15} aria-hidden="true" /> : <CircleDashed size={15} aria-hidden="true" />}
             <span className="tp-grow">{s.label}{!s.done && c.next?.key === s.key && <small>Next step</small>}
               {s.key === 'states' && <small>{c.states.join(', ') || 'No states'} · {money(c.spend)} a day · {LEAD_WORD[c.lead] || LEAD_WORD.appointment}</small>}</span>
-            {['states', 'on', 'test'].includes(s.key) && <Switch on={s.done} label={s.label} onChange={v => tick(s, v)} />}
+            {s.key === 'states' && <Switch on={s.done} label={s.label} onChange={v => tick(s, v)} />}
           </li>
         ))}</ul>
         <CampaignRequest c={c} row={row} />
       </Block>
-      <Block title="Their agent ID" sub="Rides hidden in their campaign's ad link, so every lead from it goes to them.">
-        <p className="adm-ticket-id"><b className="tp-num">{c.agentRef}</b><button type="button" className="fx-pillbtn" onClick={() => copyText(c.agentRef, note, 'Agent ID')}><Copy size={13} />Copy</button></p>
+      {c.done.includes('campaign') && <LaunchChecks c={c} />}
+      <Block title="How their leads find them" sub="The agent ID rides hidden in the ad link; the Meta campaign ID is the backup. Either one matches a lead to them.">
+        <p className="adm-ticket-id">Agent ID <b className="tp-num">{c.agentRef}</b><button type="button" className="fx-pillbtn" onClick={() => copyText(c.agentRef, note, 'Agent ID')}><Copy size={13} />Copy</button></p>
+        <p className="adm-ticket-id">Meta campaign ID <b className="tp-num">{c.launch?.campaignId || 'Not saved yet'}</b>{c.launch?.campaignId && <button type="button" className="fx-pillbtn" onClick={() => copyText(c.launch.campaignId, note, 'Campaign ID')}><Copy size={13} />Copy</button>}</p>
       </Block>
       <Block title="Open in a new tab" sub="Meta Ads Manager and GoHighLevel don't open inside other sites.">
         <div className="adm-ext">{EXTERNAL.map(x => <a key={x.key} className="tp-btn ov-ghost" href={x.href} target="_blank" rel="noopener noreferrer"><ExternalLink size={15} />{x.label}</a>)}</div>

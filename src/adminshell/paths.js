@@ -85,7 +85,8 @@ export function admRoutes(preview) {
 // The inbounds page reads "Leads" on screen: the word guard (scripts/check-wording.mjs) bans the word inbound in
 // rendered text anywhere in src. Code names and the /admin/inbounds address keep it.
 export const ADM_TABS = [
-  ['overview', 'Overview'], ['agents', 'Agents'], ['team', 'Fulfillment'], ['clients', 'Clients'], ['setup', 'Setup'], ['billing', 'Revenue'], ['leads', 'Leads'],
+  // P913: Overview · Agents · Fulfillment · Leads · Clients · Setup · Revenue (last).
+  ['overview', 'Overview'], ['agents', 'Agents'], ['team', 'Fulfillment'], ['leads', 'Leads'], ['clients', 'Clients'], ['setup', 'Setup'], ['billing', 'Revenue'],
 ]
 // Every page's short name (tabs, the phone bar, search), including the rail-only pages.
 export const ADM_LABELS = { ...Object.fromEntries(ADM_TABS), messages: 'Messages', settings: 'Settings', connect: 'Connect' }

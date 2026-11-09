@@ -55,10 +55,12 @@ test('rota cells: on (with hours), asked off, approved off, or empty', () => {
   assert.deepEqual(rotaCell({ rota, dayOff, va: v, day: 6 }), { kind: '' }, 'a declined request leaves the day as it was')
 })
 
-test('Today is the calendar and the rota is the grid (no drag pool, no desk timeline)', () => {
+test('Today is a calendar, Calendar the week, the rota the grid (no drag pool, no desk timeline)', () => {
   const src = readFileSync(new URL('./screens/Team.jsx', import.meta.url), 'utf8')
   assert.match(src, /function TeamCalendar/)
-  assert.match(src, /<DayBox/)
+  assert.match(src, /function TodayCalls/)
+  // P913: no side panel, no day strip, no key row on the week calendar
+  assert.doesNotMatch(src, /<DayBox|<WeekStrip|adm-cal-key/)
   assert.match(src, /className="adm-rt"/)
   assert.match(src, /role="radiogroup" aria-label="Show a VA"/)
   assert.doesNotMatch(src, /draggable|adm-tl-|function Desk\b/)

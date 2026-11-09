@@ -4,6 +4,7 @@ import { SETUP_STEPS, setupOf, isPaid } from './setup.js'
 import { PRICES, SETTINGS, bandText, nightlyCharge } from '../lib/priceBook.js'
 import { tierOf } from '../template/spendPlan.js'
 import { TIMESHEET, HOURLY, sheetTotals } from './p879.js'
+import { matchAgent } from '../lib/leadMatch.js'
 
 // P849 — the one door to the Admin side's sample info, like src/template/ful/data.js for the VA side. Screens read only
 // through the hooks below; every read returns { data, isLoading: false, error: null }, the react-query shape, so the
@@ -42,10 +43,12 @@ const mkBill = o => ({
   last: { when: 'Wed, Nov 4, 8:00 PM', result: 'approved' }, paidAhead: 1, credit: 0,
   setup: { paid: 'Sep 14', amount: PRICES.setupFee }, founding: { until: 'Sep 14, 2027' }, ...o,
 })
+// P913: the Meta campaign ID saved on the agent when GoHighLevel creates their campaign (one campaign per agent).
+const metaId = id => `12021${String([...id].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 1e10, 7)).padStart(10, '0')}`
 const mkAgent = (id, name, o) => ({
   id, name, role: 'agent', city: 'Austin', state: 'TX', email: `${name.split(' ')[0].toLowerCase()}@example.com`, phone: '(555) 555-0100',
   spend: 100, active: true, onDuty: false, servicing: true, access: true, comped: false, joined: 'Sep 14', lastOn: 'Today',
-  agentRef: `DS-${id.slice(3, 7).toUpperCase()}`, states: ['TX'], ...o, billing: mkBill(o.billing),
+  agentRef: `DS-${id.slice(3, 7).toUpperCase()}`, campaignId: metaId(id), states: ['TX'], ...o, billing: mkBill(o.billing),
   plan: planFor({ spend: 100, ...o }),
 })
 const seedAgents = [
@@ -95,22 +98,32 @@ const mkNew = (id, name, o) => ({
   agentRef: `DS-${id.slice(3, 7).toUpperCase()}`, ...o, plan: o.spend ? planFor(o) : null,
 })
 const made = (name, at) => ({ status: 'created', at, name })
+// P913: the launch checks' sample facts (src/adminshell/setup.js launchChecks). launchOk(ref, extra) = every check passes.
+const launchOk = (ref, o = {}) => ({
+  linkRef: ref, campaignId: `12021${ref.slice(3).padEnd(4, '0').split('').map(ch => ch.charCodeAt(0) % 10).join('')}880`, campaignRef: ref,
+  testLead: { at: 'Wed, Nov 4, 2:10 PM', matchedRef: ref, by: 'link' }, licence: true, hours: '9:00 AM to 6:00 PM', tz: 'Central', card: 'Visa •••• 4242',
+  app: { installed: true, pushAnswered: true }, testCall: { at: 'Wed, Nov 4, 2:14 PM', by: 'AI' }, ...o,
+})
 const seedOnboard = [
   mkNew('ob-nadia', 'Nadia Brooks', { city: 'Dallas', state: 'TX', states: ['TX'], spend: 75, since: 'Wed, Nov 4' }),
   mkNew('ob-monique', 'Monique Price', { city: 'Orlando', state: 'FL', states: ['FL'], spend: 100, since: 'Tue, Nov 3' }),
   mkNew('ob-carl', 'Carl Jensen', { city: 'Mesa', state: 'AZ', states: ['AZ', 'NM'], spend: 60, note: 'Card declined on the setup fee', since: 'Mon, Nov 2' }),
-  mkNew('ob-rachel', 'Rachel Nguyen', { city: 'Houston', state: 'TX', states: ['TX', 'LA'], spend: 65, done: ['paid'], paid: { on: 'Today, 9:12 AM', days: 2 }, since: 'Thu, Nov 5' }),
-  mkNew('ob-luis', 'Luis Ortega', { city: 'El Paso', state: 'TX', states: ['TX', 'NM'], lead: 'live', spend: 150, done: ['paid', 'states'], paid: { on: 'Wed, Nov 4', days: 2 }, since: 'Wed, Nov 4' }),
-  mkNew('ob-hannah', 'Hannah Wright', { city: 'Savannah', state: 'GA', states: ['GA', 'FL'], spend: 90, done: ['paid', 'states'], paid: { on: 'Tue, Nov 3', days: 2 },
-    campaignReq: { status: 'sent', at: 'Today, 9:05 AM' }, since: 'Tue, Nov 3' }),
-  mkNew('ob-owen', 'Owen Fisher', { city: 'Raleigh', state: 'NC', states: ['NC', 'SC'], lead: 'live', spend: 220, done: ['paid', 'states', 'campaign'], paid: { on: 'Mon, Nov 2', days: 2 },
-    campaignReq: made('Deedstone · Owen Fisher · DS-OWEN', 'Wed, Nov 4'), since: 'Mon, Nov 2' }),
-  mkNew('ob-derek', 'Derek Shaw', { city: 'Tulsa', state: 'OK', states: ['OK', 'KS'], lead: 'live', spend: 130, done: ['paid', 'states', 'campaign', 'on'], paid: { on: 'Fri, Oct 30', days: 2 },
-    campaignReq: made('Deedstone · Derek Shaw · DS-DERE', 'Mon, Nov 2'), since: 'Fri, Oct 30' }),
-  mkNew('ob-ivy', 'Ivy Morgan', { city: 'Scottsdale', state: 'AZ', states: ['AZ'], spend: 55, done: ['paid', 'states', 'campaign', 'on', 'test', 'live'], paid: { on: 'Thu, Oct 29', days: 2 },
-    campaignReq: made('Deedstone · Ivy Morgan · DS-IVY', 'Fri, Oct 30'), liveOn: 'Wed, Nov 4', since: 'Thu, Oct 29' }),
-  mkNew('ob-paul', 'Paul Novak', { city: 'Columbus', state: 'OH', states: ['OH', 'IN'], lead: 'live', spend: 110, done: ['paid', 'states', 'campaign', 'on', 'test', 'live'], paid: { on: 'Tue, Oct 27', days: 2 },
-    campaignReq: made('Deedstone · Paul Novak · DS-PAUL', 'Wed, Oct 28'), liveOn: 'Mon, Nov 2', since: 'Tue, Oct 27' }),
+  mkNew('ob-rachel', 'Rachel Nguyen', { city: 'Houston', state: 'TX', states: ['TX', 'LA'], spend: 65, done: ['paid'], paid: { on: 'Today, 9:12 AM', days: 2 }, since: 'Thu, Nov 5',
+    launch: { licence: true, card: 'Visa •••• 5120' } }),
+  mkNew('ob-luis', 'Luis Ortega', { city: 'El Paso', state: 'TX', states: ['TX', 'NM', 'AZ'], lead: 'live', spend: 150, done: ['paid', 'states'], paid: { on: 'Wed, Nov 4', days: 2 }, since: 'Wed, Nov 4',
+    launch: { licence: true, hours: '8:00 AM to 5:00 PM', tz: 'Mountain', card: 'Visa •••• 7781', app: { installed: true, pushAnswered: false } } }),
+  mkNew('ob-hannah', 'Hannah Wright', { city: 'Savannah', state: 'GA', states: ['GA', 'FL', 'SC'], spend: 90, done: ['paid', 'states'], paid: { on: 'Tue, Nov 3', days: 2 },
+    campaignReq: { status: 'sent', at: 'Today, 9:05 AM' }, since: 'Tue, Nov 3', launch: { linkRef: 'DS-HANN', licence: true, hours: '9:00 AM to 5:00 PM', tz: 'Eastern', card: 'Mastercard •••• 3391' } }),
+  // Every check passes but the test call: Place test call unlocks Turn campaign on.
+  mkNew('ob-owen', 'Owen Fisher', { city: 'Raleigh', state: 'NC', states: ['NC', 'SC', 'VA'], lead: 'live', spend: 220, done: ['paid', 'states', 'campaign'], paid: { on: 'Mon, Nov 2', days: 2 },
+    campaignReq: made('Deedstone · Owen Fisher · DS-OWEN', 'Wed, Nov 4'), since: 'Mon, Nov 2', launch: launchOk('DS-OWEN', { tz: 'Eastern', testCall: null }) }),
+  // Was on; the card failed last night, so the campaign paused and the ticket reopened on that tick.
+  mkNew('ob-derek', 'Derek Shaw', { city: 'Tulsa', state: 'OK', states: ['OK', 'KS', 'MO'], lead: 'live', spend: 130, done: ['paid', 'states', 'campaign', 'on'], paid: { on: 'Fri, Oct 30', days: 2 },
+    campaignReq: made('Deedstone · Derek Shaw · DS-DERE', 'Mon, Nov 2'), since: 'Fri, Oct 30', launch: launchOk('DS-DERE', { cardFailed: 'declined Thu, Nov 5, 8:00 PM' }) }),
+  mkNew('ob-ivy', 'Ivy Morgan', { city: 'Scottsdale', state: 'AZ', states: ['AZ', 'NV', 'NM'], spend: 55, done: ['paid', 'states', 'campaign', 'on', 'live'], paid: { on: 'Thu, Oct 29', days: 2 },
+    campaignReq: made('Deedstone · Ivy Morgan · DS-IVY', 'Fri, Oct 30'), liveOn: 'Wed, Nov 4', since: 'Thu, Oct 29', launch: launchOk('DS-IVY', { tz: 'Mountain', testCall: { at: 'Fri, Oct 30, 11:02 AM', by: 'VA' } }) }),
+  mkNew('ob-paul', 'Paul Novak', { city: 'Columbus', state: 'OH', states: ['OH', 'IN', 'KY'], lead: 'live', spend: 110, done: ['paid', 'states', 'campaign', 'on', 'live'], paid: { on: 'Tue, Oct 27', days: 2 },
+    campaignReq: made('Deedstone · Paul Novak · DS-PAUL', 'Wed, Oct 28'), liveOn: 'Mon, Nov 2', since: 'Tue, Oct 27', launch: launchOk('DS-PAUL', { tz: 'Eastern' }) }),
 ]
 // What a ticket's agent paid to open it: the setup fee plus their first days of spend and its 12%.
 export const paidFor = c => {
@@ -131,13 +144,15 @@ const seedSetupLog = {
 }
 
 // Leads this week across every agent. kind = appointment (booked onto the agent's calendar), live (a live transfer)
-// or none (never reached). stage (P906): booked | no_show | follow_up | sold | not_interested | no_answer, plus
-// unassigned (no agent yet: the Unassigned list). A live call waits on booked until the agent marks the result.
+// or none (never reached). stage (P913): booked | no_show | follow_up | sold | not_interested, plus unassigned (matched
+// no agent: the admin alert). owner on a follow-up: 'team' (the AI or no-answer texts still trying) or 'agent'.
+// agentRef / campaignId are what came in with the lead; matchedBy is how matchAgent found the agent. A live call waits
+// on booked until the agent marks the result.
 const FIRST = ['Angela', 'Kevin', 'Shirley', 'Marcus', 'Teresa', 'Daniel', 'Brenda', 'Frank', 'Joyce', 'Victor', 'Monica', 'Gary', 'Linda', 'Raymond', 'Carmen', 'Dennis', 'Yolanda', 'Russell', 'Tanya', 'Curtis', 'Wanda', 'Hector', 'Bonnie', 'Leon', 'Sheila', 'Wayne', 'Diane', 'Ruben', 'Gail', 'Marvin', 'Rita', 'Terrence', 'Lorraine', 'Felix', 'Darlene', 'Clyde']
 const LAST = ['Moore', 'Brooks', 'Adams', 'Hill', 'Lane', 'Ruiz', 'Cole', 'Ellis', 'Turner', 'Hayes', 'Diaz', 'Foster', 'Grant', 'Perry', 'Vega', 'Wells', 'Ford', 'Mills', 'Reyes', 'Bates', 'Long', 'Ortiz', 'Hunt', 'Webb', 'Ross', 'Fox', 'Barnes', 'Soto', 'Lowe', 'Pope', 'Rice', 'Tate', 'Kerr', 'Nash', 'Boyd', 'Gray']
 const PRODUCTS = ['Mortgage protection', 'Mortgage protection', 'Final expense', 'Term life']
 const CITY = { TX: ['Austin', 'Plano', 'Round Rock'], AZ: ['Phoenix', 'Mesa', 'Tempe'], FL: ['Tampa', 'Brandon', 'Ocala'], GA: ['Atlanta', 'Macon', 'Marietta'], CO: ['Denver', 'Aurora'], NC: ['Charlotte', 'Durham'], OK: ['Tulsa'], NV: ['Henderson'], SC: ['Greenville'] }
-const APPT_STAGES = ['booked', 'sold', 'no_show', 'not_interested', 'booked', 'sold', 'follow_up', 'no_answer']
+const APPT_STAGES = ['booked', 'sold', 'no_show', 'not_interested', 'booked', 'sold', 'follow_up', 'team_follow']
 const LIVE_STAGES = ['booked', 'sold', 'follow_up', 'not_interested', 'sold', 'booked']
 const ROUTE_TO = ['ag-dana', 'ag-priya', 'ag-james', 'ag-dana', 'ag-elena', 'ag-priya', 'ag-marcus', 'ag-grace', 'ag-james', 'ag-priya', 'ag-dana', 'ag-elena']
 const PER_DAY = { 2: 9, 3: 10, 4: 10, 5: 9 }
@@ -154,19 +169,25 @@ const seedLeads = (() => {
       const state = agent.states[i % agent.states.length]
       const cities = CITY[state]
       let stage = kind === 'live' ? LIVE_STAGES[l++ % LIVE_STAGES.length] : APPT_STAGES[a++ % APPT_STAGES.length]
-      // Today's newest come in with no agent ID (Unassigned); today's appointments are still to happen (booked).
-      if (day === TODAY && k >= PER_DAY[day] - 3) stage = 'unassigned'
-      else if (day === TODAY && kind === 'appointment' && !['booked', 'no_answer'].includes(stage)) stage = 'booked'
-      if (stage === 'no_answer') kind = 'none'
+      // P913: every lead carries the agent ID from its ad link, or only its Meta campaign ID (every 5th); matchAgent
+      // finds the agent either way. Today's newest came with neither, so it matched no one (the admin alert).
+      const lost = day === TODAY && k === PER_DAY[day] - 1
+      const sent = lost ? {} : i % 5 === 2 ? { campaignId: agent.campaignId } : { agentRef: agent.agentRef, campaignId: agent.campaignId }
+      const hit = matchAgent(sent, seedAgents)
+      if (!hit.agent_id) stage = 'unassigned'
+      else if (day === TODAY && kind === 'appointment' && !['booked', 'team_follow'].includes(stage)) stage = 'booked'
+      const owner = stage === 'team_follow' ? 'team' : stage === 'follow_up' ? 'agent' : null
+      if (stage === 'team_follow') { stage = 'follow_up'; kind = 'none' }
       const name = `${FIRST[i % FIRST.length]} ${LAST[(i * 7) % LAST.length]}`
       const time = clock(k + (day === TODAY ? 2 : 0))
       out.push({
         id: `ib-${i + 1}`, name, phone: `(${['512', '602', '813', '404', '303', '704'][i % 6]}) 555-0${String(110 + i).padStart(3, '0')}`, state, city: cities[i % cities.length],
         kind, product: PRODUCTS[i % PRODUCTS.length], day, time, came: day === TODAY ? `Today, ${time}` : `${dayName(day)}, ${time}`,
         source: i % 4 === 1 ? 'Meta · landing page' : 'Meta · form',
-        agent_id: stage === 'unassigned' ? null : agent.id, stage, premium: stage === 'sold' ? 38 + ((i * 13) % 80) : 0,
+        agent_id: hit.agent_id, stage, owner, agentRef: sent.agentRef || '', campaignId: sent.campaignId || '', matchedBy: hit.by, why: hit.why,
+        premium: stage === 'sold' ? 38 + ((i * 13) % 80) : 0,
         appt: kind === 'appointment' ? `${dateText(Math.min(day + 1 + (i % 3), 9))}, ${clock((i * 3) % 18)}` : null,
-        note: stage === 'no_answer' ? 'The AI called twice, no answer. The day 30, 60 and 90 check-in texts are set.' : '',
+        note: owner === 'team' ? 'The AI called twice, no answer. Our team keeps trying: the day 30, 60 and 90 check-in texts are set.' : '',
         log: [],
       })
     }
@@ -229,10 +250,11 @@ const seedRota = {
 }
 export const SHIFT_MIN = 2
 export const SHIFT_MAX = 3
+// P913: VAs book their own days off inside the monthly allowance, so every row is booked (approved), none pending.
 const seedDayOff = [
-  { id: 'do-1', va_id: 'va-andre', date: 6, reason: "Kid's school event", asked: 'Wed, Nov 4', status: 'pending' },
-  { id: 'do-2', va_id: 'va-lily', date: 9, reason: 'Doctor appointment', asked: 'Wed, Nov 4', status: 'pending' },
-  { id: 'do-3', va_id: 'va-omar', date: 14, reason: 'Family wedding', asked: 'Thu, Nov 5', status: 'pending' },
+  { id: 'do-1', va_id: 'va-andre', date: 6, reason: "Kid's school event", asked: 'Wed, Nov 4', status: 'approved' },
+  { id: 'do-2', va_id: 'va-lily', date: 9, reason: 'Doctor appointment', asked: 'Wed, Nov 4', status: 'approved' },
+  { id: 'do-3', va_id: 'va-omar', date: 14, reason: 'Family wedding', asked: 'Thu, Nov 5', status: 'approved' },
   { id: 'do-4', va_id: 'va-keisha', date: 3, reason: 'Moving day', asked: 'Fri, Oct 30', status: 'approved' },
 ]
 
@@ -257,6 +279,11 @@ export const SETUP_FEE = PRICES.setupFee // P884/P901: from the one price source
 const seedSetupFees = [
   { id: 'su-1', agent: 'Elena Torres', paid: 'Mon, Oct 12', period: 'last' },
   { id: 'su-2', agent: 'Ben Carter', paid: 'Mon, Oct 19', period: 'last' },
+  // P913: this week's (the Setup tickets paid this week); day = the WEEK day it was paid.
+  { id: 'su-3', agent: 'Owen Fisher', paid: 'Mon, Nov 2', period: 'now', day: 2 },
+  { id: 'su-4', agent: 'Hannah Wright', paid: 'Tue, Nov 3', period: 'now', day: 3 },
+  { id: 'su-5', agent: 'Luis Ortega', paid: 'Wed, Nov 4', period: 'now', day: 4 },
+  { id: 'su-6', agent: 'Rachel Nguyen', paid: 'Today', period: 'now', day: 5 },
 ]
 // Owner draws: paid out of a month's profit. October was paid in two draws; November is not paid yet.
 const seedDraws = [
@@ -267,11 +294,13 @@ const seedDraws = [
 ]
 // The rest of each period's costs. Ad spend this week is read from Connect's ad accounts; Nov 1 (a Sunday) adds a little.
 // Tools (texting, phone lines, software) bill on the 1st, so they land in a month and not in this week.
+// P913: aiMins = AI caller minutes in the period (speed-to-lead and test calls), costed at AI_RATE a minute.
 const PERIOD_COSTS = {
-  week: { adsExtra: 0, tools: 0 },
-  month: { adsExtra: 140, tools: 412 },
-  last: { ads: 6140, tools: 412 },
+  week: { adsExtra: 0, tools: 0, aiMins: 318 },
+  month: { adsExtra: 140, tools: 412, aiMins: 342 },
+  last: { ads: 6140, tools: 412, aiMins: 1460 },
 }
+export const AI_RATE = 0.13 // $ a minute all in (Retell, src/lib/aiCaller.js "expect about $0.13")
 export const PERIODS = [['week', 'This week', 'Mon, Nov 2 to today'], ['month', 'This month', 'Nov 1 to today'], ['last', 'Last month', 'October']]
 export const CARD_FEE = PRICES.cardFee // P884/P901: from the one price source
 
@@ -316,6 +345,7 @@ export const SWITCHES = [
   { key: 'signup_open', label: 'Sign-up open', sub: 'Lets new agents sign up without an invite.', group: 'Agents' },
 ]
 const seedSettings = {
+  daysOffPerMonth: 2, // P913: days off a month per VA (they book their own; no approvals)
   profile: { name: ME.name, email: ME.email, phone: ME.phone },
   tz: 'America/Chicago',
   switches: { sms_live: false, voice_live: false, ai_caller_live: false, recording_live: false, invite_sms_live: false, payouts_live: false, billing_enforced: false, submit_live: true, carrier_lookup_live: false, signup_open: false },
@@ -443,7 +473,7 @@ export function funnel(leads) {
     // P906: booked = appointments set with an agent; transferred = live calls an agent took (both whatever came next).
     booked: leads.filter(l => l.kind === 'appointment' && l.agent_id).length,
     transferred: leads.filter(l => l.kind === 'live' && l.agent_id).length,
-    noAnswer: leads.filter(l => l.stage === 'no_answer').length,
+    teamFollow: leads.filter(l => l.stage === 'follow_up' && l.owner === 'team').length,
     sold: leads.filter(l => l.stage === 'sold').length,
     premium: leads.reduce((t, l) => t + l.premium, 0),
   }
@@ -525,7 +555,21 @@ export function useAdmMoney() {
   const plans = weekShare(s.agents.filter(a => !a.comped && a.billing.status !== 'past_due').reduce((t, a) => t + PLANS[a.plan].price, 0))
   const leadsCharged = s.leads.filter(l => l.agent_id).reduce((t, l) => t + (LEAD_PRICE[l.kind] ?? LEAD_PRICE.appointment), 0)
   const leadFee = Math.round(leadsCharged * PRICES.leadFee)
-  const weeks = [...s.revenue, { wk: 'Nov 2', plans, leads: leadsCharged, now: true }]
+  // P913: revenue = plan fees + the 12% fee + setup fees. Lead spend (leads) rides along only to show it apart.
+  const setupWeek = (s.setupFees || []).filter(f => f.period !== 'last').length * SETUP_FEE
+  const revOf = w => w.plans + Math.round(w.leads * PRICES.leadFee) + (w.setup || 0)
+  const weeks = [...s.revenue, { wk: 'Nov 2', plans, leads: leadsCharged, setup: setupWeek, now: true }].map(w => ({ ...w, fee: Math.round(w.leads * PRICES.leadFee), revenue: revOf(w) }))
+  // This week by day, Mon to Sun: plan fees accrue evenly, the 12% fee from that day's leads, setup fees the day paid.
+  const week = s.clock?.week || WEEK
+  const today = s.clock?.today ?? TODAY
+  const days = week.map(d => {
+    const later = d > today
+    const dayLeads = s.leads.filter(l => l.agent_id && l.day === d).reduce((t, l) => t + (LEAD_PRICE[l.kind] ?? LEAD_PRICE.appointment), 0)
+    const setupD = (s.setupFees || []).filter(f => f.period !== 'last' && f.day === d).length * SETUP_FEE
+    const planD = later ? 0 : Math.round(plans / 7)
+    const fee = Math.round(dayLeads * PRICES.leadFee)
+    return { day: d, name: (s.clock?.dayName || dayName)(d), later, isToday: d === today, plans: planD, fee, setup: setupD, revenue: planD + fee + setupD, leadSpend: dayLeads }
+  })
   const failed = s.agents.filter(a => a.billing.failed).map(a => ({ ...a.billing.failed, agent: a.name, agent_id: a.id, status: a.billing.status }))
   // P890: Monday's run pays each VA's hours from clock in and out x their hourly rate (overtime past 40 at 1.5x).
   const run = s.vas.map(v => {
@@ -535,7 +579,7 @@ export function useAdmMoney() {
   })
   const runTotal = run.filter(r => r.bank === 'ready').reduce((t, r) => t + r.amount, 0)
   return okS(s, {
-    plans, leadsCharged, leadFee, total: plans + leadsCharged + leadFee, lastWeek: s.revenue.length ? s.revenue[s.revenue.length - 1].plans + s.revenue[s.revenue.length - 1].leads : 0, weeks,
+    plans, leadsCharged, leadSpend: leadsCharged, leadFee, setup: setupWeek, total: plans + leadFee + setupWeek, lastWeek: s.revenue.length ? revOf(s.revenue[s.revenue.length - 1]) : 0, weeks, days,
     failed, run, runTotal, runs: s.runs, payday: 'Mon, Nov 9',
     stripeBalance: s.real ? s.stripeBalance : 2140, rate, paused: s.settings.payoutsPaused, live: s.settings.switches.payouts_live,
     adSpend: s.connect.ads.reduce((t, a) => t + a.spent, 0), adBudget: s.connect.ads.reduce((t, a) => t + a.budget, 0),
@@ -555,7 +599,10 @@ export function moneyFor(s, period) {
   const servicing = cur === 'last' ? oct.reduce((t, w) => t + w.plans, 0) : period === 'month' ? monthPlans : weekPlans
   // P909: 12% of lead spend on every lead plan, kept apart from the plan fee.
   const leadFee = Math.round(budgets * PRICES.leadFee)
-  const inTotal = budgets + leadFee + servicing + setup
+  // P913: lead spend is the agents' money passed to Meta, never Ohvara's: it's shown on its own, never inside revenue,
+  // profit or totals. Revenue = plan fees + the 12% fee + setup fees.
+  const leadSpend = budgets
+  const inTotal = leadFee + servicing + setup
   const weekAds = s.connect.ads.reduce((t, a) => t + a.spent, 0)
   const pc = (s.periodCosts || PERIOD_COSTS)[period]
   // Real: ad spend from ad_spend_daily for the period (admin_ad_costs), never Connect's sample accounts.
@@ -564,9 +611,12 @@ export function moneyFor(s, period) {
   // Pay runs paid inside the period: Mon, Nov 2 for this week and month; Oct 12, 19 and 26 for October.
   const runs = s.runs.filter(r => (cur === 'last' ? r.paid.includes('Oct') : r.paid.includes('Nov')))
   const vaPay = runs.reduce((t, r) => t + r.amount, 0)
-  const fees = Math.round(inTotal * CARD_FEE)
-  const tools = pc.tools
-  const costTotal = ads + vaPay + fees + tools
+  // Card fees are on everything charged to the card (revenue and the lead spend that passes through).
+  const fees = Math.round((inTotal + leadSpend) * CARD_FEE)
+  const aiMins = s.real ? 0 : pc.aiMins || 0
+  const ai = Math.round(aiMins * AI_RATE)
+  // P913: Profit = revenue minus VA pay, AI minutes and card fees.
+  const costTotal = vaPay + ai + fees
   const profit = inTotal - costTotal
   const bp = s.settings.split.brayden
   const split = OWNERS.map((o, i) => {
@@ -577,8 +627,8 @@ export function moneyFor(s, period) {
     return { ...o, pct, amount, paid, owed: Math.max(0, amount - paid) }
   })
   return {
-    period, budgets, leadFee, servicing, setup, setupCount: setup / SETUP_FEE, inTotal,
-    ads, vaPay, runs, fees, tools, costTotal, profit, split, splitChanged: s.settings.split.changed,
+    period, budgets, leadSpend, leadFee, servicing, setup, setupCount: setup / SETUP_FEE, inTotal,
+    ads, vaPay, runs, fees, ai, aiMins, costTotal, profit, split, splitChanged: s.settings.split.changed,
   }
 }
 export function useAdmPeriod(period = 'week') { const s = useS(); return okS(s, moneyFor(s, period)) }
@@ -599,12 +649,12 @@ export function useAdmDay() {
   const requests = s.dayOff.filter(d => d.status === 'pending').map(d => ({ ...d, va: nameOf(s, d.va_id) }))
   const failed = s.agents.filter(a => a.billing.failed)
   return okS(s, {
-    week, byDay, unassigned, late, requests, failed, real: !!s.real,
+    week, byDay, today, unassigned, late, requests, failed, real: !!s.real,
     range: s.clock ? `${s.clock.dateText(s.clock.week[0])} to today` : 'Mon, Nov 2 to today',
     payingAgents: s.agents.filter(a => !a.comped && a.billing.status === 'current' && a.access).length,
     onShift: (s.rota[today] || []).map(id => s.vas.find(v => v.id === id)).filter(Boolean),
     onDuty: s.agents.filter(a => a.onDuty && a.active),
-    needs: unassigned.length + late.length + requests.length + failed.length,
+    needs: unassigned.length + late.length + failed.length,
     unread: s.threads.reduce((n, t) => n + t.unread, 0),
     openBugs: openBugCount(s.bugs, s.real ? [] : sentBugs),
   })
@@ -633,9 +683,9 @@ const SAMPLE_ACTIONS = {
       const l = s.leads.find(x => x.id === id)
       const stage = l.stage === 'unassigned' ? 'booked' : l.stage
       const kind = l.stage === 'unassigned' ? 'appointment' : l.kind
-      return { leads: patchById(s.leads, id, { agent_id: agentId, stage, kind, log: [...l.log, `Assigned to ${nameOf(s, agentId)} at ${stamp()}`] }), ...audit(s, l.agent_id ? 'Moved a lead' : 'Assigned a lead', `${l.name} to ${nameOf(s, agentId)}`) }
+      return { leads: patchById(s.leads, id, { agent_id: agentId, stage, kind, matchedBy: l.agent_id ? l.matchedBy : 'admin', log: [...l.log, `Assigned to ${nameOf(s, agentId)} at ${stamp()}`] }), ...audit(s, l.agent_id ? 'Moved a lead' : 'Assigned a lead', `${l.name} to ${nameOf(s, agentId)}`) }
     }),
-    setLeadStage: (id, stage) => set(s => { const l = s.leads.find(x => x.id === id); return { leads: patchById(s.leads, id, { stage, premium: stage === 'sold' ? l.premium || 60 : 0 }), ...audit(s, 'Changed a lead status', `${l.name}: ${stage.replace('_', ' ')}`) } }),
+    setLeadStage: (id, stage) => set(s => { const l = s.leads.find(x => x.id === id); return { leads: patchById(s.leads, id, { stage, owner: stage === 'follow_up' ? l.owner || 'agent' : null, premium: stage === 'sold' ? l.premium || 60 : 0 }), ...audit(s, 'Changed a lead status', `${l.name}: ${stage.replace('_', ' ')}`) } }),
     // Agents
     setAgentActive: (id, on) => set(s => ({ agents: patchById(s.agents, id, { active: on, onDuty: on && s.agents.find(a => a.id === id).onDuty }), ...audit(s, on ? 'Turned live transfers on' : 'Turned live transfers off', nameOf(s, id)) })),
     // P906: daily lead spend (the plan follows its band from the next monthly bill), and pausing lead spend.
@@ -671,9 +721,21 @@ const SAMPLE_ACTIONS = {
     tickSetup: (id, key, on) => set(s => {
       const c = s.onboard.find(x => x.id === id)
       const st = SETUP_STEPS.find(x => x.key === key)
-      if (!c || !st || key === 'live') return {}
+      if (!c || !st || ['checks', 'on', 'live'].includes(key)) return {} // P913: never ticked by hand
       const done = on ? [...new Set([...c.done, key])] : c.done.filter(k => k !== key)
       return { onboard: patchById(s.onboard, id, { done }), ...setupLogAdd(s, id, `${on ? 'Ticked' : 'Unticked'} ${st.label}`), ...audit(s, on ? 'Ticked a setup step' : 'Unticked a setup step', `${c.name}: ${st.label}`) }
+    }),
+    // P913 — the seatbelt: Turn campaign on works only when every launch check passes (no skipping).
+    turnCampaignOn: id => set(s => {
+      const c = s.onboard.find(x => x.id === id)
+      if (!c || !setupOf(c).canLaunch) return {}
+      return { onboard: patchById(s.onboard, id, { done: [...new Set([...c.done, 'on'])] }), ...setupLogAdd(s, id, 'Turned the campaign on (every launch check passed)'), ...audit(s, 'Turned a campaign on', c.name) }
+    }),
+    // Sample: the AI places the test call from the test lead to the agent's own number.
+    placeTestCall: id => set(s => {
+      const c = s.onboard.find(x => x.id === id)
+      if (!c?.launch?.testLead) return {}
+      return { onboard: patchById(s.onboard, id, { launch: { ...c.launch, testCall: { at: `Today, ${stamp()}`, by: 'AI' } } }), ...setupLogAdd(s, id, 'AI test call placed to their own number') }
     }),
     requestCampaign: id => {
       set(s => {
@@ -685,7 +747,8 @@ const SAMPLE_ACTIONS = {
         const c = s.onboard.find(x => x.id === id)
         if (!c || c.campaignReq?.status !== 'sent') return {}
         const name = `Deedstone · ${c.name} · ${c.agentRef}`
-        return { onboard: patchById(s.onboard, id, { campaignReq: { status: 'created', at: `Today, ${stamp()}`, name }, done: [...new Set([...c.done, 'campaign'])] }), ...setupLogAdd(s, id, `Campaign created: ${name}`, 'GoHighLevel') }
+        const campaignId = `12021${String(Date.now()).slice(-9)}`
+        return { onboard: patchById(s.onboard, id, { campaignReq: { status: 'created', at: `Today, ${stamp()}`, name }, done: [...new Set([...c.done, 'campaign'])], launch: { ...c.launch, linkRef: c.agentRef, campaignId, campaignRef: c.agentRef } }), ...setupLogAdd(s, id, `Campaign created: ${name} · campaign ID ${campaignId} saved`, 'GoHighLevel') }
       }), 1600)
     },
     markLive: id => set(s => {

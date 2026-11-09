@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { CircleCheck, Landmark, ArrowUpRight, CreditCard, MessageSquare, RotateCw, Wallet, Megaphone, Headset, Receipt, Wrench, BadgeDollarSign, PiggyBank, Pencil, History } from 'lucide-react'
-import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, useAdmSettings, useAdmSource, PLANS, PERIODS, SETUP_FEE, CARD_FEE } from '../data'
+import { CircleCheck, Landmark, ArrowUpRight, CreditCard, MessageSquare, RotateCw, Wallet, Megaphone, Headset, Receipt, BadgeDollarSign, PiggyBank, Pencil, History, Bot } from 'lucide-react'
+import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, useAdmSettings, useAdmSource, PLANS, PERIODS, SETUP_FEE, CARD_FEE, AI_RATE } from '../data'
 import { PRICES } from '../../lib/priceBook.js'
 import { Avatar, Chip, PillTabs, SampleTag, Seg, Switch, useNote } from '../../template/kit'
 import { CountUp, usd } from '../../template/motion'
-import { Tile, EngineSlot } from '../kit'
+import { Tile } from '../kit'
 import { ap } from '../paths'
 import { BILL_WORD, BANK_WORD } from '../words'
 import { PilotResults } from './Pilot879'
@@ -17,43 +17,36 @@ import { PilotResults } from './Pilot879'
 // payments) and money out (the Monday VA pay run: hours from clock in and out x the hourly rate, P890: no per-cancel pay;
 // past runs, the Stripe balance and the pause switch). Sample amounts and prices.
 const money = usd()
+const money2 = usd(true)
 
+// P913 — By week: the one main chart. Revenue = plan fees + the 12% fee + setup fees, stacked per week. Agent lead
+// spend is never in it: it's the agents' money passed to Meta, named on its own line under the chart.
 function Revenue() {
   const src = useAdmSource()
   const { data: m } = useAdmMoney()
-  const { data: agents } = useAdmAgents()
-  const top = Math.max(...m.weeks.map(w => w.plans + w.leads))
-  const byPlan = Object.entries(PLANS).map(([k, p]) => ({ k, ...p, n: agents.filter(a => a.plan === k && !a.comped).length }))
+  const top = Math.max(1, ...m.weeks.map(w => w.revenue))
+  const pct = n => `${Math.round(n * 100)}%`
   return (
-    <div className="fx-ovl">
-      <div className="fx-ovl-main">
-        <Tile className="adm-rev-hero" i={0} title="Revenue by week" sub={`Plans plus lead spend and its 12% · ${src === 'real' ? 'from billing' : 'sample'}`}>
-          <div className="fx-chart-head fx-bk-head">
-            <b className="tp-money fx-bk-num"><CountUp value={m.total} format={money} /></b>
-            <span className="fx-bk-side"><b>this week so far</b><small>{money(m.lastWeek)} last week</small><i className={`fx-delta is-${m.total >= m.lastWeek ? 'up' : 'warn'}`}>{m.total >= m.lastWeek ? 'Up' : 'Behind'} {Math.abs(Math.round(((m.total - m.lastWeek) / m.lastWeek) * 100))}%</i></span>
-          </div>
-          <div className="fx-key"><span><i className="adm-k is-sold" />Plans</span><span><i className="adm-k is-mid" />Leads</span><SampleTag>Sample</SampleTag></div>
-          <div className="adm-revbars" role="img" aria-label={m.weeks.map(w => `${w.wk}: ${money(w.plans + w.leads)}`).join('. ')}>
-            {m.weeks.map((w, i) => (
-              <span key={w.wk} className={w.now ? 'is-now' : ''} style={{ '--i': i }}>
-                <b className="tp-num">{money(w.plans + w.leads)}</b>
-                <i style={{ '--h': (w.plans + w.leads) / top }}><em className="is-leads" style={{ '--h': w.leads / (w.plans + w.leads) }} /><em className="is-plans" style={{ '--h': w.plans / (w.plans + w.leads) }} /></i>
-                <small>{w.wk}</small>
-              </span>
-            ))}
-          </div>
-        </Tile>
+    <div className="adm-rev-view">
+      <div className="fx-chart-head fx-bk-head">
+        <b className="tp-money fx-bk-num"><CountUp value={m.total} format={money} /></b>
+        <span className="fx-bk-side"><b>revenue this week so far</b><small>{money(m.lastWeek)} last week</small>{m.lastWeek > 0 && <i className={`fx-delta is-${m.total >= m.lastWeek ? 'up' : 'warn'}`}>{m.total >= m.lastWeek ? 'Up' : 'Behind'} {Math.abs(Math.round(((m.total - m.lastWeek) / m.lastWeek) * 100))}%</i>}</span>
       </div>
-      <div className="fx-ovl-side adm-side">
-        <Tile className="is-fill is-teal" i={1} title="Ad spend this week" sub={`Budget ${money(m.adBudget)} across both ad accounts`} to={ap('connect')} label="Open Connect">
-          <b className="fx-huge tp-money"><CountUp value={m.adSpend} format={money} /></b>
-          <div className="fx-meter" role="img" aria-label="Spent of budget"><i style={{ '--w': m.adBudget ? m.adSpend / m.adBudget : 0 }} /></div>
-          <small>{money(m.leadsCharged)} lead spend charged to agents · {money(m.leadFee)} more as the 12%</small>
-        </Tile>
-        <Tile i={2} title="By plan" sub="Paying agents">
-          <ul className="adm-sum">{byPlan.map(p => <li key={p.k}><Megaphone size={14} aria-hidden="true" /><span className="tp-grow">{p.label}<small>{p.price ? `${money(p.price)} a month · ${p.sub}` : 'Leads only'}</small></span><b className="tp-num">{p.n}</b></li>)}</ul>
-        </Tile>
-      </div>
+      <div className="adm-rev-key"><span><i className="is-plans adm-rev-sw" />Plan fees</span><span><i className="is-fee adm-rev-sw" />{pct(PRICES.leadFee)} fee</span><span><i className="is-setup adm-rev-sw" />Setup fees</span>{src !== 'real' && <SampleTag>Sample</SampleTag>}</div>
+      <ol className="adm-rev-chart" style={{ '--n': m.weeks.length }} role="img" aria-label={m.weeks.map(w => `Week of ${w.wk}: ${money(w.revenue)}`).join('. ')}>
+        {m.weeks.map(w => (
+          <li key={w.wk} className={w.now ? 'is-now' : ''}>
+            <b>{money(w.revenue)}</b>
+            <span className="adm-wg-bar" aria-hidden="true">
+              <i className="is-plans" style={{ height: `${(w.plans / top) * 100}%` }} />
+              <i className="is-fee" style={{ bottom: `${(w.plans / top) * 100}%`, height: `${(w.fee / top) * 100}%` }} />
+              <i className="is-setup" style={{ bottom: `${((w.plans + w.fee) / top) * 100}%`, height: `${((w.setup || 0) / top) * 100}%` }} />
+            </span>
+            <small>{w.now ? 'This week' : w.wk}</small>
+          </li>
+        ))}
+      </ol>
+      <p className="adm-rev-out"><Megaphone size={14} aria-hidden="true" />Agent lead spend (passed to Meta): <b className="tp-money">{money(m.leadSpend)}</b> this week. Not Ohvara's money, so it's in no total.</p>
     </div>
   )
 }
@@ -63,28 +56,6 @@ const Line = ({ icon: Icon, label, sub, n, extra, neg }) => (
   <li><Icon size={14} aria-hidden="true" /><span className="tp-grow">{label}{sub && <small>{sub}</small>}{extra}</span><b className="tp-money">{neg && n > 0 ? '−' : ''}{money(n)}</b></li>
 )
 
-// Brought in → Costs → Profit as a small waterfall: costs float from the profit up to what came in.
-function Waterfall({ p }) {
-  const top = Math.max(p.inTotal, 1)
-  const pos = Math.max(0, p.profit)
-  const cols = [
-    { k: 'in', label: 'Brought in', n: p.inTotal, b: 0, h: p.inTotal / top },
-    { k: 'cost', label: 'Costs', n: p.costTotal, b: pos / top, h: p.costTotal / top, neg: true },
-    { k: 'profit', label: 'Profit', n: p.profit, b: 0, h: pos / top },
-  ]
-  return (
-    <div className="adm-fall" role="img" aria-label={`Brought in ${money(p.inTotal)}, costs ${money(p.costTotal)}, profit ${money(p.profit)}`}>
-      {cols.map((c, i) => (
-        <span key={c.k} className={`adm-fall-${c.k}`} style={{ '--i': i }}>
-          <i style={{ '--b': c.b, '--h': Math.max(c.h, 0.004) }}><b className="tp-money">{c.neg && c.n > 0 ? '−' : ''}{money(c.n)}</b></i>
-          <small>{c.label}</small>
-        </span>
-      ))}
-    </div>
-  )
-}
-
-// The owners' split: each one's share of the period's profit, paid out so far and still owed. The split is a setting.
 function Split({ p }) {
   const { setSplit } = useAdmActions()
   const note = useNote()
@@ -117,45 +88,41 @@ function Split({ p }) {
   )
 }
 
-function MoneyTop({ period, setPeriod }) {
-  const { data: p } = useAdmPeriod(period)
-  const src = useAdmSource()
-  const span = PERIODS.find(x => x[0] === period)
+// P913 — the headline numbers: Revenue, Costs, Profit, and Agent lead spend set apart (passed to Meta, not ours).
+function Headline({ p }) {
   const margin = p.inTotal ? Math.round((p.profit / p.inTotal) * 100) : 0
   return (
-    // P867: the four totals (Brought in, Costs, Profit, the split) are one band that fills the window (data-fold), so
-    // the details below (By week, Agent billing, Payouts) clearly peek; before, the split sat alone at the fold.
-    <section className="adm-money" aria-label="Revenue for the period" data-fold data-fold-next=".adm-tabpane .fx-tile">
-      <div className="adm-money-bar">
-        <Seg label="Period" value={period} onChange={setPeriod} options={PERIODS.map(([k, label]) => ({ key: k, label }))} />
-        <small className="tp-sub">{span[2]} · {src === 'real' ? 'from billing' : 'sample numbers'}</small>
-      </div>
-      <div className="adm-money-grid has-split">
-        <Tile className="adm-total is-in" i={0} title="Brought in" sub="Everything agents paid">
-          <b className="fx-huge tp-money"><CountUp value={p.inTotal} format={money} /></b>
-          <ul className="adm-sum">
-            <Line icon={Megaphone} label="Lead spend" sub="Charged nightly, all of it goes to ads" n={p.budgets} />
-            <Line icon={BadgeDollarSign} label={`${Math.round(PRICES.leadFee * 100)}% of lead spend`} sub="Covers the AI calls and the team working every lead" n={p.leadFee} />
-            <Line icon={BadgeDollarSign} label="Plan fees" sub="Starter, Growth, Pro and servicing only, month to month" n={p.servicing} />
-            <Line icon={Receipt} label="Setup fees" sub={p.setupCount ? `${p.setupCount} new ${p.setupCount === 1 ? 'agent' : 'agents'} · ${money(SETUP_FEE)} each` : 'No new agents'} n={p.setup} />
-          </ul>
-        </Tile>
-        <Tile className="adm-total is-cost" i={1} title="Costs" sub="What it took to run">
-          <b className="fx-huge tp-money"><CountUp value={p.costTotal} format={money} /></b>
-          <ul className="adm-sum">
-            <Line icon={Megaphone} label="Ad spend" extra={<EngineSlot className="adm-engine-sm" />} n={p.ads} neg />
-            <Line icon={Headset} label="VA payouts" sub={p.runs.length ? `${p.runs.length} pay ${p.runs.length === 1 ? 'run' : 'runs'} paid` : 'No run paid yet'} n={p.vaPay} neg />
-            <Line icon={CreditCard} label="Card fees" sub={`About ${Math.round(CARD_FEE * 100)}% of what came in`} n={p.fees} neg />
-            <Line icon={Wrench} label="Tools" sub={p.tools ? 'Texting, phone lines, software' : 'Billed on the 1st'} n={p.tools} neg />
-          </ul>
-        </Tile>
-        <Tile className={`adm-total is-profit${p.profit < 0 ? ' is-loss' : ''}`} i={2} title="Profit" sub={`Brought in minus costs · ${margin}% kept`}>
-          <b className="fx-huge tp-money"><CountUp value={p.profit} format={money} /></b>
-          <Waterfall p={p} />
-        </Tile>
-        <Split p={p} key={p.split[0].pct} />
-      </div>
-    </section>
+    <div className="adm-rev-head" role="group" aria-label="Revenue for the period">
+      <div className="is-main"><small>Revenue</small><b><CountUp value={p.inTotal} format={money} /></b><em>Plan fees + {Math.round(PRICES.leadFee * 100)}% fee + setup fees</em></div>
+      <div><small>Costs</small><b>{money(p.costTotal)}</b><em>VA pay, AI minutes, card fees</em></div>
+      <div className={p.profit < 0 ? 'is-loss' : ''}><small>Profit</small><b><CountUp value={p.profit} format={money} /></b><em>{margin}% of revenue kept</em></div>
+      <div className="is-out"><small>Agent lead spend (passed to Meta)</small><b>{money(p.leadSpend)}</b><em>Not Ohvara's money · in no total</em></div>
+    </div>
+  )
+}
+
+// P913 — the breakdown, last: where revenue came from, what it cost, the profit, and the owners' split.
+function Breakdown({ p }) {
+  return (
+    <div className="adm-rev-break">
+      <Tile i={2} title="Revenue" sub="What Ohvara earned">
+        <ul className="adm-sum">
+          <Line icon={BadgeDollarSign} label="Plan fees" sub="Starter, Growth, Pro and servicing only, month to month" n={p.servicing} />
+          <Line icon={BadgeDollarSign} label={`${Math.round(PRICES.leadFee * 100)}% fee on lead spend`} sub="Covers the AI calls and the team working every lead" n={p.leadFee} />
+          <Line icon={Receipt} label="Setup fees" sub={p.setupCount ? `${p.setupCount} new ${p.setupCount === 1 ? 'agent' : 'agents'} · ${money(SETUP_FEE)} each` : 'No new agents'} n={p.setup} />
+          <li className="is-total"><BadgeDollarSign size={14} aria-hidden="true" /><span className="tp-grow">Revenue</span><b className="tp-money">{money(p.inTotal)}</b></li>
+        </ul>
+      </Tile>
+      <Tile i={3} title="Costs and profit" sub="Revenue minus VA pay, AI minutes and card fees">
+        <ul className="adm-sum">
+          <Line icon={Headset} label="VA pay" sub={p.runs.length ? `${p.runs.length} pay ${p.runs.length === 1 ? 'run' : 'runs'} paid` : 'No run paid yet'} n={p.vaPay} neg />
+          <Line icon={Bot} label="AI minutes" sub={p.aiMins ? `${p.aiMins} minutes at about ${money2(AI_RATE)} a minute` : 'From the AI caller once it is live'} n={p.ai} neg />
+          <Line icon={CreditCard} label="Card fees" sub={`About ${Math.round(CARD_FEE * 100)}% of everything charged`} n={p.fees} neg />
+          <li className="is-total"><Wallet size={14} aria-hidden="true" /><span className="tp-grow">Profit</span><b className="tp-money">{money(p.profit)}</b></li>
+        </ul>
+      </Tile>
+      <Split p={p} key={p.split[0].pct} />
+    </div>
   )
 }
 
@@ -252,26 +219,39 @@ function Payouts() {
   )
 }
 
-const TABS = [['revenue', 'By week'], ['pilot', 'Pilot results'], ['agents', 'Agent billing'], ['payouts', 'Payouts']]
+// P913 — one page, top to bottom: the period, the headline numbers, one stage that holds the main chart (By week) or
+// another view (Pilot results, Agent billing, Payouts), then the breakdown. The stage has one fixed height and place:
+// switching views changes only what's inside it (a long view scrolls inside), so nothing below moves or resizes.
+const VIEWS = [['revenue', 'By week'], ['pilot', 'Pilot results'], ['agents', 'Agent billing'], ['payouts', 'Payouts']]
 export default function Billing() {
   const [sp, setSp] = useSearchParams()
   const { data: m } = useAdmMoney()
+  const src = useAdmSource()
   const raw = sp.get('tab')
-  const tab = TABS.some(t => t[0] === raw) ? raw : 'revenue'
+  const tab = VIEWS.some(t => t[0] === raw) ? raw : 'revenue'
   const rawP = sp.get('period')
   const period = PERIODS.some(x => x[0] === rawP) ? rawP : 'week'
+  const { data: p } = useAdmPeriod(period)
+  const span = PERIODS.find(x => x[0] === period)
   const put = (k, v, dflt) => { const next = new URLSearchParams(sp); if (v === dflt) next.delete(k); else next.set(k, v); setSp(next, { replace: true }) }
   return (
-    <div className="tp-page fx-page adm-billing">
-      <MoneyTop period={period} setPeriod={v => put('period', v, 'week')} />
-      <PillTabs label="Revenue details" className="fx-ptabs adm-pagetabs" itemClass="fx-ptab" value={tab} onChange={t => put('tab', t, 'revenue')}
-        items={TABS.map(([k, label]) => ({ key: k, label, count: k === 'agents' && m.failed.length ? m.failed.length : undefined }))} />
-      <div className="adm-tabpane" key={tab} role="tabpanel">
-        {tab === 'revenue' && <Revenue />}
-        {tab === 'pilot' && <PilotResults />}
-        {tab === 'agents' && <AgentBills />}
-        {tab === 'payouts' && <Payouts />}
+    <div className="tp-page fx-page adm-billing adm-rev">
+      <div className="adm-money-bar">
+        <Seg label="Period" value={period} onChange={v => put('period', v, 'week')} options={PERIODS.map(([k, label]) => ({ key: k, label }))} />
+        <small className="tp-sub">{span[2]} · {src === 'real' ? 'from billing' : 'sample numbers'}</small>
       </div>
+      <Headline p={p} />
+      <section className="fx-tile adm-rev-stage" style={{ '--i': 1 }} aria-label="Revenue views">
+        <PillTabs label="Revenue details" className="fx-ptabs adm-pagetabs" itemClass="fx-ptab" value={tab} onChange={t => put('tab', t, 'revenue')}
+          items={VIEWS.map(([k, label]) => ({ key: k, label, count: k === 'agents' && m.failed.length ? m.failed.length : undefined }))} />
+        <div className="adm-rev-body" key={tab} role="tabpanel" tabIndex={0}>
+          {tab === 'revenue' && <Revenue />}
+          {tab === 'pilot' && <PilotResults />}
+          {tab === 'agents' && <AgentBills />}
+          {tab === 'payouts' && <Payouts />}
+        </div>
+      </section>
+      <Breakdown p={p} />
     </div>
   )
 }

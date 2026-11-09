@@ -1,18 +1,18 @@
 /* P906 — admin catch-up: the six-status Leads board and its Unassigned list, the agent plan and budget panel, Setup
    tickets, and Settings' launch switches. Colours come from the theme tokens only. */
 
-/* Leads: six statuses */
-.fx .fx-board.adm-board6 { grid-template-columns: repeat(6, minmax(168px, 1fr)); gap: 10px; scrollbar-width: thin; }
-.fx .fx-board.adm-board6.is-one { grid-template-columns: minmax(0, 1fr); }
-.adm-board6 .fx-lane-h { align-items: flex-start; line-height: 1.25; }
-.adm-board6 .fx-lane-h > i { flex: none; margin-top: 4px; }
+/* Leads: five statuses (P913) */
+.fx .fx-board.adm-board5 { grid-template-columns: repeat(5, minmax(168px, 1fr)); gap: 10px; scrollbar-width: thin; }
+.fx .fx-board.adm-board5.is-one { grid-template-columns: minmax(0, 1fr); }
+.adm-board5 .fx-lane-h { align-items: flex-start; line-height: 1.25; }
+.adm-board5 .fx-lane-h > i { flex: none; margin-top: 4px; }
 .adm-unassigned { flex: none; gap: 4px; }
 .adm-unassigned h2 { display: flex; align-items: center; gap: 6px; }
 .adm-unassigned .adm-rows { max-height: 196px; overflow-y: auto; overscroll-behavior: contain; }
 .adm-un-row .adm-who { flex: 1 1 260px; min-width: 0; }
 .adm-un-row .tp-field { min-width: 200px; }
 @media (max-width: 999.98px) {
-  .fx .fx-board.adm-board6 { grid-template-columns: repeat(6, 80%); margin: 0 -16px; padding: 0 16px 6px; scroll-snap-type: x proximity; scroll-padding: 0 16px; }
+  .fx .fx-board.adm-board5 { grid-template-columns: repeat(5, 80%); margin: 0 -16px; padding: 0 16px 6px; scroll-snap-type: x proximity; scroll-padding: 0 16px; }
   .adm-unassigned .adm-rows { max-height: none; overflow: visible; }
   .adm-un-row .tp-field, .adm-un-row .tp-primary { flex: 1 1 100%; justify-content: center; }
 }

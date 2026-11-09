@@ -30,9 +30,12 @@ test('Money adds up for every period: brought in minus costs is profit, and the 
   const s = admSnapshot()
   for (const [period] of PERIODS) {
     const p = moneyFor(s, period)
-    assert.equal(p.inTotal, p.budgets + p.leadFee + p.servicing + p.setup, period)
+    // P913: lead spend is the agents' money passed to Meta, never in revenue, profit or totals.
+    assert.equal(p.inTotal, p.leadFee + p.servicing + p.setup, period)
+    assert.equal(p.leadSpend, p.budgets, period)
     assert.equal(p.leadFee, Math.round(p.budgets * 0.12), `${period}: 12% of lead spend, apart from the plan fees (P909)`)
-    assert.equal(p.costTotal, p.ads + p.vaPay + p.fees + p.tools, period)
+    // Profit = revenue minus VA pay, AI minutes and card fees.
+    assert.equal(p.costTotal, p.vaPay + p.ai + p.fees, period)
     assert.equal(p.profit, p.inTotal - p.costTotal, period)
     assert.ok(p.profit > 0, `${period} profit is believable`)
     assert.equal(p.split.reduce((t, o) => t + o.amount, 0), p.profit, period)
@@ -54,7 +57,7 @@ test('the split is a setting written to the audit log, and both owners show as p
   const b = src('./screens/Billing.jsx')
   assert.match(b, /function OwnerPayouts\(\)/)
   assert.match(b, /\['week', 'This week'|PERIODS/)
-  assert.match(b, /<EngineSlot/) // ad spend is an engine slot until GoHighLevel is connected
+  assert.match(b, /Agent lead spend \(passed to Meta\)/) // P913: shown apart, in no total
 })
 
 test('the clock shows on Overview only in all three portals', () => {
