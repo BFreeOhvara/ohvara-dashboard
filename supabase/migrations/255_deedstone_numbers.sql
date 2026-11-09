@@ -132,7 +132,8 @@ select 'deedstone_number_hot', array['admin'], 'A Deedstone number is running ho
 -- ── 4. Load and assignment ──────────────────────────────────────────────────────────────────────────────────────
 -- The Central-time day a moment falls on (VA hours and the pool's "per day" are both Central).
 create or replace function public.deedstone_day(p_at timestamptz)
-returns date language sql immutable as $$ select (p_at at time zone 'America/Chicago')::date $$;
+returns date language sql immutable set search_path = '' as $$ select (p_at at time zone 'America/Chicago')::date $$;
+revoke execute on function public.deedstone_day(timestamptz) from public, anon;
 
 create or replace function public.deedstone_settings()
 returns table (daily_limit int, agent_estimate int) language sql stable security definer set search_path = public as $$
