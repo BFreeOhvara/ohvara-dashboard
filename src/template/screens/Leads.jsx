@@ -15,7 +15,8 @@ import { dailyTotal, openSlotsPerWeek, spendOk } from '../spendPlan'
 import { usd } from '../motion'
 import { FeedbackDrawer } from '../Talk'
 import { CallOrCopy as CallOr } from '../CallOrCopy'
-import { telOf } from '../phoneMask'
+import { DeedstoneCallButton } from '../DeedstoneCall'
+import { targetOf } from '../../lib/deedstoneCall'
 import { paths } from '../paths'
 import { FirstRun } from '../DataState'
 import '../leads873.css'
@@ -71,8 +72,8 @@ function LeadCard({ l, i, onResult }) {
   )
 }
 
-// P898: Call on phones only, the number with copy elsewhere (CallOrCopy.jsx, shared with the client drawer).
-const CallOrCopy = ({ lead, closed, onCall }) => <CallOr phone={lead.phone} rawPhone={lead.rawPhone} closed={closed} onCall={onCall} />
+// P898: the number with copy (CallOrCopy.jsx, shared with the client drawer). P916: Call through Deedstone, every width.
+const CallOrCopy = ({ lead, closed, onCall }) => <CallOr phone={lead.phone} target={targetOf('lead', lead)} closed={closed} onCall={onCall} />
 
 // One timeline row, shaped like a lead-events row. Texts show as bubbles; what the system or the agent sends is a
 // preview until texting is switched on.
@@ -138,7 +139,7 @@ function LeadDrawer({ id, onClose }) {
         {canMove(lead, 'not_interested') && <button type="button" className="tp-btn ov-ghost" onClick={() => setOutcome('not_interested')}><X size={14} />Not interested</button>}
       </>}>
       <NoShowUndo lead={lead} />
-      {task && <div className="lc-nudge is-static"><PhoneForwarded size={16} aria-hidden="true" /><span className="tp-grow"><b>{lead.first_name} asked you to call</b><small>{'“'}{lead.reply.text}{'”'} We told them someone calls shortly.</small></span><a href={telOf(lead.rawPhone || lead.phone)} className="lc-nudge-go lc-tel" onClick={called}>Call</a><span className="lc-nudge-go lc-num tp-num">{lead.phone}</span></div>}
+      {task && <div className="lc-nudge is-static"><PhoneForwarded size={16} aria-hidden="true" /><span className="tp-grow"><b>{lead.first_name} asked you to call</b><small>{'“'}{lead.reply.text}{'”'} We told them someone calls shortly.</small></span><DeedstoneCallButton target={targetOf('lead', lead)} className="lc-nudge-go lc-call" onCall={called}>Call</DeedstoneCallButton></div>}
       {needsResult(lead, clockNow()) && <button type="button" className="lc-nudge" onClick={() => setPrompt(true)}><ClipboardCheck size={16} aria-hidden="true" /><span className="tp-grow"><b>How did it go?</b><small>{isLiveCall(lead) ? 'You took the live call. Pick the result' : `The appointment at ${lead.appt} has passed`}</small></span><span className="lc-nudge-go">Mark result</span></button>}
       {lead.stage === 'sold' && !lead.submitted && <Link to={paths.submit(lead.id)} className="fx-nudge">Finish the servicing details. The team takes it from there.</Link>}
       {closed && <p className="lc-closed"><b>{closedReason(lead)}.</b> {lead.stage === 'opted_out' ? 'All calls and texts stopped.' : 'No more calls or texts.'} A reply from them brings them back as a new lead.</p>}

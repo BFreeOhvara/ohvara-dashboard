@@ -116,6 +116,12 @@ export const store: Store = {
   async setLeadTransferStatus(leadId, status) {
     await admin.from('leads').update({ transfer_status: status, ...(status === 'connected' ? { transferred_at: now() } : null) }).eq('id', leadId)
   },
+  // P916: the agent's Deedstone number (assigned the first time, kept).
+  async deedstoneFrom(agentId, kind, ref) {
+    const { data, error } = await admin.rpc('deedstone_from', { p_agent: agentId, p_kind: kind, p_ref: ref })
+    if (error) { console.error('deedstone_from', error.message); return null }
+    return (data as { phone?: string } | null)?.phone ?? null
+  },
 }
 
 export const twilio = twilioClient(SID ?? '', TOKEN ?? '')

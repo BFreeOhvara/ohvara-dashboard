@@ -3,6 +3,7 @@ import { ClipboardCheck, PhoneIncoming, ShieldQuestion, Wallet, Phone, ChevronRi
 import { Avatar } from '../kit'
 import { telOf } from '../phoneMask'
 import { mp } from './mpaths'
+import { DeedstoneCallButton } from '../DeedstoneCall'
 
 // P908 — small pieces the phone screens share.
 const LOOK = {
@@ -34,10 +35,15 @@ export function NeedList({ items, onDone, empty = 'Nothing waiting on you. We te
   )
 }
 
-// A tap-to-call button, 44 px round. Agents call from their own phone.
-export const CallBtn = ({ phone, label = 'Call', big = false }) => (phone
-  ? <a href={telOf(phone)} className={big ? 'mx-btn is-primary is-wide' : 'mx-call'} aria-label={`${label} ${phone}`} onClick={e => e.stopPropagation()}><Phone size={big ? 18 : 19} aria-hidden="true" />{big && label}</a>
-  : null)
+// A Call button, 44 px round (or wide). P916: with `to` (lib/deedstoneCall targetOf) it calls through Deedstone: the
+// agent's phone rings first, then the client is dialed and sees Deedstone Insurance. Without `to`, tap-to-call.
+export const CallBtn = ({ phone, to, label = 'Call', big = false }) => {
+  if (!phone) return null
+  const cls = big ? 'mx-btn is-primary is-wide' : 'mx-call'
+  const inner = <><Phone size={big ? 18 : 19} aria-hidden="true" />{big && label}</>
+  if (to) return <DeedstoneCallButton target={{ ...to, phone: to.phone || phone }} className={cls} label={`${label} ${to.name || ''}`.trim()} stop>{inner}</DeedstoneCallButton>
+  return <a href={telOf(phone)} className={cls} aria-label={`${label} ${phone}`} onClick={e => e.stopPropagation()}>{inner}</a>
+}
 
 // A section title with an optional link on the right.
 export const Sec = ({ title, to, link, children, className = '' }) => (

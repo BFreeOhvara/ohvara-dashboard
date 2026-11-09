@@ -9,6 +9,7 @@ import { dailyTotal, rangeWords } from '../spendPlan'
 import { usd } from '../motion'
 import { CallBtn, NeedList, Sec } from './bits'
 import { mp } from './mpaths'
+import { targetOf } from '../../lib/deedstoneCall'
 
 // P908 — the Overview on a phone: only what matters, stacked. Live calls first, then your next call (Call in reach),
 // then what needs you, then this week in three numbers. The charts stay on the desktop.
@@ -42,7 +43,7 @@ export default function MOverview() {
               <Link to={toOf(next)} className="mx-cover" aria-label={`Open ${next.who}`} />
               <div className="mx-next-top"><span><Clock size={15} aria-hidden="true" />{next.time} · {next.inText}</span><span className="mx-tag">{next.label}</span></div>
               <div className="mx-next-mid"><Avatar name={next.who} tone={toneOf(next)} /><b>{next.who}</b></div>
-              <CallBtn big phone={phoneOf(next)} label={`Call ${next.who.split(' ')[0]}`} />
+              <CallBtn big phone={phoneOf(next)} to={targetOf(next.kind === 'client' ? 'client' : 'lead', personOf(next))} label={`Call ${next.who.split(' ')[0]}`} />
             </div>
           )
           : <p className="mx-empty">Nothing else booked today.</p>}

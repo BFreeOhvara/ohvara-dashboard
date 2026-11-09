@@ -13,6 +13,7 @@ import { checkLists } from '../lib/clientCheck'
 import { nightly as nightlyOf, expected } from '../template/spendPlan'
 import { DEFAULT_LIVE_HOURS } from '../lib/leadSplit'
 import { useNote } from '../template/kit'
+import { REAL_DEEDSTONE } from './deedstoneReal'
 
 // P848 — the agent portal on real data. The same names and record shapes as the sample door (src/template/data/index.js), read through
 // the existing tables, views and RPCs under RLS (an agent reads only their own rows). Nothing here writes on its own.
@@ -531,4 +532,5 @@ export const REAL = {
   useThreads: useThreadsReal, useActivity: useActivityReal, useBilling: useBillingReal, useTalks: useTalksReal, useFeedback: useFeedbackReal,
   useBlocks: useBlocksReal, useSetup: useSetupReal, useSettings: useSettingsReal, useNeeds: useNeedsReal, useSignup: useSignupReal,
   useOverview: useOverviewReal, useActions: useActionsReal,
+  deedstone: REAL_DEEDSTONE,
 }

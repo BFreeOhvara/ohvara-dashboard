@@ -4,8 +4,8 @@
 // One Twilio Conference per call, named for the policy (policy-<id>). The
 // rep's browser is already in it (fulfillment-voice answered the TwiML App);
 // this adds and steers the two outside parties:
-//   ring_client   add the client from Ohvara's (Deedstone's) number. P890: agent
-//                 caller ID is gone; agents call from their own phone.
+//   ring_client   add the client from the agent's Deedstone number (P916; the
+//                 old single number when the pool is empty).
 //   ring_carrier  add the carrier's service_phone from Ohvara's number.
 //                 Either way, the party already talking is put on hold.
 //   hold / resume one party (participant hold, Twilio's hold music)
@@ -20,6 +20,7 @@
 // P882: every other call type (leads, callbacks, call-ins, servicing, carriers) goes through lines.ts ({ line_id }).
 
 import { actLine, endLine, Refused as LineRefused, type LineStore } from './lines.ts'
+import { actAgent, AGENT_ACTIONS, Refused as AgentRefused, type AgentStore, type AgentEnv } from './agentCall.ts'
 
 export type Leg = {
   call_sid: string
@@ -49,6 +50,8 @@ export interface Store {
   voiceLive(): Promise<boolean>
   openLegs(policyId: string): Promise<Leg[]>
   saveLeg(leg: Partial<Leg> & { call_sid: string }): Promise<void>
+  // P916: the agent's Deedstone number for a call about their client (logs one call on it); null = the old number.
+  deedstoneFrom?(agentId: string, kind: string | null, ref: string): Promise<string | null>
 }
 
 type Params = Record<string, string | string[]>
@@ -148,7 +151,8 @@ export async function act(store: Store, twilio: Twilio, env: Env, userId: string
     if (who === 'client') {
       to = toE164(p!.client_phone)
       if (!to) refuse('No valid client phone on file.', 400, 'no_client_phone')
-      callerId = env.from
+      // P916: the client sees their agent's Deedstone number (the same one on every call about them).
+      callerId = (await store.deedstoneFrom?.(p!.agent_id, 'va_call', p!.id)) || env.from
     } else {
       to = toE164(await store.carrierPhone(p!.carrier_id))
       if (!to) refuse('No phone number on file for this carrier.', 400, 'no_carrier_phone')
@@ -214,8 +218,10 @@ export async function act(store: Store, twilio: Twilio, env: Env, userId: string
 
 // P882: the line path (any call type, lines.ts) and the sweep's cron path ride on the same function.
 export type Lines = { store: LineStore; isCron(secret: string): Promise<boolean> }
+// P916: an agent's Call through Deedstone and the phone code call (agentCall.ts).
+export type Agents = { store: AgentStore; env: AgentEnv }
 
-export async function handle(req: Request, store: Store, twilio: Twilio, env: Env, lines?: Lines): Promise<Response> {
+export async function handle(req: Request, store: Store, twilio: Twilio, env: Env, lines?: Lines, agents?: Agents): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
   const cron = req.headers.get('x-ohvara-cron')
@@ -235,6 +241,7 @@ export async function handle(req: Request, store: Store, twilio: Twilio, env: En
   if (!userId) return json({ error: 'Not signed in' }, 401)
   try { body = await req.json() } catch { /* empty body */ }
   try {
+    if (agents && AGENT_ACTIONS.includes(body?.action)) return json(await actAgent(agents.store, twilio, agents.env, userId, body))
     if (lines && (body?.line_id || body?.action === 'open_line')) {
       return json(await actLine(lines.store, twilio, env, userId, body))
     }
@@ -242,6 +249,7 @@ export async function handle(req: Request, store: Store, twilio: Twilio, env: En
   } catch (e) {
     if (e instanceof Refused) return json({ error: e.message, code: e.code }, e.status)
     if (e instanceof LineRefused) return json({ error: e.message, code: e.code, ...(e.extra || {}) }, e.status)
+    if (e instanceof AgentRefused) return json({ error: e.message, code: e.code, ...(e.extra || {}) }, e.status)
     console.error('fulfillment-call', e)
     return json({ error: 'Something went wrong placing that call.' }, 500)
   }

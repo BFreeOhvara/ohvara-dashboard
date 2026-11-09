@@ -25,6 +25,7 @@ import MLeads from './m/MLeads'
 import MClients from './m/MClients'
 import MCalendar from './m/MCalendar'
 import MMore from './m/MMore'
+import { DeedstoneCallProvider } from './DeedstoneCall'
 
 // The template's screens at the real agent URLs (SHELL_ROUTES), inside the app's own router. ShellSwap decides
 // who gets here. P848: the data is sample until "Show sample data" is off (or this viewer picks View: Real); then
@@ -47,6 +48,8 @@ export default function AgentShell({ account }) {
     <AccountProvider value={live}>
       <DataProvider key={mode} impl={real ? REAL : null}>
         <NoteProvider>
+          {/* P916: every Call in the agent portal goes through Deedstone (one call sheet for the whole portal). */}
+          <DeedstoneCallProvider>
           <Routes>
             <Route element={<ShellFrame />}>
               {Object.entries(SHELL_ROUTES).map(([key, path]) => {
@@ -57,6 +60,7 @@ export default function AgentShell({ account }) {
             </Route>
             <Route path="*" element={<Navigate to={SHELL_ROUTES.overview} replace />} />
           </Routes>
+          </DeedstoneCallProvider>
         </NoteProvider>
       </DataProvider>
     </AccountProvider>

@@ -14,6 +14,8 @@ export type Ev =
 
 export type StartArgs = {
   callId: string; to: string; from: string; maxSecs: number
+  // P916: the provider's own id for the agent's Deedstone number (Vapi), when the number came from the pool.
+  fromId?: string | null
   vars: Record<string, string> // first name, agent first name, state, the lead's zone, the draft opening line
 }
 export type Fetch = (url: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => Promise<{ ok: boolean; status: number; json(): Promise<any>; text(): Promise<string> }>
@@ -114,7 +116,7 @@ export function vapi(key: string, assistantId: string, phoneNumberId: string, fe
     key: 'vapi', ready: !!key && !!assistantId && !!phoneNumberId, talksWhileWaiting: true,
     async start(a) {
       const r = await ok(await fetchFn('https://api.vapi.ai/call', { method: 'POST', headers: h, body: json({
-        assistantId, phoneNumberId, customer: { number: a.to }, metadata: { call_id: a.callId },
+        assistantId, phoneNumberId: a.fromId || phoneNumberId, customer: { number: a.to }, metadata: { call_id: a.callId },
         assistantOverrides: { variableValues: a.vars, maxDurationSeconds: a.maxSecs },
       }) }), 'vapi start')
       return { providerCallId: s(r.id) }

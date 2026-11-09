@@ -7,7 +7,8 @@
 //   npx.cmd supabase functions deploy ai-caller --no-verify-jwt --project-ref jjextitmbptoaolacocs
 //
 // Secrets: AI_PROVIDER (retell | vapi | ghl; unset = not connected, every lead goes to a VA), AI_WEBHOOK_SECRET
-// (the provider sends it as ?k= on our webhook URL), AI_FROM_NUMBER (the Deedstone caller ID, on the provider), and
+// (the provider sends it as ?k= on our webhook URL), AI_FROM_NUMBER (the fallback Deedstone caller ID; P916: each lead's
+// agent's Deedstone number is used when the pool has one), and
 // per provider (P902: no bridge number any more, the AI never hands a new lead to a VA):
 // RETELL_API_KEY + RETELL_AGENT_ID, or VAPI_API_KEY + VAPI_ASSISTANT_ID + VAPI_PHONE_NUMBER_ID, or GHL_AI_WORKFLOW_ID.
 // Plus the push keys notify-push uses (APNS_*, FCM_SERVICE_ACCOUNT). Needs migrations p892 then p902 (and p880, p882,
@@ -101,6 +102,12 @@ const store: Store = {
     if (whenStatus?.length) q = q.in('status', whenStatus)
     const { error } = await q
     if (error) console.error('ai-caller markCheck', id, error.message)
+  },
+  // P916: the agent's Deedstone number (Retell dials from_number; Vapi needs that number's id on Vapi).
+  async deedstoneFrom(agentId, callId) {
+    const { data, error } = await admin.rpc('deedstone_from', { p_agent: agentId, p_kind: 'ai_call', p_ref: callId })
+    if (error || !data?.phone) return null
+    return { phone: data.phone, providerId: data.provider_number_id ?? null }
   },
   async clearCheck(c, agentId, why) {
     if (!agentId) return

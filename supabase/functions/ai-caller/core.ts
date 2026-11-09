@@ -41,6 +41,9 @@ export interface Store {
   // check that ran out is replaced on the agent's phones ("Missed. We're booking them on your calendar").
   markCheck(id: string, patch: Record<string, unknown>, whenStatus?: string[]): Promise<void>
   clearCheck(check: CheckRow, agentId: string, why: 'booking' | 'gone'): Promise<void>
+  // P916: the agent's Deedstone number (logs one call on it), so the AI's first call shows the number the lead will
+  // see from their agent ever after. null = AI_FROM_NUMBER.
+  deedstoneFrom?(agentId: string, callId: string): Promise<{ phone: string; providerId: string | null } | null>
 }
 export type Env = { now(): number; from: string | null; words: Record<string, string> }
 
@@ -57,16 +60,19 @@ export async function start(store: Store, provider: Provider, env: Env, callId: 
   if (!c || c.status !== 'queued') return { ok: false, code: 'gone' }
   const live = await store.live()
   if (!live.on) { await store.toVa(c.id, 'switch_off'); return { ok: false, code: 'switch_off' } }
-  if (!provider.ready || !env.from) { await store.toVa(c.id, 'not_connected'); return { ok: false, code: 'not_connected' } }
+  if (!provider.ready) { await store.toVa(c.id, 'not_connected'); return { ok: false, code: 'not_connected' } }
   // The rules again at the moment of the dial (an opt-out or the window may have changed since the lead came in).
   const w = await store.takes(c.lead_id)
   if (w.by !== 'ai') { await store.toVa(c.id, w.reason || 'rules'); return { ok: false, code: w.reason } }
   const lead = await store.lead(c.lead_id)
   const agent = c.agent_id ? await store.agent(c.agent_id) : null
   if (!lead || !agent) { await store.toVa(c.id, 'no_lead_or_agent'); return { ok: false, code: 'no_lead_or_agent' } }
+  const ds = await store.deedstoneFrom?.(agent.id, c.id).catch(() => null)
+  const from = ds?.phone || env.from
+  if (!from) { await store.toVa(c.id, 'not_connected'); return { ok: false, code: 'not_connected' } }
   try {
     const r = await provider.start({
-      callId: c.id, to: lead.phone, from: env.from, maxSecs: Math.min(live.maxSecs || AI_RULES.maxCallSecs, 900),
+      callId: c.id, to: lead.phone, from, fromId: ds?.phone ? ds.providerId : null, maxSecs: Math.min(live.maxSecs || AI_RULES.maxCallSecs, 900),
       vars: { first_name: lead.first, agent_first_name: agent.first, state: lead.state ?? '', lead_tz: lead.tz ?? '', opening: env.words.opening.replace('{first}', lead.first) },
     })
     await store.status(c.id, 'dialing', { provider_call_id: r.providerCallId })

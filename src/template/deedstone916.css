@@ -1,0 +1,39 @@
+/* P916 — Call through Deedstone (the call sheet, DeedstoneCall.jsx) and Settings → "Your phone for Deedstone calls"
+   (DeedstonePhone.jsx). Tokens only (DESIGN.md). */
+
+/* The call sheet: three steps, your phone → them → talking. */
+.ds-steps { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ds-steps li { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 10px; border-radius: 12px; border: 1px solid var(--ov-line);
+  color: var(--ov-mute); font-size: 13px; font-weight: 600; transition: border-color .2s var(--fx-ease), color .2s var(--fx-ease), background .2s var(--fx-ease); }
+.ds-steps li i { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 999px; font-style: normal; font-size: 12px;
+  font-family: var(--font-mono); border: 1px solid var(--ov-line); }
+.ds-steps li.is-now { color: var(--ov-hi); border-color: var(--accent); background: var(--ov-data-a-tint); }
+.ds-steps li.is-now i { border-color: var(--accent); color: var(--accent); animation: ds-pulse 1.4s var(--fx-ease) infinite; }
+.ds-steps li.is-done { color: var(--ov-mid); }
+.ds-steps li.is-done i { background: var(--accent); border-color: var(--accent); color: var(--tp-white); }
+@keyframes ds-pulse { 0%, 100% { box-shadow: 0 0 0 0 var(--ov-data-a-tint); } 50% { box-shadow: 0 0 0 6px var(--ov-data-a-tint); } }
+@media (prefers-reduced-motion: reduce) { .ds-steps li.is-now i { animation: none; } }
+
+.ds-brand { display: flex; align-items: center; gap: 6px; margin: 12px 0 0; font-size: 12.5px; color: var(--ov-mute); }
+.ds-brand b { color: var(--ov-hi); }
+.ds-note { margin: 0; font-size: 13.5px; color: var(--ov-mid); line-height: 1.45; }
+.ds-hang { color: var(--tp-white); background: var(--danger); border-color: var(--danger); }
+.ds-hang:hover { filter: brightness(1.06); }
+.ds-tel, .tp-sheet-f a.tp-primary { text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+
+/* Settings → Hours and calls: your phone for Deedstone calls. */
+.ds-phone { display: flex; flex-direction: column; gap: 10px; padding: 14px 0; border-top: 1px solid var(--ov-line); }
+.ds-phone-h { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ds-phone-h .tp-grow b { font-size: 14.5px; }
+.ds-phone-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ds-phone-row input { flex: 1 1 180px; min-width: 0; max-width: 240px; }
+.ds-phone-row input.ds-code { max-width: 140px; font-family: var(--font-mono); letter-spacing: .2em; }
+.ds-phone-n { font-family: var(--font-mono); font-weight: 700; color: var(--ov-hi); }
+.ds-err { margin: 0; font-size: 13px; color: var(--danger); }
+.ds-hint { margin: 0; font-size: 12.5px; color: var(--ov-mute); }
+
+/* Call buttons that used to be tap-to-call links are buttons now (they start a Deedstone call). */
+button.mx-call, button.mx-nudge, button.lc-nudge-go, button.lc-call { font: inherit; cursor: pointer; }
+button.mx-nudge { width: 100%; text-align: left; }
+button.mx-call { border: 0; padding: 0; }
+button.lc-nudge-go { background: none; border: 0; padding: 0; color: inherit; }

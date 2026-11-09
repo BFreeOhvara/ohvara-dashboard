@@ -10,8 +10,10 @@
 // CALLER_ID_TWILIO_ACCOUNT_SID (rings the VAs), HELP_TRACKING_NUMBER (the
 // tracking number, read-only: the VA legs' From).
 // The tracking number's Voice URL = https://jjextitmbptoaolacocs.supabase.co/functions/v1/help-voice
+// P916: every Deedstone number's Voice URL is the same address (Settings → Deedstone numbers says so).
 import { createClient } from 'npm:@supabase/supabase-js'
 import { handle, type Store, type RouteStore } from './core.ts'
+import type { BridgeStore } from './deedstone.ts'
 import { twilioClient } from '../_shared/twilio.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -89,10 +91,36 @@ const route: RouteStore = {
     const { data } = await admin.rpc('fulfillment_cron_ok', { p_secret: secret })
     return data === true
   },
+  // P916: a call to a Deedstone number rings the caller's own agent first.
+  deedstone: {
+    inboundStart: async (callSid, caller, to) => (await rpc('deedstone_inbound_start', { p_call_sid: callSid, p_caller: caller, p_to: to }))
+      ?? { agent: false, phone: null, name: null },
+    async inboundName(callSid) {
+      const { data } = await admin.from('deedstone_inbound').select('name').eq('call_sid', callSid).maybeSingle()
+      return data?.name ?? null
+    },
+    inboundTook: async callSid => { await rpc('deedstone_inbound_took', { p_call_sid: callSid }) },
+    inboundDone: async callSid => !!(await rpc('deedstone_inbound_done', { p_call_sid: callSid })),
+  },
+}
+
+// P916: an agent's Call through Deedstone (fulfillment-call agent_call rang their phone; this answers it).
+const bridge: BridgeStore = {
+  async bridgeCall(id) {
+    const { data } = await admin.from('deedstone_calls').select('id, status, client_name, ended_at').eq('id', id).maybeSingle()
+    return data
+  },
+  bridgeConnect: async id => (await rpc('deedstone_call_connect', { p_call: id })) ?? { ok: false, reason: 'gone' },
+  async bridgeSave(id, patch, whenOpen) {
+    let q = admin.from('deedstone_calls').update(patch).eq('id', id)
+    if (whenOpen) q = q.neq('status', 'ended')
+    const { error } = await q
+    if (error) console.error('deedstone_calls', id, error.message)
+  },
 }
 
 Deno.serve(req => handle(req, store, SID && TOKEN ? twilioClient(SID, TOKEN) : null, {
   authToken: TOKEN,
   publicUrl: `${SUPABASE_URL}/functions/v1/help-voice`,
   trackingNumber: Deno.env.get('HELP_TRACKING_NUMBER') ?? null,
-}, route))
+}, route, bridge))

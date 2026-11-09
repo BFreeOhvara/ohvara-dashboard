@@ -15,6 +15,8 @@ import { Sheet, ActionSheet, ActRow } from './Sheet'
 import { CallBtn } from './bits'
 import { SpendSheet } from './MMore'
 import { mp } from './mpaths'
+import { targetOf } from '../../lib/deedstoneCall'
+import { DeedstoneCallButton } from '../DeedstoneCall'
 
 // P908 — Leads on a phone: one status at a time. Swipe sideways (or tap a status) to move between Booked, No show,
 // Follow up, Not interested, Sold and Closed, each with its count. Cards are full width with Call in thumb reach;
@@ -66,7 +68,7 @@ function LeadCard({ l }) {
       <div className="mx-lcard-mid">
         <Avatar name={nameOf(l)} tone={tone} />
         <span className="tp-grow"><b>{nameOf(l)}</b><small>{l.city}, {l.state} · {l.age_band}</small></span>
-        {!closed && <CallBtn phone={l.rawPhone || l.phone} />}
+        {!closed && <CallBtn phone={l.rawPhone || l.phone} to={targetOf('lead', l)} />}
       </div>
       <p className="mx-lcard-when"><Clock size={15} aria-hidden="true" />{closed ? closedReason(l) : whenOf(l)}</p>
       {result && <Link to={mp.lead(l.id, true)} className="mx-btn is-primary is-wide mx-over"><ClipboardCheck size={18} aria-hidden="true" />Mark result</Link>}
@@ -116,7 +118,7 @@ function LeadSheet({ id, onClose }) {
   return (
     <Sheet open onClose={onClose} title={name} kicker={`Lead · came in ${lead.created}`} tone={lane.tone}
       footer={closed ? null : <>
-        <CallBtn big phone={lead.rawPhone || lead.phone} />
+        <CallBtn big phone={lead.rawPhone || lead.phone} to={targetOf('lead', lead)} />
         {canPick && <button type="button" className="mx-btn is-wide" onClick={() => setPick(true)}><ClipboardCheck size={18} aria-hidden="true" />Pick the result</button>}
       </>}>
       <div className={`mx-hero fx-card is-${lane.tone}`}>
@@ -125,7 +127,7 @@ function LeadSheet({ id, onClose }) {
         <b className="mx-hero-big tp-money">{lead.mortgage_balance_band.replace(' to ', '–')}</b>
       </div>
       <NoShowUndo lead={lead} />
-      {task && <a href={`tel:${lead.rawPhone || lead.phone}`} className="mx-nudge is-warn" onClick={() => callBack(lead.id)}><PhoneForwarded size={18} aria-hidden="true" /><span className="tp-grow"><b>{lead.first_name} asked you to call</b><small>“{lead.reply.text}”</small></span><ChevronRight size={18} aria-hidden="true" /></a>}
+      {task && <DeedstoneCallButton target={targetOf('lead', lead)} className="mx-nudge is-warn" onCall={() => callBack(lead.id)}><PhoneForwarded size={18} aria-hidden="true" /><span className="tp-grow"><b>{lead.first_name} asked you to call</b><small>“{lead.reply.text}”</small></span><ChevronRight size={18} aria-hidden="true" /></DeedstoneCallButton>}
       {lead.stage === 'sold' && !lead.submitted && <Link to={paths.submit(lead.id)} className="mx-nudge is-green"><span className="tp-grow"><b>Finish the servicing details</b><small>The team takes it from there</small></span><ChevronRight size={18} aria-hidden="true" /></Link>}
       {closed && <p className="mx-note"><b>{closedReason(lead)}.</b> No more calls or texts. A reply from them brings them back as a new lead.</p>}
       {agentStatusOf(lead) === 'team' && <p className="mx-note">Our team is calling {lead.first_name}. Nothing for you to do yet: they land on Booked.</p>}

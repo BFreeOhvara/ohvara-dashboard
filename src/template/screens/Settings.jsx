@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { User, Bell, Radio, CreditCard, SunMoon, Mail, LogOut, Trash2, ChevronRight, KeyRound, BadgeCheck } from 'lucide-react'
 import { useSampleSettings, useSampleActions, useSampleBilling, useSampleClients, useSampleLeads, useSampleOverview } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
-import { Drawer, Field, Seg, Switch, Chip, PillTabs, useNote, useAccount, initials } from '../kit'
+import { Drawer, Field, Seg, Switch, PillTabs, useNote, useAccount, initials } from '../kit'
 import { TimeZoneSelect } from '../Clock'
 import { PhoneInput } from '../PhoneInput'
 import { CountUp, usd } from '../motion'
@@ -14,6 +14,7 @@ import { inLiveHours, takeOk } from '../../lib/leadSplit'
 import { HoursEditor } from '../Hours'
 import { LicenceCard } from '../Licence'
 import { PaymentIntakeCard } from '../PaymentIntake'
+import { DeedstonePhone } from '../DeedstonePhone'
 
 const TABS = [['profile', 'Profile', User], ['licence', 'Licence', BadgeCheck], ['alerts', 'Notifications', Bell], ['calls', 'Hours and calls', Radio], ['billing', 'Billing', CreditCard], ['look', 'Appearance', SunMoon]]
 const NEEDS = ['ringing', 'showed']
@@ -76,7 +77,9 @@ export default function Settings() {
   const [saved, saveTheme] = useThemePref()
   const note = useNote()
   const account = useAccount()
-  const [tab, setTab] = useState('profile')
+  // P916: ?tab=calls opens Hours and calls (the call sheet's "Connect your phone" link).
+  const loc = useLocation()
+  const [tab, setTab] = useState(() => { const t = new URLSearchParams(loc.search).get('tab'); return TABS.some(([k]) => k === t) ? t : 'profile' })
   const [panel, setPanel] = useState(null)
 
   // Saved values and the drafts the forms edit
@@ -158,7 +161,8 @@ export default function Settings() {
             {/* P890: live-call hours replace the Active switch. Inside them live transfers ring you; outside, we book. */}
             <TakeLeads take={cDraft.take} onTake={take => setCDraft({ ...cDraft, take })} id="set-take" />
             <HoursEditor week={cDraft.week} onChange={week => setCDraft({ ...cDraft, week })} tz={s.timeZone} />
-            <div className="fx-form-row"><div className="tp-grow"><b>A number of your own for texts</b><p className="tp-sub">Coming later</p></div><Chip tone="mute">Not available yet</Chip></div>
+            {/* P916: calls go out as Deedstone from the agent's own phone (connected here, with a code call). */}
+            <DeedstonePhone />
             <FormFoot dirty={!same(cDraft, callsSaved)} onDiscard={() => setCDraft(callsSaved)} onSave={() => {
               if (!same(cDraft.take, billing.take) && takeOk(cDraft.take)) setTake(cDraft.take)
               saveWeek(cDraft.week)

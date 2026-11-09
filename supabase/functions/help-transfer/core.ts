@@ -65,6 +65,8 @@ export interface Store extends Pick<VoiceStore, 'voiceLive' | 'helpCall' | 'upda
   // The lead goes back to the VA queue as a callback in 5 minutes (va_outcome callback).
   scheduleCallback(leadId: string): Promise<void>
   setLeadTransferStatus(leadId: string, status: 'connected' | 'dropped'): Promise<void>
+  // P916: the agent's Deedstone number (kind logs one call on it; null = no log); null = HELP_TRACKING_NUMBER.
+  deedstoneFrom?(agentId: string, kind: string | null, ref: string): Promise<string | null>
 }
 
 // from: HELP_TRACKING_NUMBER (the agent leg's caller ID). voiceUrl: transfer-voice (Twilio webhooks).
@@ -164,10 +166,11 @@ async function clearOthers(store: Store, env: Env, c: Check, why: keyof typeof C
 }
 
 // The agent's phone leg, for a real transfer or the Setup test call.
-export function agentCallParams(env: Env, to: string, checkId: string): Record<string, string | string[]> {
+// P916: from = the agent's Deedstone number, so the transfer rings their phone as Deedstone.
+export function agentCallParams(env: Env, to: string, checkId: string, from?: string | null): Record<string, string | string[]> {
   const q = (event: string) => `${env.voiceUrl}?${new URLSearchParams({ event, check: checkId })}`
   return {
-    To: to, From: env.from!, Url: q('whisper'), Method: 'POST', Timeout: String(RING_SECS),
+    To: to, From: from || env.from!, Url: q('whisper'), Method: 'POST', Timeout: String(RING_SECS),
     StatusCallback: q('agent_status'), StatusCallbackMethod: 'POST', StatusCallbackEvent: ['answered', 'completed'],
   }
 }
@@ -296,7 +299,8 @@ async function testAnswered(store: Store, twilio: Twilio, env: Env, c: Check) {
     await store.setReadiness(c.agent_id, { fail_reason: 'no_phone' })
     return { ok: true, test: true, check: view(c, env), call: 'no_phone' }
   }
-  const res = await twilio('POST', '/Calls.json', agentCallParams(env, to, c.id)).catch(e => ({ status: 599, data: { message: (e as Error).message } }))
+  const from = await store.deedstoneFrom?.(c.agent_id, null, c.id).catch(() => null)
+  const res = await twilio('POST', '/Calls.json', agentCallParams(env, to, c.id, from)).catch(e => ({ status: 599, data: { message: (e as Error).message } }))
   if (res.status >= 400 || !res.data?.sid) {
     await store.setReadiness(c.agent_id, { fail_reason: 'call_failed' })
     return { ok: true, test: true, check: view(c, env), call: 'failed' }
@@ -369,7 +373,8 @@ async function transfer(store: Store, twilio: Twilio, env: Env, userId: string, 
   // Hold first, so the lead hears music (never dead air) from the moment the VA says "connecting you".
   await holdCaller(twilio, claimed!, true, env)
   if (!to) return { ok: false, code: 'no_phone', check: view(await bounce(store, twilio, env, ringing!, 'no_phone') ?? ringing!, env) }
-  const res = await twilio('POST', '/Calls.json', agentCallParams(env, to, c.id))
+  const from = await store.deedstoneFrom?.(c.agent_id, 'transfer', c.id).catch(() => null)
+  const res = await twilio('POST', '/Calls.json', agentCallParams(env, to, c.id, from))
     .catch(e => ({ status: 599, data: { message: (e as Error).message } }))
   if (res.status >= 400 || !res.data?.sid) {
     const b = await bounce(store, twilio, env, ringing!, 'ring_failed')

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   User, Users, ToggleRight, Wallet, History, Bug, SlidersHorizontal, LogOut, Mail, UserPlus, ArrowUpRight, Search, ShieldCheck,
-  ShieldOff, Image as ImageIcon, Check, Lock, GraduationCap, Scale, ArrowRightLeft, Bot,
+  ShieldOff, Image as ImageIcon, Check, Lock, GraduationCap, Scale, ArrowRightLeft, Bot, PhoneCall,
 } from 'lucide-react'
 import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmAudit, useAdmBugs, useAdmDay, useAdmSource, SWITCHES, ME } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
@@ -21,13 +21,14 @@ import { Compliance } from './Compliance879'
 import { LaunchSwitches } from './Launch906'
 import { SplitRules } from './Split889'
 import { AiCallerSettings } from './AiCalls892'
+import { DeedstoneNumbers } from './Numbers916'
 
 // P849 — admin Settings on the agent page's shape: the profile card and Sign out on the left, one panel whose stretch
 // tabs switch sections. Sections: Profile, People & access (everyone with a login, as Users does today), Switches,
 // Pay rules, Audit log (append-only, every admin action), Bug reports, Preferences. Sample only: the
 // real switches stay on today's /settings page until the backend step, and this page says so.
 const TABS = [['profile', 'Profile', User], ['people', 'People & access', Users], ['switches', 'Switches', ToggleRight], ['pay', 'Pay rules', Wallet], ['split', 'Lead split', ArrowRightLeft], ['ai', 'AI caller', Bot],
-  ['training', 'Training', GraduationCap], ['audit', 'Audit log', History], ['bugs', 'Bug reports', Bug], ['compliance', 'Compliance', Scale], ['prefs', 'Preferences', SlidersHorizontal]]
+  ['numbers', 'Deedstone numbers', PhoneCall], ['training', 'Training', GraduationCap], ['audit', 'Audit log', History], ['bugs', 'Bug reports', Bug], ['compliance', 'Compliance', Scale], ['prefs', 'Preferences', SlidersHorizontal]]
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
 
 function FormFoot({ dirty, onDiscard, onSave, label = 'Save changes' }) {
@@ -274,6 +275,7 @@ export default function Settings() {
           {tab === 'pay' && <PayRules />}
           {tab === 'split' && <SplitRules />}
           {tab === 'ai' && <AiCallerSettings />}
+          {tab === 'numbers' && <DeedstoneNumbers />}
           {tab === 'training' && <TrainingAdmin />}
           {tab === 'audit' && <Audit />}
           {tab === 'bugs' && <Bugs />}

@@ -1,0 +1,43 @@
+/* P916 — admin Settings → Deedstone numbers (Numbers916.jsx). Tokens only (DESIGN.md). */
+.dn-head .tp-row { gap: 10px; align-items: center; }
+.dn-info { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-size: 13px; color: var(--ov-mid); line-height: 1.45; }
+.dn-info > svg { flex: none; margin-top: 2px; color: var(--ov-mute); }
+.dn-info code { font-family: var(--font-mono); font-size: 12px; color: var(--ov-hi); word-break: break-all; }
+
+.dn-limits { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.dn-limits .tp-field { flex: 1 1 200px; min-width: 0; }
+.dn-limits input { font-family: var(--font-mono); }
+
+.dn-list { display: flex; flex-direction: column; gap: 10px; }
+.dn-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 260px); gap: 8px 16px; padding: 12px 14px; border-radius: 14px;
+  border: 1px solid var(--ov-line); background: var(--bg-surface); transition: opacity .2s var(--fx-ease); }
+.dn-row.is-off { opacity: .6; }
+.dn-main { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.dn-main > svg { flex: none; color: var(--ov-mid); }
+.dn-main .tp-grow { min-width: 0; }
+.dn-main .tp-grow b.tp-num { font-family: var(--font-mono); font-size: 15px; }
+.dn-main small { display: block; color: var(--ov-mute); font-size: 12.5px; }
+.dn-main small b { color: var(--ov-mid); font-family: var(--font-mono); font-size: 11.5px; }
+.dn-today { display: flex; flex-direction: column; gap: 6px; justify-content: center; }
+.dn-today small { font-size: 12.5px; color: var(--ov-mid); }
+.dn-today .tp-num { font-family: var(--font-mono); }
+.dn-meter { display: block; height: 8px; border-radius: 999px; background: var(--fx-fill); overflow: hidden; }
+.dn-meter i { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width .4s var(--fx-ease); }
+.dn-meter i.is-hot, .dn-week i.is-hot { background: var(--ov-warn); }
+.dn-week { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; align-items: end; height: 72px; }
+.dn-week li { display: grid; grid-template-rows: 1fr auto auto; justify-items: center; height: 100%; min-width: 0; gap: 2px; }
+.dn-week li i { align-self: end; width: 100%; max-width: 18px; border-radius: 4px 4px 2px 2px; background: var(--ov-data-a); }
+.dn-week small { font-size: 10.5px; color: var(--ov-mute); }
+.dn-week span { font-size: 10.5px; color: var(--ov-mid); font-family: var(--font-mono); }
+
+.dn-h { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; }
+.dn-add { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 12px; align-items: end; }
+.dn-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+.dn-steps li b { display: block; font-size: 13.5px; color: var(--ov-hi); }
+.dn-steps li small { display: block; font-size: 12.5px; color: var(--ov-mid); line-height: 1.45; }
+
+@media (max-width: 767.98px) {
+  .dn-row { grid-template-columns: minmax(0, 1fr); }
+  .dn-add { grid-template-columns: minmax(0, 1fr); }
+  .dn-main { flex-wrap: wrap; }
+}

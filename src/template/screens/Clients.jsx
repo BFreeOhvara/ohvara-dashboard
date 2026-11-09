@@ -9,6 +9,7 @@ import { FirstRun } from '../DataState'
 import { AddClients } from '../AddClients891'
 import { FilterPills } from '../FilterPills'
 import { CallOrCopy } from '../CallOrCopy'
+import { targetOf } from '../../lib/deedstoneCall'
 import { agentOpensSaveCall } from '../ful/data'
 import { useCheckSettings, todayFor } from '../checkSettings'
 import { CLIENT_STATUS, STATUS_ORDER, clientStatusOf, clientStatus, requestTag, workingWhy, dueCheck, nextCheck, checkLists, listQuestion, answerList, shortDate, ordinal } from '../../lib/clientCheck.js'
@@ -147,7 +148,7 @@ function ClientDrawer({ id, onClose, today, settings, onLapsed }) {
         {tag && <p className="ck-req-hero"><Wrench size={13} aria-hidden="true" />{tag}</p>}
       </>}
       actions={<>
-        <CallOrCopy phone={c.client_phone} closed={st === 'closed'} />
+        <CallOrCopy phone={c.client_phone} target={targetOf('client', c)} closed={st === 'closed'} />
         <span className="tp-grow" />
         {st !== 'closed' && !c.fixing && !due && <button type="button" className="tp-btn ov-ghost" onClick={() => onLapsed(c)}>Lapsed</button>}
       </>}>

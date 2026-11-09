@@ -89,7 +89,9 @@
 .fx .fx-ovl-needs .fx-ncards { grid-auto-rows: max-content; }
 .fx .fx-ovl-needs .lc-ncard { min-height: 140px; }
 
-/* P898: agents call from their own phone. Phones get Call (tap to call); desktop and tablet get the number + Copy. */
+/* P898: the number + Copy on desktop and tablet. P916: Call (through Deedstone, .lc-call) shows at every width;
+   phones drop the number chip. .lc-tel stays for the old tap-to-call link (phones only). */
+.lc-call { display: inline-flex; align-items: center; gap: 8px; }
 .lc-num { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 6px 0 12px; border-radius: 999px; color: var(--ov-hi); background: var(--bg-surface); border: 1px solid var(--ov-line); }
 .lc-num > svg { flex: none; color: var(--ov-mid); }
 .lc-num b { font-size: 14px; font-weight: 650; white-space: nowrap; }

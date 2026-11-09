@@ -89,16 +89,16 @@ test('Follow up asks for a day: the next ten weekdays, the reminder on that day'
   assert.equal(followDays('2026-11-06T16:00')[0].label, 'Mon, Nov 9') // Friday skips the weekend
 })
 
-test('Leads page: no team bar, no "Five statuses" line; Call is a phone-only tap-to-call link', () => {
+test('Leads page: no team bar, no "Five statuses" line; Call goes through Deedstone (P916), number + copy beside it', () => {
   const leads = readFileSync(new URL('./template/screens/Leads.jsx', import.meta.url), 'utf8')
   assert.equal(/TeamLine|teamLine|Five statuses/.test(leads), false)
-  // P899: Call or copy is one component, shared with the client drawer.
-  assert.match(leads, /<CallOr phone=\{lead\.phone\}/)
+  // P899: Call or copy is one component, shared with the client drawer. P916: Call is a Deedstone call at every width.
+  assert.match(leads, /<CallOr phone=\{lead\.phone\} target=\{targetOf\('lead', lead\)\}/)
   const call = readFileSync(new URL('./template/CallOrCopy.jsx', import.meta.url), 'utf8')
-  assert.match(call, /href=\{telOf\(rawPhone \|\| phone\)\}/)
+  assert.match(call, /<DeedstoneCallButton target=\{target\}/)
   assert.match(call, /navigator\.clipboard\.writeText/)
   const css = readFileSync(new URL('./template/leads873.css', import.meta.url), 'utf8')
-  assert.match(css, /\.lc-tel \{ display: none !important;/)
+  assert.match(css, /\.lc-call \{ display: inline-flex;/)
   assert.match(css, /@media \(max-width: 767\.98px\) \{\s*\.lc-tel \{ display: inline-flex !important; \}\s*\.lc-num \{ display: none !important; \}/)
   const picker = readFileSync(new URL('./template/LeadOutcome.jsx', import.meta.url), 'utf8')
   assert.match(picker, /role="radiogroup" aria-label="Result"/)

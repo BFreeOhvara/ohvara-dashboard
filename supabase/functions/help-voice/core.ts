@@ -19,6 +19,10 @@
 //
 // help-transfer reuses helpConferenceName, helpConference, HelpCall and Store.
 //
+// P916 — every Deedstone number's Voice URL is this function. A caller is looked up by their phone number and
+// rings their own agent first (inside the agent's hours, ~20 s, press 1 to take it), else the VA desk below. An
+// agent's Call through Deedstone runs its TwiML here too (deedstone.ts: ds_* events).
+//
 // P882 — ring the next free VA, never everyone. With the routing store on (Store.route), a caller is put on
 // call_queue (route_inbound) and waits in the conference on hold music; the queue offers the call to ONE VA
 // (longest idle, 15 s, then the next) in their portal, and the VA's browser joins through fulfillment-voice
@@ -28,6 +32,7 @@
 // for calls rung the old way.
 
 import { readTwilioRequest, xmlEsc, type Twilio } from '../_shared/twilio.ts'
+import { bridgeEvent, inboundToAgent, screen, take, type BridgeStore, type DeedstoneInbound } from './deedstone.ts'
 export { twilioSignature } from '../_shared/twilio.ts'
 
 export type HelpStatus = 'ringing' | 'live' | 'transferring' | 'transferred' | 'no_answer' | 'ended'
@@ -82,6 +87,8 @@ export interface RouteStore {
   // The VA's leg on a caller's line left without End: starts the rescue. The line id, or null.
   vaLeftLine(callSid: string, vaLegSid: string): Promise<boolean>
   isCron(secret: string): Promise<boolean>
+  // P916: a call to a Deedstone number tries the caller's own agent first (deedstone.ts).
+  deedstone?: DeedstoneInbound
 }
 
 // The plain default after-hours greeting. Client-facing wording: Brayden sets recovery_config.after_hours_text
@@ -164,6 +171,10 @@ async function inbound(store: Store, twilio: Twilio | null, env: Env, form: Reco
   if (!(await store.voiceLive())) return twiml('<Hangup/>')
   const callSid = form.CallSid || ''
   if (!SID.test(callSid)) return twiml('<Hangup/>')
+  if (route?.deedstone) {
+    const toAgent = await inboundToAgent(route.deedstone, env.publicUrl, form, toE164(form.From || ''))
+    if (toAgent) return toAgent
+  }
   if (route) return inboundRouted(store, route, env, form)
   const caller = toE164(form.From || '')
   const base = { call_sid: callSid, caller_number: caller || null, tracking_number: form.To || null }
@@ -426,7 +437,7 @@ async function cronTimeout(store: Store, twilio: Twilio | null, callSid: string)
   return Response.json({ ok: true, ended: !!ended })
 }
 
-export async function handle(req: Request, store: Store, twilio: Twilio | null, env: Env, route?: RouteStore): Promise<Response> {
+export async function handle(req: Request, store: Store, twilio: Twilio | null, env: Env, route?: RouteStore, bridge?: BridgeStore): Promise<Response> {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
   const cron = req.headers.get('x-ohvara-cron')
   if (cron) {
@@ -443,9 +454,23 @@ export async function handle(req: Request, store: Store, twilio: Twilio | null, 
 
   const event = q.get('event')
   if (!event) return inbound(store, twilio, env, form, route)
+  // P916: an agent's Call through Deedstone (the agent's leg, then the client).
+  if (event.startsWith('ds_bridge') || event === 'ds_client_leg' || event === 'ds_agent_leg') {
+    return bridge ? bridgeEvent(event, q, form, bridge, env.publicUrl) : twiml('<Hangup/>')
+  }
 
   const callSid = q.get('call') || ''
   if (!SID.test(callSid)) return twiml(event === 'va_join' ? '<Hangup/>' : '')
+
+  // P916: a call in rang the caller's agent first.
+  if (event === 'ds_screen') return route?.deedstone ? screen(route.deedstone, env.publicUrl, callSid) : twiml('<Hangup/>')
+  if (event === 'ds_take') return route?.deedstone ? take(route.deedstone, callSid, form) : twiml('<Hangup/>')
+  if (event === 'ds_after_agent') {
+    if (!route?.deedstone || FINAL.includes(form.CallStatus || '')) return twiml('<Hangup/>')   // the caller hung up
+    if (await route.deedstone.inboundDone(callSid)) return twiml('<Hangup/>')                  // the agent took it
+    if (!(await store.voiceLive())) return twiml('<Hangup/>')
+    return inboundRouted(store, route, env, form)                                               // → the VA desk
+  }
 
   if (event === 'va_join') return vaJoin(store, twilio, env, callSid, q.get('va') || '', form.CallSid || '')
   if (event === 'va_leg') return vaLeg(store, twilio, callSid, form)

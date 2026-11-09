@@ -14,6 +14,7 @@ import { DEFAULT_LIVE_HOURS } from '../../lib/leadSplit.js'
 import { formatPhone } from '../phoneMask.js'
 import { answerCheck, markLapsed } from '../../lib/clientCheck.js'
 import { SUPPORT_THREAD } from '../support911.js'
+import { SAMPLE_DEEDSTONE } from '../deedstone.js'
 
 // The one door to sample info for the clickable template. Screens read only through the named functions below.
 // Every read returns { data, isLoading: false, error: null }, the shape react-query hooks give, and record fields
@@ -264,7 +265,8 @@ const seed = {
     calendarSync: { provider: null, status: 'not_connected' },
     // P848: the states the agent picked (3 to 10, never NY) and the one tick, logged with its time and the states.
     licence: { states: ['AZ', 'FL', 'GA', 'TX'], licensed: { at: 'Oct 12, 9:14 AM', states: ['AZ', 'FL', 'GA', 'TX'] } },
-    // P847: the Overview clock's zone (profiles.timezone values). P890: no agent caller ID (agents call from their own phone).
+    // P847: the Overview clock's zone (profiles.timezone values). P916: agents call through Deedstone (their phone
+    // rings first, the client sees Deedstone Insurance); the phone for that lives in template/deedstone.js.
     timeZone: 'America/Chicago',
     // P885: the forwarding address for carrier missed-payment emails, and what happened to the last few.
     paymentIntake: {
@@ -656,6 +658,8 @@ const SAMPLE = {
   useSignup: useSignupSample,
   useOverview: useOverviewSample,
   useActions: useActionsSample,
+  // P916: Call through Deedstone and Connect your phone (template/deedstone.js; real: hooks/deedstoneReal.js).
+  deedstone: SAMPLE_DEEDSTONE,
 }
 const ImplCtx = createContext(SAMPLE)
 // Loading and error for the page as a whole: never for sample data.
@@ -684,6 +688,8 @@ export function useSampleNeeds(...a) { return useImpl().useNeeds(...a) }
 export function useSampleSignup(...a) { return useImpl().useSignup(...a) }
 export function useSampleOverview(...a) { return useImpl().useOverview(...a) }
 export function useSampleActions(...a) { return useImpl().useActions(...a) }
+// P916: the Deedstone calling side for this mode (sample or real).
+export const useDeedstone = () => useImpl().deedstone || SAMPLE_DEEDSTONE
 
 // P911: the sample clients, for the stage-checklist tests (each journey has one at a different step).
 export { seedClients as SAMPLE_CLIENTS }

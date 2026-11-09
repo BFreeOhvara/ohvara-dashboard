@@ -12,6 +12,7 @@ import { HoursDrawer, BlockDrawer, CantMakeIt } from '../screens/Calendar'
 import { ActionSheet, ActRow } from './Sheet'
 import { CallBtn } from './bits'
 import { mp } from './mpaths'
+import { targetOf } from '../../lib/deedstoneCall'
 
 // P908 — the Calendar on a phone: This week / Next week, a strip of days (a dot per call, blocked days marked), and the
 // picked day as an agenda, each call a full-width row in its person's colour with Call on the right. Tapping a call
@@ -82,7 +83,7 @@ export default function MCalendar() {
                   <div className={`mx-ev fx-card is-${toneOf(a)}`}>
                     <button type="button" className="mx-cover" aria-label={`${a.who}, ${a.label}`} onClick={() => setOpen(a)} />
                     <span className="tp-grow"><b>{a.who}</b><small>{a.label}{past ? ' · done' : ''}</small></span>
-                    {past ? <ChevronRight size={18} className="mx-chev" aria-hidden="true" /> : <CallBtn phone={phoneOf(a)} />}
+                    {past ? <ChevronRight size={18} className="mx-chev" aria-hidden="true" /> : <CallBtn phone={phoneOf(a)} to={targetOf(a.kind === 'client' ? 'client' : 'lead', personOf(a))} />}
                   </div>
                 </li>
               )

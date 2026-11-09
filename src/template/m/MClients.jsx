@@ -12,6 +12,7 @@ import { Sheet, ActionSheet, ActRow } from './Sheet'
 import { CallBtn, PersonRow, Sec } from './bits'
 import { mp } from './mpaths'
 import '../p899.css'
+import { targetOf } from '../../lib/deedstoneCall'
 
 // P908 — Clients on a phone: one list with status chips on top (All · Working · Needs attention · Protected · Closed).
 // The monthly "Still on the books?" sits first as one-tap rows: Yes or No on each, or "All still on the books".
@@ -91,7 +92,7 @@ function ClientSheet({ id, onClose, today, settings, onLapsed }) {
   const closed = st === 'closed'
   return (
     <Sheet open onClose={onClose} title={name} kicker={`Client · since ${c.submitted}`} tone={tone}
-      footer={closed ? null : <><CallBtn big phone={c.client_phone} /><button type="button" className="mx-btn is-wide" onClick={() => setAppLink(true)}><Send size={18} aria-hidden="true" />Send app link</button></>}>
+      footer={closed ? null : <><CallBtn big phone={c.client_phone} to={targetOf('client', c)} /><button type="button" className="mx-btn is-wide" onClick={() => setAppLink(true)}><Send size={18} aria-hidden="true" />Send app link</button></>}>
       <div className={`mx-hero fx-card is-${tone}`}>
         <div className="mx-hero-top"><span>{st === 'protected' ? <ShieldCheck size={14} aria-hidden="true" /> : <ShieldAlert size={14} aria-hidden="true" />}{sub}</span><Chip tone={tone}>{label}</Chip></div>
         <p><MapPin size={14} aria-hidden="true" />{where(c) || 'No details yet'}</p>

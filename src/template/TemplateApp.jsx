@@ -20,6 +20,7 @@ import Deedstone from './client/Deedstone'
 import FulFrame from './ful/FulFrame'
 import { fulRoutes } from './ful/routes'
 import { ME } from './ful/data'
+import { DeedstoneCallProvider } from './DeedstoneCall'
 // P908: the phone screens load last so the desktop CSS order stays as it was.
 import MOverview from './m/MOverview'
 import MLeads from './m/MLeads'
@@ -43,6 +44,7 @@ export default function TemplateApp() {
   return (
     <BrowserRouter basename="/template">
       <NoteProvider>
+        <DeedstoneCallProvider>
         <Routes>
           <Route path="signup" element={<Signup />} />
           <Route path="welcome" element={<Welcome />} />
@@ -67,6 +69,7 @@ export default function TemplateApp() {
           <Route element={<AccountProvider value={VA}><FulFrame /></AccountProvider>}>{fulRoutes({ preview: true })}</Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </DeedstoneCallProvider>
       </NoteProvider>
     </BrowserRouter>
   )

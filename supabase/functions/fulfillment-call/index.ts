@@ -7,11 +7,15 @@
 //   npx.cmd supabase functions deploy fulfillment-call --project-ref jjextitmbptoaolacocs
 //
 // Secrets: CALLER_ID_TWILIO_ACCOUNT_SID, CALLER_ID_TWILIO_AUTH_TOKEN,
-// CALLER_ID_TWILIO_FROM_NUMBER (Ohvara's number; the same ones
-// start-agent-caller-id-call uses).
+// CALLER_ID_TWILIO_FROM_NUMBER (Ohvara's old single number: carriers, and the
+// fallback while the Deedstone pool is empty).
+// P916: calls about an agent's lead or client go out from the agent's Deedstone
+// number (deedstone_from); agents call through Deedstone ({ action: 'agent_*' },
+// agentCall.ts), and help-voice runs that call's TwiML.
 import { createClient } from 'npm:@supabase/supabase-js'
 import { handle, type Store, type Twilio } from './core.ts'
 import type { LineStore } from './lines.ts'
+import type { AgentStore } from './agentCall.ts'
 
 const SID = Deno.env.get('CALLER_ID_TWILIO_ACCOUNT_SID')
 const TOKEN = Deno.env.get('CALLER_ID_TWILIO_AUTH_TOKEN')
@@ -19,6 +23,13 @@ const FROM = Deno.env.get('CALLER_ID_TWILIO_FROM_NUMBER') || null
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 
 const admin = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+
+// P916: the agent's Deedstone number (assigned the first time, kept); kind logs one outbound call on it.
+async function deedstoneFrom(agentId: string, kind: string | null, ref: string): Promise<string | null> {
+  const { data, error } = await admin.rpc('deedstone_from', { p_agent: agentId, p_kind: kind, p_ref: ref })
+  if (error) { console.error('deedstone_from', error.message); return null }
+  return (data as { phone?: string } | null)?.phone ?? null
+}
 
 const store: Store = {
   async userFromJwt(jwt) {
@@ -64,6 +75,7 @@ const store: Store = {
     const { error } = await q
     if (error) throw error
   },
+  deedstoneFrom,
 }
 
 // P882 — the line path (every call type). Service role; the SQL functions check the task rule and the routing.
@@ -131,6 +143,24 @@ const lineStore: LineStore = {
     await admin.from('help_calls').update({ status: 'ended', end_reason: reason, ended_at: new Date().toISOString() })
       .eq('call_sid', callSid).neq('status', 'ended')
   },
+  deedstoneFrom,
+}
+
+// P916 — an agent's Call through Deedstone, and the phone code call.
+const agentStore: AgentStore = {
+  role: store.role,
+  voiceLive: store.voiceLive,
+  callBegin: async (agentId, leadId, policyId) => await rpc('deedstone_call_begin', { p_agent: agentId, p_lead: leadId, p_policy: policyId }),
+  async agentCall(id) {
+    const { data } = await admin.from('deedstone_calls').select('id, agent_id, agent_call_sid, status').eq('id', id).maybeSingle()
+    return data
+  },
+  async saveAgentCall(id, patch) {
+    const { error } = await admin.from('deedstone_calls').update(patch).eq('id', id)
+    if (error) throw error
+  },
+  codeBegin: async (agentId, phone) => String(await rpc('deedstone_code_begin', { p_agent: agentId, p_phone: phone })),
+  numberFor: agentId => deedstoneFrom(agentId, null, 'code'),
 }
 
 const twilio: Twilio = async (method, path, params) => {
@@ -158,4 +188,7 @@ Deno.serve(req => handle(req, store, twilio, {
     const { data } = await admin.rpc('fulfillment_cron_ok', { p_secret: secret })
     return data === true
   },
+}, {
+  store: agentStore,
+  env: { from: FROM, helpUrl: `${SUPABASE_URL}/functions/v1/help-voice`, configured: !!(SID && TOKEN) },
 }))

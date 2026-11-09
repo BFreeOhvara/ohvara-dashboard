@@ -62,6 +62,8 @@ export interface LineStore {
   predial(phone: string, state: string | null, leadId: string | null, policyId: string | null): Promise<Predial>
   logAttempt(phone: string, leadId: string | null, policyId: string | null, lineId: string, va: string): Promise<void>
   endHelpCall(callSid: string, reason: string): Promise<void>
+  // P916: the agent's Deedstone number (kind logs one call on it; null = no log); null = the old single number.
+  deedstoneFrom?(agentId: string, kind: string | null, ref: string): Promise<string | null>
 }
 
 export type LineEnv = { from: string | null; voiceUrl: string; configured: boolean }
@@ -189,7 +191,7 @@ export async function actLine(store: LineStore, twilio: Twilio, env: LineEnv, us
         refuse(`Can't call now: ${PREDIAL_WORDS[chk.reason || ''] || chk.reason}`, 409, 'predial',
           { reason: chk.reason, next_at: chk.next_at })
       }
-      // P890: clients and leads both see Deedstone's (Ohvara's) number; agent caller ID is gone.
+      // P916: clients and leads see their agent's Deedstone number, the same one on every call about them.
     } else if (action === 'ring_carrier') {
       who = 'carrier'
       to = toE164(await store.carrierPhone(body.carrier_id ?? pol?.carrier_id ?? null))
@@ -200,8 +202,14 @@ export async function actLine(store: LineStore, twilio: Twilio, env: LineEnv, us
       to = toE164(agent ? await store.agentPhone(agent) : null)
       if (!to) refuse('No phone number on file for the agent.', 400, 'no_agent_phone')
     }
-    if (!callerId) refuse('No Twilio number to place calls from yet.', 503, 'no_from_number')
     if (legOf(who!)) refuse('They are already on the line.', 409, 'already_on')
+    // P916: every call about an agent's lead or client goes out from that agent's Deedstone number (carriers keep
+    // the old number). A call to the agent's own phone shows it too, without counting toward the number's day.
+    const agentId = pol?.agent_id ?? lead?.assigned_rep_id ?? null
+    if (agentId && who! !== 'carrier' && store.deedstoneFrom) {
+      callerId = (await store.deedstoneFrom(agentId, who! === 'agent' ? null : 'va_call', line!.id)) || callerId
+    }
+    if (!callerId) refuse('No Twilio number to place calls from yet.', 503, 'no_from_number')
     // Whoever is talking waits on hold while the new person rings.
     for (const l of live.filter(x => !x.on_hold)) await setHold(twilio, store, conf!, l, true)
     const data = await twilioOk(twilio, 'POST', `/Conferences/${conf}/Participants.json`, {
