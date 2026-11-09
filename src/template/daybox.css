@@ -8,8 +8,8 @@
 .fx-week .tp-tgrid-h b.is-on { background: color-mix(in srgb, var(--ov-data-a) 12%, transparent); }
 .fx-week .tp-tgrid-h b.is-on > span { color: var(--ov-data-a); }
 .fx-week.is-week .tp-tcol { cursor: pointer; transition: background-color .2s var(--fx-ease); }
-.fx-week.is-week .tp-tcol:hover { background-color: color-mix(in srgb, var(--ov-hi) 4%, transparent); }
-.fx-week.is-week .tp-tcol.today:hover { background-color: color-mix(in srgb, var(--ov-data-a) 9%, transparent); }
+.fx-week.is-week .tp-tcol:hover:not(:has(.tp-ev:hover)) { background-color: color-mix(in srgb, var(--ov-hi) 4%, transparent); }
+.fx-week.is-week .tp-tcol.today:hover:not(:has(.tp-ev:hover)) { background-color: color-mix(in srgb, var(--ov-data-a) 9%, transparent); }
 .fx-week.is-day .tp-ev { min-height: 44px; }
 
 /* The week strip: chips, the open day lit. */

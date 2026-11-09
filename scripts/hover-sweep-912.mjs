@@ -41,15 +41,23 @@ const report = []
 function diff(a, b, c) {
   const A = PNG.sync.read(a), B = PNG.sync.read(b), C = c ? PNG.sync.read(c) : null
   const ch = (X, i) => Math.max(Math.abs(X.data[i] - B.data[i]), Math.abs(X.data[i + 1] - B.data[i + 1]), Math.abs(X.data[i + 2] - B.data[i + 2])) > 6
-  let n = 0, x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1, lum = 0
+  // The box is the changed pixels' extent, counting only 20px cells holding more than 20 of them, so a few
+  // re-antialiased edge pixels elsewhere (a neighbour re-rastered when the hovered item comes to the front) don't stretch it.
+  let n = 0, lum = 0
+  const S = 20, cw = Math.ceil(A.width / S), nc = cw * Math.ceil(A.height / S)
+  const cnt = new Uint32Array(nc), bx0 = new Int32Array(nc).fill(1e9), by0 = new Int32Array(nc).fill(1e9), bx1 = new Int32Array(nc).fill(-1), by1 = new Int32Array(nc).fill(-1)
   for (let y = 0; y < A.height; y++) for (let x = 0; x < A.width; x++) {
     const i = (y * A.width + x) * 4
     if (ch(A, i) && (!C || ch(C, i))) {
-      n++; if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y
+      const k = Math.floor(y / S) * cw + Math.floor(x / S)
+      n++; cnt[k]++; if (x < bx0[k]) bx0[k] = x; if (y < by0[k]) by0[k] = y; if (x > bx1[k]) bx1[k] = x; if (y > by1[k]) by1[k] = y
       lum += (B.data[i] + B.data[i + 1] + B.data[i + 2]) - (A.data[i] + A.data[i + 1] + A.data[i + 2])
     }
   }
-  return n ? { n, box: { x: x0, y: y0, r: x1 + 1, b: y1 + 1 }, lum: Math.round(lum / n / 3) } : { n: 0 }
+  let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1
+  for (let k = 0; k < nc; k++) if (cnt[k] > 20) { x0 = Math.min(x0, bx0[k]); y0 = Math.min(y0, by0[k]); x1 = Math.max(x1, bx1[k]); y1 = Math.max(y1, by1[k]) }
+  if (x1 < 0) return { n: 0 }
+  return { n, box: { x: x0, y: y0, r: x1 + 1, b: y1 + 1 }, lum: Math.round(lum / n / 3) }
 }
 
 async function signIn(role, w) {
