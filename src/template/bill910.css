@@ -56,5 +56,6 @@
   .bl910 .bl-spend-live { grid-template-columns: minmax(0, 1fr); }
   .bl910 .bl-spend-live > div { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
   .bl910 .bl-spend-live dd { text-align: right; }
-  .bl910 .bl-spend-save > .tp-btn, .bl910 .bl-spend-save > .tp-primary { flex: 1 1 auto; }
+  .bl910 .bl-spend-save small { flex-basis: 100%; }
+  .bl910 .bl-spend-save > .tp-btn, .bl910 .bl-spend-save > .tp-primary { flex: 1 1 0; width: auto; min-width: 0; }
 }

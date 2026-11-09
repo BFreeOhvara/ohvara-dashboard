@@ -20,6 +20,7 @@
    slides up from the bottom and back down. The scrim fades with them. Out runs .22s to match useExit (motion.js).
    Layers are portaled outside .fx, so the curves are written out here. ── */
 .tp-layer .tp-scrim { animation: fx-fade .24s ease both; }
+.tp-layer.is-leaving, .fx-layer.is-leaving { pointer-events: none; } /* a closing layer never eats the next click */
 .tp-layer.is-leaving .tp-scrim, .fx-rec-layer.is-leaving .fx-scrim { animation: fx-fade-out .22s ease forwards; }
 @media (min-width: 1000px) {
   .tp-layer .tp-sheet.tp-sheet:not(.is-center), .fx-layer .fx-rec.fx-rec { animation: dr-in .42s cubic-bezier(.22, 1, .36, 1) both; }

@@ -69,6 +69,8 @@ const nextBlockAfter = el => {
 // a third of its height above the fold, heading included, at any window height. It only ever adds height (never
 // shrinks content), only on pages that scroll anyway, and only from 1000px wide unless the page sets data-fold-phone.
 // data-fold-next="<selector>" names the section to peek when it is not the next sibling.
+// data-fold-peek (P914, admin Overview): peek that section even when it would just fit above the fold, as long as
+// the page goes on below it, so the window never ends on a clean edge that hides the rest.
 // A small section heading just above a card (outside it, not itself holding a card) belongs to the card: its top.
 export function headAbove(el) {
   const top = docTop(el)
@@ -112,7 +114,8 @@ export function applyFold(main) {
   const ha = fit ? null : headAbove(next)
   const nextTop = ha ? docTop(ha) : docTop(next)
   const nextH = docTop(next) + next.offsetHeight - nextTop
-  if (!fit && nextTop + nextH <= fold + 8) return // it all fits: leave the page as it is
+  const goesOn = el.hasAttribute('data-fold-peek') && blocksIn(main).some(b => docTop(b) >= nextTop + nextH - 2)
+  if (!fit && !goesOn && nextTop + nextH <= fold + 8) return // it all fits: leave the page as it is
   const gap = Math.max(0, nextTop - bottom)
   const head = ha || next.querySelector('h2, h3, .fx-tile-h, .fx-sec-h, .adm-sec-h, header')
   const headShare = head ? (docTop(head) - nextTop + head.offsetHeight + 18) / nextH : 0

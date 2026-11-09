@@ -43,13 +43,16 @@ export function NoteProvider({ children }) {
 export function Drawer({ open, onClose, center = false, title: t, sub: s, children: c, footer: f }) {
   const [shown, leaving] = useExit(open)
   const [shutting, setShutting] = useState(false)
+  // Played out by shut: once the caller closes it, don't play the way out a second time (useExit's leave).
+  const [gone, setGone] = useState(false)
+  if (open && gone) setGone(false)
   const timer = useRef(0)
   useEffect(() => () => clearTimeout(timer.current), [])
   const shut = useCallback(() => {
     if (still()) { onClose(); return }
     if (timer.current) return
     setShutting(true)
-    timer.current = setTimeout(() => { timer.current = 0; setShutting(false); onClose() }, 220)
+    timer.current = setTimeout(() => { timer.current = 0; setShutting(false); setGone(true); onClose() }, 220)
   }, [onClose])
   // While it plays out it keeps showing what it showed while open (callers often clear that state on close). Kept
   // with React's "adjust state during render" pattern: it re-renders at once with the same props, so it settles.
@@ -62,7 +65,7 @@ export function Drawer({ open, onClose, center = false, title: t, sub: s, childr
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open, shut])
-  if (!shown) return null
+  if (!shown || (gone && !open)) return null
   const out = leaving || shutting
   return createPortal(
     <div className={`tp tp-layer${out ? ' is-leaving' : ''}`} role="presentation">
