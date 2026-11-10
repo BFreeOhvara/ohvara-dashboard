@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Home, PhoneIncoming, Users, CalendarDays, Ellipsis, Bell, MessageSquare, Plus, ChevronLeft, FileUp, UserPlus, PhoneCall, StickyNote, Search, Info } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
+import { useIsTestAccount } from '../../hooks/useIsTestAccount'
 import { useSampleLeads, useSampleNeeds, useSampleThreads, useDataSource, useDataStatus } from '../data'
 import { useAccount, initials } from '../kit'
 import { avatarHue } from '../avatarHue'
@@ -47,6 +48,7 @@ export default function MobileFrame() {
   useTheme() // applies the saved theme
   const account = useAccount()
   const source = useDataSource()
+  const isTest = useIsTestAccount() // P929: no sample line on test accounts
   const status = useDataStatus()
   const { data: threads } = useSampleThreads()
   const { data: needs } = useSampleNeeds()
@@ -88,7 +90,7 @@ export default function MobileFrame() {
 
       <main className="mx-main">
         {status.error ? <DataError onRetry={status.retry} /> : status.loading ? <DataLoading /> : <Outlet />}
-        {source === 'sample' && <p className="mx-foot">Sample info. Changes reset when you reload.</p>}
+        {!isTest && source === 'sample' && <p className="mx-foot">Sample info. Changes reset when you reload.</p>}
       </main>
 
       <button type="button" className="mx-fab" aria-label="Create" aria-haspopup="dialog" onClick={pick('create')}><Plus size={26} aria-hidden="true" /></button>

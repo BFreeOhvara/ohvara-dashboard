@@ -18,3 +18,7 @@
 .fx-page .fx-weeklist .fx-wl-row:active, .fx-page .fx-daybox .fx-row:not(.is-flat):active { transform: translateY(1px) scale(.99); background: color-mix(in srgb, var(--ov-data-a) 16%, transparent); }
 .fx-page .fx-weeklist .fx-wl-row:focus-visible, .fx-page .fx-daybox .fx-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .fx-week.cal910 .tp-tgrid-h b[role="button"], .fx-week.cal910 .tp-ev, .fx-page .fx-weeklist .fx-wl-row { transition: none; } }
+/* P929 — boxes side by side never overlap; in a narrow column the words shorten instead of spilling over */
+.fx-week .tp-ev { box-sizing: border-box; overflow: hidden; }
+.fx-week .tp-ev > * { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fx-week .tp-ev.is-lane { padding-left: 6px; padding-right: 6px; }

@@ -30,7 +30,7 @@ test('agents see five statuses, with Closed only under a filter (P894: live tran
   assert.equal(agentStatusOf(leads[7]), 'sold')
   assert.deepEqual(agentChip(leads[6]), ['blue', 'Booked · mark result'])
   assert.deepEqual(agentChip(leads[7]), ['green', 'Sold · add the policy details'])
-  assert.deepEqual(agentChip(leads[11]), ['warn', 'Not interested · already covered']) // P913: took No show's old colour
+  assert.deepEqual(agentChip(leads[11]), ['warn', 'Not interested · Oct 30']) // P913: took No show's old colour; P929: the date, no reason
 })
 
 test("the agent's timeline hides call attempts, chase texts and where the lead came from", () => {

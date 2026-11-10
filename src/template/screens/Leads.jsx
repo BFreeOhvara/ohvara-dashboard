@@ -8,14 +8,12 @@ import { RecordDrawer, Stepper, Block } from '../Record'
 import { SpendSliders } from '../PlanBuilder'
 import { LANES, laneOf } from '../stages'
 import { agentCallTask, confirmedByText, atLabel, clockNow } from '../leadLifecycle'
-import { agentStatusOf, agentEvents, closedReason, needsResult, resultsFor, canMove, isLiveCall, liveCalls, RESULT_LABEL } from '../agentView'
+import { agentStatusOf, agentStatus, leadMessages, notInterestedLine, closedReason, needsResult, resultsFor, canMove, isLiveCall, liveCalls, RESULT_LABEL, RESULT_STATUS } from '../agentView'
 import { LiveCalls } from '../LiveCall'
 import { dailyTotal, openSlotsPerWeek, spendOk, planOf, bandOf } from '../spendPlan'
 import { usd } from '../motion'
 import { FeedbackDrawer } from '../Talk'
 import { CallOrCopy as CallOr } from '../CallOrCopy'
-import { DeedstoneCallButton } from '../DeedstoneCall'
-import { targetOf } from '../../lib/deedstoneCall'
 import { paths } from '../paths'
 import { FirstRun } from '../DataState'
 import '../leads873.css'
@@ -35,7 +33,7 @@ const shortWhen = l => {
   if (l.stage === 'ringing') return 'Now'
   if (isLiveCall(l)) return 'Live call'
   if (st === 'no_show') return 'Rebook link sent'
-  if (st === 'not_interested') return l.reason && !/^not interested/i.test(l.reason) ? l.reason : 'Said no'
+  if (st === 'not_interested') return notInterestedLine(l)
   if (l.stage === 'sold') return l.submitted ? 'Submitted' : 'Add details'
   if (l.stage === 'follow_up' && l.follow) return `Call ${l.follow.split(',')[0]}`
   return l.appt ? l.appt.replace(/, Nov \d+,/, '') : 'No time'
@@ -71,8 +69,9 @@ function LeadCard({ l, i, onResult }) {
   )
 }
 
-// P898: the number with copy (CallOrCopy.jsx, shared with the client drawer). P916: Call through Deedstone, every width.
-const CallOrCopy = ({ lead, closed, onCall }) => <CallOr phone={lead.phone} target={targetOf('lead', lead)} closed={closed} onCall={onCall} />
+// P898: the number with copy (CallOrCopy.jsx, shared with the client drawer). P929: no Call on a desktop (calls go out
+// from the agent's phone, P916's phone flow in src/template/m); the number and Copy stay.
+const CallOrCopy = ({ lead, closed }) => <CallOr phone={lead.phone} target={null} closed={closed} />
 
 // One timeline row, shaped like a lead-events row. Texts show as bubbles; what the system or the agent sends is a
 // preview until texting is switched on.
@@ -96,7 +95,7 @@ function Row({ e, lead, last }) {
 
 function LeadDrawer({ id, onClose }) {
   const { data: lead } = useSampleLead(id)
-  const { moveLead, addLeadNote, callBack, askTeamToCall, sendBookingLink, rebookLead } = useSampleActions()
+  const { moveLead, addLeadNote, askTeamToCall, sendBookingLink, rebookLead } = useSampleActions()
   const source = useDataSource()
   const note = useNote()
   const [params, setParams] = useSearchParams()
@@ -110,16 +109,14 @@ function LeadDrawer({ id, onClose }) {
   const name = `${lead.first_name} ${lead.last_name}`
   const lane = laneOf(lead)
   // P894: the drawer's buttons are the results this lead's status allows, nothing else.
-  const steps = resultsFor(lead).map(k => ({ key: k, label: RESULT_LABEL[k] }))
+  const steps = resultsFor(lead).map(k => ({ key: k, label: RESULT_LABEL[k], tone: agentStatus(RESULT_STATUS[k]).tone })) // P929: board colours
   const chip = stageChip(lead.stage, lead)
   const asks = [['Mortgage balance', lead.mortgage_balance_band], ['Age', lead.age_band], ['Homeowner', lead.homeowner ? 'Yes' : 'No'], ['Smoker', lead.smoker ? 'Yes' : 'No'], ['Best time', lead.best_time], ['Phone', lead.phone]]
   const pick = k => (k === 'booked' ? (moveLead(lead.id, 'booked'), note(`${name} moved to Booked`)) : setOutcome(k))
   const status = agentStatusOf(lead)
-  const events = agentEvents(lead)
-  const lastDone = events.reduce((n, e, i) => (e.state === 'done' ? i : n), -1)
+  const events = leadMessages(lead)
   const closed = lane.key === 'closed'
   const task = agentCallTask(lead)
-  const called = () => { if (task) callBack(lead.id) }
   return (
     <RecordDrawer label={name} kicker={`Lead · came in ${lead.created}`} tone={lane.tone} onClose={onClose}
       hero={<>
@@ -130,15 +127,15 @@ function LeadDrawer({ id, onClose }) {
       </>}
       stepper={steps.length ? <Stepper label="Pick the result" steps={steps} current={null} onPick={pick} /> : null}
       actions={<>
-        <CallOrCopy lead={lead} closed={closed} onCall={called} />
+        <CallOrCopy lead={lead} closed={closed} />
         <button type="button" className="tp-btn ov-ghost" disabled={closed} onClick={() => setPanel('team')}><Users size={14} />Ask our team to call</button>
         {lead.stage === 'follow_up' && <button type="button" className="tp-btn ov-ghost" disabled={lead.linkSent} onClick={() => { sendBookingLink(lead.id); note(`Booking link sent. ${lead.first_name} picks a time on your calendar`) }}><Link2 size={14} />{lead.linkSent ? 'Link sent' : 'Send booking link'}</button>}
         <span className="tp-grow" />
-        {canMove(lead, 'sold') && <button type="button" className="tp-btn ov-ghost" onClick={() => setOutcome('sold')}><Check size={14} />Sold</button>}
-        {canMove(lead, 'not_interested') && <button type="button" className="tp-btn ov-ghost" onClick={() => setOutcome('not_interested')}><X size={14} />Not interested</button>}
+        {canMove(lead, 'sold') && <button type="button" className={`tp-btn is-res is-${agentStatus('sold').tone}`} onClick={() => setOutcome('sold')}><Check size={14} />Sold</button>}
+        {canMove(lead, 'not_interested') && <button type="button" className={`tp-btn is-res is-${agentStatus('not_interested').tone}`} onClick={() => setOutcome('not_interested')}><X size={14} />Not interested</button>}
       </>}>
       <NoShowUndo lead={lead} />
-      {task && <div className="lc-nudge is-static"><PhoneForwarded size={16} aria-hidden="true" /><span className="tp-grow"><b>{lead.first_name} asked you to call</b><small>{'“'}{lead.reply.text}{'”'} We told them someone calls shortly.</small></span><DeedstoneCallButton target={targetOf('lead', lead)} className="lc-nudge-go lc-call" onCall={called}>Call</DeedstoneCallButton></div>}
+      {task && <div className="lc-nudge is-static"><PhoneForwarded size={16} aria-hidden="true" /><span className="tp-grow"><b>{lead.first_name} asked you to call</b><small>{'“'}{lead.reply.text}{'”'} We told them someone calls shortly.</small></span><span className="lc-nudge-go">Call from your phone</span></div>}
       {needsResult(lead, clockNow()) && <button type="button" className="lc-nudge" onClick={() => setPrompt(true)}><ClipboardCheck size={16} aria-hidden="true" /><span className="tp-grow"><b>How did it go?</b><small>{isLiveCall(lead) ? 'You took the live call. Pick the result' : `The appointment at ${lead.appt} has passed`}</small></span><span className="lc-nudge-go">Mark result</span></button>}
       {lead.stage === 'sold' && !lead.submitted && <Link to={paths.submit(lead.id)} className="fx-nudge">Finish the servicing details. The team takes it from there.</Link>}
       {closed && <p className="lc-closed"><b>{closedReason(lead)}.</b> {lead.stage === 'opted_out' ? 'All calls and texts stopped.' : 'No more calls or texts.'} A reply from them brings them back as a new lead.</p>}
@@ -148,10 +145,10 @@ function LeadDrawer({ id, onClose }) {
       <Block title="What they told us">
         <dl className="fx-facts">{asks.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       </Block>
-      <Block title="Messages and changes" sub="Every text is automatic, and so is every answer to theirs. If they need a person, a call task goes to you or our team. Read only.">
+      <Block title="Messages" sub="The texts sent to and from them">
         {events.length
-          ? <ol className="tp-tl fx-tl lc-tl">{events.map((e, i) => <Row key={e.id} e={e} lead={lead} last={i === lastDone} />)}</ol>
-          : <Empty title="Nothing yet" sub="Texts and changes show here as they happen." />}
+          ? <ol className="tp-tl fx-tl lc-tl">{events.map((e, i) => <Row key={e.id || i} e={e} lead={lead} last={i === events.length - 1} />)}</ol>
+          : <p className="fx-calm" data-empty="messages">No messages yet.</p>}
       </Block>
       <Block title="Notes" sub="Only you and our team see these">
         {lead.note && <p className="fx-note">{lead.note}</p>}

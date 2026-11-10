@@ -5,6 +5,7 @@ import { X, Check } from 'lucide-react'
 import { useStretchPill } from '../hooks/useStretchPill'
 import { hueFor } from './avatarHue'
 import { useExit, still } from './motion'
+import { useIsTestAccount } from '../hooks/useIsTestAccount'
 
 // Small pieces every template screen shares. Drawers, modals and the note are portaled to document.body: the
 // page ease-in wrapper keeps a transform, which would pin position: fixed to the wrapper instead of the window.
@@ -88,7 +89,8 @@ export const initials = name => name.split(' ').map(w => w[0]).slice(0, 2).join(
 // tone: a lead's or client's current stage tone (P843); without it the person's stable palette colour (P842).
 export const Avatar = ({ name, tone }) => <span className={`tp-av av-${hueFor(name, tone)}${tone ? ' is-status' : ''}`} aria-hidden="true">{initials(name)}</span>
 export const Chip = ({ tone = 'blue', children }) => <span className={`tp-chip is-${tone}`}><i />{children}</span>
-export const SampleTag = ({ children = 'Sample price' }) => <span className="tp-tag">{children}</span>
+// P929: test accounts never see a "sample" label.
+export const SampleTag = ({ children = 'Sample price' }) => (useIsTestAccount() ? null : <span className="tp-tag">{children}</span>)
 export const Money = ({ v, cents = true, size = '' }) => (
   <span className={`tp-money ${size}`}>{`$${Number(v).toLocaleString('en-US', { minimumFractionDigits: cents ? 2 : 0, maximumFractionDigits: cents ? 2 : 0 })}`}</span>
 )

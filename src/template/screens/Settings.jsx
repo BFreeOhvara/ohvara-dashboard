@@ -1,21 +1,26 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { User, Bell, Radio, CreditCard, SunMoon, LogOut, Trash2, KeyRound, BadgeCheck } from 'lucide-react'
-import { useSampleSettings, useSampleActions, useSampleBilling } from '../data'
+import { User, Bell, Radio, CreditCard, SunMoon, Mail, LogOut, Trash2, ChevronRight, KeyRound, BadgeCheck } from 'lucide-react'
+import { useSampleSettings, useSampleActions, useSampleBilling, useSampleClients, useSampleLeads, useSampleOverview } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
-import { Drawer, Field, Seg, Switch, useNote, useAccount } from '../kit'
-import { SettingsNav } from '../SettingsNav'
+import { Drawer, Field, Seg, Switch, PillTabs, useNote, useAccount, initials } from '../kit'
 import { TimeZoneSelect } from '../Clock'
 import { PhoneInput } from '../PhoneInput'
-import { usd } from '../motion'
+import { CountUp, usd } from '../motion'
 import { paths } from '../paths'
-import { dailyTotal, planOf } from '../spendPlan'
+import { dailyTotal, rangeWords, planOf } from '../spendPlan'
+import { BookedMeter } from '../PlanBuilder'
+import { inLiveHours } from '../../lib/leadSplit'
+import '../settings929.css'
 import { HoursEditor } from '../Hours'
 import { LicenceCard } from '../Licence'
 import { PaymentIntakeCard } from '../PaymentIntake'
 import { DeedstonePhone } from '../DeedstonePhone'
 
-const TABS = [['profile', 'Profile', User], ['licence', 'Licence', BadgeCheck], ['alerts', 'Notifications', Bell], ['calls', 'Hours and calls', Radio], ['billing', 'Billing', CreditCard], ['look', 'Appearance', SunMoon]]
+// P929: Settings back to the pre-P924 layout (profile card on the left, tabs on the right). Notifications is only the
+// switches; the carrier-email forwarding address that sat under it has its own Email tab, so no section is long.
+const TABS = [['profile', 'Profile', User], ['licence', 'Licence', BadgeCheck], ['alerts', 'Notifications', Bell], ['email', 'Email', Mail], ['calls', 'Hours and calls', Radio], ['billing', 'Billing', CreditCard], ['look', 'Appearance', SunMoon]]
+const NEEDS = ['ringing', 'showed']
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
 
 // Discard / Save under every section. Save is off until something changed.
@@ -32,7 +37,42 @@ function Head({ title, sub }) {
   return <header className="fx-form-h"><h2>{title}</h2><p>{sub}</p></header>
 }
 
-// Settings (P924): the sections listed on the left (SettingsNav, the same in every portal), one on the right.
+// Left: who you are, this week's budget and how many it has booked, three numbers, what's next.
+function ProfileCard({ profile }) {
+  const { data: billing } = useSampleBilling()
+  const duty = !!billing.take && inLiveHours(billing.take.hours, billing.take.tz)
+  const { data: clients } = useSampleClients()
+  const { data: leads } = useSampleLeads()
+  const { data: ov } = useSampleOverview()
+  const wk = billing.expected.appts.booked
+  const money = usd()
+  const next = ov.nextAppt || ov.upNext[0]
+  const stats = [[clients.length, 'Clients'], [leads.filter(l => NEEDS.includes(l.stage)).length, 'Need you'], [leads.filter(l => l.stage === 'booked').length, 'Booked']]
+  return (
+    <aside className="fx-tile fx-prof" aria-label="Your profile">
+      <div className="fx-prof-av" aria-hidden="true">{initials(profile.name).toUpperCase()}<i className={duty ? 'on' : ''} /></div>
+      <h2>{profile.name}</h2>
+      <p>Agent · {duty ? 'Inside your hours now' : 'Outside your hours now'}</p>
+      <span className="fx-prof-mail"><Mail size={13} aria-hidden="true" />{profile.email}</span>
+      <div className="fx-usage is-teal">
+        <div className="tp-row tp-between"><b>Lead spend {money(dailyTotal(billing.spend))} a day</b><b className="fx-usage-n"><CountUp value={billing.booked} /></b></div>
+        <BookedMeter booked={billing.booked} range={wk} />
+        <small><b>{billing.booked}</b> booked this week · about {rangeWords(wk)} expected · servicing {billing.servicing.status}</small>
+      </div>
+      <ul className="fx-pstats">{stats.map(([n, label]) => <li key={label}><small>{label}</small><b className="tp-num"><CountUp value={n} /></b></li>)}</ul>
+      {next && (
+        <Link to={paths.calendar()} className="fx-pnext">
+          <i aria-hidden="true" />
+          <span className="tp-grow"><small>Next up</small><b>{next.label} with {next.who}</b><small>{next.day} · {next.time}</small></span>
+          <ChevronRight size={16} aria-hidden="true" />
+        </Link>
+      )}
+    </aside>
+  )
+}
+
+// Settings, Solvik-style: the profile card on the left, one panel on the right whose pill tabs switch sections (P929:
+// back from P924's side list).
 // Each section is a short form with Discard / Save. Sign out and delete keep their real code.
 export default function Settings() {
   const { data: s } = useSampleSettings()
@@ -72,14 +112,16 @@ export default function Settings() {
   const money = usd()
 
   return (
-    <div className="tp-page fx-set st-set">
+    <div className="tp-page fx-set">
       {/* P843: Sign out is its own small box under the profile card (same real sign-out as before) */}
       <div className="fx-set-side">
-        <SettingsNav name={profile.name} role="Agent" tabs={TABS} value={tab} onChange={setTab} />
+        <ProfileCard profile={profile} />
         <button type="button" className="fx-tile fx-signout" onClick={signOut}><LogOut size={16} aria-hidden="true" />Sign out</button>
       </div>
 
       <section className="fx-tile fx-panel" aria-label="Settings">
+        <PillTabs label="Settings sections" className="fx-ptabs" itemClass="fx-ptab" value={tab} onChange={setTab} items={TABS.map(([key, label, icon]) => ({ key, label, icon }))} />
+
         <div className="fx-form" key={tab} role="tabpanel" aria-label={TABS.find(t => t[0] === tab)[1]}>
           {tab === 'profile' && <>
             <Head title="Profile" sub="How you show up to the team and on everything we send for you." />
@@ -115,6 +157,10 @@ export default function Settings() {
               alerts.forEach(n => { const was = s.notifications.find(x => x.key === n.key); if (was.push !== n.push) setNotification(n.key, 'push', n.push); if (was.email !== n.email) setNotification(n.key, 'email', n.email) })
               note('Notifications saved')
             }} />
+          </>}
+
+          {tab === 'email' && <>
+            <Head title="Email" sub="Forward carrier emails here: a lapse, missed payment or bounced draft becomes a save call for the team." />
             <PaymentIntakeCard />
           </>}
 

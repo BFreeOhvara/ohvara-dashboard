@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import '../leads873.css'
 import { Link } from 'react-router-dom'
 import { Phone, MapPin, ChevronRight, Clock, ClipboardCheck, CalendarX2, Settings2, Ban } from 'lucide-react'
@@ -17,6 +17,7 @@ import { DayBox, WeekList } from '../DayBox'
 import '../cal910.css'
 import { useOpenDay, useStickyDay } from '../useOpenDay'
 import { blockTime, clockOf, zoneAbbr, dateOf } from '../../lib/callSlots'
+import { calLanes, boxMinutes } from '../../lib/calLanes'
 
 // P848: the week shown comes from data useWeek (the sample week of Nov 2, or the real current week).
 const START = 9 // the grid runs 9:00 AM to 6:00 PM, your working hours
@@ -85,6 +86,7 @@ export function CantMakeIt({ appt, lead, onClose }) {
   )
 }
 // '3:30 PM' -> minutes after 9:00 AM
+const BOX_MIN_PX = 58 // P929: the time, the name and the label fit
 function minutesIn(time) {
   const [, h, m, ap] = /(\d+):(\d+)\s*(AM|PM)/.exec(time) || [0, 9, 0, 'AM']
   return ((Number(h) % 12) + (ap === 'PM' ? 12 : 0) - START) * 60 + Number(m)
@@ -116,6 +118,20 @@ export default function Calendar() {
   const TODAY = wk === 'this' ? week.today : null
   const weekIsos = key => week.days.map(([, n]) => (key === 'next' ? plusDays(week.isoOf(n), 7) : week.isoOf(n)))
   const NOW_TIME = week.time
+  // P929: grid pixels per minute, so a box is never shorter than its words.
+  const gridRef = useRef(null)
+  const [pxPerMin, setPxPerMin] = useState(0)
+  useLayoutEffect(() => {
+    const el = gridRef.current
+    if (!el) return undefined
+    const col = () => el.querySelector('.tp-tcol')
+    const read = () => { const h = col()?.getBoundingClientRect().height || 0; setPxPerMin(h ? h / (HOURS.length * 60) : 0) }
+    read()
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const ro = new ResizeObserver(read)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
   const { data: raw } = useSampleAppointments()
   const { data: leads } = useSampleLeads()
   const { data: clients } = useSampleClients()
@@ -139,10 +155,14 @@ export default function Calendar() {
   const ofDay = d => events.filter(e => e.on === isoOf(d)).sort((a, b) => minutesIn(a.time) - minutesIn(b.time))
   const list = view != null ? ofDay(view) : []
   const headKey = n => e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDay(n) } }
-  // Two at the same time sit side by side.
+  // P929: boxes never overlap. Each box is as tall as its call (never shorter than it can be read); boxes that would
+  // touch sit side by side, as many columns as the busiest moment needs (lib/calLanes).
+  const total = HOURS.length * 60
+  const span = e => boxMinutes(e.mins || e.duration, BOX_MIN_PX, pxPerMin)
+  const lanesOf = list => calLanes(list.map(e => ({ id: e.id, start: minutesIn(e.time), end: minutesIn(e.time) + span(e) })))
   const Ev = ({ e, lane: [k, of] }) => (
-    <button type="button" className={`tp-ev ${e.kind}`} onClick={() => setOpen(e)}
-      style={{ top: `${(minutesIn(e.time) / (HOURS.length * 60)) * 100}%`, left: `calc(${(k / of) * 100}% + 4px)`, width: `calc(${100 / of}% - 8px)` }}>
+    <button type="button" className={`tp-ev ${e.kind}${of > 1 ? ' is-lane' : ''}`} onClick={() => setOpen(e)}
+      style={{ top: `${(minutesIn(e.time) / total) * 100}%`, height: `${(span(e) / total) * 100}%`, minHeight: 0, left: `calc(${(k / of) * 100}% + ${of > 1 ? 2 : 4}px)`, width: `calc(${100 / of}% - ${of > 1 ? 4 : 8}px)` }}>
       <b>{e.when}</b><span>{e.who}</span><small>{e.label}</small>
     </button>
   )
@@ -167,11 +187,11 @@ export default function Calendar() {
               {d} <span>{n}</span>{n === TODAY && <small>Today</small>}
             </b>
           ))}</div>
-          <div className="tp-tgrid-b">
+          <div className="tp-tgrid-b" ref={gridRef}>
             <div className="tp-hours">{HOURS.map(h => <span key={h}>{label12(h)}</span>)}</div>
             {shown.map(([d, n]) => (
               <div key={d} className={`tp-tcol${n === TODAY ? ' today' : ''}${blocked.includes(d) ? ' is-blocked' : ''}`} data-day={n} title={blocked.includes(d) ? `${d} is blocked` : undefined} onClick={e => { if (view == null && e.target === e.currentTarget) openDay(n) }}>
-                {ofDay(n).map((e, i, all) => { const same = all.filter(x => x.time === e.time); return <Ev key={e.id} e={e} lane={[same.indexOf(e), same.length]} /> })}
+                {(() => { const day = ofDay(n); const lanes = lanesOf(day); return day.map(e => <Ev key={e.id} e={e} lane={lanes[e.id] || [0, 1]} />) })()}
                 {n === TODAY && <i className="tp-now" style={{ top: `${(minutesIn(NOW_TIME) / (HOURS.length * 60)) * 100}%` }} aria-hidden="true" />}
               </div>
             ))}

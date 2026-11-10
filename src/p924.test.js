@@ -85,15 +85,8 @@ test('agent side: no Request a service, no Log a call, no Closed on Leads, one s
   assert.equal((st.match(/<HoursEditor\b/g) || []).length, 1)
 })
 
-test('Settings: a left list of sections in every role; the header stays', () => {
-  for (const f of ['src/template/screens/Settings.jsx', 'src/template/ful/screens/Settings.jsx', 'src/adminshell/screens/Settings.jsx']) {
-    const s = src(f)
-    assert.match(s, /<SettingsNav\b/, f)
-    assert.match(s, /st-set/, f)
-    assert.doesNotMatch(s, /<PillTabs\b[^>]*label="Settings/, f)
-  }
-  const css = src('src/template/settings924.css')
-  assert.match(css, /\.st-set > \.fx-panel \{ max-height: 100%; min-height: 0; overflow-y: auto;/)
+// P929 replaced P924's left list: Settings is back to the profile card + tabs (src/p929.test.js). Wording stays.
+test('Settings: Wording to approve stays in admin Settings', () => {
   assert.match(src('src/adminshell/screens/Settings.jsx'), /\['wording', 'Wording to approve'/)
 })
 

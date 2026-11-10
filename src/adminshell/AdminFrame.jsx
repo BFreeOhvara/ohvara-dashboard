@@ -6,6 +6,7 @@ import {
   ShieldCheck, PhoneForwarded, CircleDollarSign, CheckCircle2, Radio, Link2, Copy, Plus, Rocket, BadgeCheck, Hourglass,
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
+import { useIsTestAccount } from '../hooks/useIsTestAccount'
 import { Drawer, Avatar, Field, Seg, PillTabs, useAccount, useNote, initials } from '../template/kit'
 import ViewToggle from '../template/ViewToggle'
 import { ReportBug } from '../template/ReportBug'
@@ -205,6 +206,7 @@ export default function AdminFrame() {
   const { pathname } = useLocation()
   const outlet = useOutlet()
   const source = useAdmSource()
+  const isTest = useIsTestAccount() // P929: no sample line on test accounts
   const [theme, setTheme] = useTheme()
   const [panel, setPanel] = useState(null)
   const account = useAccount()
@@ -330,7 +332,7 @@ export default function AdminFrame() {
 
         <main className={`tp-main fx-main adm-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>
           {page.el}
-          {source === 'sample' && <p className="tp-foot">Sample info. Changes reset when you reload.</p>}
+          {!isTest && source === 'sample' && <p className="tp-foot">Sample info. Changes reset when you reload.</p>}
         </main>
       </div>
 

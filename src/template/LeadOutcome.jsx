@@ -39,7 +39,6 @@ function UndoBar({ lead }) {
   )
 }
 
-const REASONS = ['Not interested right now', 'Already covered', 'Cannot afford it', 'Wrong number']
 const ICON = { sold: BadgeCheck, no_show: CalendarX2, follow_up: CalendarClock, not_interested: Ban, booked: CalendarCheck }
 const SAVE = { sold: 'Mark sold', no_show: 'Mark no show', follow_up: 'Set follow up', not_interested: 'Mark not interested', booked: 'Move to Booked' }
 
@@ -61,9 +60,12 @@ export function OutcomePrompt({ lead, start = null, onClose }) {
   const [how, setHow] = useState(allowed.includes(start) ? start : allowed.length === 1 ? allowed[0] : null)
   const [day, setDay] = useState(null)
   const [time, setTime] = useState('')
-  const [why, setWhy] = useState(REASONS[0])
+  // P929: Not interested saves with one tap, no reason asked (from the live call card, the drawer and the picker).
+  const oneTapNo = !!lead && start === 'not_interested' && allowed.includes('not_interested')
+  const markNo = () => { moveLead(lead.id, 'not_interested', { niAt: clockNow() }); note(`${lead.first_name} ${lead.last_name} marked not interested`); onClose() }
+  useEffect(() => { if (oneTapNo) markNo() }, [oneTapNo]) // eslint-disable-line react-hooks/exhaustive-deps
   const [sold, setSold] = useState(false)
-  if (!lead) return null
+  if (!lead || oneTapNo) return null
   const name = `${lead.first_name} ${lead.last_name}`
   const plan = billing.servicing?.status === 'active'
   const live = isLiveCall(lead)
@@ -77,7 +79,7 @@ export function OutcomePrompt({ lead, start = null, onClose }) {
   const save = () => {
     if (how === 'no_show') { markNoShow(lead.id); onClose(); return }
     if (how === 'booked') { moveLead(lead.id, 'booked'); note(`${name} moved to Booked`); onClose(); return }
-    moveLead(lead.id, how, how === 'follow_up' ? { follow: whenLabel(slot.at), followAt: slot.at, followAuto: !slot.picked, slotIso: slot.iso } : how === 'not_interested' ? { reason: why } : {})
+    moveLead(lead.id, how, how === 'follow_up' ? { follow: whenLabel(slot.at), followAt: slot.at, followAuto: !slot.picked, slotIso: slot.iso } : {})
     if (how === 'sold') { setSold(true); note(`${name} marked sold`); return }
     note(how === 'follow_up' ? `Follow up on your calendar: ${whenLabel(slot.at)}. ${lead.first_name} gets a reminder the day before and that morning` : `${name} marked not interested`)
     onClose()
@@ -113,7 +115,7 @@ export function OutcomePrompt({ lead, start = null, onClose }) {
               const Icon = ICON[k]
               const on = how === k
               return (
-                <button key={k} type="button" role="radio" aria-checked={on} data-result={k} className={`rs-opt is-${st.tone}${on ? ' is-on' : ''}`} onClick={() => setHow(k)}>
+                <button key={k} type="button" role="radio" aria-checked={on} data-result={k} className={`rs-opt is-${st.tone}${on ? ' is-on' : ''}`} onClick={() => (k === 'not_interested' ? markNo() : setHow(k))}>
                   <span className="rs-ic" aria-hidden="true"><Icon size={18} /></span>
                   <span className="rs-t"><b>{RESULT_LABEL[k]}</b><small>{RESULT_MEANING[k]}</small></span>
                   <span className="rs-dot" aria-hidden="true">{on && <Check size={13} strokeWidth={3} />}</span>
@@ -147,7 +149,6 @@ export function OutcomePrompt({ lead, start = null, onClose }) {
               : <p className="tp-sub" data-follow-texts="none">It{'’'}s today, so no reminder text goes out.</p>
           })()}
         </div>}
-        {how === 'not_interested' && <div className="rs-more is-mute"><Field label="Reason" hint="All calls and texts stop."><Select label="Reason" value={why} onChange={setWhy} options={REASONS} /></Field></div>}
         {how === 'booked' && <p className="rs-note">{lead.first_name} goes on Booked. Send a booking link from the lead if they still need to pick a time.</p>}
         {how === 'no_show' && <div className="rs-more is-warn">
           <p className="rs-note">{lead.first_name} gets a text right away with a one-tap link to pick a new time, and our team is booked to call and book them again (the next open time in their best window). When they rebook, they go back to Booked on your calendar. You have {UNDO_SECONDS} seconds to undo.</p>

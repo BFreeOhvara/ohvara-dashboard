@@ -6,6 +6,7 @@ import {
   Smartphone, CircleHelp, StickyNote, Mail, Keyboard, Bug,
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
+import { useIsTestAccount } from '../hooks/useIsTestAccount'
 import {
   useSampleActivity, useSampleClients, useSampleLeads, useSampleThreads, useSampleBilling, useSampleAppointments, useSampleSettings, useSampleActions, useSampleNeeds, useDataStatus, useDataSource,
 } from './data'
@@ -354,6 +355,7 @@ export default function TemplateFrame() {
   const msg = useMessagesToggle(layoutOf(pathname) === 'messages', paths.home())
   const status = useDataStatus()
   const source = useDataSource()
+  const isTest = useIsTestAccount() // P929: no sample line on test accounts
   const unread = threads.reduce((n, t) => n + t.unread, 0)
   const msgLink = (
     <NavLink to={paths.messages()} className={`fx-ib tp-wig${msg.closing ? ' is-closing' : ''}`} aria-label={layoutOf(pathname) === 'messages' ? 'Close Messages' : 'Messages'} {...wig} onClick={e => { wig.onClick?.(e); msg.onClick(e) }}><MessageSquare size={18} />{unread > 0 && <span className="fx-badge">{unread}</span>}</NavLink>
@@ -470,7 +472,7 @@ export default function TemplateFrame() {
 
         <main className={`tp-main fx-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>
           {status.error ? <DataError onRetry={status.retry} /> : status.loading ? <DataLoading /> : page.el}
-          {source === 'sample' && <p className="tp-foot">Sample info. Changes reset when you reload.</p>}
+          {!isTest && source === 'sample' && <p className="tp-foot">Sample info. Changes reset when you reload.</p>}
         </main>
       </div>
 

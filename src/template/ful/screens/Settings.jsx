@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { User, Bell, Clock3, Landmark, SunMoon, LogOut, Trash2, KeyRound, ArrowUpRight } from 'lucide-react'
-import { useFulSettings, useFulActions, useFulAgents, useFulShift } from '../data'
+import { User, Bell, Clock3, Landmark, SunMoon, Mail, LogOut, Trash2, ChevronRight, KeyRound, ArrowUpRight } from 'lucide-react'
+import { useFulSettings, useFulActions, useFulDay, useFulPay, useFulAgents, useFulShift } from '../data'
 import { ShiftLine, DayOffDrawer } from '../Shift'
 import { dateLabel } from '../../../lib/vaShifts'
 import { useThemePref, previewTheme } from '../../../hooks/useTheme'
-import { Drawer, Field, Seg, Switch, Chip, Avatar, useNote, useAccount } from '../../kit'
-import { SettingsNav } from '../../SettingsNav'
+import { Drawer, Field, Seg, Switch, Chip, PillTabs, Avatar, useNote, useAccount, initials } from '../../kit'
+import '../../settings929.css'
+import { CountUp, usd } from '../../motion'
 import { TimeZoneSelect } from '../../Clock'
 import { timezoneLabel } from '../../../lib/timezones'
+import { avatarHue } from '../../avatarHue'
 import { fp } from '../paths'
 import { PhoneInput } from '../../PhoneInput'
 
@@ -28,6 +30,36 @@ function FormFoot({ dirty, onDiscard, onSave }) {
   )
 }
 const Head = ({ title, sub }) => <header className="fx-form-h"><h2>{title}</h2><p>{sub}</p></header>
+
+// Left: who you are, this week's pay, three numbers, the next call.
+function ProfileCard({ name, email }) {
+  const { data: shift } = useFulShift()
+  const { data: day } = useFulDay()
+  const { data: pay } = useFulPay()
+  const money = usd()
+  const stats = [[day.week.filter(k => k.status === 'cancelled').length, 'Cancelled'], [day.tasks.done.length, 'Steps done'], [day.today.filter(k => !(k.done ?? (k.status === 'cancelled' || k.status === 'passed'))).length, 'Booked today']]
+  return (
+    <aside className="fx-tile fx-prof" aria-label="Your profile">
+      <div className={`fx-prof-av av-${avatarHue(name)}`} aria-hidden="true">{initials(name).toUpperCase()}<i className={shift.onToday ? 'on' : ''} /></div>
+      <h2>{name}</h2>
+      <p>Fulfillment · {shift.notSet ? 'Rota not set up yet' : shift.onToday ? `On shift ${shift.shift.text}` : 'Off today'}</p>
+      <span className="fx-prof-mail"><Mail size={13} aria-hidden="true" />{email}</span>
+      <div className="fx-usage is-green">
+        <div className="tp-row tp-between"><b>This week</b><b className="fx-usage-n tp-money"><CountUp value={pay.earned} format={money} /></b></div>
+        <div className="fx-meter" role="img" aria-label="Verified share of this week"><i style={{ '--w': pay.earned ? pay.verified / pay.earned : 0 }} /></div>
+        <small>{money(pay.verified)} verified · paid {pay.payday} · {shift.thisWeek} shifts this week</small>
+      </div>
+      <ul className="fx-pstats">{stats.map(([n, label]) => <li key={label}><small>{label}</small><b className="tp-num"><CountUp value={n} /></b></li>)}</ul>
+      {day.next && (
+        <Link to={fp('calendar', day.next.ref || day.next.id)} className="fx-pnext">
+          <i aria-hidden="true" />
+          <span className="tp-grow"><small>Next call</small><b>{day.next.name}</b><small>Today · {day.next.time}</small></span>
+          <ChevronRight size={16} aria-hidden="true" />
+        </Link>
+      )}
+    </aside>
+  )
+}
 
 export default function Settings() {
   const { data: s } = useFulSettings()
@@ -59,13 +91,14 @@ export default function Settings() {
   const flip = (key, field, v) => setAlerts(alerts.map(n => (n.key === key ? { ...n, [field]: v } : n)))
 
   return (
-    <div className="tp-page fx-set st-set">
+    <div className="tp-page fx-set">
       <div className="fx-set-side">
-        <SettingsNav name={name} role="Client care team" tabs={TABS} value={tab} onChange={setTab} />
+        <ProfileCard name={name} email={s.profile.email} />
         <button type="button" className="fx-tile fx-signout" onClick={signOut}><LogOut size={16} aria-hidden="true" />Sign out</button>
       </div>
 
       <section className="fx-tile fx-panel" aria-label="Settings">
+        <PillTabs label="Settings sections" className="fx-ptabs" itemClass="fx-ptab" value={tab} onChange={setTab} items={TABS.map(([key, label, icon]) => ({ key, label, icon }))} />
 
         <div className="fx-form" key={tab} role="tabpanel" aria-label={TABS.find(t => t[0] === tab)[1]}>
           {tab === 'profile' && <>

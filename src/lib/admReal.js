@@ -4,6 +4,7 @@
 // sample: GoHighLevel-fed pieces read as "not connected" (engine slots).
 import { PRICES } from './priceBook.js'
 import { tierOf } from '../template/spendPlan.js'
+import { isTestProfile } from './testAccounts.js'
 
 export const TZ = 'America/Chicago'
 const DAY = 864e5
@@ -329,23 +330,27 @@ export function pushOf(c, now = Date.now()) {
 // store's settings, for the rules that are company config rather than sample records (notification list, pay rule).
 // Returns the same keys as the sample store, so every derived hook (funnel, Money, Setup) reads it unchanged.
 export function buildAdmState(raw = {}, { now = Date.now(), clock = realClock(now), me = null, base = {} } = {}) {
-  const profiles = (raw.profiles || []).filter(p => !p.deleted_at && !p.is_demo)
+  // P929: test accounts (is_test, the demo side, and the known test ids) and everything of theirs stay out of every
+  // admin number: revenue, agents, leads, clients, calls, VA pay, to-dos.
+  const testIds = new Set((raw.profiles || []).filter(p => p.is_demo || isTestProfile(p)).map(p => p.id))
+  const notTest = id => !id || !testIds.has(id) && !isTestProfile({ id })
+  const profiles = (raw.profiles || []).filter(p => !p.deleted_at && !p.is_demo && !isTestProfile(p))
   const settings = raw.leadSettings || []
   const plansIdx = base.plans || {}
   const agents = profiles.filter(p => p.role === 'agent').map(p => toAgent(p, { settings, onDuty: raw.onDuty || [], plans: plansIdx }))
   const vas = profiles.filter(p => p.role === 'fulfillment').map(p => toVa(p, { accounts: raw.accounts || [] }))
   const intake = Object.fromEntries((raw.intake || []).map(i => [i.lead_id, i]))
   const seen = new Set()
-  const leads = [...(raw.leads || []), ...(raw.unassigned || [])].filter(l => !l.is_sample && !seen.has(l.id) && seen.add(l.id)).map(l => toLead(l, { clock, now, intake }))
+  const leads = [...(raw.leads || []), ...(raw.unassigned || [])].filter(l => !l.is_sample && notTest(l.assigned_rep_id) && !seen.has(l.id) && seen.add(l.id)).map(l => toLead(l, { clock, now, intake }))
   const openByPolicy = {}
   for (const t of raw.steps || []) openByPolicy[t.policy_id] = (openByPolicy[t.policy_id] || 0) + 1
-  const policies = raw.policies || []
+  const policies = (raw.policies || []).filter(p => !p.is_demo && notTest(p.agent_id) && notTest(p.assigned_fulfillment_id))
   const clients = policies.filter(p => p.agent_id).map(p => toClient(p, openByPolicy[p.id] || 0))
   const ids = new Set(clients.map(c => c.id))
   const steps = (raw.steps || []).filter(t => ids.has(t.policy_id)).map(t => toStep(t, now))
   const calls = policies.filter(p => p.fulfillment_assigned && isToday(p.scheduled_call_at, now)).map(p => toCall(p, now))
     .sort((a, b) => String(a.time).localeCompare(String(b.time)))
-  const dayOff = (raw.dayOff || []).map(r => ({ id: r.id, va_id: r.va_id, date: Number(String(r.off_date || '').slice(8, 10)) || null, reason: r.reason || '', asked: whenText(r.created_at, now), status: r.status || 'pending' }))
+  const dayOff = (raw.dayOff || []).filter(r => notTest(r.va_id)).map(r => ({ id: r.id, va_id: r.va_id, date: Number(String(r.off_date || '').slice(8, 10)) || null, reason: r.reason || '', asked: whenText(r.created_at, now), status: r.status || 'pending' }))
   const audit = (raw.audit || []).map(r => toAudit(r, now))
   const mapped = new Set((raw.campaigns || []).filter(c => c.agent_id).map(c => c.agent_id))
   const agentProfiles = profiles.filter(p => p.role === 'agent')
@@ -356,7 +361,7 @@ export function buildAdmState(raw = {}, { now = Date.now(), clock = realClock(no
   const rc = raw.rc || {}
   const meP = profiles.find(p => p.id === me?.id) || me || {}
   const runs = (raw.runs || []).map(r => ({ id: r.id, week: r.period_start ? `Week of ${shortDate(r.period_start)}` : '', paid: whenText(r.pay_date, now) || shortDate(r.pay_date), amount: Math.round((r.paid_cents || 0) / 100), people: r.paid_reps || 0, status: r.status || 'paid' }))
-  const campaigns = (raw.campaigns || []).map(c => toCampaign(c, agents))
+  const campaigns = (raw.campaigns || []).filter(c => notTest(c.agent_id)).map(c => toCampaign(c, agents))
   const costs = costsOf(raw.costsWeek || [])
   const weekSpend = Object.values(costs).reduce((t, c) => t + c.spend, 0)
   const connect = connectOf(raw.ghl, raw.keySaved, campaigns)

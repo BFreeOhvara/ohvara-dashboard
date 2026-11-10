@@ -1,0 +1,8 @@
+/* P929 — the page never scrolls behind a panel, in every role (agent, VA, admin; desktop and phone): while a drawer,
+   side panel, sheet or pop-up layer is open (the notifications panel, Messages, every Drawer / RecordDrawer / phone
+   Sheet), the page under it holds still exactly like the lead drawer; only the panel itself scrolls, and its scroll
+   never runs on into the page behind when it reaches the end. The VA's slide-out phone (fs-call-layer) is not a panel
+   over the page: the page behind it stays usable, so it is left out. */
+html:has(body :is(.tp-layer, .fx-layer, .mx-layer):not(.fs-call-layer)) { overflow: hidden; }
+html:has(body :is(.tp-layer, .fx-layer, .mx-layer):not(.fs-call-layer)) body { overflow: hidden; }
+:is(.tp-layer, .fx-layer, .mx-layer):not(.fs-call-layer), :is(.tp-layer, .fx-layer, .mx-layer):not(.fs-call-layer) * { overscroll-behavior: contain; }

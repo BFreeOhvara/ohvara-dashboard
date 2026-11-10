@@ -93,7 +93,7 @@ test('Leads page: no team bar, no "Five statuses" line; Call goes through Deedst
   const leads = readFileSync(new URL('./template/screens/Leads.jsx', import.meta.url), 'utf8')
   assert.equal(/TeamLine|teamLine|Five statuses/.test(leads), false)
   // P899: Call or copy is one component, shared with the client drawer. P916: Call is a Deedstone call at every width.
-  assert.match(leads, /<CallOr phone=\{lead\.phone\} target=\{targetOf\('lead', lead\)\}/)
+  assert.match(leads, /<CallOr phone=\{lead\.phone\} target=\{null\}/)
   const call = readFileSync(new URL('./template/CallOrCopy.jsx', import.meta.url), 'utf8')
   assert.match(call, /<DeedstoneCallButton target=\{target\}/)
   assert.match(call, /navigator\.clipboard\.writeText/)

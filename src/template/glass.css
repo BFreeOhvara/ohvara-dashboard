@@ -1,4 +1,6 @@
 @import './buttons924.css';
+@import './buttons929.css';
+@import './panels929.css';
 /* P828 — the glass layer over template.css: a soft moving sky behind everything, frosted surfaces over it, icon
    motion, the page head, and each page's own layout. Ohvara tokens only; shades are color-mix over tokens.
    Every motion is off under prefers-reduced-motion (last block). */

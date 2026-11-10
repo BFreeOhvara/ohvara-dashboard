@@ -113,7 +113,7 @@ export function agentChip(l, opts) {
   if (isLiveCall(l)) return [s.tone, 'Live call · pick the result']
   if (key === 'booked' && needsResult(l, opts?.now || clockNow())) return [s.tone, 'Booked · mark result']
   if (key === 'booked' && confirmedByText(l)) return [s.tone, 'Booked · confirmed']
-  if (key === 'not_interested') return [s.tone, l.reason && !/^not interested/i.test(l.reason) ? `Not interested · ${l.reason.toLowerCase()}` : s.label]
+  if (key === 'not_interested') return [s.tone, notInterestedLine(l)]
   if (key === 'sold' && !l.submitted) return [s.tone, 'Sold · add the policy details']
   return [s.tone, s.label]
 }
@@ -155,6 +155,25 @@ export function agentEvents(l) {
       if (e.kind === 'va_call' && /^Called\. Reached them/.test(e.label)) return { ...e, label: 'Our team talked with them' }
       return e
     })
+}
+
+// P929 — no reason for Not interested: the card and the drawer say "Not interested · {date}" (the day it was marked).
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+export function notInterestedOn(l) {
+  const at = l.niAt || [...(l.events || [])].reverse().find(e => /not interested/i.test(`${e.label || ''} ${e.stage || ''}`) || e.stage === 'not_interested')?.at || l.updated_at || ''
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(at)
+  return m ? `${MON[Number(m[2]) - 1]} ${Number(m[3])}` : null
+}
+export const notInterestedLine = l => { const d = notInterestedOn(l); return d ? `Not interested · ${d}` : 'Not interested' }
+
+// P929 — the lead's Messages: only the texts actually sent to and received from them, oldest first. No planned
+// reminders ("morning of"), nothing skipped, no status changes or call tasks.
+export function leadMessages(l, now = clockNow()) {
+  const t = v => { const d = Date.parse(v || ''); return Number.isNaN(d) ? null : d }
+  const at = t(now)
+  return (l.events || []).filter(e => (e.kind === 'text_sent' || e.kind === 'text_received')
+    && e.text && e.state !== 'scheduled' && e.state !== 'skipped' && e.state !== 'cancelled'
+    && (at == null || t(e.at) == null || t(e.at) <= at))
 }
 
 export { STAGES }

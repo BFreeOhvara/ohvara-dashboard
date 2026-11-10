@@ -7,7 +7,7 @@ import { stageChip, OutcomeDrawer, NoShowUndo } from '../LeadOutcome'
 import { FeedbackDrawer } from '../Talk'
 import { LANES, laneOf } from '../stages'
 import { agentCallTask, confirmedByText, atLabel, clockNow } from '../leadLifecycle'
-import { agentStatusOf, agentEvents, closedReason, needsResult, resultsFor, isLiveCall, liveCalls, RESULT_LABEL, RESULT_MEANING } from '../agentView'
+import { agentStatusOf, leadMessages, closedReason, needsResult, resultsFor, isLiveCall, liveCalls, RESULT_LABEL, RESULT_MEANING, RESULT_STATUS, agentStatus } from '../agentView'
 import { dailyTotal } from '../spendPlan'
 import { usd } from '../motion'
 import { paths } from '../paths'
@@ -22,7 +22,7 @@ import { DeedstoneCallButton } from '../DeedstoneCall'
 // Follow up, Not interested and Sold, each with its count (P924: no Closed). Cards are full width with Call in thumb reach;
 // a card opens the lead as a full-screen sheet, and "Pick the result" is a bottom sheet. Live calls pin on top.
 const LANE_ALL = LANES
-const RESULT_TONE = { sold: 'green', no_show: 'mute', follow_up: 'teal', not_interested: 'warn', booked: 'blue' }
+const RESULT_TONE = Object.fromEntries(Object.entries(RESULT_STATUS).map(([k, st]) => [k, agentStatus(st).tone])) // P929: the board's colours
 const whenOf = l => (l.stage === 'ringing' ? 'Ringing now' : isLiveCall(l) ? 'Live call' : l.stage === 'follow_up' && l.follow ? `Call back ${l.follow}` : l.appt || `Came in ${l.assigned_at}`)
 const tagOf = l => {
   if (l.stage === 'ringing') return 'Ringing'
@@ -113,7 +113,7 @@ function LeadSheet({ id, onClose }) {
   const closed = lane.key === 'closed'
   const task = agentCallTask(lead)
   const canPick = resultsFor(lead).length > 0
-  const events = agentEvents(lead)
+  const events = leadMessages(lead)
   const facts = [['Mortgage', lead.mortgage_balance_band], ['Age', lead.age_band], ['Homeowner', lead.homeowner ? 'Yes' : 'No'], ['Smoker', lead.smoker ? 'Yes' : 'No'], ['Best time', lead.best_time], ['Phone', lead.phone]]
   return (
     <Sheet open onClose={onClose} title={name} kicker={`Lead · came in ${lead.created}`} tone={lane.tone}
@@ -146,11 +146,10 @@ function LeadSheet({ id, onClose }) {
         <dl className="mx-facts">{facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       </section>
       <section className="mx-card">
-        <h3>Messages and changes</h3>
-        <p className="mx-sub">Every text is automatic. Read only.</p>
-        <ol className="mx-tl">{events.map(e => (
-          <li key={e.id} className={e.state === 'scheduled' ? 'is-later' : ''}><i aria-hidden="true" /><span><b>{e.label}</b><small>{e.by} · {atLabel(e.at, clockNow())}</small>{e.text && <q>{e.text}</q>}</span></li>
-        ))}</ol>
+        <h3>Messages</h3>
+        {events.length ? <ol className="mx-tl">{events.map((e, i) => (
+          <li key={e.id || i}><i aria-hidden="true" /><span><b>{e.label}</b><small>{e.by} · {atLabel(e.at, clockNow())}</small>{e.text && <q>{e.text}</q>}</span></li>
+        ))}</ol> : <p className="mx-sub" data-empty="messages">No messages yet.</p>}
       </section>
       <section className="mx-card">
         <h3>Notes</h3>

@@ -75,8 +75,9 @@ test('the pool: hot at 90% of the limit, full when a new agent would pass it, on
 
 test('every agent Call goes through Deedstone: desktop drawers, phone build, the call-me nudges', () => {
   assert.match(src('./template/CallOrCopy.jsx'), /DeedstoneCallButton/)
-  assert.match(src('./template/screens/Clients.jsx'), /target=\{targetOf\('client', c\)\}/)
-  assert.match(src('./template/screens/Leads.jsx'), /<DeedstoneCallButton target=\{targetOf\('lead', lead\)\} className="lc-nudge-go lc-call"/)
+  // P929: no Call on a desktop drawer (calls go out from the agent's phone); the number and Copy stay.
+  for (const f of ['Clients', 'Leads']) assert.match(src(`./template/screens/${f}.jsx`), /<CallOr(Copy)? phone=\{[^}]+\} target=\{null\}/, f)
+  assert.equal(/DeedstoneCallButton/.test(src('./template/screens/Leads.jsx')), false, 'no desktop Call on the lead drawer')
   const bits = src('./template/m/bits.jsx')
   assert.match(bits, /if \(to\) return <DeedstoneCallButton/)
   for (const f of ['MLeads', 'MClients', 'MCalendar', 'MOverview']) assert.match(src(`./template/m/${f}.jsx`), /<CallBtn [^>]*to=\{targetOf\(/, f)

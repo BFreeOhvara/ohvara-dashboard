@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PhoneIncoming, BadgeCheck, CalendarClock, Ban } from 'lucide-react'
 import { paths } from './paths'
-import { liveAt, liveFacts } from './agentView'
+import { liveAt, liveFacts, agentStatus, RESULT_STATUS } from './agentView'
 import { dayLabel, timeLabel, clockNow } from './leadLifecycle'
 import { OutcomePrompt } from './LeadOutcome'
 import './live910.css'
@@ -12,7 +12,8 @@ import './live910.css'
 // phone; the card is only for the result: Sold · Follow up · Not interested, any time during or after the call. Once
 // marked it moves to that status and the card goes away. P917: it says "Live call" only (no Answer), in the live call's
 // own lilac, and until it's marked it's also in Your to-dos (leadLifecycle.js liveToMark); the Overview has no cards.
-const RESULTS = [['sold', 'Sold', BadgeCheck, 'green'], ['follow_up', 'Follow up', CalendarClock, 'teal'], ['not_interested', 'Not interested', Ban, 'mute']]
+// P929: each result in its own status colour from the Leads board (agentView AGENT_STATUSES via RESULT_STATUS).
+const RESULTS = [['sold', 'Sold', BadgeCheck], ['follow_up', 'Follow up', CalendarClock], ['not_interested', 'Not interested', Ban]].map(r => [...r, agentStatus(RESULT_STATUS[r[0]]).tone])
 
 function whenOf(l) {
   if (l.stage === 'ringing') return 'Ringing now'

@@ -5429,3 +5429,11 @@ html body :is(.fx-tb, .fx-badge, .tp-tb, .tp-ovcount, .mx-badge, .mx-count, .ov-
     display: inline-block !important; align-content: center; padding-top: 0 !important; text-box: trim-both cap alphabetic;
   }
 }
+
+/* P929: the white button on coloured cards (src/template/buttons929.css), the same in both themes. */
+:root, [data-theme="light"], [data-theme="dark"] {
+  --btn-white: #FFFFFF;
+  --btn-white-ink: #16181A;
+  --btn-white-hover: #EDEFEA;
+  --btn-white-press: #DFE2DC;
+}

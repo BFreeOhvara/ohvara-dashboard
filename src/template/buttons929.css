@@ -1,0 +1,83 @@
+/* P929 — buttons that look like buttons, every role (agent, VA, admin), dark mode first (Brayden, Nov 9 22:00).
+   P924's filled grey secondary still matched the glass it sat on, and the "no colour on colour" rule (flow.css P841)
+   turned primary buttons on coloured cards into the same grey glass. Now there is no grey button:
+   - plain surfaces: solid blue, the highlight (--sh-acc, the Update card blue) with its dark navy ink;
+   - coloured cards and filled tiles: solid white with dark text.
+   Hover, pressed, focus and disabled for both. Danger buttons keep their red. Loaded after buttons924.css. */
+:root, [data-theme="light"], [data-theme="dark"] {
+  /* --btn-white, --btn-white-ink, --btn-white-hover, --btn-white-press live in src/index.css (no hex in src/template) */
+  --btn-lift: inset 0 1px 0 rgba(255, 255, 255, .26), 0 1px 2px rgba(0, 0, 0, .28);
+  --btn-press: inset 0 1px 2px rgba(0, 0, 0, .28);
+}
+
+/* Plain surfaces: solid blue */
+html .tp :is(.tp-btn, .ov-ghost, .fx-pillbtn, .fx-accent, .tp-primary):not(.tp-danger):not(.tp-white),
+html :is(.mx, .mx-layer) .mx-btn:not(.is-ghost):not(.is-danger) {
+  color: var(--sh-on-accent);
+  background: var(--sh-acc);
+  border: 1px solid transparent;
+  box-shadow: var(--btn-lift);
+  font-weight: 600;
+  cursor: pointer;
+  filter: none;
+  transition: background-color .15s ease, box-shadow .15s ease, transform .1s ease;
+}
+html .tp :is(.tp-btn, .ov-ghost, .fx-pillbtn, .fx-accent, .tp-primary):not(.tp-danger):not(.tp-white):hover:not(:disabled),
+html :is(.mx, .mx-layer) .mx-btn:not(.is-ghost):not(.is-danger):hover:not(:disabled) {
+  color: var(--sh-on-accent);
+  background: var(--sh-acc-hover);
+  filter: none;
+}
+html .tp :is(.tp-btn, .ov-ghost, .fx-pillbtn, .fx-accent, .tp-primary):not(.tp-danger):not(.tp-white):active:not(:disabled),
+html .tp :is(.tp-btn, .ov-ghost, .fx-pillbtn, .fx-accent, .tp-primary):not(.tp-danger):not(.tp-white)[aria-pressed="true"],
+html :is(.mx, .mx-layer) .mx-btn:not(.is-ghost):not(.is-danger):active:not(:disabled) {
+  background: color-mix(in srgb, var(--sh-acc) 86%, var(--btn-white-ink));
+  box-shadow: var(--btn-press);
+  transform: translateY(1px);
+}
+
+/* Coloured cards, filled tiles, attention blocks: solid white, dark text */
+html .tp :is(.fx-card, .fx-tile.is-fill, .fx-attn, .fx-rec-hero) :is(.tp-btn, .ov-ghost, .fx-pillbtn, .fx-accent, .tp-primary):not(.tp-danger):not(.tp-white),
+html .tp :is(.fx-card, .fx-tile.is-fill, .fx-attn, .fx-rec-hero) :is(.tp-btn, .ov-ghost, .fx-pillbtn, .fx-accent, .tp-primary):not(.tp-danger):not(.tp-white):hover:not(:disabled) {
+  color: var(--btn-white-ink);
+  background: var(--btn-white);
+  border-color: transparent;
+}
+html .tp :is(.fx-card, .fx-tile.is-fill, .fx-attn, .fx-rec-hero) :is(.tp-btn, .ov-ghost, .fx-pillbtn, .fx-accent, .tp-primary):not(.tp-danger):not(.tp-white):hover:not(:disabled) {
+  background: var(--btn-white-hover);
+}
+html .tp :is(.fx-card, .fx-tile.is-fill, .fx-attn, .fx-rec-hero) :is(.tp-btn, .ov-ghost, .fx-pillbtn, .fx-accent, .tp-primary):not(.tp-danger):not(.tp-white):active:not(:disabled) {
+  background: var(--btn-white-press);
+}
+html .tp :is(.fx-card, .fx-tile.is-fill, .fx-attn, .fx-rec-hero) :is(.tp-btn, .ov-ghost, .fx-pillbtn, .fx-accent, .tp-primary) svg { color: currentColor; }
+
+/* Danger: solid coral with its dark ink (never grey) */
+html .tp :is(.tp-btn, .ov-ghost, .fx-pillbtn).tp-danger:not(.tp-white) { color: var(--sh-fi-coral); background: var(--sh-f-coral); border: 1px solid transparent; box-shadow: var(--btn-lift); }
+html .tp :is(.tp-btn, .ov-ghost, .fx-pillbtn).tp-danger:not(.tp-white):hover:not(:disabled) { color: var(--sh-fi-coral); background: color-mix(in srgb, var(--sh-f-coral) 88%, var(--btn-white)); }
+html .tp :is(.tp-btn, .ov-ghost, .fx-pillbtn).tp-danger:not(.tp-white):active:not(:disabled) { background: color-mix(in srgb, var(--sh-f-coral) 86%, var(--btn-white-ink)); box-shadow: var(--btn-press); transform: translateY(1px); }
+
+html .tp :is(.tp-btn, .ov-ghost, .fx-pillbtn, .fx-accent, .tp-primary):focus-visible,
+html :is(.mx, .mx-layer) .mx-btn:focus-visible { outline: 2px solid var(--sh-acc-line); outline-offset: 2px; }
+html .tp :is(.tp-btn, .ov-ghost, .fx-pillbtn, .fx-accent, .tp-primary):disabled,
+html :is(.mx, .mx-layer) .mx-btn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html .tp :is(.tp-btn, .ov-ghost, .fx-pillbtn, .fx-accent, .tp-primary), html :is(.mx, .mx-layer) .mx-btn { transition: none; }
+}
+
+/* Result buttons in their status colours (Brayden, 22:09): the live call card, the drawer's result row, Sold / Not
+   interested, and the result picker. Each choice is filled with its Leads-board colour (flow.css tones: --cs, --csi). */
+html .tp :is(.tp-btn, .ov-ghost, .fx-step, .lv-res).is-res.is-res:not(.tp-white),
+html .tp .lv-res.lv-res:is(.is-green, .is-teal, .is-warn, .is-mute, .is-blue, .is-rose) {
+  color: var(--csi); background: var(--cs); border: 1px solid transparent; box-shadow: var(--btn-lift); filter: none;
+}
+html .tp :is(.tp-btn, .ov-ghost, .fx-step, .lv-res).is-res.is-res:not(.tp-white):hover:not(:disabled),
+html .tp .lv-res.lv-res:is(.is-green, .is-teal, .is-warn, .is-mute, .is-blue, .is-rose):hover:not(:disabled) {
+  color: var(--csi); background: color-mix(in srgb, var(--cs) 88%, var(--btn-white));
+}
+html .tp :is(.tp-btn, .ov-ghost, .fx-step, .lv-res).is-res.is-res:not(.tp-white):active:not(:disabled),
+html .tp .lv-res.lv-res:is(.is-green, .is-teal, .is-warn, .is-mute, .is-blue, .is-rose):active:not(:disabled) {
+  background: color-mix(in srgb, var(--cs) 86%, var(--btn-white-ink)); box-shadow: var(--btn-press); transform: translateY(1px);
+}
+/* The picker: every choice tinted with its colour; the picked one solid */
+.tp .rs-opt:not(.is-on) { background: color-mix(in srgb, var(--cs) 22%, transparent); border-color: color-mix(in srgb, var(--cs) 62%, transparent); }
+.tp .rs-opt:not(.is-on):hover { background: color-mix(in srgb, var(--cs) 32%, transparent); }

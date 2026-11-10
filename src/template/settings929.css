@@ -1,0 +1,7 @@
+/* P929 — Settings back to the pre-P924 layout (profile card left, pill tabs right), in every portal. */
+/* Every section is reachable without sideways scrolling: the tab row wraps onto a second line when there are many
+   (admin has 13), and the section never scrolls sideways (no horizontal scrollbar at the bottom of Settings). */
+.tp .fx-set .fx-ptabs { flex-wrap: wrap; overflow-x: visible; border-radius: 20px; row-gap: 4px; }
+.tp .fx-set .fx-ptabs .fx-ptab { flex: none; }
+.tp .fx-set .fx-panel { overflow-x: hidden; }
+.tp .fx-set .fx-panel > .fx-form { min-width: 0; }

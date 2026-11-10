@@ -53,7 +53,7 @@ export function Stepper({ steps, current, onPick, label }) {
     <div className="fx-steps" role="group" aria-label={label}>
       {steps.map((s, i) => (s.key === current
         ? <span key={s.key} className="fx-step is-on" aria-current="step">{s.label}</span>
-        : <button key={s.key} type="button" className={`fx-step${i < at ? ' is-done' : ''}`} onClick={() => onPick(s.key)}>{s.label}</button>))}
+        : <button key={s.key} type="button" className={`fx-step${i < at ? ' is-done' : ''}${s.tone ? ` is-res is-${s.tone}` : ''}`} onClick={() => onPick(s.key)}>{s.label}</button>))}
     </div>
   )
 }

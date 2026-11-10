@@ -8,6 +8,7 @@ import {
   GraduationCap, Trophy, Bug, ShieldAlert,
 } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
+import { useIsTestAccount } from '../../hooks/useIsTestAccount'
 import { Drawer, Avatar, PillTabs, useAccount, useNote, initials } from '../kit'
 import { avatarHue } from '../avatarHue'
 import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit, useKeep } from '../motion'
@@ -302,6 +303,7 @@ export default function FulFrame() {
   const { bookCallback } = useFulActions()
   const live = useFulLive()
   const source = useFulSource()
+  const isTest = useIsTestAccount() // P929: no sample line on test accounts
   const status = useFulStatus()
   const { sum: trainSum } = useTraining(account.name)
   const trainLeft = trainSum.left
@@ -498,7 +500,7 @@ export default function FulFrame() {
 
         <main className={`tp-main fx-main fs-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>
           {status.error ? <DataError onRetry={status.retry} /> : status.loading ? <DataLoading /> : page.el}
-          {source !== 'real' && <p className="tp-foot">Sample info. Changes reset when you reload.</p>}
+          {!isTest && source !== 'real' && <p className="tp-foot">Sample info. Changes reset when you reload.</p>}
         </main>
       </div>
 

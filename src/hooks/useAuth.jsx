@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, createContext, useContext } from 'react'
+import { useState, useEffect, useRef, useContext } from 'react'
+import { AuthContext } from './authContext'
 import { supabase } from '../lib/supabase'
 import { stopPush } from '../lib/push'
 
-const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [session,        setSession]        = useState(undefined)
@@ -201,3 +201,6 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used inside AuthProvider')
   return ctx
 }
+
+// P929: for small shared pieces (the sample line, SampleTag) that also render outside the provider (previews, tests).
+export { useOptionalAuth } from './authContext'

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { isTestProfile } from '../lib/testAccounts'
 
 // Getting Paid (Prompt 681, migration 115) — tracking only, no payroll.
 // fulfillment_pay holds each rep's hourly rate + scheduled shift (admin
@@ -34,7 +35,7 @@ export function useFulfillmentReps() {
         .eq('role', 'fulfillment')
         .order('full_name')
       if (error) throw error
-      return data || []
+      return (data || []).filter(r => !isTestProfile(r)) // P929: test VAs are never on the pay list
     },
   })
 }

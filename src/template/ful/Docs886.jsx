@@ -83,7 +83,7 @@ function SendDrawer({ who, d, retryOf, onClose }) {
     const e = docActions.send(who, d.id, { channel, destination: dest })
     if (e) { setErr(e); return }
     if (save && channel !== 'agent_portal' && dest.trim()) docActions.saveCarrier(d.carrier, { [channel === 'fax' ? 'docs_fax' : channel === 'email' ? 'docs_email' : 'docs_upload_url']: channel === 'fax' ? dest.replace(/\D/g, '').slice(-10) : dest.trim(), docs_channels: [...new Set([channel, ...(carrier.docs_channels || [])])] })
-    note(channel === 'agent_portal' ? 'Sent to the agent to upload' : channel === 'upload' ? 'Open the carrier’s page and upload it, then mark it' : 'Sent (sample). A confirm call comes due in 3 business days')
+    note(channel === 'agent_portal' ? 'Sent to the agent to upload' : channel === 'upload' ? 'Open the carrier’s page and upload it, then mark it' : 'Sent. A confirm call comes due in 3 business days')
     onClose()
   }
   const label = channel === 'fax' ? 'Fax number' : channel === 'email' ? 'Email address' : 'Upload page'
