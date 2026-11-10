@@ -137,7 +137,7 @@ export function retellLlm({ prompt, url }) {
   return {
     general_prompt: prompt, begin_message: '{{opening}}', start_speaker: 'agent',
     // No backup model: Retell bills a backup for the whole call (call 3: GPT-4.1 +4.5¢/min) even when it never speaks.
-    model_config: { type: 'cascading', primary: { model: RETELL_MODEL, tier: 'standard' }, temperature: 0.4 },
+    model_config: { type: 'cascading', primary: { model: RETELL_MODEL, tier: 'standard' }, backup: null, temperature: 0.4 },
     general_tools: retellTools(url),
   }
 }

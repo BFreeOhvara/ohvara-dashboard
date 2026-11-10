@@ -60,7 +60,7 @@ test('prompt and tools never name the agent', () => {
 test('model and voice: Claude Sonnet 5.5, no billed backup; smooth voice, waits its turn, harder to interrupt', () => {
   const l = retellLlm({ prompt: 'p', url: HOOK })
   assert.equal(l.model_config.primary.model, 'claude-5.5-sonnet')
-  assert.equal(l.model_config.backup, undefined)
+  assert.equal(l.model_config.backup, null)
   const a = retellAgent({ llmId: 'llm_1', voiceId: 'v1', webhookUrl: HOOK })
   assert.equal(a.voice_speed, 1)
   assert.equal(a.voice_model, 'eleven_multilingual_v2')
