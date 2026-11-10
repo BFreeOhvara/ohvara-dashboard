@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { Check, TriangleAlert, Timer, Users, ShieldCheck, CalendarX, Repeat, Clock3, Star, Flag, Scale, ClipboardCheck } from 'lucide-react'
+import { Check, TriangleAlert, Timer, Users, ShieldCheck, CalendarX, Repeat, Star, Flag, Scale, ClipboardCheck } from 'lucide-react'
 import { Avatar, Chip, Drawer, Seg, SampleTag, useNote } from '../../template/kit'
 import { usd } from '../../template/motion'
 import { Tile } from '../kit'
 import {
   VA_STATUS, DESK_VAS, DESK_QUEUE, SPEED_TODAY, median, clockS, deskAlerts, staffing, isRouted,
   VA_METRICS, QA_RUBRIC, QA_MIN_PER_WEEK, QA_REVIEWS, qaScore, qaDone, reReviewerFor,
-  TIMESHEET, CORRECTIONS, sheetTotals, dayHours, SWAPS, OPEN_SHIFTS, HOLIDAYS, HOLIDAY_WORD,
+  TIMESHEET, sheetTotals, dayHours, SWAPS, OPEN_SHIFTS, HOLIDAYS, HOLIDAY_WORD,
   ONBOARD_STEPS, ONBOARDING, canWork, RECORDS, trend,
 } from '../p879'
 import '../p879.css'
@@ -103,43 +103,28 @@ export function SwapsAndOpen() {
   )
 }
 
-// N-F-23, N-G-24 (Q75/Q76): hours from clock in/out with breaks, flags and overtime, corrections to approve, and the
-// week's pay as hours × each VA's rate. Pay is hourly only.
+// N-F-23, N-G-24 (Q75/Q76): the week's pay as each VA's scheduled hours × their rate. P945 (Brayden, Nov 10): VAs are
+// paid on their set scheduled hours minus days off, so there are no correction requests and nothing to approve.
 export function HoursPay() {
-  const note = useNote()
   const [open, setOpen] = useState(null)
-  const [fixes, setFixes] = useState(CORRECTIONS)
   const rows = TIMESHEET.map(r => ({ ...r, t: sheetTotals(r) }))
   const total = rows.reduce((t, r) => t + r.t.pay, 0)
   const row = rows.find(r => r.va === open)
   return (
     <div className="p879-stack">
-      <div className="adm-two">
-        <Tile i={0} title="This week's hours" sub="Nov 2 to 8 · from clock in and out · pay is hourly" aside={<SampleTag>Sample</SampleTag>}>
-          <b className="fx-huge tp-money">{money(total)}</b>
-          <ul className="tp-list adm-rows">{rows.map(r => (
-            <li key={r.va}><button type="button" className="fx-mrow" onClick={() => setOpen(r.va)}>
-              <Avatar name={r.name} /><span className="tp-grow"><b>{r.name}</b><small><span className="tp-num">{r.t.hours.toFixed(2)}</span> h × {money(r.t.rate)}{r.t.ot ? ` · ${r.t.ot.toFixed(1)} h overtime` : ''}{r.t.flags ? ` · ${r.t.flags} flagged` : ''}</small></span>
-              {r.t.flags > 0 && <Chip tone="warn">Check</Chip>}<b className="tp-money">{money(r.t.pay)}</b>
-            </button></li>
-          ))}</ul>
-        </Tile>
-        <Tile i={1} title="Correction requests" sub="Admin approves; every change is audited and the week locks at the pay run">
-          <ul className="tp-list">{fixes.map(c => (
-            <li key={c.id} className="adm-req"><Clock3 size={16} aria-hidden="true" />
-              <span className="tp-grow"><b>{c.va} · {c.day}</b><small>{c.ask} · {c.why}</small></span>
-              {c.status === 'pending' ? <>
-                <button type="button" className="tp-primary sm fx-accent" onClick={() => { setFixes(f => f.map(x => (x.id === c.id ? { ...x, status: 'approved' } : x))); note('Correction approved and logged') }}><Check size={14} />Approve</button>
-                <button type="button" className="tp-btn sm ov-ghost" onClick={() => { setFixes(f => f.map(x => (x.id === c.id ? { ...x, status: 'declined' } : x))); note('Correction declined') }}>Decline</button>
-              </> : <Chip tone={c.status === 'approved' ? 'green' : 'mute'}>{c.status === 'approved' ? 'Approved' : 'Declined'}</Chip>}
-            </li>
-          ))}</ul>
-          <p className="tp-sub p879-mt">Locks Mon, Nov 9 at the pay run. Brayden says yes before anything is paid.</p>
-        </Tile>
-      </div>
-      <Drawer open={!!row} center onClose={() => setOpen(null)} title={row ? `${row.name}'s timesheet` : ''} sub="Nov 2 to 8">
+      <Tile i={0} title="This week's hours" sub="Nov 2 to 8 · scheduled hours minus days off · pay is hourly" aside={<SampleTag>Sample</SampleTag>}>
+        <b className="fx-huge tp-money">{money(total)}</b>
+        <ul className="tp-list adm-rows">{rows.map(r => (
+          <li key={r.va}><button type="button" className="fx-mrow" onClick={() => setOpen(r.va)}>
+            <Avatar name={r.name} /><span className="tp-grow"><b>{r.name}</b><small><span className="tp-num">{r.t.hours.toFixed(2)}</span> h × {money(r.t.rate)} · {r.days.length} {r.days.length === 1 ? 'shift' : 'shifts'}{r.t.ot ? ` · ${r.t.ot.toFixed(1)} h overtime` : ''}</small></span>
+            <b className="tp-money">{money(r.t.pay)}</b>
+          </button></li>
+        ))}</ul>
+        <p className="tp-sub p879-mt">From the rota: each shift's set hours, days off taken out. Paid in Monday's run; Brayden says yes before anything is paid.</p>
+      </Tile>
+      <Drawer open={!!row} center onClose={() => setOpen(null)} title={row ? `${row.name}'s shifts` : ''} sub="Nov 2 to 8 · scheduled hours">
         {row && <ul className="tp-list">{row.days.map(d => (
-          <li key={d.d} className="fx-mrow"><b className="p879-day">{d.d}</b><span className="tp-grow"><b className="tp-num">{d.in} to {d.out}</b><small>{d.breakM} min break{d.flag ? ` · ${d.flag}` : ''}</small></span><b className="tp-num">{dayHours(d).toFixed(2)} h</b></li>
+          <li key={d.d} className="fx-mrow"><b className="p879-day">{d.d}</b><span className="tp-grow"><b className="tp-num">{d.in} to {d.out}</b><small>Scheduled shift</small></span><b className="tp-num">{dayHours(d).toFixed(2)} h</b></li>
         ))}</ul>}
       </Drawer>
     </div>

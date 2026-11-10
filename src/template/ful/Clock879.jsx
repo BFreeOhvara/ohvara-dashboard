@@ -76,27 +76,19 @@ function ClockTileSample({ className = '' }) {
   )
 }
 
-// N-F-23, N-G-24: this week's hours from clock in and out, breaks, flags, and hours × rate; ask for a correction.
+// N-F-23, N-G-24: this week's scheduled hours × rate. P945 (Brayden, Nov 10): pay is your set scheduled hours minus
+// days off, so there's nothing to correct (no "Fix", no correction requests).
 function TimesheetRowsSample() {
-  const note = useNote()
-  const [ask, setAsk] = useState(null)
-  const [why, setWhy] = useState('')
-  const [asked, setAsked] = useState([])
   const t = weekPay()
   return (
     <div className="v879-sheet">
       <ul className="tp-list">{MY_SHEET.map(r => (
         <li key={r.day} className="fx-mrow"><b className="v879-day">{r.d}</b>
-          <span className="tp-grow"><b className="tp-num">{r.in} to {r.out || 'now'}</b><small>{r.breakM} min break{r.flag ? ` · ${r.flag}` : ''}{asked.includes(r.day) ? ' · correction asked' : ''}</small></span>
+          <span className="tp-grow"><b className="tp-num">{r.in} to {r.out || 'now'}</b><small>{r.live ? 'Today, so far' : 'Scheduled shift'}</small></span>
           <b className="tp-num">{hoursOf(r).toFixed(2)} h</b>
-          {!r.live && !asked.includes(r.day) && <button type="button" className="tp-btn sm ov-ghost" onClick={() => setAsk(r)}>Fix</button>}
         </li>
       ))}</ul>
-      <p className="tp-sub"><Lock size={12} aria-hidden="true" /> {t.hours.toFixed(2)} h so far{t.ot ? `, ${t.ot.toFixed(1)} h overtime` : ''}. The week locks at Monday's pay run; only admins can change it after that.</p>
-      <Drawer open={!!ask} center onClose={() => setAsk(null)} title="Ask for a correction" sub={ask ? `${ask.d} · ${ask.in} to ${ask.out}` : ''}
-        footer={<button type="button" className="tp-primary fx-accent" disabled={!why.trim()} onClick={() => { setAsked([...asked, ask.day]); setAsk(null); setWhy(''); note('Sent. An admin approves it and it is logged.') }}><Check size={16} />Send</button>}>
-        <Field label="What should it say, and why"><input value={why} placeholder="e.g. Clock out 6:00 PM, the app closed on a hold" onChange={e => setWhy(e.target.value)} /></Field>
-      </Drawer>
+      <p className="tp-sub"><Lock size={12} aria-hidden="true" /> {t.hours.toFixed(2)} h so far{t.ot ? `, ${t.ot.toFixed(1)} h overtime` : ''}. Pay is your scheduled hours minus days off, paid in Monday's run.</p>
     </div>
   )
 }
@@ -184,7 +176,7 @@ export function ClockTile(props) {
   return useFulSource() === 'real' ? <NotYet className={props.className} title="Clock in and out" sub="Starts when time tracking goes live. Until then your shift is on the rota." /> : <ClockTileSample {...props} />
 }
 export function TimesheetRows() {
-  return useFulSource() === 'real' ? <p className="fx-calm">Your timesheet fills in from clock in and out once time tracking goes live.</p> : <TimesheetRowsSample />
+  return useFulSource() === 'real' ? <p className="fx-calm">Your hours fill in from your rota: your scheduled shifts, minus days off.</p> : <TimesheetRowsSample />
 }
 export function MyQuality(props) {
   return useFulSource() === 'real' ? null : <MyQualitySample {...props} />

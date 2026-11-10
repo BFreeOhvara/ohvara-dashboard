@@ -19,7 +19,7 @@ function Hero({ period, hourlyCents, account }) {
         <div className="mp-hero-top">
           <span className="ov-hero-chip"><span className="mp-dot" />This week · {fmtPeriod(period)}</span>
         </div>
-        <div className="mp-earn-label">You're paid by the hour, from clock in and out. Pay goes out every Monday.</div>
+        <div className="mp-earn-label">You're paid by the hour on your scheduled shifts, minus days off. Pay goes out every Monday.</div>
         {hourlyCents != null && (
           <div className="mp-earn">
             <span className="mp-amount" data-testid="mp-amount">{whole(hourlyCents)}</span>

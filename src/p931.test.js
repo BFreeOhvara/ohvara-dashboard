@@ -98,7 +98,7 @@ test('Pay: the hours as a days × hours grid with each day’s total and the wee
   assert.equal(g.hours.length, 12)
   assert.equal(g.total, weekPay().hours)
   const mon = g.rows.find(r => r.name === 'Mon')
-  assert.equal(mon.cells[0], 0.03) // 7:58 AM: two minutes of the 7 o'clock hour
+  assert.equal(mon.cells[0], 0) // P945: scheduled 8:00 AM, nothing in the 7 o'clock hour
   assert.equal(mon.cells[1], 1)
   assert.equal(g.rows.find(r => r.name === 'Sat').off, true)
   const ui = read('./template/ful/screens/Pay.jsx')

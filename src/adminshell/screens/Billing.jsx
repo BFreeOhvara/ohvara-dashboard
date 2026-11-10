@@ -1,7 +1,7 @@
 import { lazy, Suspense, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { CircleCheck, Landmark, ArrowUpRight, CreditCard, MessageSquare, RotateCw, Wallet, Megaphone, Headset, Receipt, BadgeDollarSign, PiggyBank, Lock, Bot } from 'lucide-react'
-import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, useAdmSettings, useAdmSource, useAdmAgentResults, useAdmRevTrend, PLANS, PERIODS, SETUP_FEE, CARD_FEE, AI_RATE } from '../data'
+import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, useAdmSettings, useAdmSource, useAdmAgentResults, useAdmRevTrend, ownerOf, OWNERS, PLANS, PERIODS, SETUP_FEE, CARD_FEE, AI_RATE } from '../data'
 import { PRICES } from '../../lib/priceBook.js'
 import { deskAdminLabel } from '../../lib/bookingDesk'
 import { RecentCharges } from './Billing933'
@@ -24,7 +24,7 @@ const ConnectEmbed = lazy(() => import('../../components/fulfillment/ConnectEmbe
 // paid), what it cost (ad spend, VA payouts, card fees, tools), the profit, and the owners' split (Brayden and Jordan,
 // P934: fixed at 50/50, read-only). Both admins see everything, each other's payouts too. Below it, kept:
 // P849 — Billing & revenue: money in (agents' plans and lead spend, by week, each agent's bill and the failed
-// payments) and money out (the Monday VA pay run: hours from clock in and out x the hourly rate, P890: no per-cancel pay;
+// payments) and money out (the Monday VA pay run: scheduled hours minus days off x the hourly rate, P890: no per-cancel pay;
 // past runs, the Stripe balance and the pause switch). Sample amounts and prices.
 const money = usd()
 const money2 = usd(true)
@@ -230,21 +230,58 @@ function AgentBills() {
   )
 }
 
-// Brayden and Jordan as payees: every draw, newest first. Both admins see both.
-function OwnerPayouts() {
+// P945 — Your payouts: each admin sees only their own. Connect the bank their share goes to through Stripe Connect
+// Express (Stripe's own form holds the bank details and identity checks; Ohvara stores nothing), the next payout (their
+// 50% of this week's profit, in Monday's pay run) and their payout history. Nothing is paid until Brayden turns on
+// Owner payouts in Settings › Go live.
+function YourPayouts() {
+  const src = useAdmSource()
+  const { profile } = useAuth()
   const { data: owners } = useAdmDraws()
+  const { data: week } = useAdmPeriod('week')
+  const { data: m } = useAdmMoney()
+  const { data: settings } = useAdmSettings()
+  const note = useNote()
+  // Sample: you see Brayden's side (the sample admin isn't an owner); real: the owner whose first name you sign in with.
+  const me = ownerOf(profile?.full_name) || (src === 'real' ? null : OWNERS[0])
+  const live = !!settings.switches?.owner_payouts_live
+  if (!me) {
+    return (
+      <Tile i={4} title="Your payouts" sub="For the owners">
+        <p className="fx-calm">Only the owners (Brayden and Jordan) are paid from the profit. Your login isn&apos;t one of them.</p>
+      </Tile>
+    )
+  }
+  const mine = owners.find(o => o.id === me.id) || { draws: [], total: 0 }
+  const share = week.split.find(o => o.id === me.id)
+  const next = Math.max(0, share?.amount || 0)
   return (
-    <Tile i={4} title="Owner payouts" sub="Brayden and Jordan, from the profit split">
-      <ul className="tp-list adm-rows">{owners.flatMap(o => o.draws.map(d => ({ ...d, name: o.name }))).map(d => (
-        <li key={d.id} className="fx-mrow"><Avatar name={d.name} /><span className="tp-grow"><b>{d.name}</b><small>Paid {d.paid} · October profit</small></span><Chip tone="green">Paid</Chip><b className="tp-money">{money(d.amount)}</b></li>
-      ))}</ul>
-      <ul className="adm-sum adm-owner-sum">{owners.map(o => <li key={o.id}><PiggyBank size={14} aria-hidden="true" /><span className="tp-grow">{o.name}<small>Paid out since the start</small></span><b className="tp-money">{money(o.total)}</b></li>)}</ul>
+    <Tile i={4} className="adm-yourpay" title="Your payouts" sub={`${me.name} · ${share?.pct ?? 50}% of the profit, in the Monday pay run`} aside={src !== 'real' ? <SampleTag>Sample</SampleTag> : null}>
+      <div className="adm-yp-top">
+        <div className="adm-yp-next">
+          <small>Next payout · {m.payday}</small>
+          <b className="fx-huge tp-money"><CountUp value={next} format={money} /></b>
+          <small>{share ? `Half of this week's ${money(week.profit)} profit` : 'Nothing kept this week yet'}</small>
+        </div>
+        <ul className="adm-sum adm-yp-bank">
+          {src === 'real'
+            ? <RealBank />
+            : <li><Landmark size={14} aria-hidden="true" /><span className="tp-grow">Your bank<small>Chase •••• 7781 · through Stripe</small></span><button type="button" className="fx-pillbtn" onClick={() => note("Opens Stripe's own form (test mode) once you sign in for real")}>Change</button></li>}
+          <li><Lock size={14} aria-hidden="true" /><span className="tp-grow">Owner payouts<small>{live ? 'On: paid in every Monday run' : 'Off: nothing is paid until Brayden turns it on in Settings › Go live'}</small></span>
+            <Chip tone={live ? 'green' : 'mute'}>{live ? 'On' : 'Off'}</Chip></li>
+        </ul>
+      </div>
+      <h3 className="fx-h3 adm-yp-h">Your payout history</h3>
+      <ul className="tp-list adm-rows">{mine.draws.map(d => (
+        <li key={d.id} className="fx-mrow"><PiggyBank size={17} aria-hidden="true" className="adm-ok" /><span className="tp-grow"><b>{d.paid}</b><small>{d.period === 'last' ? 'October profit' : 'This month'}</small></span><Chip tone="green">Paid</Chip><b className="tp-money">{money(d.amount)}</b></li>
+      ))}{mine.draws.length === 0 && <li className="tp-sub">No payouts yet.</li>}</ul>
+      <ul className="adm-sum adm-owner-sum"><li><PiggyBank size={14} aria-hidden="true" /><span className="tp-grow">Paid to you<small>Since the start</small></span><b className="tp-money">{money(mine.total)}</b></li></ul>
     </Tile>
   )
 }
 
-// P919: the admin's own payout bank on real data (Stripe Connect, the same form and refresh the old Payouts page used).
-// With the old admin pages gone, this is where an owner connects or changes the bank their payouts go to.
+// P919: the admin's own payout bank on real data (Stripe Connect Express, the same form and refresh the old Payouts
+// page used). P945: it sits in Your payouts; this is where an owner connects or changes the bank their share goes to.
 function RealBank() {
   const { profile } = useAuth()
   const accounts = usePayoutAccounts(null)
@@ -264,14 +301,13 @@ function RealBank() {
 }
 
 function Payouts() {
-  const src = useAdmSource()
   const { data: m } = useAdmMoney()
   const { setPaused } = useAdmActions()
   const note = useNote()
   return (
     <div className="fx-ovl">
       <div className="fx-ovl-main">
-        <Tile i={2} title="Who is in Monday's run" sub={`${m.payday} · hours from clock in and out · ${money(m.rate)} an hour`}>
+        <Tile i={2} title="Who is in Monday's run" sub={`${m.payday} · scheduled hours minus days off · ${money(m.rate)} an hour`}>
           <ul className="tp-list adm-rows">{m.run.map(r => {
             const [bw, bt] = BANK_WORD[r.bank]
             return <li key={r.va_id} className="fx-mrow"><Avatar name={r.name} /><span className="tp-grow"><b>{r.name}</b><small>{r.hours} hours</small></span><Chip tone={bt}>{bw}</Chip><b className="tp-money">{r.bank === 'ready' ? money(r.amount) : '–'}</b></li>
@@ -280,7 +316,7 @@ function Payouts() {
         <Tile i={3} title="Past pay runs" sub={`${money(m.runs.reduce((t, r) => t + r.amount, 0))} paid since the first run`}>
           <ul className="tp-list adm-rows">{m.runs.map(r => <li key={r.id} className="fx-mrow"><CircleCheck size={17} aria-hidden="true" className="adm-ok" /><span className="tp-grow"><b>{r.week}</b><small>{r.people} people · paid {r.paid}</small></span><Chip tone="green">Paid</Chip><b className="tp-money">{money(r.amount)}</b></li>)}</ul>
         </Tile>
-        <OwnerPayouts />
+        <YourPayouts />
       </div>
       <div className="fx-ovl-side adm-side">
         <Tile className="is-fill is-green" i={0} title="Next pay run" sub={`${m.payday}, ${m.paused ? 'paused' : 'automatically'}`}>
@@ -292,8 +328,7 @@ function Payouts() {
         <Tile i={1} title="Stripe" sub="Where pay comes from">
           <ul className="adm-sum">
             <li><Wallet size={14} aria-hidden="true" /><span className="tp-grow">Balance<small>{m.stripeBalance >= m.runTotal ? "Covers Monday's run" : "Short for Monday's run"}</small></span><b className="tp-money">{money(m.stripeBalance)}</b></li>
-            {src === 'real' ? <RealBank /> : <li><Landmark size={14} aria-hidden="true" /><span className="tp-grow">Your bank<small>Chase •••• 7781</small></span><button type="button" className="fx-pillbtn" onClick={() => note("Opens Stripe's form once you sign in for real")}>Change</button></li>}
-            <li><CircleCheck size={14} aria-hidden="true" /><span className="tp-grow">Hourly rate<small>Overtime past 40 hours at 1.5×</small></span><Link to={`${ap('settings')}?tab=pay`} className="fx-pillbtn">{money(m.rate)}<ArrowUpRight size={13} /></Link></li>
+            <li><CircleCheck size={14} aria-hidden="true" /><span className="tp-grow">Hourly rate<small>On each VA's scheduled hours, minus days off</small></span><Link to={`${ap('settings')}?tab=pay`} className="fx-pillbtn">{money(m.rate)}<ArrowUpRight size={13} /></Link></li>
           </ul>
         </Tile>
       </div>

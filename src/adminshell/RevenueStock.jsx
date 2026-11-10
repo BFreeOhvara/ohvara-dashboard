@@ -1,17 +1,15 @@
-import { useId, useMemo, useState } from 'react'
-import { ResponsiveContainer, ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { ResponsiveContainer, ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, usePlotArea, useXAxisScale, useYAxisScale } from 'recharts'
 import { Seg } from '../template/kit'
 import { CountUp, usd } from '../template/motion'
-import { PRICES } from '../lib/priceBook.js'
-import { deskAdminLabel } from '../lib/bookingDesk'
-import { RANGES, rangeRows, headline, shortOf, fullOf, monthOf, dowOf } from './revTrend'
+import { RANGES, rangeRows, headline, shortOf, fullOf, monthOf, dowOf, monoAt, monoSlopes } from './revTrend'
 import '../template/chart936.css'
 import './p943.css'
 
 // P943 — Revenue like a stock line (Brayden picked Idea 1, Nov 10): the rolling 7-day revenue as one smooth blue line
 // with a soft gradient under it, what Ohvara kept after costs as a dashed green line, and the gold gap between them is
 // the costs. Header: the last 7 days' revenue, how it moved against the 7 days before, what was kept; range buttons
-// 1W · 1M · 3M · 1Y · All. Hover any day for its 7 days: Revenue, Kept, Costs and the fee breakdown.
+// 1W · 1M · 3M · 1Y · All. Hover any day for its 7 days: Revenue, Costs and Kept (P945: the hover glides).
 //   roll: useAdmRevTrend().roll (adminshell/revTrend.js rolling rows)
 
 const money = usd()
@@ -22,22 +20,87 @@ const kMoney = n => {
 }
 const signed = n => (n < 0 ? `−${money(-n)}` : money(n))
 
-function Tip({ active, payload }) {
-  if (!active || !payload?.length) return null
-  const r = payload[0].payload
+// P945 — the hover glides: the guide line and the tooltip follow the mouse (eased a little each frame), and the
+// values are read off the same smooth curve the chart draws between days, so the numbers roll as you drag. The chart
+// itself never re-renders on hover; this overlay does. Tooltip: Revenue · Costs (the gap) · Kept, nothing else.
+function PlotProbe({ onArea, data }) {
+  const a = usePlotArea()
+  const xs = useXAxisScale()
+  const ys = useYAxisScale()
+  const ready = a && xs && ys
+  const key = ready ? `${a.x}|${a.y}|${a.width}|${a.height}|${xs(data[0]?.date)}|${xs(data[data.length - 1]?.date)}|${ys(0)}|${ys(1000)}` : ''
+  useEffect(() => {
+    if (!ready) return
+    onArea({ x: a.x, y: a.y, width: a.width, height: a.height, px: data.map(d => xs(d.date)), py: v => ys(v) })
+  }, [key]) // eslint-disable-line react-hooks/exhaustive-deps
+  return null
+}
+
+const EASE = 0.28 // share of the way to the mouse each frame: smooth, never laggy
+function Glide({ data, area }) {
+  const box = useRef(null)
+  const goal = useRef(null)
+  const cur = useRef(null)
+  const raf = useRef(0)
+  const [at, setAt] = useState(null) // fractional day index shown
+  const n = data.length
+  const rev = useMemo(() => data.map(d => d.revenue), [data])
+  const kept = useMemo(() => data.map(d => d.kept), [data])
+  const sRev = useMemo(() => monoSlopes(rev), [rev])
+  const sKept = useMemo(() => monoSlopes(kept), [kept])
+  const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  const start = useRef(null)
+  // One animation loop per chart: each frame eases the shown day toward the mouse, then stops once it's there.
+  useEffect(() => {
+    const loop = () => {
+      raf.current = 0
+      const g = goal.current
+      if (g == null) return
+      const c = cur.current
+      const next = c == null || reduce ? g : c + (g - c) * EASE
+      const done = Math.abs(g - next) <= 0.002
+      cur.current = done ? g : next
+      setAt(cur.current)
+      if (!done) raf.current = requestAnimationFrame(loop)
+    }
+    start.current = () => { if (!raf.current) raf.current = requestAnimationFrame(loop) }
+    return () => { cancelAnimationFrame(raf.current); raf.current = 0 }
+  }, [reduce])
+  if (!area || n < 2) return null
+  const px = area.px
+  const first = px[0]
+  const span = (px[n - 1] - first) || 1
+  // The days sit evenly on the axis (a point scale), so a pixel maps straight to a fractional day.
+  const xOf = f => { const i = Math.min(n - 2, Math.floor(f)); return px[i] + (px[i + 1] - px[i]) * (f - i) }
+  const yOf = area.py
+  const move = e => {
+    const r = box.current.getBoundingClientRect()
+    goal.current = Math.max(0, Math.min(n - 1, ((e.clientX - r.left - first) / span) * (n - 1)))
+    start.current?.()
+  }
+  const leave = () => { goal.current = null; cur.current = null; cancelAnimationFrame(raf.current); raf.current = 0; setAt(null) }
+  const vRev = at == null ? 0 : monoAt(rev, at, sRev)
+  const vKept = at == null ? 0 : monoAt(kept, at, sKept)
+  const x = at == null ? 0 : xOf(at)
+  const day = at == null ? null : data[Math.round(at)]
+  const flip = at != null && x > area.x + area.width * 0.62
   return (
-    <div className="ox-tip rs-tip" role="status">
-      <b>{fullOf(r.date)} · last 7 days</b>
-      <ul>
-        <li><i className="is-rev" /><span>Revenue</span><b className="tp-money">{money(r.revenue)}</b></li>
-        <li><i className="is-kept" /><span>Kept (profit)</span><b className="tp-money">{signed(r.kept)}</b></li>
-        <li><i className="is-gap" /><span>Costs (the gap)</span><b className="tp-money">{money(r.costs)}</b></li>
-      </ul>
-      <ul className="rs-tip-sub" aria-label="Revenue by fee">
-        <li><span>Plan fees</span><b className="tp-money">{money(r.plans)}</b></li>
-        <li><span>{deskAdminLabel(PRICES.leadFee)}</span><b className="tp-money">{money(r.fee)}</b></li>
-        <li><span>Setup fees</span><b className="tp-money">{money(r.setup)}</b></li>
-      </ul>
+    <div ref={box} className="rs-glide" onPointerMove={move} onPointerDown={move} onPointerLeave={leave}>
+      {at != null && <>
+        <svg className="rs-glide-svg" aria-hidden="true">
+          <line x1={x} x2={x} y1={area.y} y2={area.y + area.height} className="rs-guide" />
+          <circle cx={x} cy={yOf(vKept)} r={4} className="rs-dot is-kept" />
+          <circle cx={x} cy={yOf(vRev)} r={5.5} className="rs-dot is-rev" />
+        </svg>
+        <div className={`ox-tip rs-tip${flip ? ' is-left' : ''}`} role="status" style={{ '--x': `${x}px`, '--y': `${area.y + 6}px` }}>
+          <b>{day ? fullOf(day.date) : ''} · last 7 days</b>
+          <ul>
+            <li><i className="is-rev" /><span>Revenue</span><b className="tp-money">{money(Math.round(vRev))}</b></li>
+            <li><i className="is-gap" /><span>Costs (the gap)</span><b className="tp-money">{money(Math.round(vRev) - Math.round(vKept))}</b></li>
+            <li><i className="is-kept" /><span>Kept</span><b className="tp-money">{signed(Math.round(vKept))}</b></li>
+          </ul>
+        </div>
+      </>}
     </div>
   )
 }
@@ -74,6 +137,7 @@ export default function RevenueStock({ roll }) {
   const up = h.pct == null || h.pct >= 0
   const anim = !(typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
   const end = data[last]
+  const [area, setArea] = useState(null)
 
   return (
     <div className="rs">
@@ -104,18 +168,18 @@ export default function RevenueStock({ roll }) {
                 <CartesianGrid vertical={false} stroke="var(--ox-grid)" strokeDasharray="3 4" />
                 <XAxis dataKey="date" axisLine={false} tickLine={false} tickMargin={10} ticks={ticks} interval={0} tickFormatter={tick} tick={{ className: 'ox-tick' }} />
                 <YAxis width={48} axisLine={false} tickLine={false} tickCount={5} domain={[bottom, top]} tickFormatter={kMoney} tick={{ className: 'ox-ytick' }} />
-                <Tooltip cursor={{ stroke: 'var(--ox-axis)', strokeOpacity: 0.55, strokeWidth: 1 }} wrapperStyle={{ outline: 'none', zIndex: 30 }}
-                  isAnimationActive={false} content={p => <Tip {...p} />} />
+                <PlotProbe onArea={setArea} data={data} />
                 <Area type="monotone" dataKey="revenue" stroke="none" fill={`url(#${uid}-rev)`} activeDot={false} isAnimationActive={anim} animationDuration={700} />
-                <Area type="monotone" dataKey="gap" stroke="none" fill="var(--rs-gap)" fillOpacity={0.34} activeDot={false} isAnimationActive={anim} animationDuration={700} />
-                <Line type="monotone" dataKey="kept" stroke="var(--rs-kept)" strokeWidth={2} strokeDasharray="5 4" dot={false}
-                  activeDot={{ r: 4, strokeWidth: 2, stroke: 'var(--ox-dot-ring)', fill: 'var(--rs-kept)' }} isAnimationActive={anim} animationDuration={700} />
-                <Line type="monotone" dataKey="revenue" stroke="var(--rs-rev)" strokeWidth={2.6} isAnimationActive={anim} animationDuration={700}
+                <Area type="monotone" dataKey="gap" stroke="none" fill="var(--rs-gap)" fillOpacity={0.42} activeDot={false} isAnimationActive={anim} animationDuration={700} />
+                <Line type="monotone" dataKey="kept" stroke="var(--rs-kept)" strokeWidth={2.2} strokeDasharray="5 4" dot={false}
+                  activeDot={false} isAnimationActive={anim} animationDuration={700} />
+                <Line type="monotone" dataKey="revenue" stroke="var(--rs-rev)" strokeWidth={3.25} strokeLinecap="round" isAnimationActive={anim} animationDuration={700}
                   dot={p => (p.index === last ? <circle key="end" cx={p.cx} cy={p.cy} r={4.5} fill="var(--rs-rev)" stroke="var(--ox-dot-ring)" strokeWidth={2} /> : <g key={p.index} />)}
-                  activeDot={{ r: 5, strokeWidth: 2, stroke: 'var(--ox-dot-ring)', fill: 'var(--rs-rev)' }} />
+                  activeDot={false} />
               </ComposedChart>
             </ResponsiveContainer>
-          ) : <p className="rs-empty">No revenue yet. The line starts with the first plan fee.</p>}
+          ) : null}
+          {data.length ? <Glide key={range} data={data} area={area} /> : <p className="rs-empty">No revenue yet. The line starts with the first plan fee.</p>}
         </div>
         <ul className="ox-key rs-key">
           <li><i className="is-rev" aria-hidden="true" />Revenue (last 7 days)</li>

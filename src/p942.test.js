@@ -8,18 +8,18 @@ import { LEAD_LANES } from './adminshell/words.js'
 const src = p => readFileSync(new URL(p, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
 
 // P942 (Brayden, Nov 10): the Overview leads chart is shadcn's "Area Chart - Interactive" with three ranges.
-test('the leads trend: 91 days, three ranges, This week is Monday to Sunday', () => {
-  assert.deepEqual(TREND_RANGES.map(r => r.label), ['This week', 'Last 30 days', 'Last 3 months'])
+test('the leads trend: 91 days, three ranges, Last 7 days ends today (P945)', () => {
+  assert.deepEqual(TREND_RANGES.map(r => r.label), ['Last 7 days', 'Last 30 days', 'Last 3 months'])
   const rows = dailyCounts('2026-11-05', { in: ['2026-11-05T10:00', '2026-11-05T11:00', '2026-11-02', '2026-08-01'], sold: ['2026-11-05'] })
   assert.equal(rows.length, TREND_DAYS)
   assert.equal(rows.at(-1).date, '2026-11-05')
   assert.equal(rows.at(-1).in, 2)
   assert.equal(rows.at(-1).sold, 1)
   assert.equal(rows.reduce((t, r) => t + r.in, 0), 3, 'a date older than 91 days is left out')
-  const wk = trendRows(rows, 'week', '2026-11-05', ['in', 'sold'])
-  assert.deepEqual(wk.map(r => r.name), ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
-  assert.deepEqual(wk.map(r => r.later), [false, false, false, false, true, true, true])
-  assert.equal(wk[4].in, null, 'days to come have no value')
+  const wk = trendRows(rows, '7d', '2026-11-05', ['in', 'sold'])
+  assert.deepEqual(wk.map(r => r.name), ['Fri', 'Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu'])
+  assert.equal(wk.at(-1).date, '2026-11-05', 'always full: the last 7 days end today')
+  assert.ok(wk.every(r => !r.later))
   assert.equal(trendRows(rows, '30d', '2026-11-05', ['in']).length, 30)
   assert.equal(trendRows(rows, '90d', '2026-11-05', ['in']).length, 90)
 })

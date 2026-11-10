@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, Check, Hand, CreditCard, PhoneCall, Radio, Megaphone, ChevronDown, ChevronUp, Shuffle, Rocket, CalendarOff, PhoneIncoming, ListChecks, Headset, Landmark, Users } from 'lucide-react'
+import { ArrowUpRight, Check, CalendarDays, CreditCard, PhoneCall, Radio, Megaphone, ChevronDown, ChevronUp, Shuffle, Rocket, CalendarOff, PhoneIncoming, ListChecks, Headset, Landmark, Users } from 'lucide-react'
 import { useAdmDay, useAdmMoney, useAdmAgents, useAdmDesk, useAdmCosts, useAdmSetup, useAdmRota, useAdmVas, SHIFT_MIN, dateText } from '../data'
 import { Avatar } from '../../template/kit'
 import { CountUp, usd } from '../../template/motion'
@@ -22,7 +22,7 @@ import '../p942.css'
 // P914: "Needs you" is To-dos: a clean list of real admin jobs (todos.js), each with one action; what fits shows, the
 // rest wait behind "Show all" (never cut off). Empty: All caught up.
 const TODOS_SHOWN = 5 // P934: at least this many; the box shows as many as fit its height (useTodoFit)
-const TODO_ICON = { lead: Shuffle, card: CreditCard, launch: Rocket, cover: CalendarOff, late: Hand, ad: Megaphone }
+const TODO_ICON = { lead: Shuffle, card: CreditCard, launch: Rocket, cover: CalendarOff, ad: Megaphone }
 const money = usd()
 const cents = usd(true)
 const REV_SERIES = [{ key: 'plans', label: 'Plan fees', color: 'var(--ox-1)' }, { key: 'fee', label: 'Booking desk', color: 'var(--ox-3)' }, { key: 'setup', label: 'Setup fees', color: 'var(--ox-4)' }]
@@ -107,7 +107,7 @@ export default function Overview() {
   const cover = shortCover({ rota: rota.rota, dayOff: rota.dayOff, days: ahead, min: SHIFT_MIN, nameOf: id => (vas.find(v => v.id === id)?.name || 'A VA').split(' ')[0] })
   // P879 (N-A-04): an ad rejected, or in review over 24 h, from the engine (sample until 858 + GoHighLevel).
   const todos = adminTodos({
-    unassigned: day.unassigned, pipeline, failed: day.failed, cover, late: day.late, ads: day.real ? [] : adAlerts(),
+    unassigned: day.unassigned, pipeline, failed: day.failed, cover, ads: day.real ? [] : adAlerts(),
     ap, money, dayText: dateText, agentName: id => agents.find(a => a.id === id)?.name || 'An agent',
   })
   const onShift = day.onShift.map(v => ({ ...v, calls: desk.filter(c => c.va_id === v.id) }))
@@ -139,6 +139,8 @@ export default function Overview() {
               <header className="fx-tile-h">
                 <span className="adm-tile-ic" aria-hidden="true"><ListChecks size={16} /></span>
                 <span className="tp-grow"><h2>To-dos</h2><p>{todos.length ? `${todos.length} to do` : 'Nothing waiting'}</p></span>
+                {/* P945: booked calls look after themselves (they move on at 10 minutes); the shortcut opens the calendar. */}
+                <Link to={`${ap('team')}?tab=calendar`} className="fx-pillbtn adm-cal-go"><CalendarDays size={14} aria-hidden="true" />Calendar</Link>
               </header>
               {todos.length
                 ? <ul className="adm-todo-list">{(allTodos ? todos : todos.slice(0, fit)).map((t, i) => <Todo key={t.id} t={t} i={i} />)}</ul>
@@ -154,7 +156,7 @@ export default function Overview() {
       </div>
 
       <div className="adm-ov-pair">
-          <Tile className="is-fill is-teal adm-ov-shift" i={1} icon={Headset} title="On shift today" sub={`${done} of ${todayCalls} calls done · ${day.late.length} past their time`} to={ap('team')} label="Open Fulfillment team">
+          <Tile className="is-fill is-teal adm-ov-shift" i={1} icon={Headset} title="On shift today" sub={`${done} of ${todayCalls} calls done today`} to={ap('team')} label="Open Fulfillment team">
             <b className="fx-huge tp-num"><CountUp value={onShift.length} /><small>VAs</small></b>
             <ul className="adm-shift">
               {onShift.map(v => (

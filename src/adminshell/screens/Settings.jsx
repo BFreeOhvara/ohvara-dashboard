@@ -143,7 +143,7 @@ function PayRules() {
     <>
       {/* P934: two columns so the section never scrolls: VA pay on the left, lead billing on the right. */}
       <div className="adm-set-two"><div>
-      <Head title="Pay rules" sub="VAs are paid by the hour, from clock in and out. Paid every Monday." />
+      <Head title="Pay rules" sub="VAs are paid by the hour on their scheduled shifts, minus days off. Paid every Monday." />
       <div className="fx-form-grid">
         <Field label="Hourly rate ($)" hint="Overtime past 40 hours a week at 1.5×"><input className="tp-money" inputMode="decimal" value={d.hourly} onChange={num('hourly')} /></Field>
       </div>

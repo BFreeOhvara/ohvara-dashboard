@@ -11,16 +11,16 @@ import { MY_SHEET, MY_RATE, weekPay } from '../p879'
 import { hourGrid, hourLabel } from '../pay931'
 import './pay931.css'
 
-// P845 — Pay, built with the care of the agent's Billing. P879 (Q75/Q76): VA pay is hourly only, from clock in and
-// out. The hero is this week's hours × the rate with a bar per day, the detail is the timesheet (ask for a
-// correction; it locks at the pay run), then payouts and tax forms. The next payout is the one filled tile (sage).
+// P845 — Pay, built with the care of the agent's Billing. P879 (Q75/Q76): VA pay is hourly only. P945: it's your set
+// scheduled hours minus days off (nothing to correct). The hero is this week's hours × the rate with a bar per day,
+// the detail is your shifts, then payouts and tax forms. The next payout is the one filled tile (sage).
 // Sample amounts only; the per-cancellation pay is gone.
 export default function Pay() {
   return useFulSource() === 'real' ? <PayReal /> : <PaySample />
 }
 
 // P852 — Pay on real data: payouts, the bank on file and the next payday are real (fulfillment_payouts, the payout
-// account). Hourly pay needs clock in and out, which has no tables yet (a door), so the hours part says so instead of
+// account). P945: pay comes from the rota (scheduled hours, minus days off); until real shifts are read the hours part says so instead of
 // showing sample hours. Bank details are only ever entered in the payout service's own form.
 function PayReal() {
   const { data: pay } = useFulPay()
@@ -28,7 +28,7 @@ function PayReal() {
   return (
     <div className="tp-page fx-page fx-ovl fs-pay">
       <div className="fx-ovl-main">
-        <FirstRun icon={Info} title="Hours start when time tracking goes live" sub="Pay is hourly, from your clock in and out. Once that's switched on, this week's hours and pay show here." />
+        <FirstRun icon={Info} title="Hours fill in from your rota" sub="Pay is hourly: your scheduled shifts, minus days off. Once your rota is set, this week's hours and pay show here." />
         <section className="fx-tile fs-pay-list" style={{ '--i': 1 }} aria-label="Payouts">
           <header className="fx-tile-h"><span className="tp-grow"><h2>Payouts</h2><p>{pay.payouts.length ? 'Paid to your bank' : 'Nothing paid yet'}</p></span></header>
           {pay.payouts.length ? (
@@ -72,7 +72,7 @@ function PaySample() {
         {/* P867: the hero fills the window (data-fold) so the pay detail below peeks about a third; its bars stretch. */}
         <section className="fx-tile fs-pay-hero" style={{ '--i': 0 }} aria-label="This week" data-fold>
           <header className="fx-tile-h">
-            <span className="tp-grow"><h2>This week</h2><p>Nov 2 to 8 · {cents(MY_RATE)} an hour, from your clock in and out</p></span>
+            <span className="tp-grow"><h2>This week</h2><p>Nov 2 to 8 · {cents(MY_RATE)} an hour, on your scheduled hours</p></span>
             <button type="button" className="fx-open" aria-label="How pay works" onClick={() => setHow(true)}><Info size={16} /></button>
           </header>
           <div className="fx-chart-head fx-bk-head">
@@ -99,12 +99,12 @@ function PaySample() {
               <span role="cell" className="pg-tot tp-num"><b>{g.total.toFixed(2)} h</b></span>
             </div>
           </div>
-          <div className="fx-key"><span><i className="is-line" />On the clock</span><span><i className="is-dash" />Today, still on the clock</span><SampleTag>Sample amounts</SampleTag></div>
+          <div className="fx-key"><span><i className="is-line" />Scheduled hours</span><span><i className="is-dash" />Today, so far</span><SampleTag>Sample amounts</SampleTag></div>
         </section>
 
         <section className="fx-tile fs-pay-list" style={{ '--i': 1 }} aria-label="Pay detail">
           <PillTabs label="Pay detail" className="fx-ptabs" itemClass="fx-ptab" value={tab} onChange={setTab}
-            items={[{ key: 'week', label: 'Timesheet', count: MY_SHEET.length }, { key: 'payouts', label: 'Payouts', count: pay.payouts.length }, { key: 'tax', label: 'Tax forms' }]} />
+            items={[{ key: 'week', label: 'Your shifts', count: MY_SHEET.length }, { key: 'payouts', label: 'Payouts', count: pay.payouts.length }, { key: 'tax', label: 'Tax forms' }]} />
           <div className="fx-form" key={tab} role="tabpanel">
             {tab === 'week' && <TimesheetRows />}
             {tab === 'payouts' && (
@@ -133,7 +133,7 @@ function PaySample() {
         <section className="fx-tile is-fill is-green fs-payout" style={{ '--i': 2 }} aria-label="Next payout">
           <header className="fx-tile-h"><span className="tp-grow"><h2>Next payout</h2><p>{pay.payday}, after an admin checks the week</p></span></header>
           <b className="fx-huge tp-money"><CountUp value={w.pay} format={cents} /></b>
-          <small>Hours so far × {cents(MY_RATE)}. Today's hours join when you clock out.</small>
+          <small>Scheduled hours so far × {cents(MY_RATE)}. Days off aren't paid.</small>
           <span className="fx-next-who"><Landmark size={16} aria-hidden="true" /><span><b>{pay.account.bank} •••• {pay.account.last4}</b><small>{pay.account.status}</small></span></span>
           <Link to={fp('settings')} className="fx-pillbtn fx-self">Pay details<ArrowUpRight size={14} /></Link>
         </section>
@@ -141,7 +141,7 @@ function PaySample() {
 
       <Drawer open={how} onClose={() => setHow(false)} title="How pay works" sub="Sample amounts">
         <ol className="tp-tl fx-tl">
-          {[['Clock in and out', 'Within 15 minutes of your shift'], ['Breaks', 'Breaks are paid, lunch is not'], ['An admin checks the week', 'Ask for a fix before Monday; it locks at the pay run'], ['Paid Monday', `Hours × ${cents(MY_RATE)} to ${pay.account.bank} •••• ${pay.account.last4}`]].map(([a, b]) => <li key={a} className="done"><i /><div><b>{a}</b><span>{b}</span></div></li>)}
+          {[['Your shifts', 'The hours set on your rota'], ['Days off', 'Taken out; you have a few a month'], ['Nothing to correct', 'Pay comes from the rota, not a timesheet'], ['Paid Monday', `Scheduled hours × ${cents(MY_RATE)} to ${pay.account.bank} •••• ${pay.account.last4}`]].map(([a, b]) => <li key={a} className="done"><i /><div><b>{a}</b><span>{b}</span></div></li>)}
         </ol>
       </Drawer>
     </div>

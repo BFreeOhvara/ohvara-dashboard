@@ -29,14 +29,22 @@ export default function MoreBelow({ page }) {
   }, [page])
 
   // The cue: only at the top of a fresh page, only when there is more, gone for good after the first scroll.
+  // P945: "more" means the page really scrolls (never a hint on a view that fits, like a tab that's shorter than the
+  // window), and it's checked again whenever the page's content changes size (switching tabs on one page).
   useEffect(() => {
     let gone = false
-    const check = () => { if (!gone) setShow({ page, on: window.scrollY < 8 && continuesBelow(mainEl() || document.body) }) }
+    let t2 = 0
+    const scrolls = () => document.documentElement.scrollHeight - window.innerHeight > 24
+    const check = () => { if (!gone) setShow({ page, on: window.scrollY < 8 && scrolls() && continuesBelow(mainEl() || document.body) }) }
     const t = setTimeout(check, 700)
+    const soon = () => { clearTimeout(t2); t2 = setTimeout(check, 250) }
     const onScroll = () => { if (window.scrollY > 16) { gone = true; setShow({ page, on: false }) } }
+    const main = mainEl()
+    const ro = typeof ResizeObserver !== 'undefined' && main ? new ResizeObserver(soon) : null
+    if (ro) { ro.observe(main); for (const c of main.children) ro.observe(c) }
     window.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('resize', check)
-    return () => { clearTimeout(t); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', check) }
+    return () => { clearTimeout(t); clearTimeout(t2); ro?.disconnect(); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', check) }
   }, [page])
 
   if (!show || show.page !== page || !show.on) return null

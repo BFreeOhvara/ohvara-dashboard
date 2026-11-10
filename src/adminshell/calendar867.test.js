@@ -45,13 +45,13 @@ test('overlapping calls sit side by side', () => {
   assert.deepEqual(l.get('c'), [0, 1])
 })
 
-test('rota cells: on (with hours), asked off, approved off, or empty', () => {
+test('rota cells: on (with hours), off (any booked day off, P945: no asked state), or empty', () => {
   const rota = { 3: ['v1'], 4: ['v1'], 5: [] }
   const dayOff = [{ va_id: 'v1', date: 4, status: 'pending', reason: 'Dentist' }, { va_id: 'v1', date: 5, status: 'approved' }, { va_id: 'v1', date: 6, status: 'declined' }]
   const v = team[0]
   assert.deepEqual(rotaCell({ rota, dayOff, va: v, day: 3 }), { kind: 'on', hours: v.hours })
-  assert.deepEqual(rotaCell({ rota, dayOff, va: v, day: 4 }), { kind: 'requested', on: true, reason: 'Dentist' })
-  assert.deepEqual(rotaCell({ rota, dayOff, va: v, day: 5 }), { kind: 'off' })
+  assert.deepEqual(rotaCell({ rota, dayOff, va: v, day: 4 }), { kind: 'off', reason: 'Dentist' })
+  assert.deepEqual(rotaCell({ rota, dayOff, va: v, day: 5 }), { kind: 'off', reason: undefined })
   assert.deepEqual(rotaCell({ rota, dayOff, va: v, day: 6 }), { kind: '' }, 'a declined request leaves the day as it was')
 })
 

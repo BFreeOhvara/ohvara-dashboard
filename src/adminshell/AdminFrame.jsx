@@ -97,14 +97,14 @@ export function AddSomeone({ open, onClose }) {
   )
 }
 
-// Give a call: the desk's calls past their time. Picking one opens the Fulfillment page's desk on it.
+// Give a call: the desk's calls not started yet. P945: they move on by themselves at 10 minutes; this gives one now.
 function GiveCall({ open, onClose }) {
   const { data: day } = useAdmDay()
   const navigate = useNavigate()
   const keep = useKeep(open)
   if (!keep) return null
   return (
-    <Drawer open={open} center onClose={onClose} title="Give a call" sub={day.late.length ? 'Calls past their time. Pick one to give it to someone free.' : 'No call is past its time.'}>
+    <Drawer open={open} center onClose={onClose} title="Give a call" sub={day.late.length ? 'Not started yet. They move to the next free VA by themselves at 10 minutes; pick one to give it now.' : 'Every call has started or is still ahead. Missed ones move on by themselves.'}>
       <ul className="tp-list">
         {day.late.map(c => (
           <li key={c.id}><button type="button" className="fx-mrow" onClick={() => { onClose(); navigate(`${ap('team')}?call=${c.id}`) }}>
@@ -183,12 +183,12 @@ function useHeadStats(page) {
     overview: [S(ShieldCheck, day.payingAgents, 'paying agents', { chip: [`${day.onDuty.length} on duty`, 'up'] }), S(Headset, day.onShift.length, 'VAs on shift today'), S(CircleDollarSign, m.total, 'revenue this week', { fmt: money, chip: [`${money(m.lastWeek)} last week`, 'blue'] })],
     agents: [S(Users, agents.length, 'agents', { chip: invites.some(i => i.role === 'agent') ? [`${invites.filter(i => i.role === 'agent').length} invites out`.replace(/^1 invites/, '1 invite'), 'blue'] : null }), S(Radio, agents.filter(a => a.active).length, 'taking transfers'), S(TriangleAlert, agents.filter(a => a.billing.status === 'past_due').length, 'past due', { chip: agents.some(a => a.billing.status === 'past_due') ? ['See who', 'warn'] : null })],
     setup: [S(Rocket, pipe.filter(c => c.stage !== 'live').length, 'getting set up'), S(Hourglass, pipe.filter(c => c.stage === 'checks').length, 'on launch checks', { chip: pipe.some(c => c.paused) ? [`${pipe.filter(c => c.paused).length} paused`, 'warn'] : null }), S(BadgeCheck, pipe.filter(c => c.stage === 'live').length, 'live this week')],
-    team: [S(Headset, day.onShift.length, 'on shift today'), S(CalendarOff, settings.daysOffPerMonth ?? 2, 'days off a month each'), S(Wallet, vas.reduce((t, v) => t + v.week.verified + v.week.checking, 0), 'VA pay this week', { fmt: money })],
+    team: [S(Headset, day.onShift.length, 'on shift today'), S(CalendarOff, settings.daysOffPerMonth ?? 3, 'days off a month each'), S(Wallet, vas.reduce((t, v) => t + v.week.verified + v.week.checking, 0), 'VA pay this week', { fmt: money })],
     leads: [S(PhoneIncoming, day.week.in, 'leads this week'), S(Shuffle, route, 'not matched', { chip: route ? ['Pick an agent', 'warn'] : null }), S(CheckCircle2, day.week.sold, 'sold this week')],
     clients: [S(BookUser, clients.length, 'clients'), S(TriangleAlert, att, 'need attention', { chip: att ? ['See who', 'warn'] : null }), S(CalendarDays, clients.reduce((n, c) => n + c.steps.length, 0), 'servicing steps open')],
     billing: [S(CircleDollarSign, wk.inTotal, 'brought in this week', { fmt: money }), S(Wallet, wk.profit, 'profit this week', { fmt: money, chip: [`${wk.split[0].pct}/${wk.split[1].pct} split`, 'blue'] }), S(TriangleAlert, m.failed.length, 'failed payments', { chip: m.failed.length ? ['Follow up', 'warn'] : null })],
     connect: [S(Link2, linked, 'of 5 plugged in'), S(PhoneForwarded, connect.ads.length, 'ad accounts'), S(Plug, connect.sources.forms.filter(f => f.on).length, 'forms on')],
-    settings: [S(Users, agents.length + vas.length, 'people with a login'), S(Radio, ['sms_live', 'voice_live', 'ai_caller_live'].filter(k => settings.switches?.[k]).length, 'of 3 go-live switches on', { chip: ['Sample', 'blue'] }), S(Bug, day.openBugs, 'open bug reports')],
+    settings: [S(Users, agents.length + vas.length, 'people with a login'), S(Radio, ['sms_live', 'voice_live', 'ai_caller_live', 'owner_payouts_live'].filter(k => settings.switches?.[k]).length, 'of 4 go-live switches on', { chip: ['Sample', 'blue'] }), S(Bug, day.openBugs, 'open bug reports')],
   }[page] || []
 }
 
@@ -290,7 +290,7 @@ export default function AdminFrame() {
         <i className="fx-hair" />
         <button type="button" className="fx-ri tp-wig" aria-label="Add a VA" data-tip="Add a VA" {...wig} onClick={open('add')}><UserPlus size={18} /></button>
         {/* P934: no Route a lead here; a real unmatched lead is routed from its notification (RouteLeadDrawer). */}
-        <button type="button" className="fx-ri tp-wig" aria-label="Give a call" data-tip={day.late.length ? `${day.late.length} calls past their time` : 'Give a call'} {...wig} onClick={open('give')}><Hand size={18} /></button>
+        <button type="button" className="fx-ri tp-wig" aria-label="Give a call" data-tip={day.late.length ? `${day.late.length} not started yet` : 'Give a call'} {...wig} onClick={open('give')}><Hand size={18} /></button>
         <i className="fx-hair" />
         <NavLink to={ap('messages')} className="fx-ri tp-wig" aria-label="Messages" data-tip="Messages" {...wig}><MessageSquare size={18} />{day.unread > 0 && <span className="fx-badge">{day.unread}</span>}</NavLink>
         <NavLink to={ap('connect')} className="fx-ri tp-wig" aria-label="Connect" data-tip={syncFailed(ghlRow) ? 'Connect · the last sync failed' : 'Connect'} {...wig}><Plug size={18} />{syncFailed(ghlRow) && <span className="adm-warndot" aria-label="The last sync failed" />}</NavLink>
