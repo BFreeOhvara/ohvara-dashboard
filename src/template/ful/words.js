@@ -1,4 +1,5 @@
 import { NEW_OUTCOMES } from './bookings.js'
+import { SAVE_OUTCOMES } from '../../lib/clientLine.js'
 // P845 — the VA side's shared words and colours (no React, so component files only export components).
 // Call status → word and card colour (flow.css .is-<tone>): to call = the Booked blue, cancelled = sage (done, paid),
 // no answer = apricot (needs a retry), passed on = stone.
@@ -26,8 +27,8 @@ export function kindTone(kind) {
 const CHANGE = [['completed', 'Done'], ['could_not_complete', "Couldn't finish"]]
 const CALL = [['completed', 'Completed'], ['not_reached', 'Not reached']]
 const OUTCOMES = {
-  // P888: the four things a VA hears on a save call (p888 va_servicing_outcome). 'lapsed' is history only.
-  lapse_save: [['saved', 'Saved'], ['fixing', 'Fixing it'], ['client_cancelled', 'Wants to cancel'], ['no_answer', 'No answer']],
+  // P888/P924: what a VA records on a save call. 'lapsed' and 'client_cancelled' are history only.
+  lapse_save: SAVE_OUTCOMES,
   packet_check: [['delivered', 'Delivered'], ['not_delivered', 'Not delivered']],
   // P891: a client the agent added (p891 servicing_tasks_outcome_check).
   welcome_call: [['welcomed', 'Welcomed'], ['details_fixed', 'Details fixed'], ['problem', 'Problem → agent'], ['no_answer', 'No answer']],
@@ -35,7 +36,7 @@ const OUTCOMES = {
   ...NEW_OUTCOMES,
 }
 export const outcomesOf = kind => OUTCOMES[kind] || CHANGE
-export const outcomeLabel = (kind, v) => outcomesOf(kind).find(o => o[0] === v)?.[1] || (kind === 'lapse_save' && v === 'lapsed' ? 'Lapsed' : null)
+export const outcomeLabel = (kind, v) => outcomesOf(kind).find(o => o[0] === v)?.[1] || (kind === 'lapse_save' ? { lapsed: 'Lapsed', client_cancelled: 'Wants to cancel' }[v] || null : null)
 export const SEND_REASONS = ['Coverage question', 'Needs advice', 'Something else']
 // P907: every call is booked, so a call step is always Today or Coming up; Overdue and No date are the steps that
 // aren't calls (a packet check, a chargeback watch).

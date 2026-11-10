@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Check, Play, Pause, Captions, Signal, BellRing, Smartphone, MessageCircleQuestion, CreditCard } from 'lucide-react'
 import { useSampleSetup, useSampleSettings, useSampleBilling, useSampleActions, DEFAULT_WEEK } from '../data'
-import { Field, Pending, Seg, Switch, useNote } from '../kit'
+import { Field, Seg, Switch, useNote } from '../kit'
 import { Select } from '../Select'
 import { paths } from '../paths'
 import { LicenceForm } from '../Licence'
 import { pickReady, asPick, EMPTY_PICK } from '../licenceModel'
 import { HoursEditor, CalendarConnect } from '../Hours'
-import { SpendSliders, SpendSummary, TakeLeads } from '../PlanBuilder'
+import { SpendSliders, SpendSummary } from '../PlanBuilder'
 import { DEFAULT_LIVE_HOURS, PITCH, takeOk } from '../../lib/leadSplit'
 import { TalkDrawer } from '../Talk'
 import { ForwardSetup } from '../PaymentIntake'
@@ -99,7 +99,8 @@ export default function Welcome() {
   const openSlots = openSlotsPerWeek(s.week)
   // P889: one daily spend + how they take leads. An older saved setup ({ appts, live }) reads as its total.
   const spend = { daily: dailyTotal(s.spend) }
-  const take = { mode: 'both', hours: DEFAULT_LIVE_HOURS, ...s.take, tz: s.tz }
+  // P924: one set of hours: the hours set on the Calendar step are the live-call hours too.
+  const take = { mode: 'both', hours: s.week, tz: s.tz }
   const roomy = spend.daily === 0 || openSlots >= slotsNeeded(spend, take.mode)
   const STEPS = [
     { key: 'video', label: 'Watch the intro', done: s.watched >= VIDEO_SECONDS },
@@ -146,7 +147,7 @@ export default function Welcome() {
               <p className="tp-sub">{s.products === 'servicing' ? 'Our team keeps your policies on the books: payments, changes, cancellations. No lead spend.' : s.products === 'leads' ? 'Booked appointments and live calls. You service your own policies.' : 'Booked appointments and live calls, and our team keeps every policy you sell on the books.'}</p>
             </>}
             {cur.key === 'calendar' && <>
-              <header className="fx-form-h"><h2>Calendar and hours</h2><p>Appointments are only booked inside your hours, in your time zone.</p></header>
+              <header className="fx-form-h"><h2>Calendar and hours</h2><p>One set of hours, in your time zone: booked calls land and live calls ring inside them.</p></header>
               <Field label="Your time zone"><Select label="Your time zone" value={s.tz} onChange={v => stable(x => ({ ...x, tz: v, tzOk: true }))} options={ZONES} /></Field>
               {!s.tzOk && <div className="fx-form-row fx-form-sw"><b className="tp-grow">Is {ZONES.find(z => z.value === s.tz)?.label} right?</b><button type="button" className="tp-btn ov-ghost sm" onClick={() => stable(x => ({ ...x, tzOk: true }))}>Yes, that{'’'}s mine</button></div>}
               <HoursEditor week={s.week} onChange={w => stable(x => ({ ...x, week: w }))} tz={s.tz} />
@@ -155,7 +156,6 @@ export default function Welcome() {
             {cur.key === 'spend' && <>
               <header className="fx-form-h"><h2>Your lead spend</h2><p>{PITCH} Your plan follows your daily spend. Each night your card is charged the next day’s spend plus {feeWords}.</p></header>
               <SpendSliders spend={spend} onSpend={v => stable(x => ({ ...x, spend: v }))} plan={plan} mode={take.mode} id="wz-sp" openSlots={openSlots} />
-              <TakeLeads take={take} onTake={({ mode, hours }) => stable(x => ({ ...x, take: { mode, hours } }))} id="wz-take" />
               <SpendSummary spend={spend} plan={plan} products={s.products} setup><p className="pb-note">Leads start at 12:00 AM your time, the day after you finish setup.</p></SpendSummary>
             </>}
             {cur.key === 'card' && <>
@@ -175,7 +175,6 @@ export default function Welcome() {
             {cur.key === 'app' && <PushStep s={s} up={stable} />}
             {cur.key === 'terms' && <>
               <header className="fx-form-h"><h2>Terms</h2><p>Read and agree to finish.</p></header>
-              <Pending>Agent agreement and terms wording pending</Pending>
               <label className="tp-check"><input type="checkbox" checked={s.terms} onChange={e => stable(x => ({ ...x, terms: e.target.checked }))} /><span>I agree to the agent terms (wording pending)</span></label>
             </>}
             <footer className="fx-form-f">

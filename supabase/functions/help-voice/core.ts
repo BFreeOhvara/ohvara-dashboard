@@ -32,7 +32,7 @@
 // for calls rung the old way.
 
 import { readTwilioRequest, xmlEsc, type Twilio } from '../_shared/twilio.ts'
-import { bridgeEvent, inboundToAgent, screen, take, type BridgeStore, type DeedstoneInbound } from './deedstone.ts'
+import { bridgeEvent, screen, take, type BridgeStore, type DeedstoneInbound } from './deedstone.ts'
 export { twilioSignature } from '../_shared/twilio.ts'
 
 export type HelpStatus = 'ringing' | 'live' | 'transferring' | 'transferred' | 'no_answer' | 'ended'
@@ -81,7 +81,7 @@ export interface Store {
 export interface RouteStore {
   deskOpen(): Promise<boolean>
   afterHoursText(): Promise<string | null>
-  routeInbound(callSid: string, caller: string): Promise<{ queue_id: string | null }>
+  routeInbound(callSid: string, caller: string, to?: string | null): Promise<{ queue_id: string | null }>
   afterHoursCall(callSid: string, caller: string): Promise<void>
   inboundGone(callSid: string): Promise<void>
   // The VA's leg on a caller's line left without End: starts the rescue. The line id, or null.
@@ -158,7 +158,9 @@ async function inboundRouted(store: Store, route: RouteStore, env: Env, form: Re
     const had = await store.helpCall(callSid)   // a retried webhook: queue once
     return twiml(had?.status === 'ringing' ? helpConference(env.publicUrl, callSid, { startOnEnter: false, endOnExit: true }) : '<Hangup/>')
   }
-  const q = await route.routeInbound(callSid, caller)
+  // P924: the number called picks the pod; route_inbound rings the VA who last talked with this caller, then the pod,
+  // then any free VA. Nobody takes it → a booked callback (P907).
+  const q = await route.routeInbound(callSid, caller, toE164(form.To || '') || null)
   if (!q.queue_id) {
     await store.updateHelpCall(callSid, { status: 'ended', end_reason: 'not_queued', ended_at: now() }, ['ringing'])
     return twiml(sorry())
@@ -171,10 +173,8 @@ async function inbound(store: Store, twilio: Twilio | null, env: Env, form: Reco
   if (!(await store.voiceLive())) return twiml('<Hangup/>')
   const callSid = form.CallSid || ''
   if (!SID.test(callSid)) return twiml('<Hangup/>')
-  if (route?.deedstone) {
-    const toAgent = await inboundToAgent(route.deedstone, env.publicUrl, form, toE164(form.From || ''))
-    if (toAgent) return toAgent
-  }
+  // P924: clients reach our team, not the agent. A Deedstone number no longer rings the agent first (P916's
+  // inboundToAgent stays for the agent's own outbound bridge); the VA live-transfers or books the agent instead.
   if (route) return inboundRouted(store, route, env, form)
   const caller = toE164(form.From || '')
   const base = { call_sid: callSid, caller_number: caller || null, tracking_number: form.To || null }

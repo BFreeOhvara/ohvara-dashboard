@@ -1,13 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { PhoneIncoming, CalendarDays, Search, Wallet, Clock, MapPin, Check, X, ClipboardCheck, Users, Link2, MessageSquareWarning, Archive, PhoneForwarded, Inbox } from 'lucide-react'
+import { PhoneIncoming, CalendarDays, Search, Wallet, Clock, MapPin, Check, X, ClipboardCheck, Users, Link2, MessageSquareWarning, PhoneForwarded, Inbox } from 'lucide-react'
 import { useDataSource, useSampleLeads, useSampleLead, useSampleBilling, useSampleActions, useSampleSettings } from '../data'
-import { Avatar, Chip, Seg, Drawer, Empty, Pending, Switch, useNote } from '../kit'
+import { Avatar, Chip, Seg, Drawer, Empty, useNote } from '../kit'
 import { stageChip, OutcomeDrawer, OutcomePrompt, NoShowUndo } from '../LeadOutcome'
 import { RecordDrawer, Stepper, Block } from '../Record'
-import { SpendSliders, TakeLeads } from '../PlanBuilder'
-import { takeOk } from '../../lib/leadSplit'
-import { LANES, CLOSED_LANE, laneOf } from '../stages'
+import { SpendSliders } from '../PlanBuilder'
+import { LANES, laneOf } from '../stages'
 import { agentCallTask, confirmedByText, atLabel, clockNow } from '../leadLifecycle'
 import { agentStatusOf, agentEvents, closedReason, needsResult, resultsFor, canMove, isLiveCall, liveCalls, RESULT_LABEL } from '../agentView'
 import { LiveCalls } from '../LiveCall'
@@ -24,8 +23,8 @@ import '../p878.css'
 import { FilterPills } from '../FilterPills'
 
 // P898: Leads as a board of the agent's five statuses (agentView.js), left to right: Booked, No show, Follow up, Not
-// interested, Sold. Closed (Couldn't reach, opted out, wrong number) sits under "Show closed", with its reason on each
-// lead. P910: a live transfer isn't a column: it's pinned above the board (LiveCall.jsx) until the agent picks how it
+// interested, Sold. P924: no Closed: a lead that never reached the agent (couldn't reach, opted out, wrong number)
+// is never on the agent's side. P910: a live transfer isn't a column: it's pinned above the board (LiveCall.jsx) until the agent picks how it
 // went, and there are no All / Appointments / Live calls tabs, only the status filters. Leads the team is still calling
 // aren't on the board. A lead that needs the agent says so on its card ("Mark
 // result"). Never call attempts, the text sequence or where a lead came from. A card opens the lead in a drawer at its
@@ -148,13 +147,11 @@ function LeadDrawer({ id, onClose }) {
         {source === 'sample' && <button type="button" className="tp-btn ov-ghost sm" onClick={() => { rebookLead(lead.id); note(`${lead.first_name} picked a new time. Back on Booked`) }}>Sample: they pick a new time</button>}</div>}
       <Block title="What they told us">
         <dl className="fx-facts">{asks.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
-        <Pending>Consent wording pending</Pending>
       </Block>
       <Block title="Messages and changes" sub="Every text is automatic, and so is every answer to theirs. If they need a person, a call task goes to you or our team. Read only.">
         {events.length
           ? <ol className="tp-tl fx-tl lc-tl">{events.map((e, i) => <Row key={e.id} e={e} lead={lead} last={i === lastDone} />)}</ol>
           : <Empty title="Nothing yet" sub="Texts and changes show here as they happen." />}
-        <Pending>Opt-out line pending lawyer review</Pending>
       </Block>
       <Block title="Notes" sub="Only you and our team see these">
         {lead.note && <p className="fx-note">{lead.note}</p>}
@@ -201,11 +198,10 @@ export default function Leads() {
   const [q, setQ] = useState('')
   const [spend, setSpend] = useState(false)
   const [params, setParams] = useSearchParams()
-  const showClosed = params.get('closed') === '1'
-  const ALL = showClosed ? [...LANES, CLOSED_LANE] : LANES
+  // P924: no Closed on Leads. A lead that never reached the agent is never on their side (useSampleLeads).
+  const ALL = LANES
   const laneKey = ALL.some(l => l.key === params.get('lane')) ? params.get('lane') : 'all'
-  const setLane = k => setParams({ ...(k === 'all' ? {} : { lane: k }), ...(showClosed ? { closed: '1' } : {}) }, { replace: true })
-  const setClosed = on => setParams(on ? { closed: '1', lane: 'closed' } : {}, { replace: true })
+  const setLane = k => setParams(k === 'all' ? {} : { lane: k }, { replace: true })
   const n = q.trim().toLowerCase()
   const shown = leads.filter(l => !n || `${l.first_name} ${l.last_name} ${l.city} ${l.phone}`.toLowerCase().includes(n))
   const live = liveCalls(shown)
@@ -220,7 +216,6 @@ export default function Leads() {
       <div className="fx-tools">
         <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a lead" placeholder="Find by name, city or phone" value={q} onChange={e => setQ(e.target.value)} /></label>
         <span className="tp-grow" />
-        <label className="lc-closedsw"><Archive size={15} aria-hidden="true" /><span>Show closed</span><Switch on={showClosed} label="Show closed leads" onChange={setClosed} /></label>
         <button type="button" className="fx-pillbtn" aria-label="Change your daily lead spend" onClick={() => setSpend(true)}><Wallet size={15} aria-hidden="true" /><b className="tp-money">{money(dailyTotal(billing.spend))}</b><small>a day</small></button>
       </div>
 
@@ -258,15 +253,13 @@ export default function Leads() {
 function SpendDrawer({ open, onClose }) {
   const { data: billing } = useSampleBilling()
   const { data: settings } = useSampleSettings()
-  const { setSpend, setTake } = useSampleActions()
+  const { setSpend } = useSampleActions()
   const note = useNote()
   const [spend, setDraft] = useState({ daily: dailyTotal(billing.spend) })
-  const [take, setTakeDraft] = useState(billing.take)
   return (
     <Drawer open={open} onClose={onClose} title="Daily lead spend" sub="A change starts tomorrow at 12:00 AM your time"
-      footer={<button type="button" className="tp-primary fx-accent" disabled={!spendOk(billing.plan, spend) || !takeOk(take)} onClick={() => { setSpend(spend); setTake(take); note('Lead spend saved. Starts tomorrow. Sample only, nothing was charged'); onClose() }}>Save lead spend</button>}>
-      <SpendSliders spend={spend} onSpend={setDraft} plan={billing.plan} mode={take.mode} id="leads-spend" openSlots={openSlotsPerWeek(settings.week)} band={{ tier: planOf(billing), ...bandOf(planOf(billing)) }} />
-      <TakeLeads take={take} onTake={setTakeDraft} id="leads-take" />
+      footer={<button type="button" className="tp-primary fx-accent" disabled={!spendOk(billing.plan, spend)} onClick={() => { setSpend(spend); note('Lead spend saved. Starts tomorrow. Sample only, nothing was charged'); onClose() }}>Save lead spend</button>}>
+      <SpendSliders spend={spend} onSpend={setDraft} plan={billing.plan} mode="both" id="leads-spend" openSlots={openSlotsPerWeek(settings.week)} band={{ tier: planOf(billing), ...bandOf(planOf(billing)) }} />
     </Drawer>
   )
 }

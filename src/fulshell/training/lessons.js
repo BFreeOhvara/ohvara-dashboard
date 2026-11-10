@@ -10,7 +10,7 @@
 //
 // Bump TRAINING_VERSION when a lesson's check changes, so a VA's old pass is shown as "updated, take the check again".
 
-export const TRAINING_VERSION = '2026-11-08.3' // P907: speed is now Working in bookings; callbacks, check-ins, fromai, reminders follow the bookings
+export const TRAINING_VERSION = '2026-11-10.1' // P924: saves end with the agent or Closed; clients call our team. P907: speed is now Working in bookings; callbacks, check-ins, fromai, reminders follow the bookings
 export const PASS_MARK = 0.8 // 4 of 5, 4 of 4, 3 of 3: a check passes at 80% or better
 
 const say = (text, o = {}) => ({ who: 'You', text, ...o })
@@ -150,10 +150,11 @@ export const LESSONS = [
     why: 'The first ten seconds decide whether a caller trusts us. A clear, warm greeting keeps them on the line.',
     steps: [
       'A call rings in the phone on the left rail. It slides open by itself. Answer within three rings.',
+      'Clients call our team, not their agent. A call rings the VA who last talked with that caller first, then the VAs on that Deedstone number, then any free VA. Nobody free: a callback is booked.',
       'Greet with the Deedstone greeting and your first name.',
       'Find out what they need: a new quote request, a question about their policy, or a booked call.',
       'New lead: go through the checklist (question type, carrier, state, how soon) and book or transfer them.',
-      'Policy question: press Add caller, pick their agent, then Merge, so the agent takes it with you on the line (a warm hand-off).',
+      'Coverage or price question: press Check agent and hand them over live (a warm hand-off). If the agent can\'t take it, book the agent\'s calendar.',
       'Log the result straight after (see Logging every call).',
       'Sliding the phone away never ends a call: it tucks into the left rail with a green timer. Hang up is always the red button.',
     ],
@@ -561,11 +562,11 @@ export const LESSONS = [
     minutes: 4,
     why: 'Most cancellations have a fixable reason. A save keeps the client covered and the agent paid.',
     steps: [
-      'A lapse save or a client asking to cancel shows as a booked call on your Calendar. Do it within one business day.',
+      'A save call shows as a booked call on your Calendar: the day after a draft the agent said No to "Still on the books?", a lapse, or a client asking to cancel. Do it within one business day.',
       'Listen first. Ask what\'s behind it: money, a payment problem, or a question about the policy.',
-      'Payment problem: fix it as in Failed payments.',
-      'Anything else (price, cover, "I don\'t need it"): book them with their agent as soon as possible. That conversation is the agent\'s.',
-      'Never pressure. If they still want to cancel, record the result Wants to cancel, with a note of why. Their agent sees it. Price, cover or advice questions: Send to agent.',
+      'Payment problem: fix it as in Failed payments, then record Saved (or Fixing it).',
+      'Anything else (price, cover, "I don\'t need it"): press Check agent and hand them over live. If the agent can\'t take it, book the agent\'s calendar. Record Transferred to agent or Booked with agent.',
+      'Never pressure. If it can\'t be saved, record Can\'t be saved and pick why. The client moves to Closed on the agent\'s side with that reason.',
     ],
     script: {
       title: 'Opening a save call',
@@ -573,11 +574,12 @@ export const LESSONS = [
         say('Hi [first name], it\'s [your first name] with Deedstone. I saw you might want to cancel your [carrier] policy. Can I ask what\'s going on? Sometimes there\'s an easy fix.', { approve: true }),
       ],
     },
-    dos: ['Listen before anything else', 'Fix payment problems on the spot', 'Book them with their agent'],
+    dos: ['Listen before anything else', 'Fix payment problems on the spot', 'Hand them to their agent live, or book the agent'],
     donts: ['Never pressure or scare', 'Don\'t offer a different price or policy', 'Don\'t argue'],
     portal: { shot: 'servicing', clicks: [{ spot: 'card', text: 'Open the save step' }] },
     check: [
-      ok('A client wants to cancel because it\'s too expensive. You:', ['Offer a cheaper policy', 'Book them with their agent', 'Cancel it for them', 'Tell them it\'s worth it'], 1, 'Price and cover talks are the agent\'s.'),
+      ok('A client wants to cancel because it\'s too expensive. You:', ['Offer a cheaper policy', 'Check agent and hand them over, or book the agent', 'Cancel it for them', 'Tell them it\'s worth it'], 1, 'Price and cover talks are the agent\'s.'),
+      ok('It can\'t be saved. You record:', ['Nothing', 'Can\'t be saved, with the reason', 'Saved', 'No answer'], 1, 'The client moves to Closed with that reason.'),
       ok('How fast is a save step done?', ['Within one business day', 'Within a month', 'At renewal', 'Whenever'], 0, 'Within one business day.'),
       ok('What do you do first?', ['Listen and ask why', 'Read the cancellation rules', 'Transfer to the carrier', 'Quote the cost of no cover'], 0, 'Listen first.'),
     ],

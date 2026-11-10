@@ -1,3 +1,4 @@
+import { SAVE_OUTCOMES } from './clientLine.js'
 // P837 — the VA servicing desk's rules (migration 206). No React, no network.
 // Rows come from va_servicing_queue(): task_id, policy_id, lead_id, kind, status,
 // requested_by, due_at, best_time, outcome, client_name, client_state, carrier,
@@ -20,8 +21,8 @@ const CHANGE = [['completed', 'Done'], ['could_not_complete', "Couldn't finish"]
 const CALL = [['completed', 'Completed'], ['not_reached', 'Not reached']]
 // One closed list per kind, the server's exact values (206's FRONTEND CONTRACT).
 export const OUTCOMES = {
-  // P888: the four things a VA hears on a save call (p888 va_servicing_outcome). 'lapsed' is history only.
-  lapse_save: [['saved', 'Saved'], ['fixing', 'Fixing it'], ['client_cancelled', 'Wants to cancel'], ['no_answer', 'No answer']],
+  // P888/P924: what a VA records on a save call (258 widens the check). 'lapsed' and 'client_cancelled' are history only.
+  lapse_save: SAVE_OUTCOMES,
   packet_check: [['delivered', 'Delivered'], ['not_delivered', 'Not delivered']],
   // P891: the welcome call for a client the agent added. No answer retries next business day, 3 tries in all.
   welcome_call: [['welcomed', 'Welcomed'], ['details_fixed', 'Details fixed'], ['problem', 'Problem → agent'], ['no_answer', 'No answer']],
@@ -31,7 +32,7 @@ export const OUTCOMES = {
   claim_help: CHANGE, carrier_call: CHANGE, other: CHANGE,
 }
 export const outcomesOf = kind => OUTCOMES[kind] || CHANGE
-export const outcomeLabel = (kind, v) => outcomesOf(kind).find(o => o[0] === v)?.[1] || (kind === 'lapse_save' && v === 'lapsed' ? 'Lapsed' : null)
+export const outcomeLabel = (kind, v) => outcomesOf(kind).find(o => o[0] === v)?.[1] || (kind === 'lapse_save' ? { lapsed: 'Lapsed', client_cancelled: 'Wants to cancel' }[v] || null : null)
 
 export const SEND_REASONS = [['coverage', 'Coverage question'], ['advice', 'Needs advice'], ['other', 'Something else']]
 

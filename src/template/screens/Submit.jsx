@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Check, ChevronLeft, ChevronRight, Pencil, User, ShieldCheck, ClipboardCheck, PhoneCall, Wrench, Activity as ActivityIcon, Clock3, CalendarClock, UserPlus, Trash2 } from 'lucide-react'
+import { Check, Contact, ChevronLeft, ChevronRight, Pencil, User, ShieldCheck, ClipboardCheck, PhoneCall, Activity as ActivityIcon, Clock3, CalendarClock, UserPlus, Trash2 } from 'lucide-react'
 import { useSampleActions, useSampleSettings, useSampleLeads, useSampleClients } from '../data'
-import { Field, Pending, Seg, Chip, useNote, initials } from '../kit'
+import { Field, Seg, Chip, useNote, initials } from '../kit'
 import { Select } from '../Select'
 import { matchPeople, fillFromMatch } from '../leadLifecycle'
 import { agentChip } from '../agentView'
@@ -20,6 +20,7 @@ import { formatPhone } from '../phoneMask'
 import { EMPTY_SUBMIT, EMPTY_SPOUSE, NEEDED, TIMES, DRAFT_DAYS, missingFields, buildSubmission, reachText, livesIn } from '../submitModel'
 import { ordinal } from '../../lib/clientCheck.js'
 import '../submit923.css'
+import { CLIENT_LINE_WORDS, CONTACT_NAME, fill } from '../../lib/clientLine'
 
 // P843: Submit a policy, built out in the shell design. Three clear steps (the client, the policy, review) with a
 // live summary beside them. P868: the phone formats itself and saves as E.164, the state is a dropdown, the carrier
@@ -48,9 +49,9 @@ const STEPS = [
   { key: 'review', label: 'Review', sub: 'Check and submit', Icon: ClipboardCheck, needs: [] },
 ]
 const NEXT = [
-  [PhoneCall, 'Our team takes it from here', 'They set it up with the client and the carrier. It shows as Working.'],
+  [PhoneCall, 'Our team takes it from here', 'They set it up with the client and the carrier. It shows as Working. The client gets our contact card, so their calls and texts come to our team.'],
   [ShieldCheck, 'Protected', 'Once it’s in force it turns green. Nothing needed from you.'],
-  [ActivityIcon, 'Once a month: still on the books?', 'A few days after each draft we ask. One tap to confirm.'],
+  [ActivityIcon, 'Once a month: still on the books?', 'The day after each draft we ask. One tap to confirm. A No books a save call with our team.'],
 ]
 
 function Steps({ at, done, onPick }) {
@@ -182,6 +183,12 @@ export default function Submit() {
           <h2>Submitted</h2>
           <p>{done.name}{done.spouse ? ` and ${done.spouse} are` : ' is'} on your books{done.spouse ? ', each with their own policy in one household' : ''}. {done.call ? `Their hand-off call is booked for ${done.call}.` : 'Our team takes it from here.'}{done.cancel ? ` The call to cancel the old policy is booked for ${done.cancel}${done.cancelBy ? `, before its ${done.cancelBy} draft` : ''}.` : ''} It shows on Clients as Working until it{'’'}s Protected.</p>
           <ol className="fx-sub-next">{NEXT.map(([Icon, t, s]) => <li key={t}><span className="fx-sub-nic"><Icon size={16} aria-hidden="true" /></span><span><b>{t}</b><small>{s}</small></span></li>)}</ol>
+          {/* P924: the welcome text carries our contact card, so the client calls or texts our team, not you. */}
+          <div className="fx-sub-welcome" aria-label="The welcome text we send">
+            <small>The welcome text we send {done.name.split(' ')[0]}</small>
+            <p>{fill(CLIENT_LINE_WORDS.welcome_card, { first: done.name.split(' ')[0] })}</p>
+            <span className="fx-sub-vcard"><Contact size={16} aria-hidden="true" /><b>{CONTACT_NAME}</b><small>Contact card · your Deedstone number</small></span>
+          </div>
           <div className="tp-row tp-wrap fx-sub-okacts">
             <Link to={paths.clients()} className="tp-primary fx-accent">See your clients</Link>
             <button type="button" className="tp-btn ov-ghost" onClick={restart}>Submit another</button>
@@ -259,7 +266,6 @@ export default function Submit() {
                 <Field label="Monthly premium, optional"><input value={f.spouse.premium} onChange={e => setSpouse({ premium: e.target.value })} inputMode="decimal" /></Field>
               </div>
             </div> : <button type="button" className="tp-btn ov-ghost fx-self" onClick={() => setF({ ...f, spouse: { ...EMPTY_SPOUSE } })}><UserPlus size={15} />Add a second insured (a spouse)</button>}
-            <Pending>Texting consent wording pending</Pending>
           </>}
 
           {S.key === 'review' && <>
@@ -297,11 +303,6 @@ export default function Submit() {
           <h3>What happens next</h3>
           <ol className="fx-sub-next">{NEXT.map(([Icon, t, s]) => <li key={t}><span className="fx-sub-nic"><Icon size={16} aria-hidden="true" /></span><span><b>{t}</b><small>{s}</small></span></li>)}</ol>
         </section>
-        <Link to={paths.requestService()} className="fx-tile fx-sub-req" style={{ '--i': 3 }}>
-          <span className="fx-sub-nic"><Wrench size={16} aria-hidden="true" /></span>
-          <span className="tp-grow"><b>Request a service</b><small>Something to change on a client you already have</small></span>
-          <ChevronRight size={16} aria-hidden="true" />
-        </Link>
       </aside>
     </div>
   )

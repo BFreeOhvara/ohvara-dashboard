@@ -119,7 +119,7 @@ export function AddClients({ open, onClose }) {
     <Drawer open={open} onClose={close} title="Add your clients" sub="Clients you sold anywhere. Your client care team calls each one to welcome them, then looks after them like any client."
       footer={<>
         <AddedCost billing={billing} adding={ready} />
-        <label className="tp-check bi-ack"><input type="checkbox" checked={ack} onChange={e => setAck(e.target.checked)} /><span>{TEAM_CALL_ACK} <span className="tp-tag">Draft wording</span></span></label>
+        <label className="tp-check bi-ack"><input type="checkbox" checked={ack} onChange={e => setAck(e.target.checked)} /><span>{TEAM_CALL_ACK}</span></label>
         <button type="button" className="tp-primary fx-accent" disabled={!ack || !ready || busy} onClick={save}><UserPlus size={16} />{ready > 1 ? `Add ${ready} clients` : 'Add client'}</button>
       </>}>
       <Seg label="How" value={mode} onChange={k => { setMode(k); setOnly(false) }} options={[{ key: 'one', label: 'One client' }, { key: 'import', label: 'Import' }]} className="bi-seg" />

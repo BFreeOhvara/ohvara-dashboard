@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Phone, Plus, AlertTriangle, Smartphone, Link2, ListChecks } from 'lucide-react'
+import { Phone, Plus, AlertTriangle, Smartphone, Link2, ListChecks, Users } from 'lucide-react'
 import { Chip, Switch, SampleTag, Empty, Field, useNote } from '../../template/kit'
 import { PhoneInput } from '../../template/PhoneInput'
-import { useAdmSource } from '../data'
+import { useAdmSource, useAdmVas } from '../data'
 import { SAMPLE_POOL, CALLER_NAME, DEFAULT_LIMIT, DEFAULT_ESTIMATE, isHot, isFull, poolWarning, shownPhone, barOf, BRANDING_STEPS } from '../../lib/deedstonePool'
-import { loadPool, saveNumber, savePoolSettings, VOICE_URL } from '../../hooks/deedstoneAdmin'
+import { loadPool, saveNumber, savePoolSettings, loadPods, savePod, VOICE_URL } from '../../hooks/deedstoneAdmin'
+import { POD_MIN, POD_MAX } from '../../lib/clientLine'
 import './numbers916.css'
 
 // P916 — Settings → Deedstone numbers (admins only; agents never see any of this). Every call a client gets shows
@@ -21,6 +22,17 @@ export function DeedstoneNumbers() {
   const [estimate, setEstimate] = useState(String(pool?.estimate ?? DEFAULT_ESTIMATE))
   const [add, setAdd] = useState({ phone: '', label: '', provider: '' })
   const [busy, setBusy] = useState(false)
+  const vas = useAdmVas().data || []
+  const [pods, setPods] = useState({})
+  const [editing, setEditing] = useState(null)   // { id, pick: [va ids] }
+  useEffect(() => {
+    if (src !== 'real') return undefined
+    let alive = true
+    loadPods().then(p => { if (alive) setPods(p) })
+    return () => { alive = false }
+  }, [src])
+  const podOf = n => (src === 'real' ? pods[n.id] : n.pod) || []
+  const vaName = id => vas.find(v => v.id === id)?.name || 'A VA'
 
   const took = useCallback(p => {
     setPool(p)
@@ -53,6 +65,14 @@ export function DeedstoneNumbers() {
     if (src !== 'real') sample = { ...sample, numbers: sample.numbers.map(x => (x.id === n.id ? { ...x, active } : x)) }
     else await saveNumber({ id: n.id, phone: n.phone, label: n.label, caller_name: n.caller_name, provider_number_id: n.provider_number_id, active })
   }, `${shownPhone(n.phone)} ${active ? 'on' : 'off'}${src === 'real' ? '' : ' (sample)'}`)
+  // P924: 2 or 3 VAs answer the clients who call or text each number.
+  const savePodPick = n => run(async () => {
+    const pick = editing.pick
+    if (pick.length < POD_MIN || pick.length > POD_MAX) throw new Error('Pick 2 or 3 VAs.')
+    if (src !== 'real') sample = { ...sample, numbers: sample.numbers.map(x => (x.id === n.id ? { ...x, pod: pick } : x)) }
+    else { await savePod(n.id, pick); setPods(await loadPods()) }
+    setEditing(null)
+  }, src === 'real' ? 'VAs saved' : 'VAs saved (sample)')
   const saveLimits = () => run(async () => {
     const l = Math.round(Number(limit)); const e = Math.round(Number(estimate))
     if (!(l >= 10 && l <= 2000) || !(e >= 1 && e <= 500)) throw new Error('Limit 10 to 2,000 calls; a new agent 1 to 500.')
@@ -104,6 +124,20 @@ export function DeedstoneNumbers() {
                   </li>
                 ))}
               </ol>
+              <div className="dn-pod">
+                <Users size={15} aria-hidden="true" />
+                {editing?.id === n.id ? <>
+                  <span className="tp-grow dn-pod-pick" role="group" aria-label={`VAs on ${shownPhone(n.phone)}`}>{vas.map(v => {
+                    const on = editing.pick.includes(v.id)
+                    return <button key={v.id} type="button" aria-pressed={on} className={`fx-chip${on ? ' is-on' : ''}`} disabled={!on && editing.pick.length >= POD_MAX} onClick={() => setEditing({ ...editing, pick: on ? editing.pick.filter(x => x !== v.id) : [...editing.pick, v.id] })}><b>{v.name}</b></button>
+                  })}</span>
+                  <button type="button" className="tp-btn" onClick={() => setEditing(null)}>Cancel</button>
+                  <button type="button" className="tp-primary fx-accent" disabled={busy || editing.pick.length < POD_MIN} onClick={() => savePodPick(n)}>Save</button>
+                </> : <>
+                  <span className="tp-grow"><small>Clients who call or text it reach</small> <b>{podOf(n).length ? podOf(n).map(vaName).join(', ') : 'any free VA (no VAs picked)'}</b></span>
+                  <button type="button" className="tp-btn" onClick={() => setEditing({ id: n.id, pick: podOf(n) })}>Change VAs</button>
+                </>}
+              </div>
             </li>
           )
         })}</ul>
@@ -116,7 +150,7 @@ export function DeedstoneNumbers() {
         <Field label="AI caller number id" hint="Only if the AI caller runs on Vapi"><input value={add.provider} maxLength={120} onChange={e => setAdd({ ...add, provider: e.target.value })} /></Field>
         <button type="button" className="tp-primary fx-accent" disabled={add.phone.length !== 10 || busy} onClick={addNumber}><Plus size={16} aria-hidden="true" />Add number</button>
       </div>
-      <p className="dn-info"><Link2 size={15} aria-hidden="true" /><span>In Twilio, set each number’s Voice URL (POST) to <code>{VOICE_URL}</code>. Calls in then ring the caller’s own agent first, then a VA.</span></p>
+      <p className="dn-info"><Link2 size={15} aria-hidden="true" /><span>In Twilio, set each number’s Voice URL (POST) to <code>{VOICE_URL}</code>. Calls in ring the VA who last talked with the caller, then this number’s VAs, then any free VA; if nobody can take it, a callback is booked. Clients reach our team, not the agent.</span></p>
 
       <h3 className="fx-h3 dn-h"><ListChecks size={16} aria-hidden="true" />So the name shows: Brayden and Jordan</h3>
       <ol className="dn-steps">{BRANDING_STEPS.map(([t, s]) => <li key={t}><b>{t}</b><small>{s}</small></li>)}</ol>

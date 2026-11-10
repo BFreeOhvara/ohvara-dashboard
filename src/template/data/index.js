@@ -3,7 +3,7 @@ import { instantOf, clockOf, dateOf, zoneOf } from '../../lib/callSlots.js'
 import { bookNoShowCall, cancelNoShowCall } from '../ful/data.js'
 import { checkLists, CHECK_DEFAULTS } from '../../lib/clientCheck.js'
 import { seedEvents, applyMove, rebookLead, closeCallTask, whenLabel, needsYouNow, forYourInfo, addMin, STAGES, SAMPLE_NOW } from '../leadLifecycle.js'
-import { canMove, clientCards, unsubmittedSales, followUpPick } from '../agentView.js'
+import { canMove, clientCards, unsubmittedSales, followUpPick, agentStatusOf } from '../agentView.js'
 import { wallOf } from '../../lib/agentReal.js'
 import { leadText, SENDER } from '../leadTexts.js'
 import { nightly as nightlyOf, expected, startsText, TIERS, SETUP_FEE } from '../spendPlan.js'
@@ -371,7 +371,9 @@ function useClientSample(id) { const s = useStore(); const all = clientsOf(s); r
 function useAppointmentsSample() { const s = useStore(); return ok(s.appointments) }
 function useThreadsSample() { const s = useStore(); return ok(s.threads) }
 function useActivitySample() { const s = useStore(); return ok(s.activity) }
-function useBillingSample() { const s = useStore(); return ok(useMemo(() => billingView(s.billing, s.submitted), [s.billing, s.submitted])) }
+// P924: one set of hours. The hours in Settings are when the agent takes booked calls AND live calls, so take follows them.
+function useBillingSample() { const s = useStore(); return ok(useMemo(() => billingView({ ...s.billing, take: oneHours(s.settings) }, s.submitted), [s.billing, s.submitted, s.settings])) }
+export const oneHours = st => ({ mode: 'both', hours: st.week, tz: st.timeZone || 'America/Chicago' })
 // P878: the billing record plus what's worked out from it (P909: tonight's charge and the credit, the week's range).
 function billingView(b, submitted) {
   const n = nightlyOf(b.nightly, b.spend, b.plan)
@@ -708,7 +710,12 @@ export const useDataSource = () => useImpl().source
 export function useWeek() { const w = useImpl().useWeek(); return useMemo(() => weekTools(w), [w]) }
 // The clock the lifecycle rules read: the sample clock (Mon, Nov 2, 2:14 PM) or the agent's real wall clock.
 export const useNow = () => { const i = useImpl(); return i.useNow ? i.useNow() : i.now }
-export function useSampleLeads(...a) { return useImpl().useLeads(...a) }
+// P924: leads that never reached the agent (wrong number, couldn't reach, opted out) are never on the agent's side.
+export function useSampleLeads(...a) {
+  const r = useImpl().useLeads(...a)
+  const data = useMemo(() => (r.data || []).filter(l => agentStatusOf(l) !== 'closed'), [r.data])
+  return useMemo(() => ({ ...r, data }), [r, data])
+}
 export function useSampleLead(...a) { return useImpl().useLead(...a) }
 export function useSampleClients(...a) { return useImpl().useClients(...a) }
 export function useSampleClient(...a) { return useImpl().useClient(...a) }

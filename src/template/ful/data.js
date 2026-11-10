@@ -1,6 +1,7 @@
 import { useSyncExternalStore, createContext, useContext, createElement } from 'react'
 import { shortDate } from '../../lib/clientCheck.js'
 import { instantOf, clockOf, dateOf, zoneOf, freeVa, blockTime, nextSlot, preferredWindow, windowOfMinute, minuteOf, zoneAbbr } from '../../lib/callSlots.js'
+import { textToWork } from '../../lib/clientLine.js'
 import { typeOfKind, isCallKind, callType, CALL_TYPES, RETRY_KINDS, CALLBACK_WHY } from './bookings.js'
 import { draftIn } from '../../lib/clientCheck.js'
 import { SUPPORT_THREAD } from '../support911.js'
@@ -172,6 +173,14 @@ const seedTasks = [
   // booked call, never a queue. who = the person when they aren't a client yet.
   mkTask('cb-1', 'callback', null, { why: 'asked', agent_id: 'ag-dana', who: { name: 'Angela Moore', phone: '(210) 555-0147', city: 'San Antonio', state: 'TX' }, window: 'Afternoon', note: 'Asked us to call back after lunch. A question about her Globe Life policy.' }),
   mkTask('cb-2', 'callback', null, { why: 'missed_call', agent_id: 'ag-marcus', who: { name: 'Owen Price', phone: '(702) 555-0119', city: 'Henderson', state: 'NV' }, note: 'Called us at 8:31 AM and nobody picked up. The system booked this callback.' }),
+  // P924: clients text and call our team, not the agent. A text becomes a booked call (or a pod task) and the
+  // automatic reply has already gone; a coverage question ends with a live transfer or a call on the agent's calendar.
+  mkTask('cb-4', 'callback', 'fc-robert', { why: 'client_text', agent_id: 'ag-marcus', intent: 'question', window: 'Afternoon', text: 'Does my policy cover my wife too?',
+    reply: textToWork({ body: 'Does my policy cover my wife too?', va: 'Maya', when: 'today at 3 PM' }).reply,
+    note: 'A coverage question: find out what he needs, then Check agent to hand him to Marcus live, or book Marcus’s calendar.' }),
+  mkTask('cb-5', 'callback', 'fc-carla', { why: 'client_text', agent_id: 'ag-priya', intent: 'payment', text: 'my bank changed, the draft will bounce',
+    reply: textToWork({ body: 'my bank changed, the draft will bounce', va: 'Maya', when: 'today at 4 PM' }).reply,
+    note: 'A payment problem: get the new bank details and send the change to the carrier.' }),
   mkTask('cb-3', 'callback', null, { why: 'reply', agent_id: 'ag-dana', who: { name: 'Hector Ruiz', phone: '(469) 555-0193', city: 'Plano', state: 'TX' }, note: 'Replied “yes call me” to the day-60 check-in text. The automatic answer already went.' }),
 ]
 
@@ -540,7 +549,7 @@ function useFulActionsSample() {
     putBack: id => set(s => ({ tasks: s.tasks.map(t => (t.id === id ? { ...t, held: false, status: t.status === 'in_progress' ? (t.iso ? 'scheduled' : 'requested') : t.status } : t)) })),
     // P888/P891/P907: a No answer on a call that retries books the next try by itself on the next business day, in
     // the same window (3 tries in all). Fixing it books a check-it-cleared call 3 days on.
-    finishTask: (id, outcome) => set(s => {
+    finishTask: (id, outcome, reason = null) => set(s => {
       const t = s.tasks.find(x => x.id === id)
       const tries = (t.tries || 1) + 1
       if (RETRY_KINDS.includes(t.kind) && outcome === 'no_answer' && tries <= 3) {
@@ -552,6 +561,22 @@ function useFulActionsSample() {
         const check = bookTask({ ...s, tasks: done }, mkTask(`st-${Date.now()}`, 'lapse_save', t.client_id, { missed: t.missed && { ...t.missed, check: true },
           note: 'Check the fixed payment cleared. Call the client if it didn’t.' }), { from: nextDayFrom(t.iso, 3) })
         return { tasks: [...done, check] }
+      }
+      // P924: a save call ends with the agent (live transfer or a booked call on their calendar) or in Closed with
+      // the reason. Saved puts the client back to Protected.
+      if (t.kind === 'lapse_save' && ['to_agent', 'agent_booked', 'not_saved', 'saved'].includes(outcome)) {
+        const c = clientOf(s, t.client_id)
+        const stage = outcome === 'not_saved' ? 'closed' : outcome === 'saved' ? 'protected' : 'needs_attention'
+        const step = { to_agent: `Transferred to ${agentName(c.agent_id)}`, agent_booked: `Call with ${agentName(c.agent_id)} booked`, not_saved: `Closed: ${reason || 'Can’t be saved'}`, saved: null }[outcome]
+        const clients = s.clients.map(x => (x.id === c.id ? { ...x, stage, next_step: step || undefined, attention: undefined, closed_reason: outcome === 'not_saved' ? reason || 'Other' : x.closed_reason } : x))
+        const what = { to_agent: `Save call: ${fullName(c)} transferred to you live`, agent_booked: `Save call: ${fullName(c)} booked on your calendar`, not_saved: `Save call: ${fullName(c)} can’t be saved (${reason || 'Other'}). Moved to Closed`, saved: `Save call: ${fullName(c)} saved` }[outcome]
+        return { tasks: done, clients, ...feedAdd(s, agentName(c.agent_id), what, 'servicing') }
+      }
+      // P924: a client's call or text handed to the agent: the agent is told.
+      if (['callback', 'cancel_request'].includes(t.kind) && ['to_agent', 'agent_booked'].includes(outcome)) {
+        const c = whoOf(s, t)
+        const who = fullName(c).trim() || 'A client'
+        return { tasks: done, ...feedAdd(s, agentName(c.agent_id || t.agent_id), outcome === 'to_agent' ? `${who} transferred to you live` : `${who} booked on your calendar by our team`, 'servicing') }
       }
       // P891: Problem → the agent is told (the VA's note says what). P907: the same for a hand-off call.
       if ((t.kind === 'welcome_call' || t.kind === 'handoff_call') && outcome === 'problem') {

@@ -8,7 +8,6 @@ import Leads from './screens/Leads'
 import Calendar from './screens/Calendar'
 import Clients from './screens/Clients'
 import Submit from './screens/Submit'
-import RequestService from './screens/RequestService'
 import Messages from './screens/Messages'
 import Activity from './screens/Activity'
 import Billing from './screens/Billing'
@@ -32,7 +31,7 @@ import { DeedstoneCallProvider } from './DeedstoneCall'
 // every screen reads the agent's own rows (hooks/agentRealData.js). The tree is keyed on the mode, so a switch remounts it.
 const SCREENS = {
   overview: Overview, leads: Leads, lead: Leads, calendar: Calendar, clients: Clients, client: Clients, submit: Submit,
-  requestService: RequestService, activity: Activity, billing: Billing, more: More, settings: Settings, messages: Messages,
+  activity: Activity, billing: Billing, more: More, settings: Settings, messages: Messages,
 }
 // P908: below 768 px these pages are the phone build (src/template/m); the rest keep their screen inside the phone frame.
 const PHONE = { overview: MOverview, leads: MLeads, lead: MLeads, calendar: MCalendar, clients: MClients, client: MClients, more: MMore }
@@ -54,6 +53,8 @@ export default function AgentShell({ account }) {
             <Route element={<ShellFrame />}>
               {Object.entries(SHELL_ROUTES).map(([key, path]) => {
                 const Screen = SCREENS[key]
+                // P924: Request a service is gone; its old address lands on Clients.
+                if (key === 'requestService') return <Route key={key} path={path} element={<Navigate to={SHELL_ROUTES.clients} replace />} />
                 // Screens read the id as :id (the /template routes); the real client URL calls it :clientId.
                 return <Route key={key} path={path.replace(':clientId', ':id')} element={<Pick d={Screen} m={PHONE[key]} />} />
               })}

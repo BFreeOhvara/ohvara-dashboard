@@ -264,7 +264,7 @@ export function useFulActionsReal() {
       // Servicing (migration 206's functions)
       startTask: id => run(() => rpc('va_servicing_claim', { p_task: id }), [S]),
       putBack: id => run(() => rpc('va_servicing_release', { p_task: id }), [S]),
-      finishTask: (id, o) => run(() => rpc('va_servicing_outcome', { p_task: id, p_outcome: o }), [S]),
+      finishTask: (id, o, reason) => run(() => rpc('va_servicing_outcome', reason ? { p_task: id, p_outcome: o, p_reason: reason } : { p_task: id, p_outcome: o }), [S]),
       scheduleTask: (id, when) => {
         const at = instantFromWords(when, clock, tz)
         return at ? run(() => rpc('va_servicing_schedule', { p_task: id, p_at: at }), [S]) : note('Pick a time first')

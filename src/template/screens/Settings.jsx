@@ -1,23 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { User, Bell, Radio, CreditCard, SunMoon, Mail, LogOut, Trash2, ChevronRight, KeyRound, BadgeCheck } from 'lucide-react'
-import { useSampleSettings, useSampleActions, useSampleBilling, useSampleClients, useSampleLeads, useSampleOverview } from '../data'
+import { User, Bell, Radio, CreditCard, SunMoon, LogOut, Trash2, KeyRound, BadgeCheck } from 'lucide-react'
+import { useSampleSettings, useSampleActions, useSampleBilling } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
-import { Drawer, Field, Seg, Switch, PillTabs, useNote, useAccount, initials } from '../kit'
+import { Drawer, Field, Seg, Switch, useNote, useAccount } from '../kit'
+import { SettingsNav } from '../SettingsNav'
 import { TimeZoneSelect } from '../Clock'
 import { PhoneInput } from '../PhoneInput'
-import { CountUp, usd } from '../motion'
+import { usd } from '../motion'
 import { paths } from '../paths'
-import { dailyTotal, rangeWords, planOf } from '../spendPlan'
-import { BookedMeter, TakeLeads } from '../PlanBuilder'
-import { inLiveHours, takeOk } from '../../lib/leadSplit'
+import { dailyTotal, planOf } from '../spendPlan'
 import { HoursEditor } from '../Hours'
 import { LicenceCard } from '../Licence'
 import { PaymentIntakeCard } from '../PaymentIntake'
 import { DeedstonePhone } from '../DeedstonePhone'
 
 const TABS = [['profile', 'Profile', User], ['licence', 'Licence', BadgeCheck], ['alerts', 'Notifications', Bell], ['calls', 'Hours and calls', Radio], ['billing', 'Billing', CreditCard], ['look', 'Appearance', SunMoon]]
-const NEEDS = ['ringing', 'showed']
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
 
 // Discard / Save under every section. Save is off until something changed.
@@ -34,46 +32,12 @@ function Head({ title, sub }) {
   return <header className="fx-form-h"><h2>{title}</h2><p>{sub}</p></header>
 }
 
-// Left: who you are, this week's budget and how many it has booked, three numbers, what's next.
-function ProfileCard({ profile }) {
-  const { data: billing } = useSampleBilling()
-  const duty = billing.take?.mode === 'both' && inLiveHours(billing.take.hours, billing.take.tz)
-  const { data: clients } = useSampleClients()
-  const { data: leads } = useSampleLeads()
-  const { data: ov } = useSampleOverview()
-  const wk = billing.expected.appts.booked
-  const money = usd()
-  const next = ov.nextAppt || ov.upNext[0]
-  const stats = [[clients.length, 'Clients'], [leads.filter(l => NEEDS.includes(l.stage)).length, 'Need you'], [leads.filter(l => l.stage === 'booked').length, 'Booked']]
-  return (
-    <aside className="fx-tile fx-prof" aria-label="Your profile">
-      <div className="fx-prof-av" aria-hidden="true">{initials(profile.name).toUpperCase()}<i className={duty ? 'on' : ''} /></div>
-      <h2>{profile.name}</h2>
-      <p>Agent · {billing.take?.mode !== 'both' ? 'Appointments only' : duty ? 'Live transfers on now' : 'Live transfers off now'}</p>
-      <span className="fx-prof-mail"><Mail size={13} aria-hidden="true" />{profile.email}</span>
-      <div className="fx-usage is-teal">
-        <div className="tp-row tp-between"><b>Lead spend {money(dailyTotal(billing.spend))} a day</b><b className="fx-usage-n"><CountUp value={billing.booked} /></b></div>
-        <BookedMeter booked={billing.booked} range={wk} />
-        <small><b>{billing.booked}</b> booked this week · about {rangeWords(wk)} expected · servicing {billing.servicing.status}</small>
-      </div>
-      <ul className="fx-pstats">{stats.map(([n, label]) => <li key={label}><small>{label}</small><b className="tp-num"><CountUp value={n} /></b></li>)}</ul>
-      {next && (
-        <Link to={paths.calendar()} className="fx-pnext">
-          <i aria-hidden="true" />
-          <span className="tp-grow"><small>Next up</small><b>{next.label} with {next.who}</b><small>{next.day} · {next.time}</small></span>
-          <ChevronRight size={16} aria-hidden="true" />
-        </Link>
-      )}
-    </aside>
-  )
-}
-
-// Settings, Solvik-style: the profile card on the left, one panel on the right whose pill tabs switch sections.
+// Settings (P924): the sections listed on the left (SettingsNav, the same in every portal), one on the right.
 // Each section is a short form with Discard / Save. Sign out and delete keep their real code.
 export default function Settings() {
   const { data: s } = useSampleSettings()
   const { data: billing } = useSampleBilling()
-  const { setNotification, setTake, saveSettings, saveWeek } = useSampleActions()
+  const { setNotification, saveSettings, saveWeek } = useSampleActions()
   const [saved, saveTheme] = useThemePref()
   const note = useNote()
   const account = useAccount()
@@ -87,7 +51,7 @@ export default function Settings() {
   const [pDraft, setPDraft] = useState(s.profile)
   const [tz, setTz] = useState(s.timeZone)
   const [alerts, setAlerts] = useState(s.notifications)
-  const [cDraft, setCDraft] = useState({ take: billing.take, week: s.week })
+  const [cDraft, setCDraft] = useState({ week: s.week })
   const [bill, setBill] = useState({ email: s.profile.email, receipts: true })
   const [bDraft, setBDraft] = useState(bill)
   const [look, setLook] = useState(saved)
@@ -101,23 +65,21 @@ export default function Settings() {
 
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
   const alertsDirty = !same(alerts, s.notifications)
-  const callsSaved = { take: billing.take, week: s.week }
+  const callsSaved = { week: s.week }
   const signOut = () => (account.live ? account.signOut() : note('Sign out works once you sign in for real'))
   const DeleteDialog = account.DeleteDialog
   const flip = (key, field, v) => setAlerts(alerts.map(n => (n.key === key ? { ...n, [field]: v } : n)))
   const money = usd()
 
   return (
-    <div className="tp-page fx-set">
+    <div className="tp-page fx-set st-set">
       {/* P843: Sign out is its own small box under the profile card (same real sign-out as before) */}
       <div className="fx-set-side">
-        <ProfileCard profile={profile} />
+        <SettingsNav name={profile.name} role="Agent" tabs={TABS} value={tab} onChange={setTab} />
         <button type="button" className="fx-tile fx-signout" onClick={signOut}><LogOut size={16} aria-hidden="true" />Sign out</button>
       </div>
 
       <section className="fx-tile fx-panel" aria-label="Settings">
-        <PillTabs label="Settings sections" className="fx-ptabs" itemClass="fx-ptab" value={tab} onChange={setTab} items={TABS.map(([key, label, icon]) => ({ key, label, icon }))} />
-
         <div className="fx-form" key={tab} role="tabpanel" aria-label={TABS.find(t => t[0] === tab)[1]}>
           {tab === 'profile' && <>
             <Head title="Profile" sub="How you show up to the team and on everything we send for you." />
@@ -157,14 +119,12 @@ export default function Settings() {
           </>}
 
           {tab === 'calls' && <>
-            <Head title="Hours and calls" sub="When you're active, live calls ring your phone. When you're off, we book callers on your calendar inside these hours." />
-            {/* P890: live-call hours replace the Active switch. Inside them live transfers ring you; outside, we book. */}
-            <TakeLeads take={cDraft.take} onTake={take => setCDraft({ ...cDraft, take })} id="set-take" />
+            <Head title="Hours and calls" sub="One set of hours. Inside them, booked calls land on your calendar and live calls ring your phone. Outside them, we book callers for your next open time." />
+            {/* P924: one set of hours for booked calls and live calls; no second schedule. */}
             <HoursEditor week={cDraft.week} onChange={week => setCDraft({ ...cDraft, week })} tz={s.timeZone} />
             {/* P916: calls go out as Deedstone from the agent's own phone (connected here, with a code call). */}
             <DeedstonePhone />
             <FormFoot dirty={!same(cDraft, callsSaved)} onDiscard={() => setCDraft(callsSaved)} onSave={() => {
-              if (!same(cDraft.take, billing.take) && takeOk(cDraft.take)) setTake(cDraft.take)
               saveWeek(cDraft.week)
               note('Hours and calls saved. Clashes with booked appointments show on Calendar')
             }} />

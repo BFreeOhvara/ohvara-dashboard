@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CreditCard, History, Settings, MessageSquare, LifeBuoy, Smartphone, CircleHelp, LogOut, ChevronRight, Radio, Sun, Moon, Trash2, ShieldCheck, Home, Globe, FileUp } from 'lucide-react'
+import { CreditCard, History, Settings, MessageSquare, Smartphone, CircleHelp, LogOut, ChevronRight, Radio, Sun, Moon, Trash2, ShieldCheck, Home, Globe, FileUp } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { useSampleBilling, useSampleSettings, useSampleActivity, useSampleActions, useSampleThreads } from '../data'
 import { useAccount, useNote, initials } from '../kit'
 import { avatarHue } from '../avatarHue'
-import { SpendSliders, TakeLeads } from '../PlanBuilder'
-import { takeOk, inLiveHours } from '../../lib/leadSplit'
+import { SpendSliders } from '../PlanBuilder'
+import { inLiveHours } from '../../lib/leadSplit'
 import { dailyTotal, openSlotsPerWeek, spendOk, planOf, bandOf } from '../spendPlan'
 import { usd } from '../motion'
 import { paths, isTemplateAddress } from '../paths'
@@ -18,7 +18,7 @@ import { Sheet } from './Sheet'
 import { mp } from './mpaths'
 
 // P908 — More on a phone: you, live-transfer status, then stacked rows for Billing, Activity and Settings (their full
-// pages, with a back arrow), Messages, Submit, Request a service, the app, help, sign out and delete. Rows 64 px.
+// pages, with a back arrow), Messages, Submit, the app, help, sign out and delete. Rows 64 px.
 function MoreRow({ to, icon: Icon, label, sub, right, onClick, danger }) {
   const inner = <><span className="mx-row-ic"><Icon size={19} aria-hidden="true" /></span><span className="tp-grow"><b>{label}</b>{sub && <small>{sub}</small>}</span>{right}<ChevronRight size={18} className="mx-chev" aria-hidden="true" /></>
   const cls = `mx-row is-link${danger ? ' is-danger' : ''}`
@@ -50,9 +50,9 @@ export default function MMore() {
       </section>
       {account.view?.canPreview && <div className="mx-card mx-view"><ViewToggle /></div>}
 
-      <Link to={mp.billing()} className={`mx-duty${duty ? ' is-on' : ''}`}>
+      <Link to={`${mp.settings()}?tab=calls`} className={`mx-duty${duty ? ' is-on' : ''}`}>
         <Radio size={18} aria-hidden="true" />
-        <span className="tp-grow"><b>{duty ? 'Live transfers ring you now' : 'Live transfers off now'}</b><small>{duty ? 'Inside your live-call hours' : 'We book callers on your calendar'}</small></span>
+        <span className="tp-grow"><b>{duty ? 'Live transfers ring you now' : 'Live transfers off now'}</b><small>{duty ? 'Inside your hours' : 'Outside your hours: we book callers'}</small></span>
         <ChevronRight size={18} aria-hidden="true" />
       </Link>
 
@@ -64,7 +64,6 @@ export default function MMore() {
       <ul className="mx-stack">
         <MoreRow to={paths.messages()} icon={MessageSquare} label="Messages" sub="You and our team" right={unread > 0 ? <span className="mx-count">{unread}</span> : null} />
         <MoreRow to={paths.submit()} icon={FileUp} label="Submit a policy" sub="A sale for servicing" />
-        <MoreRow to={paths.requestService()} icon={LifeBuoy} label="Request a service" sub="Changes, cancellations, documents" />
         <MoreRow icon={Smartphone} label="Get the phone app" sub="Alerts the moment a lead comes in" onClick={() => setPanel('app')} />
         <MoreRow icon={CircleHelp} label="Help and support" sub="Talk to someone, or report a bug" onClick={() => setPanel('help')} />
       </ul>
@@ -89,19 +88,17 @@ export default function MMore() {
   )
 }
 
-// The daily lead spend and how leads come in (the same controls as Billing), as a full-screen sheet.
+// The daily lead spend (the same slider as Billing), as a full-screen sheet. P924: one set of hours, set in Settings.
 export function SpendSheet({ open, onClose }) {
   const { data: billing } = useSampleBilling()
   const { data: settings } = useSampleSettings()
-  const { setSpend, setTake } = useSampleActions()
+  const { setSpend } = useSampleActions()
   const note = useNote()
   const [spend, setDraft] = useState({ daily: dailyTotal(billing.spend) })
-  const [take, setTakeDraft] = useState(billing.take)
   return (
     <Sheet open={open} onClose={onClose} title="Daily lead spend" kicker="Starts with the next day not yet paid"
-      footer={<button type="button" className="mx-btn is-primary is-wide" disabled={!spendOk(billing.plan, spend) || !takeOk(take)} onClick={() => { setSpend(spend); setTake(take); note('Lead spend saved. It starts with the next day not yet paid'); onClose() }}>Save lead spend</button>}>
-      <section className="mx-card mx-plan"><SpendSliders spend={spend} onSpend={setDraft} plan={billing.plan} mode={take.mode} id="m-spend" openSlots={openSlotsPerWeek(settings.week)} band={{ tier: planOf(billing), ...bandOf(planOf(billing)) }} /></section>
-      <section className="mx-card mx-plan"><TakeLeads take={take} onTake={setTakeDraft} id="m-take" /></section>
+      footer={<button type="button" className="mx-btn is-primary is-wide" disabled={!spendOk(billing.plan, spend)} onClick={() => { setSpend(spend); note('Lead spend saved. It starts with the next day not yet paid'); onClose() }}>Save lead spend</button>}>
+      <section className="mx-card mx-plan"><SpendSliders spend={spend} onSpend={setDraft} plan={billing.plan} mode="both" id="m-spend" openSlots={openSlotsPerWeek(settings.week)} band={{ tier: planOf(billing), ...bandOf(planOf(billing)) }} /></section>
     </Sheet>
   )
 }

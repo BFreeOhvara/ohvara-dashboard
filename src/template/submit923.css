@@ -11,3 +11,10 @@
 .sb-before .fx-ta { min-height: 72px; }
 @media (max-width: 999.98px) { .sb-grid3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 599.98px) { .sb-grid3 { grid-template-columns: minmax(0, 1fr); } .sb-before { padding: 12px; } }
+/* P924: the welcome text and the contact card on the Submitted screen. */
+.fx-sub-welcome { display: grid; gap: 6px; margin-top: 14px; padding: 12px 14px; border-radius: 14px; text-align: left; background: color-mix(in srgb, var(--ov-hi) 5%, transparent); border: 1px solid var(--sh-edge); }
+.fx-sub-welcome > small { font-size: 12px; color: var(--ov-mid); }
+.fx-sub-welcome p { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--ov-hi); }
+.fx-sub-vcard { display: inline-flex; align-items: center; gap: 8px; justify-self: start; padding: 6px 10px; border-radius: 10px; background: var(--sh-surface, transparent); border: 1px solid var(--sh-edge); }
+.fx-sub-vcard b { font-size: 13px; color: var(--ov-hi); }
+.fx-sub-vcard small { font-size: 12px; color: var(--ov-mid); }

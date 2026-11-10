@@ -17,8 +17,8 @@ const week = counts => counts.map((calls, i) => ({ day: day(counts.length - 1 - 
 export const SAMPLE_POOL = {
   limit: DEFAULT_LIMIT, estimate: DEFAULT_ESTIMATE, agents_without_phone: 2,
   numbers: [
-    { id: 'n1', phone: '+12145550101', label: 'Dallas 1', caller_name: CALLER_NAME, active: true, provider_number_id: null, agents: 4, load: 118, today: 112, days: week([84, 97, 101, 108, 0, 0, 112]) },
-    { id: 'n2', phone: '+12145550102', label: 'Dallas 2', caller_name: CALLER_NAME, active: true, provider_number_id: null, agents: 3, load: 90, today: 61, days: week([40, 52, 58, 66, 0, 0, 61]) },
+    { id: 'n1', phone: '+12145550101', label: 'Dallas 1', caller_name: CALLER_NAME, active: true, pod: ['va-maya', 'va-keisha'], provider_number_id: null, agents: 4, load: 118, today: 112, days: week([84, 97, 101, 108, 0, 0, 112]) },
+    { id: 'n2', phone: '+12145550102', label: 'Dallas 2', caller_name: CALLER_NAME, active: true, pod: ['va-andre', 'va-omar', 'va-lily'], provider_number_id: null, agents: 3, load: 90, today: 61, days: week([40, 52, 58, 66, 0, 0, 61]) },
     { id: 'n3', phone: '+14695550103', label: 'Plano 1', caller_name: CALLER_NAME, active: true, provider_number_id: null, agents: 0, load: 0, today: 0, days: week([0, 0, 0, 0, 0, 0, 0]) },
   ],
 }

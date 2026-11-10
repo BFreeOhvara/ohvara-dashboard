@@ -31,15 +31,16 @@ export const callType = key => CALL_TYPES[key] || CALL_TYPES.callback
 export const NEW_KINDS = { handoff_call: 'Hand-off call', name_change: 'Name change', change_request: 'Change request', cancel_request: 'Cancel request', callback: 'Callback' }
 export const NEW_OUTCOMES = {
   handoff_call: [['welcomed', 'Done: welcomed'], ['details_fixed', 'Details fixed'], ['problem', 'Problem → agent'], ['no_answer', 'No answer']],
-  cancel_request: [['saved', 'Saved'], ['client_cancelled', 'Cancelled'], ['no_answer', 'No answer']],
-  callback: [['completed', 'Done'], ['no_answer', 'No answer']],
+  cancel_request: [['saved', 'Saved'], ['to_agent', 'Transferred to agent'], ['agent_booked', 'Booked with agent'], ['client_cancelled', 'Cancelled'], ['no_answer', 'No answer']],
+  // P924: a client's call or text ends with us, or with the agent (live, or a call on their calendar).
+  callback: [['completed', 'Done'], ['to_agent', 'Transferred to agent'], ['agent_booked', 'Booked with agent'], ['no_answer', 'No answer']],
 }
 // Kinds whose No answer books the next try by itself (3 tries in all), like P888's save call and P891's welcome call.
 export const RETRY_KINDS = ['lapse_save', 'welcome_call', 'handoff_call', 'cancel_request', 'callback']
 
 // Why a callback was booked (the missed incoming call, a text reply that needs a person, the client asked, a no-show).
 // P910: no_show = a lead missed their booked call with the agent; the VA calls to re-engage and book them again.
-export const CALLBACK_WHY = { missed_call: 'Missed their call', reply: 'Replied to a text', asked: 'Asked for a call back', no_show: 'No show: book them again' }
+export const CALLBACK_WHY = { missed_call: 'Missed their call', reply: 'Replied to a text', asked: 'Asked for a call back', no_show: 'No show: book them again', client_text: 'A client texted us', client_call: 'A client called in' }
 
 // P918: the filter chips beside the week, one per call type (a no-show rebook is a callback the system booked after a
 // lead missed their call with the agent).

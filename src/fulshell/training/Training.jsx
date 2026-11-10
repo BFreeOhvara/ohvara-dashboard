@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   GraduationCap, Lock, CircleCheck, ChevronRight, Search, ArrowLeft, ArrowRight, Check, X, MessageSquareQuote, ListOrdered,
-  ThumbsUp, Ban, MousePointerClick, RotateCcw, Trophy, TriangleAlert, Clock3, Sparkles, PlayCircle, Hand,
+  ThumbsUp, Ban, MousePointerClick, RotateCcw, Trophy, Clock3, PlayCircle, Hand,
 } from 'lucide-react'
 import { useAccount } from '../../template/kit'
 import { fp } from '../../template/ful/paths'
@@ -18,9 +18,8 @@ import './training.css'
 // P872 — Training, for VAs: one lesson per job (./lessons.js). Home: "Finish your training" with progress and the path
 // (lessons unlock in order), and "How do I…?" search. A lesson: why it matters, the steps in order, the words to say,
 // do's and don'ts, what to click (a picture of that screen with numbered spots), then a short check to pass. Sample
-// progress in this browser until P852. Anything a lead or client hears is marked "Draft: Brayden and Jordan approve".
+// progress in this browser until P852. P924: no draft markers on screen; the words to approve are in admin Settings › Wording to approve.
 
-const APPROVE = 'Draft: Brayden and Jordan approve'
 const pctText = n => `${Math.round(n * 100)}%`
 
 function Ring({ value, size = 64 }) {
@@ -92,7 +91,7 @@ function Home({ lessons, t, who }) {
         </section>
 
         <section className="fx-tile tr-path" style={{ '--i': 1 }} aria-label="Lessons">
-          <header className="fx-tile-h"><span className="tp-grow"><h2>Your lessons</h2><p>One per job, in the order you need them</p></span><span className="tp-tag">Draft v1</span></header>
+          <header className="fx-tile-h"><span className="tp-grow"><h2>Your lessons</h2><p>One per job, in the order you need them</p></span></header>
           <ol className="tr-list">
             {lessons.map((l, i) => {
               const s = byId[l.id]
@@ -144,7 +143,6 @@ function Home({ lessons, t, who }) {
             <li><PlayCircle size={15} aria-hidden="true" />Every lesson has a short video. Watching about 90% counts as watched.</li>
             <li><ListOrdered size={15} aria-hidden="true" />Lessons open in order. Where a mistake costs money or breaks a rule, pass a check ({pctText(PASS_MARK)} or better). Everywhere else, try it once on sample data.</li>
             <li><MousePointerClick size={15} aria-hidden="true" />Every task in the portal has a ? that opens its lesson.</li>
-            <li><Sparkles size={15} aria-hidden="true" />Wording marked “{APPROVE}” may still change.</li>
           </ul>
         </section>
       </div>
@@ -252,7 +250,6 @@ function Lesson({ lesson, lessons, t, who }) {
     }
     window.scrollTo({ top: 0 })
   }
-  const approve = (lesson.script?.lines || []).some(x => x.approve)
   const quiz = endsInQuiz(lesson)
   const vid = hasVideo(lesson.id)
   return (
@@ -292,12 +289,12 @@ function Lesson({ lesson, lessons, t, who }) {
 
             {lesson.script && (
               <section className="fx-tile tr-script" style={{ '--i': 2 }} aria-label="What to say">
-                <header className="fx-tile-h"><span className="tp-grow"><h2>What to say</h2><p>{lesson.script.title}</p></span>{approve && <span className="tr-approve"><TriangleAlert size={13} aria-hidden="true" />{APPROVE}</span>}</header>
+                <header className="fx-tile-h"><span className="tp-grow"><h2>What to say</h2><p>{lesson.script.title}</p></span></header>
                 <ul className="tr-lines">
                   {lesson.script.lines.map(x => (
                     <li key={x.text} className={`is-${x.who.toLowerCase()}${x.approve ? ' is-approve' : ''}`}>
                       <span className="tr-who">{x.who === 'Note' ? <MessageSquareQuote size={14} aria-hidden="true" /> : x.who}</span>
-                      <p>{x.text}{x.approve && <small className="tr-approve-tag">{APPROVE}</small>}</p>
+                      <p>{x.text}</p>
                     </li>
                   ))}
                 </ul>

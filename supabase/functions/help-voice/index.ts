@@ -79,7 +79,7 @@ const route: RouteStore = {
     const { data } = await admin.from('recovery_config').select('after_hours_text').limit(1).maybeSingle()
     return data?.after_hours_text ?? null
   },
-  routeInbound: async (callSid, caller) => (await rpc('route_inbound', { p_call_sid: callSid, p_caller: caller })) ?? { queue_id: null },
+  routeInbound: async (callSid, caller, to) => (await rpc('route_inbound', { p_call_sid: callSid, p_caller: caller, p_to: to ?? null })) ?? { queue_id: null },
   afterHoursCall: async (callSid, caller) => { await rpc('route_after_hours_call', { p_call_sid: callSid, p_caller: caller }) },
   inboundGone: async callSid => { await rpc('route_inbound_gone', { p_call_sid: callSid }) },
   async vaLeftLine(callSid, vaLegSid) {

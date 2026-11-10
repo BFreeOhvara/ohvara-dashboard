@@ -319,7 +319,13 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
       deps.log(`[ghl-webhook] save reply ${e.message}`)
       return retry()
     }
-    return json({ ok: e ? 'duplicate' : 'reply_saved', matched: !!lead })
+    if (e) return json({ ok: 'duplicate', matched: !!lead })
+    // P924: a client's text becomes a pod task (or a save call) and a drafted reply (client_text_intake, 258). The
+    // reply is not sent from here: GoHighLevel sends it once the workflow is wired. A failure is logged, not retried
+    // (the text itself is saved).
+    const intake = await deps.rpc('client_text_intake', { p_phone: action.phone, p_body: action.body, p_message_id: `ghl:${action.messageId}` })
+    if (intake.error) deps.log(`[ghl-webhook] client_text_intake ${intake.error.message}`)
+    return json({ ok: 'reply_saved', matched: !!lead, client: (intake.data as { intent?: string } | null)?.intent ?? null })
   }
 
   // sent

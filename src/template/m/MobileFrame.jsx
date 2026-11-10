@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Home, PhoneIncoming, Users, CalendarDays, Ellipsis, Bell, MessageSquare, Plus, ChevronLeft, FileUp, UserPlus, PhoneCall, LifeBuoy, StickyNote, PhoneOutgoing, Search, Info } from 'lucide-react'
+import { Home, PhoneIncoming, Users, CalendarDays, Ellipsis, Bell, MessageSquare, Plus, ChevronLeft, FileUp, UserPlus, PhoneCall, StickyNote, Search, Info } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { useSampleLeads, useSampleNeeds, useSampleThreads, useDataSource, useDataStatus } from '../data'
 import { useAccount, initials } from '../kit'
@@ -8,7 +8,7 @@ import { avatarHue } from '../avatarHue'
 import { liveCalls } from '../agentView'
 import { paths, layoutOf } from '../paths'
 import { AddClients } from '../AddClients891'
-import { BookCall, AddNote, LogCall } from '../TemplateFrame'
+import { BookCall, AddNote } from '../TemplateFrame'
 import { DataLoading, DataError } from '../DataState'
 import Palette from '../Palette'
 import { OhvaraMark } from '../../components/ui/OhvaraMark'
@@ -38,7 +38,7 @@ const TABS = [
 const PAGES = [
   { to: paths.home, label: 'Overview' }, { to: paths.leads, label: 'Leads' }, { to: paths.clients, label: 'Clients' }, { to: paths.calendar, label: 'Calendar' },
   { to: paths.activity, label: 'Activity' }, { to: paths.billing, label: 'Billing' }, { to: paths.messages, label: 'Messages' }, { to: paths.submit, label: 'Submit a policy' },
-  { to: paths.requestService, label: 'Request a service' }, { to: paths.settings, label: 'Settings' }, { to: paths.more, label: 'More' },
+  { to: paths.settings, label: 'Settings' }, { to: paths.more, label: 'More' },
 ]
 
 export default function MobileFrame() {
@@ -106,9 +106,7 @@ export default function MobileFrame() {
         <ActRow icon={FileUp} label="Submit a policy" sub="A sale for servicing. Our team takes it from there" onClick={() => { close(); navigate(paths.submit()) }} />
         <ActRow icon={UserPlus} label="Add clients" sub="Clients you already have" onClick={pick('add')} />
         <ActRow icon={PhoneCall} label="Book a call" sub="Puts it on your calendar" onClick={pick('book')} />
-        <ActRow icon={LifeBuoy} label="Request a service" sub="Changes, cancellations, documents" onClick={() => { close(); navigate(paths.requestService()) }} />
         <ActRow icon={StickyNote} label="Add a note to a client" sub="Shows on their page" onClick={pick('note')} />
-        <ActRow icon={PhoneOutgoing} label="Log a call" sub="A call you made yourself" onClick={pick('log')} />
       </ActionSheet>
       <ActionSheet open={panel === 'bell'} onClose={close} title="Your to-dos" sub={bell ? `${bell} waiting on you` : 'Nothing waiting on you'}>
         <NeedList items={[...needs.now, ...(needs.notices || [])]} onDone={close} />
@@ -121,7 +119,6 @@ export default function MobileFrame() {
       <AddClients open={panel === 'add'} onClose={close} />
       <BookCall open={panel === 'book'} onClose={close} />
       <AddNote open={panel === 'note'} onClose={close} />
-      <LogCall open={panel === 'log'} onClose={close} />
     </div>
   )
 }

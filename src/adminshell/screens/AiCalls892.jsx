@@ -48,7 +48,7 @@ export function AiCallerSettings() {
       <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>AI caller on</b><p className="tp-sub">Off: no AI calls go out. Turning it on is Brayden{'’'}s call, after the four items below. Also in Settings › Switches.</p></div>
         <Switch on={live} label="AI caller on" onChange={v => { setSwitch('ai_caller_live', v); note(`AI caller ${v ? 'on' : 'off'} (sample)`) }} /></div>
       <div className="adm-warn ai-stops" role="note"><ShieldAlert size={15} aria-hidden="true" /><div><b>Before it goes on (Brayden{'’'}s yes)</b>
-        <ul>{HARD_STOPS.map(([k, v]) => <li key={k}><b>{k}:</b> {v} <SampleTag>Draft</SampleTag></li>)}</ul></div></div>
+        <ul>{HARD_STOPS.map(([k, v]) => <li key={k}><b>{k}:</b> {v}</li>)}</ul></div></div>
 
       <h3 className="fx-h3">Which agents</h3>
       <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Every agent</b><p className="tp-sub">New agents are included too.</p></div>
@@ -65,7 +65,7 @@ export function AiCallerSettings() {
       </div>
       {prov && <dl className="fx-facts ai-prov">{[['Cost', prov.perMin], ['Calls out', prov.outbound], ['Transfers', prov.transfer], ['Transcripts', prov.transcripts]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>}
 
-      <h3 className="fx-h3">What it says (drafts)</h3>
+      <h3 className="fx-h3">What it says</h3>
       <ul className="tp-list ai-words">{[['Opening', DRAFT_WORDS.opening], ['While checking the agent', DRAFT_WORDS.hold], ['Agent said Yes', DRAFT_WORDS.connecting], ['Agent said No or didn’t answer', DRAFT_WORDS.bounce], ['Asked for a person, coverage or price', DRAFT_WORDS.agentWill], ['No open time in 3 days', DRAFT_WORDS.noTimes]].map(([k, v]) => (
         <li key={k}><small className="tp-sub">{k}</small><p className="tp-mid">“{v}”</p></li>
       ))}</ul>

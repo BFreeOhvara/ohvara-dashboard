@@ -25,7 +25,7 @@ test('groupTasks puts your live claim first, then overdue, today, later, none', 
 })
 
 test('outcomes are the server lists, per kind', () => {
-  assert.deepEqual(outcomesOf('lapse_save').map(o => o[0]), ['saved', 'fixing', 'client_cancelled', 'no_answer'])
+  assert.deepEqual(outcomesOf('lapse_save').map(o => o[0]), ['saved', 'to_agent', 'agent_booked', 'fixing', 'not_saved', 'no_answer']) // P924
   assert.deepEqual(outcomesOf('packet_check').map(o => o[0]), ['delivered', 'not_delivered'])
   assert.deepEqual(outcomesOf('annual_review').map(o => o[0]), ['completed', 'not_reached'])
   assert.deepEqual(outcomesOf('chargeback_watch').map(o => o[0]), ['on_time', 'missed'])

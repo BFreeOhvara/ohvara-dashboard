@@ -23,3 +23,14 @@ export async function savePoolSettings(limit, estimate) {
 }
 // Every Deedstone number's Voice URL in Twilio (calls in, and the agent-call bridge).
 export const VOICE_URL = `${import.meta.env.VITE_SUPABASE_URL || ''}/functions/v1/help-voice`
+
+// P924 — the VA pod on each number (258): who answers clients who call or text it.
+export async function loadPods() {
+  const { data, error } = await supabase.from('deedstone_number_vas').select('number_id, va_id, sort').order('sort')
+  if (error) return {}
+  return (data || []).reduce((m, r) => ({ ...m, [r.number_id]: [...(m[r.number_id] || []), r.va_id] }), {})
+}
+export async function savePod(numberId, vaIds) {
+  const { error } = await supabase.rpc('admin_set_number_pod', { p_number: numberId, p_vas: vaIds })
+  if (error) throw fail(error, 'Couldn’t save the VAs on this number.')
+}

@@ -152,7 +152,7 @@ function helpWorld(over: { inbound?: { agent: boolean; phone: string | null; nam
   const route: RouteStore = {
     async deskOpen() { return true },
     async afterHoursText() { return null },
-    async routeInbound(sid, caller) { log.push(['route', sid, caller]); return { queue_id: 'q1' } },
+    async routeInbound(sid, caller, to) { log.push(['route', sid, caller, to]); return { queue_id: 'q1' } },
     async afterHoursCall(sid, caller) { log.push(['afterHours', sid, caller]) },
     async inboundGone() {}, async vaLeftLine() { return false }, async isCron() { return false },
     deedstone: {
@@ -204,40 +204,18 @@ test('bridge: no key (voicemail) cancels; a pre-dial refusal at the dial is said
   assert.equal((await help(forged, w.store, null, env, w.route, w.bridge)).status, 403)
 })
 
-test('calls in: a known caller rings their agent (~20 s, press 1); taken → done', async () => {
+test('P924 calls in: a Deedstone number rings our team (last VA → pod → any VA), never the agent first', async () => {
   const w = helpWorld()
   const xml = await run(w, '', { CallSid: 'CAin', From: '(214) 555-0301', To: DS })
-  assert.deepEqual(w.log[0], ['dsStart', 'CAin', '+12145550301', DS])
-  assert.match(xml, new RegExp(`<Dial timeout="20" callerId="\\${DS}"`))
-  assert.match(xml, /event=ds_screen&amp;call=CAin/)
-  assert.match(xml, />\+12145550100<\/Number>/)
-  assert.ok(!/Lou/.test(xml), 'no name in a URL')
-  const whisper = await run(w, '?event=ds_screen&call=CAin', { CallSid: 'CAleg' })
-  assert.match(whisper, /Deedstone call from Lou\. Press 1 to take it\./)
-  assert.equal(await run(w, '?event=ds_take&call=CAin', { CallSid: 'CAleg', Digits: '1' }), '<?xml version="1.0" encoding="UTF-8"?><Response></Response>')
-  const after = await run(w, '?event=ds_after_agent&call=CAin', { CallSid: 'CAin', From: '+12145550301', To: DS, CallStatus: 'in-progress', DialCallStatus: 'completed' })
-  assert.match(after, /<Hangup\/>/)
-  assert.ok(!w.log.some(l => l[0] === 'route'), 'no VA needed')
-})
-
-test('calls in: the agent doesn\'t take it → the next free VA; unknown caller → a VA; caller hung up → nothing queued', async () => {
-  const w = helpWorld()
-  await run(w, '', { CallSid: 'CAin', From: '+12145550301', To: DS })
-  const nokey = await run(w, '?event=ds_take&call=CAin', { CallSid: 'CAleg', Digits: '' })
-  assert.match(nokey, /<Hangup\/>/)
-  const after = await run(w, '?event=ds_after_agent&call=CAin', { CallSid: 'CAin', From: '+12145550301', To: DS, CallStatus: 'in-progress', DialCallStatus: 'no-answer' })
-  assert.match(after, /startConferenceOnEnter="false"/, 'waits for a VA on hold music')
-  assert.deepEqual(w.log.find(l => l[0] === 'route'), ['route', 'CAin', '+12145550301'])
+  assert.match(xml, /startConferenceOnEnter="false"/, 'waits for a VA on hold music')
+  assert.ok(!/<Number|12145550100/.test(xml), 'the agent phone is not rung')
+  assert.ok(!w.log.some(l => l[0] === 'dsStart'), 'no agent leg')
+  assert.deepEqual(w.log.find(l => l[0] === 'route'), ['route', 'CAin', '+12145550301', DS], 'the number called picks the pod')
 
   const unknown = helpWorld({ inbound: { agent: false, phone: null, name: null } })
   const u = await run(unknown, '', { CallSid: 'CAnew', From: '+19725559999', To: DS })
   assert.match(u, /<Conference/)
-  assert.deepEqual(unknown.log.find(l => l[0] === 'route'), ['route', 'CAnew', '+19725559999'])
-
-  const gone = helpWorld()
-  await run(gone, '', { CallSid: 'CAin', From: '+12145550301', To: DS })
-  await run(gone, '?event=ds_after_agent&call=CAin', { CallSid: 'CAin', CallStatus: 'completed', DialCallStatus: 'no-answer' })
-  assert.ok(!gone.log.some(l => l[0] === 'route'), 'a caller who hung up isn\'t queued')
+  assert.deepEqual(unknown.log.find(l => l[0] === 'route'), ['route', 'CAnew', '+19725559999', DS])
 })
 
 // ── the same Deedstone number everywhere ─────────────────────────────────────────────────────────────────────

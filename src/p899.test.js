@@ -27,10 +27,15 @@ test('statuses: Working, Needs attention, Protected, and Closed behind a switch'
   assert.equal(clientStatusOf(mk('j'), today), 'needs_attention') // the Nov 7 draft, asked Nov 10, not answered
 })
 
-test('the check is asked 3 days after the draft date (admin setting), one per client', () => {
+// P924: asked the day after the draft by default; the older tests below pin the old 3-day setting.
+const THREE = { ...CHECK_DEFAULTS, delayDays: 3 }
+
+test('the check is asked the day after the draft date (admin setting), one per client', () => {
+  assert.equal(CHECK_DEFAULTS.delayDays, 1)
   const c = mk('a', { checked_through: '2026-10-07' })
-  assert.equal(dueCheck(c, '2026-11-09'), null) // drafted Nov 7, asked on the 10th
-  assert.deepEqual(dueCheck(c, '2026-11-10'), { draft: '2026-11-07', askOn: '2026-11-10', k: 10 })
+  assert.equal(dueCheck(c, '2026-11-07'), null) // drafted Nov 7, asked on the 8th
+  assert.deepEqual(dueCheck(c, '2026-11-08'), { draft: '2026-11-07', askOn: '2026-11-08', k: 10 })
+  assert.deepEqual(dueCheck(c, '2026-11-10', THREE), { draft: '2026-11-07', askOn: '2026-11-10', k: 10 })
   assert.equal(dueCheck(c, '2026-11-10', { ...CHECK_DEFAULTS, delayDays: 5 }), null)
   assert.equal(dueCheck(c, '2026-11-12', { ...CHECK_DEFAULTS, delayDays: 5 }).askOn, '2026-11-12')
   // Unanswered for months: only the newest draft is asked.
@@ -49,16 +54,17 @@ test('monthly for the first 12 drafts, then every 3 months; both are settings', 
   assert.deepEqual(Array.from({ length: 12 }, (_, k) => k).filter(k => isCheckDraft(k, { monthlyFor: 6, thenEvery: 2 })), [0, 1, 2, 3, 4, 5, 7, 9, 11])
   // Month 13 (k = 12) isn't asked; month 15 (k = 14) is.
   const c = mk('a', { draft_day: 7, check_from: '2026-01-01', checked_through: '2026-12-07' })
-  assert.equal(dueCheck(c, '2027-01-10'), null) // k = 12
-  assert.equal(dueCheck(c, '2027-02-10'), null) // k = 13
-  assert.equal(dueCheck(c, '2027-03-10').draft, '2027-03-07') // k = 14
-  assert.equal(nextCheck({ ...c, checked_through: '2027-03-07' }, '2027-03-11').askOn, '2027-06-10')
+  assert.equal(dueCheck(c, '2027-01-10', THREE), null) // k = 12
+  assert.equal(dueCheck(c, '2027-02-10', THREE), null) // k = 13
+  assert.equal(dueCheck(c, '2027-03-10', THREE).draft, '2027-03-07') // k = 14
+  assert.equal(nextCheck({ ...c, checked_through: '2027-03-07' }, '2027-03-11', THREE).askOn, '2027-06-10')
+  assert.equal(nextCheck({ ...c, checked_through: '2027-03-07' }, '2027-03-11').askOn, '2027-06-08') // P924: the day after
 })
 
 test('one list per draft day, one tap answers all, or tick only the ones that fell off', () => {
   const today = '2026-11-11'
   const clients = [mk('a', { draft_day: 7 }), mk('b', { draft_day: 7 }), mk('c', { draft_day: 8 }), mk('d', { draft_day: 9, checked_through: '2026-10-09' }), mk('e', { draft_day: 7, stage: 'setting_up' }), mk('f', { draft_day: 7, checked_through: '2026-11-07' })]
-  const lists = checkLists(clients, today)
+  const lists = checkLists(clients, today, THREE)
   assert.deepEqual(lists.map(l => [l.draft, l.clients.map(c => c.id)]), [['2026-11-07', ['a', 'b']], ['2026-11-08', ['c']]]) // the 9th is asked tomorrow
   assert.equal(listQuestion(lists[0]), 'These policies drafted on the 7th. Are they still on the books?')
   assert.equal(listQuestion(lists[1]), 'This policy drafted on the 8th. Is it still on the books?')
@@ -67,7 +73,7 @@ test('one list per draft day, one tap answers all, or tick only the ones that fe
   // Tick only the ones that fell off
   assert.deepEqual(answerList(lists[0], ['b']), { yes: ['a'], no: ['b'] })
   // Unanswered lists stay
-  assert.equal(checkLists(clients, '2026-11-25').length, 3)
+  assert.equal(checkLists(clients, '2026-11-25', THREE).length, 3)
 })
 
 test('Yes → Protected, No → Working with a save call, Lapsed → Working', () => {

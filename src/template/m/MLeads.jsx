@@ -2,10 +2,10 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { PhoneIncoming, CalendarDays, Clock, MapPin, Search, Wallet, ChevronRight, Users, Link2, ClipboardCheck, PhoneForwarded, X, MessageSquareWarning } from 'lucide-react'
 import { useSampleLeads, useSampleLead, useSampleActions, useSampleBilling, useDataSource } from '../data'
-import { Avatar, Chip, Pending, useNote } from '../kit'
+import { Avatar, Chip, useNote } from '../kit'
 import { stageChip, OutcomeDrawer, NoShowUndo } from '../LeadOutcome'
 import { FeedbackDrawer } from '../Talk'
-import { LANES, CLOSED_LANE, laneOf } from '../stages'
+import { LANES, laneOf } from '../stages'
 import { agentCallTask, confirmedByText, atLabel, clockNow } from '../leadLifecycle'
 import { agentStatusOf, agentEvents, closedReason, needsResult, resultsFor, isLiveCall, liveCalls, RESULT_LABEL, RESULT_MEANING } from '../agentView'
 import { dailyTotal } from '../spendPlan'
@@ -19,9 +19,9 @@ import { targetOf } from '../../lib/deedstoneCall'
 import { DeedstoneCallButton } from '../DeedstoneCall'
 
 // P908 — Leads on a phone: one status at a time. Swipe sideways (or tap a status) to move between Booked, No show,
-// Follow up, Not interested, Sold and Closed, each with its count. Cards are full width with Call in thumb reach;
+// Follow up, Not interested and Sold, each with its count (P924: no Closed). Cards are full width with Call in thumb reach;
 // a card opens the lead as a full-screen sheet, and "Pick the result" is a bottom sheet. Live calls pin on top.
-const LANE_ALL = [...LANES, CLOSED_LANE]
+const LANE_ALL = LANES
 const RESULT_TONE = { sold: 'green', no_show: 'mute', follow_up: 'teal', not_interested: 'warn', booked: 'blue' }
 const whenOf = l => (l.stage === 'ringing' ? 'Ringing now' : isLiveCall(l) ? 'Live call' : l.stage === 'follow_up' && l.follow ? `Call back ${l.follow}` : l.appt || `Came in ${l.assigned_at}`)
 const tagOf = l => {
@@ -144,7 +144,6 @@ function LeadSheet({ id, onClose }) {
       <section className="mx-card">
         <h3>What they told us</h3>
         <dl className="mx-facts">{facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
-        <Pending>Consent wording pending</Pending>
       </section>
       <section className="mx-card">
         <h3>Messages and changes</h3>

@@ -80,7 +80,7 @@ export function CantMakeIt({ appt, lead, onClose }) {
     <Drawer open onClose={onClose} title="Can't make it?" sub={`${appt.who} · ${appt.day}, ${monOf(appt.date)} ${appt.date}, ${appt.time}`}
       footer={<><button type="button" className="tp-primary fx-accent" onClick={() => { cantMakeIt(appt.id); note(`${lead.first_name} got your apology and a link to pick a new time`); onClose() }}><CalendarX2 size={15} />Send and free the time</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Keep it</button></>}>
       <p className="tp-sub">{lead.first_name} gets this text right away. If they don{'’'}t pick a new time, our team calls them.</p>
-      <div className="tp-chat"><div className="tp-bub me">{leadText('cant_make_it', { lead: lead.first_name, appt: `${appt.day} at ${appt.time}` })}<small>Deedstone · draft wording · sends when your leads go live</small></div></div>
+      <div className="tp-chat"><div className="tp-bub me">{leadText('cant_make_it', { lead: lead.first_name, appt: `${appt.day} at ${appt.time}` })}<small>Deedstone · sends when your leads go live</small></div></div>
     </Drawer>
   )
 }

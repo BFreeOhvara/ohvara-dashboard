@@ -40,7 +40,9 @@ test('live-call hours replace the Active switch', () => {
   for (const f of ['src/template/screens/Settings.jsx', 'src/template/TemplateFrame.jsx']) {
     assert.doesNotMatch(src(f), /setDuty|Active for live calls/, f)
   }
-  assert.match(src('src/template/screens/Settings.jsx'), /<TakeLeads /)
+  // P924: one set of hours (the HoursEditor) covers booked and live calls; no TakeLeads, no Appointments only.
+  assert.match(src('src/template/screens/Settings.jsx'), /<HoursEditor /)
+  assert.doesNotMatch(src('src/template/screens/Settings.jsx'), /TakeLeads/)
 })
 
 test('Pause leads: spend and new leads stop, membership and servicing keep going; real mode calls the RPCs', () => {
@@ -57,12 +59,12 @@ test('Pause leads: spend and new leads stop, membership and servicing keep going
   assert.match(mig, /'paused by agent'/)
 })
 
-test('carrier email forwarding step: Gmail and Outlook guides and a test, in setup and Settings; Payment problem request', () => {
+test('carrier email forwarding step: Gmail and Outlook guides and a test, in setup and Settings', () => {
   const pi = src('src/template/PaymentIntake.jsx')
   assert.match(pi, /export function ForwardSetup/)
   assert.match(pi, /gmail: \[/)
   assert.match(pi, /outlook: \[/)
   assert.match(pi, /Send a test/)
   assert.match(src('src/template/screens/Welcome.jsx'), /key: 'forward'/)
-  assert.match(src('src/template/screens/RequestService.jsx'), /'Payment problem'/)
+  // P924: Request a service is gone from the agent side (clients reach our team directly).
 })

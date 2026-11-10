@@ -8,7 +8,6 @@ import Leads from './screens/Leads'
 import Calendar from './screens/Calendar'
 import Clients from './screens/Clients'
 import Submit from './screens/Submit'
-import RequestService from './screens/RequestService'
 import Messages from './screens/Messages'
 import Activity from './screens/Activity'
 import Billing from './screens/Billing'
@@ -58,7 +57,7 @@ export default function TemplateApp() {
             <Route path="clients" element={<Pick d={Clients} m={MClients} />} />
             <Route path="clients/:id" element={<Pick d={Clients} m={MClients} />} />
             <Route path="submit" element={<Submit />} />
-            <Route path="request-service" element={<RequestService />} />
+            <Route path="request-service" element={<Navigate to="/clients" replace />} />
             <Route path="messages" element={<Messages />} />
             <Route path="activity" element={<Activity />} />
             <Route path="billing" element={<Billing />} />

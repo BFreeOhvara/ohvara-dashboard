@@ -37,6 +37,7 @@ function fakeDb(o: { settings?: Settings | null; lead?: boolean; rpcError?: stri
       if (o.rpcError) return { data: null, error: { message: o.rpcError } }
       if (fn === 'ghl_lead_for_contact') return { data: o.lead === false ? [] : [{ lead_id: LEAD, agent_id: AGENT, is_sample: false }], error: null }
       if (fn === 'ghl_log_text') return { data: 'inserted', error: null }
+      if (fn === 'client_text_intake') return { data: { ok: true, intent: 'question' }, error: null }
       return { data: null, error: null }
     },
     insertReply: async row => {
@@ -83,9 +84,11 @@ test('a reply is saved once for the VA queue, tied to the lead', async () => {
   const raw = fx('inbound-message.json')
   const db = fakeDb()
   const res = await handle(viaSig(raw), db.d)
-  assert.deepEqual(await res.json(), { ok: 'reply_saved', matched: true })
+  assert.deepEqual(await res.json(), { ok: 'reply_saved', matched: true, client: 'question' })
   assert.deepEqual(db.rows, [{ twilio_sid: 'ghl:msgInb0000000000001', from_phone: '+15551234567', body: 'Yes tomorrow at 3 works', lead_id: LEAD }])
   assert.deepEqual(db.calls[0], { fn: 'ghl_lead_for_contact', args: { p_contact_id: 'cI08i1Bls3iTB9bKgFJh', p_phone: '+15551234567' } })
+  // P924: the text becomes a pod task and a drafted reply.
+  assert.deepEqual(db.calls[1], { fn: 'client_text_intake', args: { p_phone: '+15551234567', p_body: 'Yes tomorrow at 3 works', p_message_id: 'ghl:msgInb0000000000001' } })
   // GHL retries the same delivery: nothing saved twice, still 200.
   const again = await handle(viaSig(raw), db.d)
   assert.equal(again.status, 200)
@@ -165,7 +168,7 @@ test('ContactDndUpdate with SMS DND on opts out; DND off does not opt in', async
 test('workflow webhooks (shared secret): reply saved once by body hash, opt-out honoured', async () => {
   const raw = fx('workflow-reply.json')
   const db = fakeDb()
-  assert.deepEqual(await (await handle(viaSecret(raw), db.d)).json(), { ok: 'reply_saved', matched: true })
+  assert.deepEqual(await (await handle(viaSecret(raw), db.d)).json(), { ok: 'reply_saved', matched: true, client: 'question' })
   assert.match(db.rows[0].twilio_sid, /^ghl:wf-[0-9a-f]{32}$/)
   assert.equal(db.rows[0].body, 'Can we move it to Friday?')
   await handle(viaSecret(raw), db.d)

@@ -6,7 +6,7 @@ import { followUpSlot, instantOf, zoneOf, minuteOf, dateOf } from '../lib/callSl
 // keep every stage (leadLifecycle.js STAGES); this file only decides the agent's view of them. Pure, no React.
 
 // P898 — the agent's five statuses, left to right: Booked · No show · Follow up · Not interested · Sold. Closed
-// (Couldn't reach, opted out, wrong number) sits under "Show closed". Leads the team is still calling aren't shown on
+// (Couldn't reach, opted out, wrong number) is never on the agent's side (P924). Leads the team is still calling aren't shown on
 // the board at all. A lead that needs the agent says so on its own card ("Mark result").
 // P910 — a live call isn't a column either: while it rings and once it connects it's pinned at the top of Leads and
 // the Overview (status 'live', liveCalls) with everything the AI collected, until the agent picks Sold, Follow up or

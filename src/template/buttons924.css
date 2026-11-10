@@ -1,0 +1,27 @@
+/* P924 — one secondary button for every role (agent, VA, admin): Mark result, Calendar, Change plan, Update card,
+   Move, Send to agent… Filled and clearly clickable in both themes, with hover, pressed, focus and disabled states.
+   `html .tp` lifts it over the old ghost look (index.css .ov-ghost, [data-theme] .ov-ghost) and the per-shell copies;
+   sizes stay with each place (height, padding). Tokens only. */
+html .tp :is(.tp-btn, .ov-ghost):not(.tp-primary):not(.tp-white) {
+  color: var(--ov-hi);
+  background: color-mix(in srgb, var(--sh-ink) 14%, var(--sh-surface));
+  border: 1px solid color-mix(in srgb, var(--sh-ink) 22%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--sh-ink) 7%, transparent), 0 1px 2px color-mix(in srgb, var(--sh-deep) 22%, transparent);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .1s ease;
+}
+html .tp :is(.tp-btn, .ov-ghost):not(.tp-primary):not(.tp-white):hover:not(:disabled) {
+  background: color-mix(in srgb, var(--sh-ink) 20%, var(--sh-surface));
+  border-color: color-mix(in srgb, var(--sh-ink) 34%, transparent);
+}
+html .tp :is(.tp-btn, .ov-ghost):not(.tp-primary):not(.tp-white):active:not(:disabled),
+html .tp :is(.tp-btn, .ov-ghost):not(.tp-primary):not(.tp-white)[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--sh-ink) 26%, var(--sh-surface));
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--sh-deep) 30%, transparent);
+  transform: translateY(1px);
+}
+html .tp :is(.tp-btn, .ov-ghost):not(.tp-primary):not(.tp-white):focus-visible { outline: 2px solid var(--sh-acc); outline-offset: 2px; }
+html .tp :is(.tp-btn, .ov-ghost):not(.tp-primary):not(.tp-white):disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+html .tp :is(.tp-btn, .ov-ghost).tp-danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+@media (prefers-reduced-motion: reduce) { html .tp :is(.tp-btn, .ov-ghost) { transition: none; } }

@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom'
-import { Layers, CreditCard, Check, PauseCircle, PlayCircle, LogOut, Phone, CalendarClock, Clock, CircleAlert, Wallet, CalendarCheck2, Users, BadgeCheck, Target, SlidersHorizontal } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
+import { paths } from '../paths'
+import { Layers, CreditCard, Check, PauseCircle, PlayCircle, LogOut, Phone, CalendarClock, Clock, CircleAlert, Wallet, CalendarCheck2, Users, BadgeCheck, Target, SlidersHorizontal, Clock3 } from 'lucide-react'
 import { useSampleBilling, useSampleActions, useSampleAppointments } from '../data'
 import { Chip, Drawer, Field, SampleTag, Seg, useNote } from '../kit'
 import { Select } from '../Select'
 import { usd } from '../motion'
-import { TakeLeads } from '../PlanBuilder'
 import { bought, planOf, dailyTotal, spendOk, nightlyFor, monthlyBill, feeWords, SETUP_FEE, PAID_MIN_DAILY, TIERS, bandOf, bandText, switchDaily } from '../spendPlan'
 import { planChange, changeWords } from '../../lib/planChange'
-import { LEAD_MODES, liveHoursText, takeOk } from '../../lib/leadSplit'
+import { liveHoursText } from '../../lib/leadSplit'
 import { TalkDrawer } from '../Talk'
 import { cardOf, chargesOf } from '../billing917'
 import '../p878.css'
@@ -283,16 +283,14 @@ function CardDrawer({ open, onClose, face }) {
 export default function Billing() {
   const { data: b } = useSampleBilling()
   const { data: appts } = useSampleAppointments()
-  const { setSpend, setTake, resume, keepPlan, addCard, fixCard, changePlan, undoPlanChange } = useSampleActions()
+  const { setSpend, resume, keepPlan, addCard, fixCard, changePlan, undoPlanChange } = useSampleActions()
   const note = useNote()
   const { hash } = useLocation()
   // P893: Results lives here now; /activity?view=results lands on it (#results)
   useEffect(() => { if (hash === '#results') document.getElementById('results')?.scrollIntoView({ block: 'start' }) }, [hash])
   const [spend, setDraft] = useState({ daily: Math.max(PAID_MIN_DAILY, dailyTotal(b.spend)) })
-  const [take, setTakeDraft] = useState(b.take)
   const [range, setRange] = useState('week')
   const [panel, setPanel] = useState(null)
-  const dirty = dailyTotal(spend) !== dailyTotal(b.spend) || JSON.stringify(take) !== JSON.stringify(b.take)
   const n = b.nightNow
   const noCard = b.card && !b.card.onFile && b.products !== 'servicing'
   const tierNow = planOf(b)
@@ -302,10 +300,9 @@ export default function Billing() {
   const running = !b.paused && !b.cancel && !noCard
   const face = cardOf(b.card)
   const save = () => {
-    if (!spendOk('paid', spend) || !takeOk(take)) return
+    if (!spendOk('paid', spend)) return
     setSpend(spend)
-    setTake(take)
-    note(`Lead spend set to ${money(dailyTotal(spend))} a day, ${LEAD_MODES.find(m => m.key === take.mode).label.toLowerCase()}. Starts with the next unpaid day. Sample only, nothing was charged`)
+    note(`Lead spend set to ${money(dailyTotal(spend))} a day. Starts with the next unpaid day. Sample only, nothing was charged`)
   }
   // P921: switching plan. Up: charged now, the plan changes once it's paid (declined: nothing changes). Down: from the
   // next bill. Back to the plan they're on: Undo.
@@ -397,17 +394,19 @@ export default function Billing() {
         <ResultTiles rows={b.bought[range]} />
       </section>
 
-      <section className="fx-tile fx-s8 pb-tile" style={{ '--i': 5 }} aria-label="How you take leads">
-        <header className="fx-tile-h"><span className="tp-grow"><h2>How you take leads</h2><p>{money(dailyTotal(spend))} a day plus {feeWords}, charged a day ahead. Change the spend with Change plan.</p></span></header>
-        <div className="sp-col"><TakeLeads take={take} onTake={setTakeDraft} id="bill-take" /></div>
+      {/* P924: one set of hours. No Appointments only and no separate live-call hours: the hours in Settings are when
+          booked calls land and live calls ring. */}
+      <section className="fx-tile fx-s8 pb-tile" style={{ '--i': 5 }} aria-label="Your hours">
+        <header className="fx-tile-h"><span className="tp-grow"><h2>Your hours</h2><p>Booked calls land and live calls ring inside these hours. Outside them, we book callers for your next open time.</p></span></header>
+        <p className="bl-hours"><Clock3 size={16} aria-hidden="true" /><b>{liveHoursText(b.take.hours)}</b></p>
         <div className="tp-row tp-wrap bl-take-save">
-          <p className="pb-note tp-grow">{dirty ? `Days already paid keep their spend. The change starts with ${n.forDay}, charged tonight.` : 'Change it any day. It starts with the next day not yet paid.'}</p>
-          <button type="button" className="tp-primary fx-accent" disabled={!dirty || !spendOk('paid', spend) || !takeOk(take)} onClick={save}>Save</button>
+          <p className="pb-note tp-grow">{money(dailyTotal(b.spend))} a day plus {feeWords}, charged a day ahead. Change the spend with Change plan.</p>
+          <Link to={`${paths.settings()}?tab=calls`} className="tp-btn ov-ghost">Change your hours</Link>
         </div>
       </section>
 
       <section className="fx-tile fx-s4 sp-acts" style={{ '--i': 6 }} aria-label="Pause or cancel">
-        <header className="fx-tile-h"><span className="tp-grow"><h2>Pause or cancel</h2><p>{money(daily)} a day · {b.take.mode === 'both' ? `Live transfers ${liveHoursText(b.take.hours)}` : 'Appointments only'}</p></span></header>
+        <header className="fx-tile-h"><span className="tp-grow"><h2>Pause or cancel</h2><p>{money(daily)} a day · {liveHoursText(b.take.hours)}</p></span></header>
         <ul className="tp-list">
           <li><button type="button" className="fx-mrow" onClick={() => setPanel('pause')} disabled={!!b.cancel}><PauseCircle size={17} aria-hidden="true" /><span className="tp-grow"><b>{b.paused ? 'Change the pause' : 'Pause leads'}</b><small>Holidays, a full calendar, a break</small></span></button></li>
           <li><button type="button" className="fx-mrow" onClick={() => setPanel('talk')}><Phone size={17} aria-hidden="true" /><span className="tp-grow"><b>Talk to someone</b><small>About your spend, your plan, anything</small></span></button></li>
@@ -417,7 +416,7 @@ export default function Billing() {
 
       <Drawer open={panel === 'plan'} onClose={() => setPanel(null)} title="Change plan" sub={`Now ${tierNow.label}, ${money(tierNow.monthly)} a month, ${money(daily)} a day. The slider stays inside this plan`}>
         <div className="bl910">
-          <PlanSpend tier={tierNow} daily={dailyTotal(spend)} onDaily={d => setDraft({ daily: d })} dirty={dailyTotal(spend) !== daily} ok={spendOk('paid', spend) && takeOk(take)}
+          <PlanSpend tier={tierNow} daily={dailyTotal(spend)} onDaily={d => setDraft({ daily: d })} dirty={dailyTotal(spend) !== daily} ok={spendOk('paid', spend)}
             onSave={() => { save(); setPanel(null) }} onReset={() => setDraft({ daily: Math.max(PAID_MIN_DAILY, daily) })} forDay={n.forDay} />
           <OtherPlans tierNow={tierNow} daily={daily} month={b.planMonth || { today: '2026-11-02', start: '2026-11-01', next: '2026-12-01' }} pending={b.planNext} onSwitch={switchPlan} />
         </div>

@@ -9,6 +9,7 @@ import { WINDOWS } from '../../../lib/callSlots'
 import { RecordDrawer, Block, Stepper } from '../../Record'
 import { fp } from '../paths'
 import { KIND, kindTone, outcomesOf, outcomeLabel, SEND_REASONS } from '../words'
+import { NOT_SAVED_REASONS } from '../../../lib/clientLine'
 import { HelpDot } from '../../../fulshell/training/HelpDot'
 import { DocsBlock } from '../Docs886'
 import { WELCOME_TEXT_ASK, ordinal } from '../../../lib/bookImport.js'
@@ -55,7 +56,7 @@ function WelcomeSteps({ t }) {
         <li className={done ? 'done' : ''}><i /><div><b>Say who you are</b><p className="fs-say">“{sayWelcome(t)}”</p></div></li>
         <li className={done ? 'done' : ''}><i /><div><b>Check the details</b><span>Read each one back. Anything wrong: fix it in your notes and pick Details fixed.</span>
           <dl className="wc-facts">{facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></div></li>
-        <li className={done || t.texts ? 'done' : ''}><i /><div><b>Ask about text updates</b><p className="fs-say">“{WELCOME_TEXT_ASK}” <span className="tp-tag">Draft wording</span></p>
+        <li className={done || t.texts ? 'done' : ''}><i /><div><b>Ask about text updates</b><p className="fs-say">“{WELCOME_TEXT_ASK}”</p>
           {t.texts ? <span className="wc-said"><Check size={14} aria-hidden="true" />{t.texts === 'yes' ? 'Said yes. Logged as their text consent' : 'Said no. No texts, nothing logged'}</span>
             : !done && <div className="wc-ask"><button type="button" className="tp-primary sm fx-accent" disabled={!t.held} onClick={() => say(true)}>Yes, texts are fine</button><button type="button" className="tp-btn ov-ghost" disabled={!t.held} onClick={() => say(false)}>No texts</button></div>}
           {!t.held && !done && !t.texts && <span>Start the step to record their answer.</span>}</div></li>
@@ -124,6 +125,7 @@ function WhatHappened({ t }) {
   if (t.kind === 'callback') {
     return (
       <Block title={CALLBACK_WHY[t.why] || 'Call back'} sub={t.client.lead ? 'Not a client yet' : `${t.agent}'s client`}>
+        {t.text && <div className="fs-texted"><small>They texted</small><q>{t.text}</q>{t.reply && <><small>We replied automatically</small><q>{t.reply}</q></>}</div>}
         <p className="tp-mid">{t.note}</p>
         <dl className="fx-facts">{[['Phone', t.client.client_phone], ['Lives in', [t.client.city, t.client.state].filter(Boolean).join(', ') || 'Not known'], ['Agent', t.agent], ['Booked', t.due_text]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       </Block>
@@ -175,6 +177,7 @@ export function TaskDrawer({ id, onClose }) {
   const [panel, setPanel] = useState(null)
   const [result, setResult] = useState(null)
   const [why, setWhy] = useState(SEND_REASONS[0])
+  const [lost, setLost] = useState(null)
   if (!t) return <RecordDrawer label="Step not found" kicker="Calendar" onClose={onClose} hero={<h2>Sent back</h2>}><p className="fx-calm"><Check size={16} aria-hidden="true" />This step went back to the agent.</p></RecordDrawer>
   const tone = kindTone(t.kind)
   const done = t.status === 'done'
@@ -223,8 +226,15 @@ export function TaskDrawer({ id, onClose }) {
       </Block>
 
       <Drawer open={panel === 'done'} center onClose={() => setPanel(null)} title="Record the result" sub={`${KIND[t.kind]} · ${t.name}`}
-        footer={<button type="button" className="tp-primary fx-accent" disabled={!result} onClick={() => { finishTask(t.id, result); note(`${outcomeLabel(t.kind, result)}. ${t.agent} can see it`); setPanel(null) }}><CircleCheck size={16} />Save result</button>}>
+        footer={<button type="button" className="tp-primary fx-accent" disabled={!result || (result === 'not_saved' && !lost)} onClick={() => { finishTask(t.id, result, lost); note(`${outcomeLabel(t.kind, result)}. ${t.agent} can see it`); setPanel(null) }}><CircleCheck size={16} />Save result</button>}>
         <PillTabs role="radiogroup" label="Result" className="fx-chips fs-wrap" itemClass="fx-chip" value={result} onChange={setResult} items={outcomesOf(t.kind).map(([k, label]) => ({ key: k, label: <b>{label}</b> }))} />
+        {/* P924: a save call ends in the agent's hands (live or booked) or in Closed with the reason. */}
+        {t.kind === 'lapse_save' && result === 'to_agent' && <p className="tp-mid fs-hint">Use Check agent on the call first. If {t.agent} picks up, the client is handed over live.</p>}
+        {t.kind === 'lapse_save' && result === 'agent_booked' && <p className="tp-mid fs-hint">The call lands on {t.agent}'s calendar in their next open time. They see why on the client.</p>}
+        {t.kind === 'lapse_save' && result === 'not_saved' && <>
+          <p className="tp-mid fs-hint">The client moves to Closed on {t.agent}'s side with this reason.</p>
+          <PillTabs role="radiogroup" label="Why it can't be saved" className="fx-chips fs-wrap" itemClass="fx-chip" value={lost} onChange={setLost} items={NOT_SAVED_REASONS.map(r => ({ key: r, label: <b>{r}</b> }))} />
+        </>}
       </Drawer>
       <MoveBooking open={panel === 'move'} onClose={() => setPanel(null)} name={t.name} state={t.client.state} city={t.client.city} tz={t.tz} exceptId={t.id} onMove={(iso, va) => moveTask(t.id, iso, va)} />
       <Drawer open={panel === 'send'} center onClose={() => setPanel(null)} title={`Send to ${t.agent}`} sub="It leaves your list and goes back to the agent."

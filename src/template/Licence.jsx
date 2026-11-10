@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { BadgeCheck } from 'lucide-react'
-import { Pending, useNote } from './kit'
+import { useNote } from './kit'
 import { useSampleSettings, useSampleActions } from './data'
 import { US_STATES } from '../lib/usStates'
 import { LICENCE_LIMITS, NOT_TAKING, LICENSED_WORDS, asPick, pickCount, pickReady } from './licenceModel'
@@ -43,7 +43,6 @@ export function LicenceForm({ value, onChange, limits = LICENCE_LIMITS }) {
       <label className="tp-check lic-tick"><input type="checkbox" checked={!!v.licensed} disabled={count !== 'ok'} onChange={e => tick(e.target.checked)} />
         <span>{LICENSED_WORDS}{v.licensed ? ` · ticked ${v.licensed.at}` : ''}</span></label>
       <small className="tp-sub">Your leads start right away in these states, and only these. Change the states and you tick again.</small>
-      <Pending>Wording is a draft for Brayden</Pending>
     </div>
   )
 }

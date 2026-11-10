@@ -1,55 +1,15 @@
 import { SLIDER, TIERS, PAID_MIN_DAILY, SETUP_FEE, RECOMMENDED, MAX_DAILY, feeWords, FEE_WHY, tierOf, dailyTotal, bandShare, expected, rangeWords, monthlyBill, slotsNeeded, nightlyFor } from './spendPlan'
-import { LEAD_MODES, DAYS, liveHoursOk, liveHoursText, clockMin } from '../lib/leadSplit'
-import { Seg, Switch } from './kit'
-import { Select } from './Select'
-import { zoneAbbr } from '../lib/callSlots'
 import { usd } from './motion'
 import './p878.css'
 import './p889.css'
 
 // P909: up to $500 a day (an admin can raise one agent); a paid plan adds 12% of the spend, charged with it each night.
 // P878 + P889 — the lead spend builder: ONE daily spend ($50 a day minimum, P914: no pilot) and
-// How you take leads (Appointments only, or Appointments + live transfers with live-call hours). Under it, what it buys
+// (P924: no How you take leads: one set of hours, set in Settings, covers booked and live calls). Under it, what it buys
 // in a week; the tier bands and the membership tier, live as the slider moves. Used by Billing, the
 // Leads spend drawer and Setup. Every number comes from spendPlan.js (drafts). Agents never read where leads come from
 // or how the spend is split: it's "lead spend".
 const money = usd()
-const CLOCKS = ['7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM', '9:00 PM']
-
-// take = { mode: 'appts' | 'both', hours: { Mon: { on, start, end } ... }, tz }
-export function TakeLeads({ take, onTake, id = 'tk' }) {
-  const set = (d, patch) => onTake({ ...take, hours: { ...take.hours, [d]: { ...take.hours[d], ...patch } } })
-  const noHours = take.mode === 'both' && !liveHoursOk(take.hours)
-  return (
-    <div className="sp-take">
-      <div className="lc-q"><b id={`${id}-mode`}>How you take leads</b>
-        <Seg role="radiogroup" label="How you take leads" value={take.mode} onChange={mode => onTake({ ...take, mode })} options={LEAD_MODES.map(m => ({ key: m.key, label: m.label }))} /></div>
-      <p className="tp-sub">{LEAD_MODES.find(m => m.key === take.mode)?.sub}</p>
-      {take.mode === 'both' && (
-        <div className="tp-field"><span>Your live-call hours{take.tz ? ` (your time, ${zoneAbbr(take.tz)})` : ''}</span>
-          <div className="hr-week" role="group" aria-label="Live-call hours per weekday">
-            {DAYS.map(d => {
-              const day = take.hours[d]
-              const bad = day.on && clockMin(day.end) <= clockMin(day.start)
-              return (
-                <div key={d} className="hr-day">
-                  <b>{d}</b>
-                  <Switch on={day.on} label={`Live calls on ${d}`} onChange={on => set(d, { on })} />
-                  {day.on ? <>
-                    <Select label={`${d} live calls start`} value={day.start} onChange={v => set(d, { start: v })} options={CLOCKS} />
-                    <Select label={`${d} live calls end`} value={day.end} onChange={v => set(d, { end: v })} options={CLOCKS} invalid={bad} />
-                  </> : <span className="is-off">Off. Leads that day are booked</span>}
-                </div>
-              )
-            })}
-          </div>
-          <small>{noHours ? 'Turn on at least one day.' : `${liveHoursText(take.hours)}. Outside these hours every lead is booked on your calendar.`}</small>
-        </div>
-      )}
-      {noHours && <p className="sp-warn" role="alert">Pick at least one day for live calls, or choose Appointments only.</p>}
-    </div>
-  )
-}
 
 // The tier bands under the total: where today's total daily spend sits.
 export function TierBands({ daily }) {

@@ -143,7 +143,7 @@ export function OutcomePrompt({ lead, start = null, onClose }) {
           {slot && (() => {
             const texts = followReminders(slot.at, clockNow())
             return texts.length > 0
-              ? <div className="tp-chat">{texts.map(r => <div key={r.step} className="tp-bub me">{leadText(r.step, { lead: lead.first_name, appt: timeLabel(slot.at) })}<small>{r.step === 'follow_day_before' ? 'The day before, 6:30 PM' : 'That morning, 8:30 AM'} · draft wording · sends when your leads go live</small></div>)}</div>
+              ? <div className="tp-chat">{texts.map(r => <div key={r.step} className="tp-bub me">{leadText(r.step, { lead: lead.first_name, appt: timeLabel(slot.at) })}<small>{r.step === 'follow_day_before' ? 'The day before, 6:30 PM' : 'That morning, 8:30 AM'} · sends when your leads go live</small></div>)}</div>
               : <p className="tp-sub" data-follow-texts="none">It{'’'}s today, so no reminder text goes out.</p>
           })()}
         </div>}
@@ -151,7 +151,7 @@ export function OutcomePrompt({ lead, start = null, onClose }) {
         {how === 'booked' && <p className="rs-note">{lead.first_name} goes on Booked. Send a booking link from the lead if they still need to pick a time.</p>}
         {how === 'no_show' && <div className="rs-more is-warn">
           <p className="rs-note">{lead.first_name} gets a text right away with a one-tap link to pick a new time, and our team is booked to call and book them again (the next open time in their best window). When they rebook, they go back to Booked on your calendar. You have {UNDO_SECONDS} seconds to undo.</p>
-          <div className="tp-chat"><div className="tp-bub me">{leadText('no_show_link', { lead: lead.first_name })}<small>Deedstone · draft wording · sends when your leads go live</small></div></div>
+          <div className="tp-chat"><div className="tp-bub me">{leadText('no_show_link', { lead: lead.first_name })}<small>Deedstone · sends when your leads go live</small></div></div>
         </div>}
       </div>
     </Drawer>

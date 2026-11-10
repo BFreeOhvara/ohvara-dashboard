@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Check, MailCheck, MessageSquareText } from 'lucide-react'
 import { useSampleSignup } from '../data'
-import { Field, Pending, Seg, SampleTag, useNote } from '../kit'
+import { Field, Seg, SampleTag, useNote } from '../kit'
 import { paths } from '../paths'
 import { PhoneInput } from '../PhoneInput'
 import { phoneComplete, formatPhone } from '../phoneMask'
@@ -60,7 +60,6 @@ export default function Signup() {
               <div className="tp-plan"><span className="tp-grow"><b>A plan that follows your daily lead spend</b><p className="tp-sub">You set the spend per day ($50 to $500) and change it any time. Each night your card is charged the next day{'’'}s spend plus 12%; anything not spent comes off the next charge. Your plan is billed monthly.</p></span><SampleTag /></div>
               <ul className="tp-list">{data.covers.map(c => <li key={c} className="tp-row tp-sub" style={{ minHeight: 26 }}><Check size={14} />{c}</li>)}</ul>
               <label className="tp-check"><input type="checkbox" checked={agree} onChange={e => setAgree(e.target.checked)} /><span>Agreement checkbox, wording pending</span></label>
-              <Pending>Terms, privacy and text-message consent wording pending</Pending>
               {tried && !agree && <p className="fx-sub-err" role="alert">Tick the box to go on.</p>}
               <button type="submit" className="tp-primary fx-accent">Create account</button>
             </form>

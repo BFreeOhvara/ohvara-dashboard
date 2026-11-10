@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { Check, CalendarPlus, PhoneCall, BellOff } from 'lucide-react'
 import { useSampleSettings } from '../data'
-import { Field, Pending } from '../kit'
+import { Field } from '../kit'
 import { Select } from '../Select'
 import { agentSlots, clockMin, clocksBetween, zoneAbbr, ZONE_CHOICES } from '../../lib/callSlots'
 import '../p878.css'
@@ -90,7 +90,6 @@ export default function Deedstone() {
       <div className="dd-in">
         <div className="dd-brand"><i aria-hidden="true">D</i>Deedstone</div>
         {which === 'opt-out' ? <OptOut /> : <Picker key={which} page={which} agent={agent} agentTz={settings.timeZone} week={settings.week} first={first} />}
-        <Pending>Consent and privacy wording pending</Pending>
         <p className="dd-foot">Deedstone · Reply STOP to any text to opt out · Sample page: nothing is booked or sent</p>
       </div>
     </div>

@@ -2,8 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Link, NavLink, useLocation, useOutlet } from 'react-router-dom'
 import {
   Home, PhoneIncoming, CalendarDays, Users, History, CreditCard, Settings, Search, Bell, Plus, Sun, Moon, MessageSquare,
-  PhoneCall, LifeBuoy, Radio, ChevronRight, LogOut, ShieldCheck, Ellipsis, FileUp, TriangleAlert, Wallet, CalendarCheck, Clock3,
-  Smartphone, CircleHelp, StickyNote, PhoneOutgoing, Mail, Keyboard, Bug,
+  PhoneCall, Radio, ChevronRight, LogOut, ShieldCheck, Ellipsis, FileUp, TriangleAlert, Wallet, CalendarCheck, Clock3,
+  Smartphone, CircleHelp, StickyNote, Mail, Keyboard, Bug,
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
 import {
@@ -67,7 +67,7 @@ const TABS = [
   { to: paths.activity, key: 'activity', label: 'Activity', icon: History },
   { to: paths.billing, key: 'billing', label: 'Billing', icon: CreditCard },
 ]
-const PAGES = [...TABS, { to: paths.messages, label: 'Messages' }, { to: paths.submit, label: 'Submit a policy' }, { to: paths.requestService, label: 'Request a service' }, { to: paths.settings, label: 'Settings' }, { to: paths.more, label: 'More' }]
+const PAGES = [...TABS, { to: paths.messages, label: 'Messages' }, { to: paths.submit, label: 'Submit a policy' }, { to: paths.settings, label: 'Settings' }, { to: paths.more, label: 'More' }]
 
 // P873: the bell leads with Your to-dos (P910; each with its one action), any billing notice (Fix card), then the
 // quiet FYI list, then the latest activity.
@@ -171,14 +171,6 @@ export function BookCall({ open, onClose }) {
 }
 
 // Everyone an agent can call or write about: clients and open leads.
-function usePeople() {
-  const { data: clients } = useSampleClients()
-  const { data: leads } = useSampleLeads()
-  return useMemo(() => [
-    ...clients.map(c => ({ ref: c.id, kind: 'client', who: `${c.client_first_name} ${c.client_last_name}` })),
-    ...leads.filter(l => !['sold', 'not_interested'].includes(l.stage)).map(l => ({ ref: l.id, kind: 'lead', who: `${l.first_name} ${l.last_name}` })),
-  ], [clients, leads])
-}
 
 // Add a note to a client: it shows on the client's page (sample only).
 export function AddNote({ open, onClose }) {
@@ -196,38 +188,6 @@ export function AddNote({ open, onClose }) {
       footer={<><button type="button" className="tp-primary fx-accent" disabled={!text.trim()} onClick={save}><StickyNote size={16} />Save note</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
       <Field label="Client"><Select label="Client" value={c?.id} onChange={setRef} options={clients.map(x => ({ value: x.id, label: `${x.client_first_name} ${x.client_last_name}` }))} /></Field>
       <Field label="Note"><textarea className="tp-input fx-ta" rows={4} placeholder="What should the team know?" value={text} onChange={e => setText(e.target.value)} /></Field>
-    </Drawer>
-  )
-}
-
-// Log a call you made yourself, so the record stays whole (sample only).
-const RESULTS = ['Reached them', 'Left a voicemail', 'No answer', 'Set a follow-up']
-export function LogCall({ open, onClose }) {
-  const people = usePeople()
-  const { clientAction, addLeadNote } = useSampleActions()
-  const note = useNote()
-  const [ref, setRef] = useState('')
-  const [result, setResult] = useState(RESULTS[0])
-  const [text, setText] = useState('')
-  const keep = useKeep(open)
-  if (!keep) return null
-  const who = people.find(p => p.ref === ref) || people[0]
-  const save = () => {
-    const line = `Call logged: ${result}${text.trim() ? `. ${text.trim()}` : ''}`
-    if (who.kind === 'client') clientAction(who.ref, line)
-    else addLeadNote(who.ref, line)
-    note(`Call with ${who.who} logged`)
-    setText('')
-    onClose()
-  }
-  return (
-    <Drawer open={open} center onClose={onClose} title="Log a call" sub="A call you made outside Ohvara."
-      footer={<><button type="button" className="tp-primary fx-accent" onClick={save}><PhoneOutgoing size={16} />Log it</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
-      <Field label="Who"><Select label="Who" value={who.ref} onChange={setRef} options={people.map(p => ({ value: p.ref, label: p.who, sub: p.kind === 'lead' ? 'Lead' : 'Client' }))} /></Field>
-      <div className="tp-field"><span>How it went</span>
-        <PillTabs role="radiogroup" label="How it went" className="fx-chips" itemClass="fx-chip" value={result} onChange={setResult} items={RESULTS.map(r => ({ key: r, label: <b>{r}</b> }))} />
-      </div>
-      <Field label="Notes (optional)"><textarea className="tp-input fx-ta" rows={3} value={text} onChange={e => setText(e.target.value)} /></Field>
     </Drawer>
   )
 }
@@ -277,7 +237,6 @@ export function Help({ open, onClose, onBug, onTalk }) {
         {/* P876: Report a bug, the same pop-up in all three portals (ReportBug) */}
         <li><button type="button" className="fx-mrow" onClick={() => { onClose(); onBug() }}><Bug size={17} aria-hidden="true" /><span className="tp-grow"><b>Report a bug</b><small>Something broken or not working right</small></span><ChevronRight size={15} aria-hidden="true" /></button></li>
         <li><Link to={paths.messages()} className="fx-mrow" onClick={onClose}><MessageSquare size={17} aria-hidden="true" /><span className="tp-grow"><b>Message the team</b><small>Fastest for anything about a client</small></span><ChevronRight size={15} aria-hidden="true" /></Link></li>
-        <li><Link to={paths.requestService()} className="fx-mrow" onClick={onClose}><LifeBuoy size={17} aria-hidden="true" /><span className="tp-grow"><b>Request a service</b><small>Changes, cancellations, documents</small></span><ChevronRight size={15} aria-hidden="true" /></Link></li>
         <li><a href={`mailto:${SUPPORT_EMAIL}`} className="fx-mrow"><Mail size={17} aria-hidden="true" /><span className="tp-grow"><b>Email support</b><small>{SUPPORT_EMAIL}</small></span><ChevronRight size={15} aria-hidden="true" /></a></li>
         <li className="fx-mrow"><Keyboard size={17} aria-hidden="true" /><span className="tp-grow"><b>Search anything</b><small>Press Ctrl K (Cmd K on a Mac)</small></span></li>
       </ul>
@@ -304,10 +263,8 @@ function CreateMenu({ open, onClose, at, pick }) {
         <p className="fx-cmenu-h">Create</p>
         <Link to={paths.submit()} role="menuitem" className="fx-mrow" onClick={onClose}>{row(FileUp, 'Submit a policy', 'A sale for servicing')}</Link>
         <button type="button" role="menuitem" className="fx-mrow" onClick={() => pick('book')}>{row(PhoneCall, 'Book a call', 'Puts it on your calendar')}</button>
-        <Link to={paths.requestService()} role="menuitem" className="fx-mrow" onClick={onClose}>{row(LifeBuoy, 'Request a service', 'Changes, cancellations, documents')}</Link>
         <i className="fx-mline" />
         <button type="button" role="menuitem" className="fx-mrow" onClick={() => pick('note')}>{row(StickyNote, 'Add a note to a client', 'Shows on their page')}</button>
-        <button type="button" role="menuitem" className="fx-mrow" onClick={() => pick('log')}>{row(PhoneOutgoing, 'Log a call', 'A call you made yourself')}</button>
       </section>
     </div>
   )
@@ -326,7 +283,7 @@ function AccountMenu({ open, onClose, theme, setTheme }) {
   // P843: the menu plays its way out (fx-menu-out) instead of vanishing
   const [shown, leaving] = useExit(open, 200)
   if (!shown) return null
-  const links = [[paths.billing, 'Billing', CreditCard], [paths.settings, 'Settings', Settings], [paths.requestService, 'Request a service', LifeBuoy], [paths.more, 'More', Ellipsis]]
+  const links = [[paths.billing, 'Billing', CreditCard], [paths.settings, 'Settings', Settings], [paths.more, 'More', Ellipsis]]
   if (isTemplateAddress()) links.push([paths.signup, 'Sign-up preview', ShieldCheck], [paths.welcome, 'Welcome preview', Home])
   return (
     <div className={`tp fx-layer fx-menu-layer${leaving ? ' is-leaving' : ''}`} role="presentation">
@@ -412,7 +369,7 @@ export default function TemplateFrame() {
   const toggleMenu = e => { wig.onClick(e); setPanel(p => (p === 'menu' ? null : 'menu')) }
   const menuOn = panel === 'menu'
   const flipTheme = e => { wig.onClick(e); setTheme(theme === 'dark' ? 'light' : 'dark') }
-  // P890: no Active switch. Live transfers ring the agent inside their live-call hours (How you take leads, P889).
+  // P890: no Active switch. P924: live transfers ring the agent inside their hours (one set, Settings → Hours and calls).
   const take = billing.take
   const duty = take?.mode === 'both' && inLiveHours(take.hours, take.tz)
   // The + menu opens beside the rail button on a desktop (a bottom sheet on a phone).
@@ -477,12 +434,11 @@ export default function TemplateFrame() {
         <i className="fx-hair" />
         <button type="button" className="fx-ri fx-rplus tp-wig" aria-label="Create" aria-haspopup="menu" aria-expanded={panel === 'create'} data-tip="Create" {...wig} onClick={openCreate}><Plus size={20} /></button>
         <button type="button" className="tp-ri fx-ri tp-wig" aria-label="Book a call" data-tip="Book a call" {...wig} onClick={open('book')}><PhoneCall size={18} /></button>
-        <NavLink to={paths.requestService()} className="fx-ri tp-wig" aria-label="Request a service" data-tip="Request a service" {...wig}><LifeBuoy size={18} /></NavLink>
         <i className="fx-hair" />
         <NavLink to={paths.messages()} className="fx-ri tp-wig" aria-label="Messages" data-tip="Messages" {...wig}><MessageSquare size={18} />{unread > 0 && <span className="fx-badge">{unread}</span>}</NavLink>
         <NavLink to={paths.calendar()} className="fx-ri tp-wig" aria-label="Calendar" data-tip="Calendar" {...wig}><CalendarDays size={18} /></NavLink>
         <i className="fx-hair" />
-        <NavLink to={paths.billing()} className={`fx-ri fx-duty tp-wig${duty ? ' on' : ''}`} aria-label={duty ? 'Live transfers ring you now' : 'Live transfers off now: we book callers'} data-tip={duty ? 'Live transfers: on now' : 'Live transfers: off now'} {...wig}><Radio size={18} /><i aria-hidden="true" /></NavLink>
+        <NavLink to={`${paths.settings()}?tab=calls`} className={`fx-ri fx-duty tp-wig${duty ? ' on' : ''}`} aria-label={duty ? 'Live transfers ring you now' : 'Live transfers off now: we book callers'} data-tip={duty ? 'Live transfers: on now' : 'Live transfers: off now'} {...wig}><Radio size={18} /><i aria-hidden="true" /></NavLink>
         <i className="fx-hair" />
         <button type="button" className="fx-ri tp-wig" aria-label="Get the phone app" aria-expanded={panel === 'app'} data-tip="Get the phone app" {...wig} onClick={open('app')}><Smartphone size={18} /></button>
         <button type="button" className="fx-ri tp-wig" aria-label="Help and support" aria-expanded={panel === 'help'} data-tip="Help and support" {...wig} onClick={open('help')}><CircleHelp size={18} /></button>
@@ -522,7 +478,7 @@ export default function TemplateFrame() {
         <button type="button" className="fx-btab" aria-label="Search" onClick={open('search')}><Search size={21} aria-hidden="true" />Search</button>
         <button type="button" className="fx-btab" onClick={open('book')}><PhoneCall size={20} aria-hidden="true" />Book</button>
         <button type="button" className="fx-btab is-plus" aria-label="Create" aria-haspopup="menu" aria-expanded={panel === 'create'} onClick={openCreate}><span className="fx-bplus"><Plus size={24} aria-hidden="true" /></span>Create</button>
-        <Link to={paths.requestService()} className="fx-btab"><LifeBuoy size={20} aria-hidden="true" />Request</Link>
+        <Link to={paths.messages()} className="fx-btab"><MessageSquare size={20} aria-hidden="true" />Messages</Link>
         <Link to={paths.settings()} className="fx-btab"><Settings size={20} aria-hidden="true" />Settings</Link>
       </nav>
 
@@ -531,7 +487,6 @@ export default function TemplateFrame() {
       <BookCall open={panel === 'book'} onClose={close} />
       <CreateMenu open={panel === 'create'} onClose={close} at={menuAt} pick={setPanel} />
       <AddNote open={panel === 'note'} onClose={close} />
-      <LogCall open={panel === 'log'} onClose={close} />
       <GetApp open={panel === 'app'} onClose={close} />
       <Help open={panel === 'help'} onClose={close} onBug={() => setPanel('bug')} onTalk={() => setPanel('talk')} />
       <TalkDrawer open={panel === 'talk'} onClose={close} />

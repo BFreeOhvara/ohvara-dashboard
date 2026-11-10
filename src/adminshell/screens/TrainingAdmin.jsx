@@ -92,7 +92,7 @@ function Editor() {
       <Field label="Steps" hint="One step per line, in order"><textarea className="tp-input fx-ta" rows={7} value={d.steps} onChange={e => set({ steps: e.target.value })} /></Field>
       {approve.length > 0 && (
         <div className="adm-tr-approve">
-          <p><TriangleAlert size={14} aria-hidden="true" /><b>Draft: Brayden and Jordan approve.</b> What leads and clients hear in this lesson. The words to say change in the repo for now (P852 makes them editable here).</p>
+          <p><TriangleAlert size={14} aria-hidden="true" /><b>What leads and clients hear in this lesson.</b> Approve or change them in Settings › Wording to approve.</p>
           <ul>{approve.map(x => <li key={x.text}>{x.text}</li>)}</ul>
         </div>
       )}

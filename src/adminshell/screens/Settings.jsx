@@ -2,13 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   User, Users, ToggleRight, Wallet, History, Bug, SlidersHorizontal, LogOut, Mail, UserPlus, ArrowUpRight, Search, ShieldCheck,
-  ShieldOff, Image as ImageIcon, Check, Lock, GraduationCap, Scale, ArrowRightLeft, Bot, PhoneCall,
+  ShieldOff, Image as ImageIcon, Check, Lock, GraduationCap, Scale, ArrowRightLeft, Bot, PhoneCall, MessageSquareText,
 } from 'lucide-react'
-import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmAudit, useAdmBugs, useAdmDay, useAdmSource, SWITCHES, ME } from '../data'
+import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmAudit, useAdmBugs, useAdmSource, SWITCHES, ME } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
-import { Field, Seg, Switch, Chip, PillTabs, Avatar, Empty, useNote, useAccount, initials } from '../../template/kit'
-import { CountUp } from '../../template/motion'
-import { avatarHue } from '../../template/avatarHue'
+import { Field, Seg, Switch, Chip, Avatar, Empty, useNote, useAccount } from '../../template/kit'
+import { SettingsNav } from '../../template/SettingsNav'
 import { Dropdown, DField } from '../kit'
 import { AddSomeone } from '../AdminFrame'
 import { ap } from '../paths'
@@ -22,6 +21,7 @@ import { LaunchSwitches } from './Launch906'
 import { SplitRules } from './Split889'
 import { AiCallerSettings } from './AiCalls892'
 import { DeedstoneNumbers } from './Numbers916'
+import { WordingToApprove } from './Wording924'
 import { useCallOpenMin, saveCallOpenMin } from '../../hooks/useCallOpen'
 
 // P849 — admin Settings on the agent page's shape: the profile card and Sign out on the left, one panel whose stretch
@@ -29,7 +29,7 @@ import { useCallOpenMin, saveCallOpenMin } from '../../hooks/useCallOpen'
 // Pay rules, Audit log (append-only, every admin action), Bug reports, Preferences. Sample only: the
 // real switches stay on today's /settings page until the backend step, and this page says so.
 const TABS = [['profile', 'Profile', User], ['people', 'People & access', Users], ['switches', 'Switches', ToggleRight], ['pay', 'Pay rules', Wallet], ['split', 'Lead split', ArrowRightLeft], ['ai', 'AI caller', Bot],
-  ['numbers', 'Deedstone numbers', PhoneCall], ['training', 'Training', GraduationCap], ['audit', 'Audit log', History], ['bugs', 'Bug reports', Bug], ['compliance', 'Compliance', Scale], ['prefs', 'Preferences', SlidersHorizontal]]
+  ['numbers', 'Deedstone numbers', PhoneCall], ['wording', 'Wording to approve', MessageSquareText], ['training', 'Training', GraduationCap], ['audit', 'Audit log', History], ['bugs', 'Bug reports', Bug], ['compliance', 'Compliance', Scale], ['prefs', 'Preferences', SlidersHorizontal]]
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
 
 function FormFoot({ dirty, onDiscard, onSave, label = 'Save changes' }) {
@@ -63,20 +63,6 @@ function CallOpenSetting() {
 }
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
 
-function ProfileCard({ name, email }) {
-  const { data: day } = useAdmDay()
-  const stats = [[day.needs, 'Need you'], [day.payingAgents, 'Paying'], [day.onShift.length, 'On shift']]
-  return (
-    <aside className="fx-tile fx-prof" aria-label="Your profile">
-      <div className={`fx-prof-av av-${avatarHue(name)}`} aria-hidden="true">{initials(name).toUpperCase()}<i className="on" /></div>
-      <h2>{name}</h2>
-      <p>Admin · owner</p>
-      <span className="fx-prof-mail"><Mail size={13} aria-hidden="true" />{email}</span>
-      <ul className="fx-pstats">{stats.map(([n, label]) => <li key={label}><small>{label}</small><b className="tp-num"><CountUp value={n} /></b></li>)}</ul>
-      <Link to={ap('overview')} className="fx-pnext"><i aria-hidden="true" /><span className="tp-grow"><small>Overview</small><b>{day.needs} things need you</b><small>Leads, desk, days off, money</small></span><ArrowUpRight size={16} aria-hidden="true" /></Link>
-    </aside>
-  )
-}
 
 function People() {
   const { data: agents } = useAdmAgents()
@@ -272,13 +258,12 @@ export default function Settings() {
   const [panel, setPanel] = useState(null)
   const DeleteDialog = account.DeleteDialog
   return (
-    <div className="tp-page fx-set adm-settings">
+    <div className="tp-page fx-set st-set adm-settings">
       <div className="fx-set-side">
-        <ProfileCard name={name} email={s.profile.email} />
+        <SettingsNav name={name} role="Admin" tabs={TABS} value={tab} onChange={setTab} />
         <button type="button" className="fx-tile fx-signout" onClick={signOut}><LogOut size={16} aria-hidden="true" />Sign out</button>
       </div>
       <section className="fx-tile fx-panel" aria-label="Settings">
-        <PillTabs label="Settings sections" className="fx-ptabs adm-settabs" itemClass="fx-ptab" value={tab} onChange={setTab} items={TABS.map(([key, label, icon]) => ({ key, label, icon }))} />
         <div className="fx-form" key={tab} role="tabpanel" aria-label={TABS.find(t => t[0] === tab)[1]}>
           {tab === 'profile' && <>
             <Head title="Profile" sub="How agents, VAs and Jordan see you on messages." />
@@ -298,6 +283,7 @@ export default function Settings() {
           {tab === 'split' && <SplitRules />}
           {tab === 'ai' && <AiCallerSettings />}
           {tab === 'numbers' && <DeedstoneNumbers />}
+          {tab === 'wording' && <WordingToApprove />}
           {tab === 'training' && <TrainingAdmin />}
           {tab === 'audit' && <Audit />}
           {tab === 'bugs' && <Bugs />}

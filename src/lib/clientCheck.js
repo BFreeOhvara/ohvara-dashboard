@@ -10,14 +10,14 @@
 //   Closed           Gone for good (hidden unless turned on).
 // Requests (an address change...) aren't a status: they show as a small tag on the card.
 //
-// The monthly check: some days after each client's draft date (admin setting, default 3) the agent is asked whether
+// The monthly check: some days after each client's draft date (admin setting, default 1: P924, the day after the draft) the agent is asked whether
 // the policy is still on the books. One list per draft date ("These policies drafted on the 7th"), answered with one
 // tap for all, or by ticking only the ones that fell off. Yes → Protected. No → Working, and the VA gets a save call.
 // Checks run monthly for the first 12 drafts, then every 3 months (admin settings).
 
 import { trackOpen, trackClosed, saveTrack } from './clientStages.js'
 
-export const CHECK_DEFAULTS ={ delayDays: 3, monthlyFor: 12, thenEvery: 3 }
+export const CHECK_DEFAULTS ={ delayDays: 1, monthlyFor: 12, thenEvery: 3 }
 
 export const CLIENT_STATUS = {
   needs_attention: { key: 'needs_attention', tone: 'warn', label: 'Needs attention', sub: 'Still on the books?' },

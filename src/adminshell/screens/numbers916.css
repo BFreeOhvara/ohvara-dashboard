@@ -41,3 +41,8 @@
   .dn-add { grid-template-columns: minmax(0, 1fr); }
   .dn-main { flex-wrap: wrap; }
 }
+/* P924: the VAs on each number. */
+.dn-pod { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; padding-top: 10px; border-top: 1px solid var(--sh-edge); color: var(--ov-mid); }
+.dn-pod small { font-size: 12.5px; }
+.dn-pod b { color: var(--ov-hi); font-weight: 600; }
+.dn-pod-pick { display: flex; flex-wrap: wrap; gap: 6px; }

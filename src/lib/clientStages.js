@@ -6,7 +6,9 @@
 //   New policy        Sold and submitted → Hand-off call with our team → Policy approved by the carrier → Old policy
 //                     cancelled (replacements only, timed before the old draft) → First payment cleared.
 //   Saving a policy   Problem found → Save call booked → Client reached → Fixed with the carrier → Payment cleared.
-//                     If it can't be saved it ends Closed, with the reason.
+//                     If it can't be saved it ends Closed, with the reason. P924: the save call is booked the day
+//                     after the draft; the VA finds out why, then transfers the client live (Check agent) or books
+//                     the agent's calendar.
 //   Change request    Requested → Call booked → Done with the carrier → Confirmed.
 //   Client you added  Added → Welcome call → Details confirmed.
 //
@@ -32,8 +34,8 @@ export const JOURNEYS = {
     key: 'save', label: 'Saving the policy',
     steps: [
       { key: 'found', label: 'Problem found' },
-      { key: 'booked', label: 'Save call booked' },
-      { key: 'reached', label: 'Client reached' },
+      { key: 'booked', label: 'Save call booked', sub: 'The day after the draft, with our team' },
+      { key: 'reached', label: 'Client reached', sub: 'We find out why, then hand them to you: live, or a call on your calendar' },
       { key: 'fixed', label: 'Fixed with the carrier', sub: 'Redraft, new bank or new draft date' },
       { key: 'cleared', label: 'Payment cleared' },
     ],

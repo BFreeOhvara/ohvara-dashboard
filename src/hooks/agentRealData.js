@@ -280,6 +280,7 @@ export function useBillingReal() {
   })
   const clients = useClientsReal()
   const leads = useLeadsReal()
+  const settings = useSettingsReal()
   const data = useMemo(() => {
     const { spend = [], balance } = q.data || {}
     const d0 = new Date(`${now.slice(0, 10)}T12:00:00Z`)
@@ -290,7 +291,8 @@ export function useBillingReal() {
       plan: 'paid', products: profile?.has_servicing === false ? 'leads' : 'both',
       // P889: one daily spend (the old per-type rows add up until p889's lead_product_set is live).
       spend: { daily: daily('booked_appointment') + daily('live_call') }, pending: null, booked: 0, usual: 0,
-      take: { mode: daily('live_call') > 0 ? 'both' : 'appts', hours: DEFAULT_LIVE_HOURS, tz: profile?.timezone || DEFAULT_TZ },
+      // P924: one set of hours: the agent's working hours are their live-call hours too (258 keeps the server in step).
+      take: { mode: 'both', hours: settings.data?.week || DEFAULT_LIVE_HOURS, tz: settings.data?.timeZone || profile?.timezone || DEFAULT_TZ },
       // P909: lead spend is charged nightly; until the P909 reads are live, the balance stands in as credit.
       nightly: { at: 'Tonight, 8 PM', forDay: 'tomorrow', nights: [], credit: Math.max(0, (balance?.balance_cents || 0) / 100) },
       card: { label: null, onFile: true },
@@ -299,7 +301,7 @@ export function useBillingReal() {
       next_charge: 'Tonight, 8 PM', nextBill: null, servicing: { status: 'active', next: null }, cancellations: null, history: [], real: true,
     }
     return { ...b, submitted: clients.data.length, nightNow: nightlyOf(b.nightly, b.spend, b.plan), expected: expected(b.spend, b.take.mode), servicing: { ...b.servicing, status: b.products === 'leads' ? 'off' : 'active' } }
-  }, [q.data, profile, now, clients.data.length, leads.data])
+  }, [q.data, profile, now, clients.data.length, leads.data, settings.data])
   return { data, isLoading: q.isLoading, error: q.error || null }
 }
 function billingNeedsOf(b) {
