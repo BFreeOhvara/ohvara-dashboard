@@ -12,7 +12,7 @@
 --      client goes to Closed with the reason, policies.closed_reason).
 --   6. One set of hours: the agent's working hours are their live-call hours too (agent_lead_product mode 'both').
 --
--- Not applied: needs Brayden's yes.
+-- Applied on live 2026-11-10 on Brayden's yes (plus the tighten step at the end).
 
 -- ── 1. VA pods ─────────────────────────────────────────────────────────────────────────────────────────────────
 create table if not exists public.deedstone_number_vas (
@@ -332,3 +332,8 @@ do $$ declare a uuid;
 begin
   for a in select distinct agent_id from public.agent_working_hours loop perform public.agent_hours_to_live(a); end loop;
 end $$;
+
+-- Tighten (advisors, applied on live as 258_client_line_tighten): fixed search_path; trigger functions not callable.
+alter function public.client_text_intent(text) set search_path = public;
+revoke all on function public.agent_hours_sync() from public, anon, authenticated;
+revoke all on function public.client_save_told() from public, anon, authenticated;
