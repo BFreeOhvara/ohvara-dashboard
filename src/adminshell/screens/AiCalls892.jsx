@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Bot, Clock3, PhoneOutgoing, ShieldAlert, PhoneOff, MessageSquareText } from 'lucide-react'
-import { Chip, Switch, SampleTag, Empty, useNote } from '../../template/kit'
+import { Bot, Clock3, PhoneOutgoing, ShieldAlert, PhoneOff, MessageSquareText, ChevronRight, Power } from 'lucide-react'
+import { Chip, Switch, SampleTag, Empty, Drawer, useNote } from '../../template/kit'
 import { Dropdown, DField } from '../kit'
-import { useAdmSettings, useAdmActions, useAdmAgents } from '../data'
+import { useAdmSettings, useAdmAgents } from '../data'
 import { usd } from '../../template/motion'
 import {
   AI_RULES, PROVIDERS, providerOf, DRAFT_WORDS, SAMPLE_AI_CALLS, SAMPLE_AI_SETTINGS, SAMPLE_CENTS_PER_MIN, OUTCOME_WORD, OUTCOME_TONE,
@@ -31,7 +31,6 @@ const HARD_STOPS = [
 
 export function AiCallerSettings() {
   const { data: s } = useAdmSettings()
-  const { setSwitch } = useAdmActions()
   const { data: agents } = useAdmAgents()
   const note = useNote()
   const [d, setD] = useState(saved)
@@ -41,32 +40,38 @@ export function AiCallerSettings() {
   const toggle = id => setD({ ...d, agents: all ? agents.map(a => a.id).filter(x => x !== id) : picked(id) ? d.agents.filter(x => x !== id) : [...d.agents, id] })
   const dirty = JSON.stringify(d) !== JSON.stringify(saved)
   const prov = providerOf(d.provider)
+  const [words, setWords] = useState(false)
   return (
     <>
-      <header className="fx-form-h"><h2>AI caller</h2><p>An AI calls every new form lead within {AI_RULES.firstCallSecs} seconds, says it{'’'}s Deedstone{'’'}s virtual assistant, asks the VA questions, then checks the agent or books. It never hands a new lead to a VA: if they want a person or ask about coverage or price, it says their agent will go over that, then checks the agent or books. Calls people make to us still ring a VA.</p></header>
-      <div className="tp-row tp-wrap"><AiSlot provider={d.provider} /><SampleTag>Sample</SampleTag></div>
-      <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>AI caller on</b><p className="tp-sub">Off: no AI calls go out. Turning it on is Brayden{'’'}s call, after the four items below. Also in Settings › Switches.</p></div>
-        <Switch on={live} label="AI caller on" onChange={v => { setSwitch('ai_caller_live', v); note(`AI caller ${v ? 'on' : 'off'} (sample)`) }} /></div>
+      <header className="fx-form-h"><h2>AI caller</h2><p>An AI calls every new form lead within {AI_RULES.firstCallSecs} seconds, says it{'’'}s Deedstone{'’'}s virtual assistant, then books it or checks the agent for a transfer. It never hands a new lead to a VA; calls people make to us still ring a VA.</p></header>
+      {/* P934: the on/off switch lives in Settings › Go live only; this section is how it calls. Two columns, no scroll:
+          the wording and the call rules open in a slide-in. */}
+      <div className="tp-row tp-wrap"><AiSlot provider={d.provider} /><SampleTag>Sample</SampleTag><span className="ai-golive"><Power size={14} aria-hidden="true" />The AI caller is {live ? 'on' : 'off'}. Turn it on or off in Go live.</span></div>
+      <div className="adm-set-two">
+      <div>
       <div className="adm-warn ai-stops" role="note"><ShieldAlert size={15} aria-hidden="true" /><div><b>Before it goes on (Brayden{'’'}s yes)</b>
         <ul>{HARD_STOPS.map(([k, v]) => <li key={k}><b>{k}:</b> {v}</li>)}</ul></div></div>
 
+      </div>
+      <div>
       <h3 className="fx-h3">Which agents</h3>
       <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Every agent</b><p className="tp-sub">New agents are included too.</p></div>
         <Switch on={all} label="Every agent" onChange={v => setD({ ...d, agents: v ? 'all' : agents.map(a => a.id) })} /></div>
-      <ul className="tp-list ai-agents">{agents.map(a => (
-        <li key={a.id} className="fx-form-row fx-form-sw"><div className="tp-grow"><b>{a.name}</b><p className="tp-sub">{a.active ? 'Appointments + live transfers' : 'Appointments only'} · licensed in {a.states.join(', ')}</p></div>
-          <Switch on={picked(a.id)} label={`AI calls ${a.name}'s leads`} onChange={() => toggle(a.id)} /></li>
-      ))}</ul>
-
+      {/* P934: the agents as colour pills (the agent side's FilterPills look, several can be on) so the section fits. */}
+      <div className="fx-fpills ai-agent-pills" role="group" aria-label="Which agents the AI calls for">{agents.map(a => (
+        <button key={a.id} type="button" className={`fx-fpill is-blue${picked(a.id) ? ' is-on' : ''}`} aria-pressed={picked(a.id)} title={`${a.active ? 'Appointments + live transfers' : 'Appointments only'} · licensed in ${a.states.join(', ')}`} onClick={() => toggle(a.id)}>{a.name}</button>
+      ))}</div>
       <div className="fx-form-grid">
         <DField label="Longest call" hint="The AI wraps up and books before this."><Dropdown label="Longest call" value={d.maxCallSecs} options={LENGTHS} onChange={v => setD({ ...d, maxCallSecs: v })} /></DField>
         <DField label="Provider" hint="Picked here, connected only once it's paid for."><Dropdown label="Provider" value={d.provider} onChange={v => setD({ ...d, provider: v })}
           options={[{ value: 'none', label: 'Not picked yet' }, ...PROVIDERS.map(p => ({ value: p.key, label: p.name, sub: p.recommended ? 'Recommended' : undefined }))]} /></DField>
       </div>
       {prov && <dl className="fx-facts ai-prov">{[['Cost', prov.perMin], ['Calls out', prov.outbound], ['Transfers', prov.transfer], ['Transcripts', prov.transcripts]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>}
-
-      <h3 className="fx-h3">What it says</h3>
-      <ul className="tp-list ai-words">{[['Opening', DRAFT_WORDS.opening], ['While checking the agent', DRAFT_WORDS.hold], ['Agent said Yes', DRAFT_WORDS.connecting], ['Agent said No or didn’t answer', DRAFT_WORDS.bounce], ['Asked for a person, coverage or price', DRAFT_WORDS.agentWill], ['No open time in 3 days', DRAFT_WORDS.noTimes]].map(([k, v]) => (
+        <button type="button" className="fx-mrow ai-words-open" onClick={() => setWords(true)}><MessageSquareText size={16} aria-hidden="true" /><span className="tp-grow"><b>What it says and its call rules</b><small>The six lines it says, and when a VA calls instead</small></span><ChevronRight size={15} aria-hidden="true" /></button>
+      </div>
+      </div>
+      <Drawer open={words} onClose={() => setWords(false)} title="What the AI caller says" sub="Its lines, and the rules every call follows.">
+            <ul className="tp-list ai-words">{[['Opening', DRAFT_WORDS.opening], ['While checking the agent', DRAFT_WORDS.hold], ['Agent said Yes', DRAFT_WORDS.connecting], ['Agent said No or didn’t answer', DRAFT_WORDS.bounce], ['Asked for a person, coverage or price', DRAFT_WORDS.agentWill], ['No open time in 3 days', DRAFT_WORDS.noTimes]].map(([k, v]) => (
         <li key={k}><small className="tp-sub">{k}</small><p className="tp-mid">“{v}”</p></li>
       ))}</ul>
       <ul className="tp-list tp-sub">
@@ -75,6 +80,7 @@ export function AiCallerSettings() {
         <li>Every call ends in one result: booked, transferred, no answer, not now, hard no, wrong number or opted out. Only no answer and booked (a "not now" with a time counts as booked) start texts.</li>
         <li>{'“'}Stop calling{'”'} is honoured at once, everywhere.</li>
       </ul>
+      </Drawer>
       <footer className="fx-form-f">
         <button type="button" className="tp-btn ov-ghost" disabled={!dirty} onClick={() => setD(saved)}>Discard</button>
         <button type="button" className="tp-primary fx-accent" disabled={!dirty} onClick={() => { saved = { ...d }; setD(saved); note('AI caller settings saved (sample)') }}>Save</button>

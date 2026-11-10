@@ -81,7 +81,7 @@ test('P879 screens carry the new pieces', () => {
   assert.match(src('./screens/Billing.jsx'), /\['results', 'Agent results'\]/)
   assert.match(src('./screens/Leads.jsx'), /<ConsentProof lead=\{l\}/)
   assert.match(src('./screens/Leads.jsx'), /<UnassignedBlock/)
-  assert.match(src('./screens/Settings.jsx'), /\['compliance', 'Compliance'/)
+  assert.match(src('./paths.js'), /compliance: '\/admin\/compliance'/) // P934: a rail page now
   assert.match(src('./screens/Campaign879.jsx'), /<EngineSlot \/>/) // campaign status is an engine slot
   assert.match(src('./screens/Overview.jsx'), /adAlerts\(\)/)
 })

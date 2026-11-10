@@ -4,6 +4,7 @@ import {
   Home, Users, Headset, PhoneIncoming, BookUser, Landmark, Plug, Settings, Search, Bell, Sun, Moon, MessageSquare, ChevronRight, LogOut,
   Ellipsis, CircleHelp, Mail, Keyboard, UserPlus, Shuffle, Hand, Bug, History, TriangleAlert, Wallet, CalendarDays, CalendarOff,
   ShieldCheck, PhoneForwarded, CircleDollarSign, CheckCircle2, Radio, Link2, Copy, Plus, Rocket, BadgeCheck, Hourglass,
+  PhoneCall, MessageSquareText, GraduationCap, Scale, BookOpen,
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
 import { useIsTestAccount } from '../hooks/useIsTestAccount'
@@ -123,7 +124,7 @@ function Help({ open, onClose, onBug }) {
       <ul className="tp-list">
         {/* P876: Report a bug, the same pop-up in all three portals (ReportBug) */}
         <li><button type="button" className="fx-mrow" onClick={() => { onClose(); onBug() }}><Bug size={17} aria-hidden="true" /><span className="tp-grow"><b>Report a bug</b><small>Something broken in the admin side</small></span><ChevronRight size={15} aria-hidden="true" /></button></li>
-        <li><Link to={`${ap('settings')}?tab=bugs`} className="fx-mrow" onClick={onClose}><Bug size={17} aria-hidden="true" /><span className="tp-grow"><b>Bug reports</b><small>What agents, VAs and admins sent from Help and support</small></span><ChevronRight size={15} aria-hidden="true" /></Link></li>
+        <li><Link to={ap('bugs')} className="fx-mrow" onClick={onClose}><Bug size={17} aria-hidden="true" /><span className="tp-grow"><b>Bug reports</b><small>What agents, VAs and admins sent from Help and support</small></span><ChevronRight size={15} aria-hidden="true" /></Link></li>
         <li><Link to={`${ap('settings')}?tab=audit`} className="fx-mrow" onClick={onClose}><History size={17} aria-hidden="true" /><span className="tp-grow"><b>Audit log</b><small>Every admin action, newest first</small></span><ChevronRight size={15} aria-hidden="true" /></Link></li>
         <li><a href={`mailto:${SUPPORT_EMAIL}`} className="fx-mrow"><Mail size={17} aria-hidden="true" /><span className="tp-grow"><b>Support mailbox</b><small>{SUPPORT_EMAIL}</small></span><ChevronRight size={15} aria-hidden="true" /></a></li>
         <li className="fx-mrow"><Keyboard size={17} aria-hidden="true" /><span className="tp-grow"><b>Search anything</b><small>Press Ctrl K (Cmd K on a Mac)</small></span></li>
@@ -187,7 +188,7 @@ function useHeadStats(page) {
     clients: [S(BookUser, clients.length, 'clients'), S(TriangleAlert, att, 'need attention', { chip: att ? ['See who', 'warn'] : null }), S(CalendarDays, clients.reduce((n, c) => n + c.steps.length, 0), 'servicing steps open')],
     billing: [S(CircleDollarSign, wk.inTotal, 'brought in this week', { fmt: money }), S(Wallet, wk.profit, 'profit this week', { fmt: money, chip: [`${wk.split[0].pct}/${wk.split[1].pct} split`, 'blue'] }), S(TriangleAlert, m.failed.length, 'failed payments', { chip: m.failed.length ? ['Follow up', 'warn'] : null })],
     connect: [S(Link2, linked, 'of 5 plugged in'), S(PhoneForwarded, connect.ads.length, 'ad accounts'), S(Plug, connect.sources.forms.filter(f => f.on).length, 'forms on')],
-    settings: [S(Users, agents.length + vas.length, 'people with a login'), S(Radio, 0, 'live switches on', { chip: ['Sample', 'blue'] }), S(Bug, day.openBugs, 'open bug reports')],
+    settings: [S(Users, agents.length + vas.length, 'people with a login'), S(Radio, ['sms_live', 'voice_live', 'ai_caller_live'].filter(k => settings.switches?.[k]).length, 'of 3 go-live switches on', { chip: ['Sample', 'blue'] }), S(Bug, day.openBugs, 'open bug reports')],
   }[page] || []
 }
 
@@ -293,6 +294,14 @@ export default function AdminFrame() {
         <i className="fx-hair" />
         <NavLink to={ap('messages')} className="fx-ri tp-wig" aria-label="Messages" data-tip="Messages" {...wig}><MessageSquare size={18} />{day.unread > 0 && <span className="fx-badge">{day.unread}</span>}</NavLink>
         <NavLink to={ap('connect')} className="fx-ri tp-wig" aria-label="Connect" data-tip={syncFailed(ghlRow) ? 'Connect · the last sync failed' : 'Connect'} {...wig}><Plug size={18} />{syncFailed(ghlRow) && <span className="adm-warndot" aria-label="The last sync failed" />}</NavLink>
+        <i className="fx-hair" />
+        {/* P934: the working pages that left Settings, each its own page (screens/Work934.jsx). */}
+        <NavLink to={ap('bugs')} className="fx-ri tp-wig" aria-label="Bug reports" data-tip="Bug reports" {...wig}><Bug size={18} /></NavLink>
+        <NavLink to={ap('numbers')} className="fx-ri tp-wig" aria-label="Deedstone numbers" data-tip="Deedstone numbers and VA pods" {...wig}><PhoneCall size={18} /></NavLink>
+        <NavLink to={ap('playbook')} className="fx-ri tp-wig" aria-label="Carrier playbook" data-tip="Carrier playbook" {...wig}><BookOpen size={18} /></NavLink>
+        <NavLink to={ap('wording')} className="fx-ri tp-wig" aria-label="Wording to approve" data-tip="Wording to approve" {...wig}><MessageSquareText size={18} /></NavLink>
+        <NavLink to={ap('training')} className="fx-ri tp-wig" aria-label="Training" data-tip="Training" {...wig}><GraduationCap size={18} /></NavLink>
+        <NavLink to={ap('compliance')} className="fx-ri tp-wig" aria-label="Compliance" data-tip="Compliance" {...wig}><Scale size={18} /></NavLink>
         <i className="fx-hair" />
         <button type="button" className="fx-ri tp-wig" aria-label="Help and support" aria-expanded={panel === 'help'} data-tip="Help and support" {...wig} onClick={open('help')}><CircleHelp size={18} /></button>
         <NavLink to={ap('settings')} className="fx-ri tp-wig" aria-label="Settings" data-tip="Settings" {...wig}><Settings size={18} /></NavLink>

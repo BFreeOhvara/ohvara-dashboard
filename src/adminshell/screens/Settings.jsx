@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import {
-  User, Users, ToggleRight, Wallet, History, Bug, SlidersHorizontal, LogOut, Mail, UserPlus, ArrowUpRight, Search, ShieldCheck,
-  ShieldOff, Image as ImageIcon, Check, Lock, GraduationCap, Scale, ArrowRightLeft, Bot, PhoneCall, MessageSquareText, CreditCard, BookOpen, Music,
+  User, Users, Power, Wallet, History, SlidersHorizontal, LogOut, Mail, UserPlus, ArrowUpRight, Search, ShieldCheck,
+  ShieldOff, Lock, Bot, CreditCard, Hand,
 } from 'lucide-react'
-import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmAudit, useAdmBugs, useAdmDay, useAdmSource, SWITCHES, ME } from '../data'
+import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmAudit, useAdmDay, useAdmSource, ME } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
 import { Field, Seg, Switch, Chip, PillTabs, Avatar, Empty, useNote, useAccount, initials } from '../../template/kit'
 import { CountUp } from '../../template/motion'
-import { WordingToApprove } from './Wording924'
 import '../../template/settings929.css'
 import { avatarHue } from '../../template/avatarHue'
 import { Dropdown, DField } from '../kit'
@@ -16,15 +15,10 @@ import { AddSomeone } from '../AdminFrame'
 import { ap } from '../paths'
 import { PhoneInput } from '../../template/PhoneInput'
 import { ZONES } from '../words'
-import TrainingAdmin from './TrainingAdmin'
-import { BUG_STATUS } from '../../template/bugReport'
-import '../../template/reportbug.css'
-import { Compliance } from './Compliance879'
-import { LaunchSwitches } from './Launch906'
-import { SplitRules } from './Split889'
+import { GoLive, BookingGap } from './Launch906'
+import { BookCheck } from './BookCheck899'
+import { WelcomeLoad } from './WelcomeLoad891'
 import { AiCallerSettings } from './AiCalls892'
-import { CarrierPlaybookAdmin, HoldLineSettings } from './Playbook932'
-import { DeedstoneNumbers } from './Numbers916'
 import { StripeBilling } from './Billing933'
 import { useCallOpenMin, saveCallOpenMin } from '../../hooks/useCallOpen'
 
@@ -32,8 +26,15 @@ import { useCallOpenMin, saveCallOpenMin } from '../../hooks/useCallOpen'
 // tabs switch sections. Sections: Profile, People & access (everyone with a login, as Users does today), Switches,
 // Pay rules, Audit log (append-only, every admin action), Bug reports, Preferences. Sample only: the
 // real switches stay on today's /settings page until the backend step, and this page says so.
-const TABS = [['profile', 'Profile', User], ['people', 'People & access', Users], ['switches', 'Switches', ToggleRight], ['pay', 'Pay rules', Wallet], ['billing', 'Billing', CreditCard], ['split', 'Lead split', ArrowRightLeft], ['ai', 'AI caller', Bot],
-  ['numbers', 'Deedstone numbers', PhoneCall], ['hold', 'Hold line', Music], ['playbook', 'Carrier playbook', BookOpen], ['wording', 'Wording to approve', MessageSquareText], ['training', 'Training', GraduationCap], ['audit', 'Audit log', History], ['bugs', 'Bug reports', Bug], ['compliance', 'Compliance', Scale], ['prefs', 'Preferences', SlidersHorizontal]]
+// P934 (Brayden, Nov 10): the tabs fit one row at 1440 wide. Settings holds only what is set: the working pages (Bug
+// reports, Deedstone numbers and VA pods (with the P932 hold line), Carrier playbook, Wording to approve, Training,
+// Compliance) are their own rail pages
+// (screens/Work934.jsx); Lead split and the Call ads switch are gone; Switches is one small Go live card; Stripe's
+// setup checks are their own tab so no section scrolls. Old ?tab= links land where the section went (MOVED).
+const TABS = [['profile', 'Profile', User], ['people', 'People', Users], ['golive', 'Go live', Power], ['pay', 'Pay', Wallet], ['stripe', 'Stripe', CreditCard],
+  ['servicing', 'Servicing', Hand], ['ai', 'AI caller', Bot], ['audit', 'Audit log', History], ['prefs', 'Preferences', SlidersHorizontal]]
+const MOVED = { bugs: 'bugs', numbers: 'numbers', wording: 'wording', training: 'training', compliance: 'compliance', playbook: 'playbook', hold: 'numbers' }
+const RENAMED = { switches: 'golive', billing: 'stripe', split: 'golive' }
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
 
 function FormFoot({ dirty, onDiscard, onSave, label = 'Save changes' }) {
@@ -129,33 +130,6 @@ function People() {
   )
 }
 
-function Switches({ live }) {
-  const { data: s } = useAdmSettings()
-  const { setSwitch } = useAdmActions()
-  const src = useAdmSource()
-  const note = useNote()
-  const rest = SWITCHES.filter(x => x.key !== 'ai_caller_live') // P906: the AI caller sits in Tonight's switches
-  const groups = [...new Set(rest.map(x => x.group))]
-  return (
-    <>
-      <Head title="Switches" sub="Company-wide on and off. Each says what it does." />
-      <LaunchSwitches live={live} />
-      {src === 'real'
-        ? <p className="adm-warn">These are the real company switches: each flip is saved right away.</p>
-        : <p className="adm-warn">Sample only: flipping these changes nothing real.{live && <> The real switches are on the <a href="/settings" className="tp-link">current Settings page</a> until the backend step.</>}</p>}
-      {groups.map(g => (
-        <div key={g} className="adm-swgroup">
-          <h3 className="fx-h3">{g}</h3>
-          <ul className="tp-list">{rest.filter(x => x.group === g).map(x => (
-            <li key={x.key} className="fx-form-row fx-form-sw"><div className="tp-grow"><b>{x.label}</b><p className="tp-sub">{x.sub}</p></div>
-              <Switch on={s.switches[x.key]} label={x.label} onChange={v => { setSwitch(x.key, v); note(`${x.label} ${v ? 'on' : 'off'} (sample)`) }} /></li>
-          ))}</ul>
-        </div>
-      ))}
-    </>
-  )
-}
-
 function PayRules() {
   const { data: s } = useAdmSettings()
   const { savePayRules, saveBilling } = useAdmActions()
@@ -167,12 +141,15 @@ function PayRules() {
   const num = k => e => setD({ ...d, [k]: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, '')) || 0) })
   return (
     <>
+      {/* P934: two columns so the section never scrolls: VA pay on the left, lead billing on the right. */}
+      <div className="adm-set-two"><div>
       <Head title="Pay rules" sub="VAs are paid by the hour, from clock in and out. Paid every Monday." />
       <div className="fx-form-grid">
         <Field label="Hourly rate ($)" hint="Overtime past 40 hours a week at 1.5×"><input className="tp-money" inputMode="decimal" value={d.hourly} onChange={num('hourly')} /></Field>
       </div>
       <FormFoot dirty={!same(d, s.payRules)} onDiscard={() => setD(s.payRules)} onSave={() => { savePayRules(d); note('Pay rules saved (sample)') }} />
       <CallOpenSetting />
+      </div><div>
       {/* P909: lead billing. Lead spend is charged each night for the next day; a decline turns the next day's ads off. */}
       <Head title="Lead billing" sub="Each evening agents' cards are charged the next day's lead spend plus the booking desk (12%). A decline keeps the next day's ads off and retries in the morning." />
       <div className="fx-form-grid">
@@ -183,6 +160,7 @@ function PayRules() {
         <Field label="Founding lock (months)"><input className="tp-num" inputMode="numeric" value={b.foundingMonths} onChange={bnum('foundingMonths', 1, 60)} /></Field>
       </div>
       <FormFoot dirty={!bsame} onDiscard={() => setB(s.billing)} onSave={() => { saveBilling(b); note('Lead billing saved (sample)') }} />
+      </div></div>
     </>
   )
 }
@@ -197,34 +175,6 @@ function Audit() {
       <Head title="Audit log" sub="Every admin action, newest first. Append-only: nobody can change or remove a row." />
       <div className="fx-form-row"><label className="fx-find adm-find-sm"><Search size={15} aria-hidden="true" /><input aria-label="Search the log" placeholder="Search actions or people" value={q} onChange={e => setQ(e.target.value)} /></label><span className="tp-grow" /><Chip tone="mute">{rows.length} rows</Chip></div>
       <ol className="adm-audit">{list.map(r => <li key={r.id}><small className="tp-num">{r.at}</small><span className="tp-grow"><b>{r.what}</b><small>{r.target}</small></span><small>{r.who}</small></li>)}</ol>
-    </>
-  )
-}
-
-// P876 — Bug reports: what agents, VAs and admins send from Help & Support → Report a bug, newest first, with what was
-// captured for them. New → Seen → Fixed. Sample until P858 reads bug_reports (the P711 table).
-const BUG_TONE = { new: 'warn', seen: 'blue', fixed: 'green' }
-function Bugs() {
-  const { data: bugs } = useAdmBugs()
-  const { setBugStatus } = useAdmActions()
-  const note = useNote()
-  const [show, setShow] = useState('open')
-  const list = bugs.filter(b => (show === 'open' ? b.status !== 'fixed' : show === 'fixed' ? b.status === 'fixed' : true))
-  const count = k => bugs.filter(b => (k === 'open' ? b.status !== 'fixed' : k === 'fixed' ? b.status === 'fixed' : true)).length
-  return (
-    <>
-      <Head title="Bug reports" sub="Sent from Help and support → Report a bug. Each one tells you the page, time, browser and screen." />
-      <Seg label="Show" value={show} onChange={setShow} options={[{ key: 'open', label: 'Open', count: count('open') }, { key: 'fixed', label: 'Fixed', count: count('fixed') }, { key: 'all', label: 'All', count: count('all') }]} />
-      {list.length === 0 && <Empty title="Nothing here" sub={show === 'open' ? 'No open bug reports.' : 'None yet.'} />}
-      <ul className="tp-list adm-bugs">{list.map(b => (
-        <li key={b.id} className="fx-mrow"><Avatar name={b.who} />
-          <span className="tp-grow"><b>{b.who}{b.role ? ` (${b.role})` : ''} · {b.at}</b><small>{b.text}</small>{b.expected && <small>Expected: {b.expected}</small>}
-            <small className="adm-bug-ctx">{[b.page, b.browser, b.screen].filter(Boolean).join(' · ')}</small></span>
-          {b.shot && <button type="button" className="fx-pillbtn" onClick={() => note('Screenshots open once you sign in for real')}><ImageIcon size={13} />{b.file ? 'File' : 'Screenshot'}</button>}
-          <Chip tone={BUG_TONE[b.status]}>{BUG_STATUS[b.status]}</Chip>
-          {b.status !== 'fixed' && <button type="button" className="fx-pillbtn" onClick={() => { const to = b.status === 'new' ? 'seen' : 'fixed'; setBugStatus(b.id, to, b.who); note(to === 'seen' ? 'Marked seen' : 'Marked fixed') }}><Check size={13} />{b.status === 'new' ? 'Mark seen' : 'Mark fixed'}</button>}
-        </li>
-      ))}</ul>
     </>
   )
 }
@@ -244,9 +194,11 @@ function Prefs() {
   return (
     <>
       <Head title="Preferences" sub="Theme, your time zone, and what also comes to your phone or email." />
+      <div className="adm-set-two"><div>
       <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Theme</b><p className="tp-sub">{THEME_NAME[look]}</p></div><Seg label="Theme" value={look} onChange={pickLook} options={[{ key: 'light', label: 'Light' }, { key: 'dark', label: 'Dark' }, { key: 'system', label: 'System' }]} /></div>
       {look !== saved && <div className="fx-form-row"><span className="tp-grow" /><button type="button" className="tp-btn ov-ghost" onClick={() => pickLook(saved)}>Discard</button><button type="button" className="tp-primary fx-accent" onClick={() => { saveTheme(look); note(`${THEME_NAME[look]} theme saved`) }}>Save theme</button></div>}
       <DField label="Time zone" hint="The clock beside the page title and every time on the admin side."><Dropdown label="Time zone" value={s.tz} onChange={tz => { setTz(tz); note('Time zone saved') }} options={ZONES.map(([v, l, x]) => ({ value: v, label: `${l} time`, sub: x }))} /></DField>
+      </div><div>
       <div className="fx-alerts">
         <div className="fx-alerts-h"><span className="tp-grow" /><span>Push</span><span>Email</span></div>
         <ul className="tp-list">{alerts.map(x => (
@@ -257,6 +209,7 @@ function Prefs() {
         ))}</ul>
       </div>
       <FormFoot dirty={!same(alerts, s.notifications)} onDiscard={() => setAlerts(s.notifications)} onSave={() => { saveSettings({ notifications: alerts }); note('Notifications saved') }} />
+      </div></div>
     </>
   )
 }
@@ -267,7 +220,8 @@ export default function Settings() {
   const account = useAccount()
   const note = useNote()
   const [sp, setSp] = useSearchParams()
-  const raw = sp.get('tab')
+  const asked = sp.get('tab')
+  const raw = RENAMED[asked] || asked
   const tab = TABS.some(t => t[0] === raw) ? raw : 'profile'
   const setTab = t => setSp(t === 'profile' ? {} : { tab: t }, { replace: true })
   const [p, setP] = useState(s.profile)
@@ -275,6 +229,7 @@ export default function Settings() {
   const signOut = () => (account.live ? account.signOut() : note('Sign out works once you sign in for real'))
   const [panel, setPanel] = useState(null)
   const DeleteDialog = account.DeleteDialog
+  if (MOVED[asked]) return <Navigate to={ap(MOVED[asked])} replace />
   return (
     <div className="tp-page fx-set adm-settings">
       <div className="fx-set-side">
@@ -297,19 +252,19 @@ export default function Settings() {
             <FormFoot dirty={!same(p, s.profile)} onDiscard={() => setP(s.profile)} onSave={() => { saveSettings({ profile: p }); note('Profile saved') }} />
           </>}
           {tab === 'people' && <People />}
-          {tab === 'switches' && <Switches live={account.live} />}
+          {tab === 'golive' && <>
+            <Head title="Go live" sub="The switches that turn real things on. Everything else is set, not switched." />
+            <GoLive live={account.live} />
+          </>}
           {tab === 'pay' && <PayRules />}
-          {tab === 'billing' && <StripeBilling />}
-          {tab === 'split' && <SplitRules />}
+          {tab === 'stripe' && <StripeBilling />}
+          {tab === 'servicing' && <>
+            <Head title="Servicing" sub="How clients are kept on the books, for every agent and VA." />
+            <BookingGap />
+            <div className="adm-set-two"><BookCheck /><WelcomeLoad /></div>
+          </>}
           {tab === 'ai' && <AiCallerSettings />}
-          {tab === 'numbers' && <DeedstoneNumbers />}
-          {tab === 'hold' && <HoldLineSettings />}
-          {tab === 'playbook' && <CarrierPlaybookAdmin />}
-          {tab === 'wording' && <WordingToApprove />}
-          {tab === 'training' && <TrainingAdmin />}
           {tab === 'audit' && <Audit />}
-          {tab === 'bugs' && <Bugs />}
-          {tab === 'compliance' && <Compliance />}
           {tab === 'prefs' && <Prefs />}
         </div>
       </section>

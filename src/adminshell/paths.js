@@ -15,6 +15,13 @@ export const ADM = {
   messages: '/admin/messages',
   settings: '/admin/settings',
   connect: '/admin/connect',
+  // P934: the working pages that left Settings for the rail (screens/Work934.jsx).
+  bugs: '/admin/bugs',
+  numbers: '/admin/numbers',
+  wording: '/admin/wording',
+  training: '/admin/training',
+  compliance: '/admin/compliance',
+  playbook: '/admin/playbook',
 }
 // Old admin addresses that now land on a page of the shell (Users is a Settings section, Payouts a Billing tab).
 export const ADM_OLD = { users: '/admin/users', payouts: '/admin/payouts', more: '/admin/more' }
@@ -101,11 +108,13 @@ export const ADM_TABS = [
   ['overview', 'Overview'], ['agents', 'Agents'], ['team', 'Fulfillment'], ['leads', 'Leads'], ['clients', 'Clients'], ['setup', 'Setup'], ['billing', 'Revenue'],
 ]
 // Every page's short name (tabs, the phone bar, search), including the rail-only pages.
-export const ADM_LABELS = { ...Object.fromEntries(ADM_TABS), messages: 'Messages', settings: 'Settings', connect: 'Connect' }
+export const ADM_LABELS = { ...Object.fromEntries(ADM_TABS), messages: 'Messages', settings: 'Settings', connect: 'Connect', bugs: 'Bug reports', numbers: 'Deedstone numbers', wording: 'Wording to approve', training: 'Training', compliance: 'Compliance', playbook: 'Carrier playbook' }
 
 const TITLES = {
   overview: ['The business', 'Overview'], agents: ['Who sells', 'Agents'], setup: ['Paid agents to live', 'Setup'], team: ['Who serves', 'Fulfillment team'],
   leads: ['Every agent', 'Leads'], clients: ['Every book', 'Clients'], billing: ['In, out and split', 'Revenue'],
   messages: ['Admin lines', 'Messages'], settings: ['Run the portal', 'Settings'], connect: ['Plug it in', 'Connect'],
+  bugs: ['What people sent', 'Bug reports'], numbers: ['Lines and pods', 'Deedstone numbers'], wording: ['Before it goes out', 'Wording to approve'],
+  training: ['What VAs learn', 'Training'], compliance: ['Kept on record', 'Compliance'], playbook: ['How each carrier works', 'Carrier playbook'],
 }
 export const admTitleOf = page => TITLES[page] || TITLES.overview

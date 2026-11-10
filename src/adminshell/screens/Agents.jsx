@@ -11,7 +11,6 @@ import { Dropdown, DField, EngineSlot } from '../kit'
 import { ap } from '../paths'
 import { BILL_WORD, STAGE_WORD, stageTone } from '../words'
 import { CampaignBlock } from './Campaign879'
-import { SplitBlock } from './Split889'
 
 // P849 — Agents: every agent, their plan and weekly lead budget, whether they take live transfers, this week's results
 // and billing. A row opens the agent in a drawer at its own address (/admin/agents/:id) with every admin control the
@@ -140,7 +139,7 @@ function AgentDrawer({ id, onClose }) {
           <Switch on={a.active} label="Active for transfers" onChange={v => { setAgentActive(a.id, v); note(v ? `${a.name} takes live transfers` : `${a.name} is booking only`) }} /></div>
       </Block>
       <PlanBudget key={`pb-${a.id}-${a.spend}`} a={a} />
-      <SplitBlock key={`s-${a.id}`} agent={a} />
+      {/* P934: no Lead split block: Meta form ads only, the split is a constant in code (splitStore). */}
       <CampaignBlock agent={a} />
       <Block title="This week"><Funnel w={a.week} /><AgentCosts id={a.id} /></Block>
       <Block title="Access">

@@ -829,7 +829,7 @@ const SAMPLE_ACTIONS = {
       return out
     }),
     // P890: no per-cancel decisions (VA pay is hourly). The Monday run can still be paused.
-    // P934: no setSplit. The owners' profit split is fixed at 50/50 (OWNER_SPLIT); changing it is a code and migration change.
+    // P934: no split setter. The owners' profit split is fixed at 50/50 (OWNER_SPLIT); changing it is a code and migration change.
     setPaused: on => set(s => ({ settings: { ...s.settings, payoutsPaused: on }, ...audit(s, on ? 'Paused payouts' : 'Resumed payouts', 'Monday pay run') })),
     // Settings
     setSwitch: (key, on) => set(s => ({ settings: { ...s.settings, switches: { ...s.settings.switches, [key]: on } }, ...audit(s, `${on ? 'Turned on' : 'Turned off'} ${SWITCHES.find(x => x.key === key).label}`, 'Sample only') })),

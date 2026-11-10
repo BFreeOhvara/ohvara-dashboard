@@ -4,5 +4,9 @@
    never runs on into the page behind when it reaches the end. The VA's slide-out phone (fs-call-layer) is not a panel
    over the page: the page behind it stays usable, so it is left out. */
 html:has(body :is(.tp-layer, .fx-layer, .mx-layer):not(.fs-call-layer)) { overflow: hidden; }
-html:has(body :is(.tp-layer, .fx-layer, .mx-layer):not(.fs-call-layer)) body { overflow: hidden; }
+/* P934 (Brayden, Nov 10: "scroll down, click the profile icon, the whole header vanishes"): the lock is on <html>
+   only. Setting overflow on <body> as well made body its own scroll box, so the sticky header stuck to body (never
+   scrolled) instead of the window and jumped off the top at any scroll position. Never lock <body>. Body's own
+   overflow-x: hidden does the same once <html> is locked (it stops passing to the window), so body is kept visible. */
+html:has(body :is(.tp-layer, .fx-layer, .mx-layer):not(.fs-call-layer)) body { overflow: visible; }
 :is(.tp-layer, .fx-layer, .mx-layer):not(.fs-call-layer), :is(.tp-layer, .fx-layer, .mx-layer):not(.fs-call-layer) * { overscroll-behavior: contain; }

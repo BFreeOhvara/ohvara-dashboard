@@ -62,7 +62,19 @@ function StripeCheck({ check, busy, error, onRun }) {
   )
 }
 
-function LiveCharging({ check, onChanged }) {
+// P934: Live charging sits in Settings › Go live with the other go-live switches. It reads the billing server itself.
+export function LiveChargingRow() {
+  const [check, setCheck] = useState(null)
+  const load = useCallback(() => invokeBilling('stripe_check').then(setCheck).catch(() => setCheck(null)), [])
+  useEffect(() => {
+    let live = true
+    invokeBilling('stripe_check').then(c => { if (live) setCheck(c) }).catch(() => {})
+    return () => { live = false }
+  }, [])
+  return <LiveCharging check={check} onChanged={load} bare />
+}
+
+function LiveCharging({ check, onChanged, bare }) {
   const note = useNote()
   const [asking, setAsking] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -72,9 +84,9 @@ function LiveCharging({ check, onChanged }) {
     try { await setLiveCharging(supabase, next); note(next ? 'Live charging is on' : 'Live charging is off'); setAsking(false); onChanged() } catch (e) { note(e.message) }
     setBusy(false)
   }
-  return (
-    <ul className="tp-list">
-      <Row icon={Power} title="Live charging" sub={on ? `On since ${when(check.live_charging_at)}. Real cards are charged on the live key: sign-ups, plans and nightly lead spend.` : 'Off: on the live key nothing is charged. Test keys always charge test cards.'}>
+  const rows = (
+    <>
+      <Row icon={Power} title="Live charging" sub={on ? `On since ${when(check.live_charging_at)}. Real cards are charged on the live key: sign-ups, plans and nightly lead spend.` : 'Turns on real card charges on the live key: sign-ups, plans and nightly lead spend. Test keys only charge test cards.'}>
         <Switch on={on} label="Live charging" onChange={v => (v ? setAsking(true) : flip(false))} />
       </Row>
       {asking && (
@@ -84,8 +96,9 @@ function LiveCharging({ check, onChanged }) {
           <button type="button" className="tp-primary fx-accent" onClick={() => flip(true)} disabled={busy}>{busy ? 'Turning on…' : 'Turn on'}</button>
         </li>
       )}
-    </ul>
+    </>
   )
+  return bare ? rows : <ul className="tp-list">{rows}</ul>
 }
 
 function Catalog({ mode }) {
@@ -165,13 +178,16 @@ export function StripeBilling() {
     return () => { live = false }
   }, [])
   return (
-    <div className="b933">
-      {src !== 'real' && <p className="tp-sub"><SampleTag>Real</SampleTag> This tab always reads the real billing server.</p>}
-      <StripeCheck check={check} busy={busy} error={error} onRun={run} />
-      <h3 className="fx-h3">Charging</h3>
-      <LiveCharging check={check} onChanged={run} />
-      <Catalog mode={check?.mode} />
-      <DollarCheck mode={check?.mode} />
+    <div className="b933 adm-set-two">
+      <div>
+        {src !== 'real' && <p className="tp-sub"><SampleTag>Real</SampleTag> This tab always reads the real billing server.</p>}
+        <StripeCheck check={check} busy={busy} error={error} onRun={run} />
+        <p className="tp-sub">Live charging is in Settings › Go live with the other go-live switches.</p>
+      </div>
+      <div>
+        <Catalog mode={check?.mode} />
+        <DollarCheck mode={check?.mode} />
+      </div>
     </div>
   )
 }

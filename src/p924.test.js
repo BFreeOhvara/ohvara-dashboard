@@ -86,8 +86,9 @@ test('agent side: no Request a service, no Log a call, no Closed on Leads, one s
 })
 
 // P929 replaced P924's left list: Settings is back to the profile card + tabs (src/p929.test.js). Wording stays.
-test('Settings: Wording to approve stays in admin Settings', () => {
-  assert.match(src('src/adminshell/screens/Settings.jsx'), /\['wording', 'Wording to approve'/)
+test('P934: Wording to approve is its own admin rail page', () => {
+  assert.match(src('src/adminshell/screens/Work934.jsx'), /<WordingToApprove \/>/)
+  assert.match(src('src/adminshell/AdminFrame.jsx'), /ap\('wording'\)/)
 })
 
 test('no "draft" notes on screen in any role', () => {

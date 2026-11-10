@@ -20,7 +20,7 @@ test('lead statuses are the five (P913), and a lead with no agent is an alert, n
   const leads = admSnapshot().leads
   for (const l of leads.filter(x => !isUnassigned(x))) assert.ok(LEAD_STAGES.includes(l.stage), `${l.name}: ${l.stage}`)
   const un = leads.filter(isUnassigned)
-  assert.equal(un.length, 1, 'the sample has one unmatched lead (it should almost never happen)')
+  assert.equal(un.length, 0, 'P934: no sample lead is unmatched (a real one almost never is)')
   for (const old of ['needs_routing', 'transferred', 'not_sold', 'missed']) assert.ok(!leads.some(l => l.stage === old), old)
   // a live call waits on Booked with Mark result, like the agent side (P910)
   assert.ok(leads.some(awaitsResult))
@@ -52,10 +52,11 @@ test('client statuses are P899: Working · Needs attention · Protected, Closed 
   assert.match(src('./screens/Clients.jsx'), /Show closed/)
 })
 
-test('Settings shows tonight’s switches in one place', () => {
+test('P934: Settings › Go live holds only the go-live switches, each with what it turns on', () => {
   const l = src('./screens/Launch906.jsx')
-  for (const w of ['AI caller', 'Call ads (Google)', 'SampleSwitch', 'Monthly check timing', 'Booking gap', 'Nightly charge time', 'Max daily spend', 'Founding lock']) assert.ok(l.includes(w), w)
-  assert.match(src('./screens/Settings.jsx'), /<LaunchSwitches live=\{live\} \/>/)
+  for (const w of ['sms_live', 'voice_live', 'ai_caller_live', '<LiveChargingRow />', '<SampleSwitch live={live} bare />']) assert.ok(l.includes(w), w)
+  for (const w of ['Call ads (Google)', 'setCallAdsOn', 'Nightly charge time', 'Max daily spend', 'Founding lock']) assert.ok(!l.includes(w), w)
+  assert.match(src('./screens/Settings.jsx'), /<GoLive live=\{account\.live\} \/>/)
 })
 
 test('no AI → VA hand-off shown on admin', () => {

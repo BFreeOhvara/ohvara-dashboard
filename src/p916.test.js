@@ -99,8 +99,10 @@ test('Settings: "Your phone for Deedstone calls" on Hours and calls; ?tab=calls 
 
 test('admin Settings → Deedstone numbers: tab, sample tag, limits, add, voice URL, branding steps', () => {
   const s = src('./adminshell/screens/Settings.jsx')
-  assert.match(s, /\['numbers', 'Deedstone numbers', PhoneCall\]/)
-  assert.match(s, /tab === 'numbers' && <DeedstoneNumbers \/>/)
+  // P934: Deedstone numbers is its own page on the rail; the old Settings tab link lands there.
+  assert.match(s, /numbers: 'numbers'/)
+  assert.match(src('./adminshell/screens/Work934.jsx'), /<DeedstoneNumbers \/>/)
+  assert.match(src('./adminshell/paths.js'), /numbers: '\/admin\/numbers'/)
   const n = src('./adminshell/screens/Numbers916.jsx')
   for (const w of ['Calls a day per number', 'Add number', 'VOICE_URL', 'BRANDING_STEPS', 'SampleTag', 'calls today']) assert.ok(n.includes(w), w)
   assert.match(src('./hooks/deedstoneAdmin.js'), /admin_deedstone_numbers/)

@@ -59,9 +59,10 @@ test('Today is a calendar, Calendar the week, the rota the grid (no drag pool, n
   const src = readFileSync(new URL('./screens/Team.jsx', import.meta.url), 'utf8')
   assert.match(src, /function TeamCalendar/)
   assert.match(src, /function TodayCalls/)
-  // P913: no side panel, no day strip, no key row on the week calendar
-  assert.doesNotMatch(src, /<DayBox|<WeekStrip|adm-cal-key/)
+  // P913: no day strip, no key row on the week calendar. P934: clicking a day opens the agent's slide-in day panel (DayBox).
+  assert.doesNotMatch(src, /<WeekStrip|adm-cal-key/)
+  assert.match(src, /<DayBox/)
   assert.match(src, /className="adm-rt"/)
-  assert.match(src, /role="radiogroup" aria-label="Show a VA"/)
+  assert.match(src, /<FilterPills label="Show a VA"/) // P934: the agent side's colour-coded pills
   assert.doesNotMatch(src, /draggable|adm-tl-|function Desk\b/)
 })
