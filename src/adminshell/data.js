@@ -174,9 +174,9 @@ const seedLeads = (() => {
       const cities = CITY[state]
       let stage = kind === 'live' ? LIVE_STAGES[l++ % LIVE_STAGES.length] : APPT_STAGES[a++ % APPT_STAGES.length]
       // P913: every lead carries the agent ID from its ad link, or only its Meta campaign ID (every 5th); matchAgent
-      // finds the agent either way. Today's newest came with neither, so it matched no one (the admin alert).
-      const lost = day === TODAY && k === PER_DAY[day] - 1
-      const sent = lost ? {} : i % 5 === 2 ? { campaignId: agent.campaignId } : { agentRef: agent.agentRef, campaignId: agent.campaignId }
+      // finds the agent either way. P934: no sample lead matches no one. The "couldn't be matched" alert is a real
+      // safety net (a paid lead with no agent ID and no known campaign) and only shows if that really happens.
+      const sent = i % 5 === 2 ? { campaignId: agent.campaignId } : { agentRef: agent.agentRef, campaignId: agent.campaignId }
       const hit = matchAgent(sent, seedAgents)
       if (!hit.agent_id) stage = 'unassigned'
       else if (day === TODAY && kind === 'appointment' && !['booked', 'team_follow'].includes(stage)) stage = 'booked'
@@ -331,9 +331,9 @@ const seedThreads = [
 ]
 
 const seedFeed = [
-  { id: 'f1', who: 'Ben Carter', text: 'Weekly plan card declined', at: 'Wed', kind: 'billing' },
-  { id: 'f2', who: 'Andre Lewis', text: 'Asked for Fri, Nov 6 off', at: 'Wed', kind: 'team' },
-  { id: 'f3', who: 'Elena Torres', text: 'Lead top-up declined', at: '9:05 AM', kind: 'billing' },
+  { id: 'f1', who: 'Ben Carter', text: 'Monthly plan card declined', at: 'Wed', kind: 'billing' },
+  { id: 'f2', who: 'Andre Lewis', text: 'Took Fri, Nov 6 off', at: 'Wed', kind: 'team' },
+  { id: 'f3', who: 'Elena Torres', text: 'Nightly lead charge declined', at: '9:05 AM', kind: 'billing' },
   { id: 'f4', who: 'Carla Jones', text: "Keisha's 12:15 call is past its time", at: '12:30 PM', kind: 'desk' },
   { id: 'f5', who: 'Jordan Hale', text: 'Saved the GoHighLevel location', at: 'Tue', kind: 'connect' },
 ]
@@ -366,7 +366,7 @@ const seedSettings = {
   notifications: [
     { key: 'lead', label: 'A lead comes in with no agent', push: true, email: false },
     { key: 'missed', label: 'A live transfer is missed', push: true, email: true },
-    { key: 'dayoff', label: 'A VA asks for a day off', push: true, email: false },
+    { key: 'dayoff', label: 'A VA takes a day off', push: true, email: false },
     { key: 'payment', label: 'A payment fails', push: true, email: true },
     { key: 'bug', label: 'A bug report comes in', push: true, email: true }, // P876: an app notification, never a text
   ],

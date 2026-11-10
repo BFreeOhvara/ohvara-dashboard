@@ -26,7 +26,7 @@ function RealGate({ children }) {
   if (meta.error) {
     return (
       <div className="tp-page fx-page" role="alert">
-        <Empty title="Couldn't load real data" sub="Nothing changed. Try again, or switch View to Sample from your avatar menu." />
+        <Empty title="Couldn't load real data" sub="Nothing changed. Try again, or turn Sample info on from your avatar menu." />
         <button type="button" className="tp-primary fx-accent" onClick={() => meta.retry?.()}>Try again</button>
       </div>
     )
@@ -68,7 +68,7 @@ export default function AdminShell({ account, preview = false }) {
     document.head.appendChild(tag)
     return () => tag.remove()
   }, [preview])
-  // P848/P858: the admin's own "View: Sample / Real". Real (the company switch off, or this admin's own preview) hands
+  // P848/P858: the admin's own view (P934: the Sample info pill). Real (the company switch off, or this admin's own preview) hands
   // the pages the real store (hooks/admRealData.js); /preview/admin is always sample.
   const { mode, canPreview, setView, show } = useDataMode()
   const real = !preview && mode === 'real'

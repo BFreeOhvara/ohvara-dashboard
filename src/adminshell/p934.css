@@ -55,3 +55,32 @@
 .adm .adm-res-n b.is-loss { color: var(--sh-fi-coral, var(--ov-hi)); }
 .adm .adm-res-out b { font-size: 13px; color: var(--ov-mid); }
 @media (max-width: 760px) { .adm .adm-res-bars > li { grid-template-columns: minmax(0, 1fr) auto; } .adm .adm-res-bar, .adm .adm-res-sum { grid-column: 1 / -1; order: 3; } .adm .adm-res-out { display: none; } }
+
+/* Tile header icon chip (the agent Overview's polish), every admin Tile that passes icon. */
+.adm .adm-tile-ic { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 11px; color: var(--ov-hi); background: color-mix(in srgb, var(--accent, var(--ov-hi)) 16%, transparent); border: 1px solid color-mix(in srgb, var(--accent, var(--ov-hi)) 22%, transparent); }
+.adm .fx-tile.is-fill .adm-tile-ic { background: color-mix(in srgb, var(--ov-hi) 12%, transparent); border-color: color-mix(in srgb, var(--ov-hi) 18%, transparent); }
+.adm .fx-tile-h:has(> .adm-tile-ic) { align-items: center; gap: 10px; }
+
+/* Overview: no dead space. Leads this week's by-day chart grows into the box; the cost line sits at its foot. */
+@media (min-width: 1000px) {
+  .adm .adm-ov-hero > .adm-weekgrid { flex: 1 1 auto; min-height: 132px; margin-bottom: 0; }
+  .adm .adm-ov-hero > .adm-weekgrid > li { height: auto; }
+  .adm .adm-ov-hero > .adm-costs { margin-top: 0; }
+}
+/* To-dos: Show all is pinned to the bottom of the box, never floating under the last row. */
+.adm .adm-todos .fx-ovl-needs-in > .adm-needs-more { margin-top: auto; }
+
+/* Avatar menu: the Sample info pill sits in one menu row. */
+.adm .fx-menu .fx-mrow-sw { cursor: default; }
+.adm .fx-menu .fx-mrow-sw .tp-switch { flex: none; }
+
+/* Notifications: a real unmatched lead is one row; it slides in Pick the agent. */
+.tp .adm-unmatched-row { display: flex; align-items: center; gap: 10px; width: 100%; margin: 0 0 10px; padding: 10px 12px; border-radius: 14px; text-align: left; font: inherit; cursor: pointer;
+  color: var(--ov-hi); background: color-mix(in srgb, var(--sh-cf-apricot) 70%, transparent); border: 1px solid color-mix(in srgb, var(--sh-cs-apricot) 45%, transparent); }
+.tp .adm-unmatched-row .tp-grow { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tp .adm-unmatched-row small { font-size: 12px; color: var(--ov-mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp .adm-unmatched-row:hover { border-color: var(--sh-cs-apricot); }
+.tp .adm-route { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.tp .adm-route .adm-unmatched-who { display: flex; flex-direction: column; gap: 2px; text-decoration: none; color: var(--ov-hi); }
+.tp .adm-route .adm-unmatched-who small { font-size: 12px; color: var(--ov-mid); }
+.tp .adm-route-list .fx-mrow .tp-grow { display: flex; flex-direction: column; min-width: 0; }

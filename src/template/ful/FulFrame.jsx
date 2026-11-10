@@ -20,7 +20,6 @@ import { OhvaraMark } from '../../components/ui/OhvaraMark'
 import { isSearchKey } from '../../lib/searchKey'
 import { SUPPORT_EMAIL } from '../../components/auth/authUtils'
 import { useFulDay, useFulClients, useFulFeed, useFulSettings, useFulPay, useFulTasks, useFulActions, useFulAgents, useFulShift, useFulSchedule, useAgentAppts, useVaBooking, useFulLive, useFulClock, useFulSource, useFulStatus } from './data'
-import ViewToggle from '../ViewToggle'
 import { DataLoading, DataError, FirstRun } from '../DataState'
 import { SlotPick } from '../SlotPick'
 import { useClientZone } from '../useClientZone'
@@ -192,7 +191,6 @@ function AccountMenu({ open, onClose, theme, setTheme, onAsk, onApp }) {
         <i className="fx-mline" />
         {links.map(([k, label, Icon]) => <Link key={k} to={fp(k)} className="fx-mrow" onClick={onClose}><Icon size={17} aria-hidden="true" /><b className="tp-grow">{label}</b><ChevronRight size={15} aria-hidden="true" /></Link>)}
         <i className="fx-mline" />
-        <ViewToggle />
         <button type="button" className="fx-mrow is-danger" onClick={() => (account.live ? account.signOut() : note('Sign out works once you sign in for real'))}><LogOut size={17} aria-hidden="true" /><b className="tp-grow">Sign out</b></button>
       </section>
     </div>
@@ -289,6 +287,7 @@ export default function FulFrame() {
   const [panel, setPanel] = useState(null)
   const account = useAccount()
   const note = useNote()
+  const { data: feed } = useFulFeed() // P934: the bell's count is what's really in it (no fixed 3)
   const active = fulPageOf(pathname)
   const page = usePageSwap(active || 'overview', outlet)
   const layout = page.key
@@ -432,7 +431,7 @@ export default function FulFrame() {
   const tops = (
     <>
       <NavLink to={fp('messages')} className={`fx-ib tp-wig${msg.closing ? ' is-closing' : ''}`} aria-label={active === 'messages' ? 'Close Messages' : 'Messages'} {...wig} onClick={e => { wig.onClick?.(e); msg.onClick(e) }}><MessageSquare size={18} />{day.unread > 0 && <span className="fx-badge">{day.unread}</span>}</NavLink>
-      <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} /><span className="fx-badge">3</span></button>
+      <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} />{feed.length > 0 && <span className="fx-badge">{Math.min(9, feed.length)}</span>}</button>
     </>
   )
 

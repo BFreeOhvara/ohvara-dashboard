@@ -8,10 +8,12 @@ import { engineState } from './engine'
 // P849 — the Admin side's own small pieces, beside the shared kit (src/template/kit.jsx, imported, never edited).
 
 // A tile on the Solvik shape: title, a line under it, an open arrow. Staggered in by --i (flow.css).
-export function Tile({ className = '', i = 0, title, sub, to, label, aside, children }) {
+// P934: icon = an optional header icon chip (the agent Overview's polish), before the title.
+export function Tile({ className = '', i = 0, title, sub, to, label, aside, icon: Icon, children }) {
   return (
     <section className={`fx-tile ${className}`} style={{ '--i': i }} aria-label={title}>
       <header className="fx-tile-h">
+        {Icon && <span className="adm-tile-ic" aria-hidden="true"><Icon size={16} /></span>}
         <span className="tp-grow"><h2>{title}</h2>{sub && <p>{sub}</p>}</span>
         {aside}
         {to && <Link to={to} className="fx-open" aria-label={label || `Open ${title}`}><ArrowUpRight size={16} /></Link>}

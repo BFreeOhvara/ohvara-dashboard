@@ -13,7 +13,6 @@ import { paths, isTemplateAddress } from '../paths'
 import { GetApp, Help } from '../TemplateFrame'
 import { TalkDrawer } from '../Talk'
 import { ReportBug } from '../ReportBug'
-import ViewToggle from '../ViewToggle'
 import { Sheet } from './Sheet'
 import { mp } from './mpaths'
 
@@ -48,7 +47,6 @@ export default function MMore() {
         <span className="tp-grow"><b>{account.name}</b><small>Agent · {planOf(b).label} plan</small></span>
         <button type="button" className="mx-ib is-soft" aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'} onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={20} aria-hidden="true" /> : <Moon size={20} aria-hidden="true" />}</button>
       </section>
-      {account.view?.canPreview && <div className="mx-card mx-view"><ViewToggle /></div>}
 
       <Link to={`${mp.settings()}?tab=calls`} className={`mx-duty${duty ? ' is-on' : ''}`}>
         <Radio size={18} aria-hidden="true" />

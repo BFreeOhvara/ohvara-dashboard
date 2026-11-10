@@ -49,10 +49,10 @@ test('matching: the agent ID in the ad link, else the Meta campaign ID; only bot
   assert.equal(matchAgent({}, agents).agent_id, null)
   assert.equal(matchAgent({}, agents).why, 'missing')
   assert.equal(matchAgent({ agentRef: 'DS-NOPE', campaignId: '999' }, agents).why, 'unknown')
-  // the sample: some leads matched by campaign alone, one by nothing
+  // the sample: some leads matched by campaign alone; P934: none by nothing (the alert only shows when it really happens)
   const leads = admSnapshot().leads
   assert.ok(leads.some(l => l.matchedBy === 'campaign' && !l.agentRef && l.agent_id))
-  assert.equal(leads.filter(l => !l.agent_id).length, 1)
+  assert.equal(leads.filter(l => !l.agent_id).length, 0)
 })
 
 test('an unmatched lead raises the admin alert with Assign, not an Unassigned section on Leads', () => {
@@ -60,11 +60,15 @@ test('an unmatched lead raises the admin alert with Assign, not an Unassigned se
   const alert = src('./screens/Unmatched913.jsx')
   assert.match(alert, /role="alert"/)
   assert.match(alert, />Assign</)
+  assert.match(alert, /title="Pick the agent"/)
   assert.doesNotMatch(src('./screens/Leads.jsx'), /<Unassigned |UserX/)
   // P914: on Overview the unmatched lead is a To-do row with Assign (todos.js), not a separate alert.
   assert.match(src('./screens/Overview.jsx'), /adminTodos\(\{[^)]*unassigned/)
   assert.match(src('./todos.js'), /action: 'Assign'/)
-  assert.match(src('./AdminFrame.jsx'), /<UnmatchedAlert onDone=\{onClose\} \/>/)
+  // P934: the alert is a notifications row that slides in Pick the agent; no Route a lead on the rail
+  assert.match(src('./AdminFrame.jsx'), /<UnmatchedAlert onOpen=\{onRoute\} \/>/)
+  assert.match(src('./AdminFrame.jsx'), /<RouteLeadDrawer open=\{panel === 'route'\}/)
+  assert.doesNotMatch(src('./AdminFrame.jsx'), /aria-label="Route a lead"/)
 })
 
 const ticket = (o = {}) => ({

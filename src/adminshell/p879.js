@@ -173,6 +173,14 @@ export function assignable(agents, lead) {
   return agents.filter(a => a.access && a.states.includes(lead.state) && (lead.kind !== 'live' || a.active))
 }
 
+// P934: the agents to offer for one lead, best first: the ad campaign it came from, then licensed in its state, then the rest.
+export function pickOrder(agents, lead) {
+  const fits = new Set(assignable(agents, lead).map(a => a.id))
+  const camp = String(lead.campaignId || '')
+  const score = a => (camp && a.campaignId && camp === String(a.campaignId) ? 0 : fits.has(a.id) ? 1 : 2)
+  return agents.slice().sort((a, b) => score(a) - score(b) || a.name.localeCompare(b.name)).map(a => ({ ...a, why: score(a) === 0 ? 'campaign' : score(a) === 1 ? 'licensed' : '' }))
+}
+
 // ---------- Compliance records (N-J-15, N-J-27, N-J-34, N-J-35, N-J-36) ----------
 export const DNC = [
   { id: 'dnc-1', phone: '(214) 555-0199', name: 'Carl Benton', by: 'Keisha Grant', how: 'One tap on a call', at: 'Nov 5, 3:12 PM', keepUntil: 'Nov 2031' },

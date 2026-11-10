@@ -38,7 +38,7 @@ import '../template/shell914.css'
 import './p914.css'
 import './p934.css'
 import { useMessagesToggle } from '../template/msgToggle'
-import { UnmatchedAlert } from './screens/Unmatched913'
+import { UnmatchedAlert, RouteLeadDrawer } from './screens/Unmatched913'
 import '@fontsource/urbanist/500.css'
 import '@fontsource/urbanist/600.css'
 import '@fontsource/urbanist/700.css'
@@ -51,12 +51,12 @@ import '@fontsource/urbanist/700.css'
 const ICONS = { overview: Home, agents: Users, setup: Rocket, team: Headset, leads: PhoneIncoming, clients: BookUser, billing: Landmark, connect: Plug }
 const money = usd()
 
-function BellDrawer({ open, onClose }) {
+function BellDrawer({ open, onClose, onRoute }) {
   const { data: items } = useAdmFeed()
   return (
     <Drawer open={open} onClose={onClose} title="Notifications" sub="What happened lately">
-      {/* P913: a lead that matched no agent is an alert at the top, with Assign. */}
-      <UnmatchedAlert onDone={onClose} />
+      {/* P913: a lead that matched no agent is an alert at the top. P934: clicking it slides in Pick the agent. */}
+      <UnmatchedAlert onOpen={onRoute} />
       <ul className="tp-list">
         {items.slice(0, 8).map(a => <li key={a.id} className="tp-li"><Avatar name={a.who} /><span className="tp-grow"><b>{a.who}</b><small>{a.text}</small></span><small>{a.at}</small></li>)}
       </ul>
@@ -92,18 +92,6 @@ export function AddSomeone({ open, onClose }) {
       </div>
       {via !== 'link' && <Field label={via === 'email' ? 'Email' : 'Mobile number'}><input type={via === 'email' ? 'email' : 'tel'} value={to} onChange={e => setTo(e.target.value)} placeholder={via === 'email' ? 'name@example.com' : '(555) 555-0100'} /></Field>}
       <p className="tp-sub">Agents sign up and pay on their own; they show on Setup once they've paid. Admins are added by another admin outside the portal.</p>
-    </Drawer>
-  )
-}
-
-// Route a lead (P913): the leads that matched no agent (no agent ID and no Meta campaign ID), with Assign.
-function RouteLead({ open, onClose }) {
-  const { data: day } = useAdmDay()
-  const keep = useKeep(open)
-  if (!keep) return null
-  return (
-    <Drawer open={open} center onClose={onClose} title="Route a lead" sub={day.unassigned.length ? 'Pick an agent for each.' : 'Every lead matched an agent by its ad link or its campaign.'}>
-      <UnmatchedAlert onDone={onClose} />
     </Drawer>
   )
 }
@@ -300,7 +288,7 @@ export default function AdminFrame() {
         <button type="button" className="tp-ri fx-ri tp-wig" aria-label="Search (Ctrl K)" data-tip="Search  Ctrl K" {...wig} onClick={open('search')}><Search size={20} /></button>
         <i className="fx-hair" />
         <button type="button" className="fx-ri tp-wig" aria-label="Add a VA" data-tip="Add a VA" {...wig} onClick={open('add')}><UserPlus size={18} /></button>
-        <button type="button" className="fx-ri tp-wig" aria-label="Route a lead" data-tip={day.unassigned.length ? `${day.unassigned.length} not matched to an agent` : 'Route a lead'} {...wig} onClick={open('route')}><Shuffle size={18} />{day.unassigned.length > 0 && <span className="fx-badge">{day.unassigned.length}</span>}</button>
+        {/* P934: no Route a lead here; a real unmatched lead is routed from its notification (RouteLeadDrawer). */}
         <button type="button" className="fx-ri tp-wig" aria-label="Give a call" data-tip={day.late.length ? `${day.late.length} calls past their time` : 'Give a call'} {...wig} onClick={open('give')}><Hand size={18} /></button>
         <i className="fx-hair" />
         <NavLink to={ap('messages')} className="fx-ri tp-wig" aria-label="Messages" data-tip="Messages" {...wig}><MessageSquare size={18} />{day.unread > 0 && <span className="fx-badge">{day.unread}</span>}</NavLink>
@@ -345,9 +333,9 @@ export default function AdminFrame() {
       </nav>
 
       {panel === 'search' && <Palette onClose={close} pages={pages} rows={rows} placeholder="Search clients, agents, VAs, leads, pages" />}
-      <BellDrawer open={panel === 'bell'} onClose={close} />
+      <BellDrawer open={panel === 'bell'} onClose={close} onRoute={() => setPanel('route')} />
       <AddSomeone open={panel === 'add'} onClose={close} />
-      <RouteLead open={panel === 'route'} onClose={close} />
+      <RouteLeadDrawer open={panel === 'route'} onClose={close} />
       <GiveCall open={panel === 'give'} onClose={close} />
       <Help open={panel === 'help'} onClose={close} onBug={() => setPanel('bug')} />
       <ReportBug open={panel === 'bug'} onClose={close} role="Admin" />

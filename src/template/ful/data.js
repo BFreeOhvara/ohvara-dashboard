@@ -224,12 +224,13 @@ const seedThreads = [
   ] },
 ]
 
+// P934: only things that really happen now (no per-cancel checks or listens since P890).
 const seedFeed = [
   { id: 'f1', who: 'Dana Walker', text: 'Wrote about Gloria Santos', at: '9:25 AM', kind: 'message' },
   { id: 'f2', who: 'Angela Moore', text: 'Callback booked on your Calendar', at: '1:30 PM', kind: 'call' },
-  { id: 'f3', who: 'Tom Fischer', text: 'Cancellation confirmed, checking now', at: '10:52 AM', kind: 'pay' },
+  { id: 'f3', who: 'Tom Fischer', text: 'Cancellation call booked for Thu, 2:00 PM', at: '10:52 AM', kind: 'call' },
   { id: 'f4', who: 'Priya Shah', text: 'Asked for a payment change for Luis Ortega', at: 'Wed', kind: 'servicing' },
-  { id: 'f5', who: 'Robert Chen', text: 'Cancellation needs a listen', at: 'Wed', kind: 'pay' },
+  { id: 'f5', who: 'Robert Chen', text: 'Moved his call to Fri, 10:00 AM', at: 'Wed', kind: 'call' },
 ]
 
 // Appointments the VA booked for agents (they land on the agent's calendar). day = date in November.

@@ -68,7 +68,9 @@ test('the sample switch: on by default, admins and test accounts can preview', (
   assert.equal(resolveMode({ show: false, view: 'sample', canPreview: true }), 'sample')
   assert.equal(canPreviewReal({ role: 'admin', id: 'x' }), true)
   assert.equal(canPreviewReal({ role: 'agent', id: 'x' }), false)
-  assert.equal(canPreviewReal({ role: 'agent', id: '3f2b2df7-40b1-4921-80e2-09981c819642' }), true)
+  // P934: test agents and the test VA no longer pick a view; only admins do
+  assert.equal(canPreviewReal({ role: 'agent', id: '3f2b2df7-40b1-4921-80e2-09981c819642' }), false)
+  assert.equal(canPreviewReal({ role: 'fulfillment', id: '402a7a07-c9b0-428f-9b9d-ff2b6480bed0' }), false)
   assert.equal(switchReady({ id: 1 }), false)
   assert.equal(switchReady({ id: 1, show_sample_data: true }), true)
 })

@@ -1,25 +1,25 @@
 // P848 — "Show sample data" (Brayden, Nov 6): every portal keeps its sample information until this is switched off.
 // The company-wide switch is app_settings.show_sample_data. Until that column exists (it needs a migration) or while
-// it is anything but false, every page shows sample data. Admins (and the test accounts) can preview real data for
-// themselves with "View: Sample / Real" in the avatar menu; that choice lives in this browser only and changes
+// it is anything but false, every page shows sample data. Admins can preview real data for
+// themselves with the "Sample info" pill in the avatar menu (P934); that choice lives in this browser only and changes
 // nothing anyone else sees.
-import { isTestProfile } from './testAccounts.js'
 
 export const VIEW_KEY = 'ohvara-view'
 
 // show: the company switch's value as loaded (undefined = column not there yet, or still loading).
-// view: this viewer's own choice ('sample' | 'real' | null). canPreview: admins and test accounts only.
+// view: this viewer's own choice ('sample' | 'real' | null). canPreview: admins only (P934).
 // P929: test accounts always open on the sample information (Brayden wants every screen filled in), even after the
-// company switch goes to real; they can still pick "View: Real" to check the sandbox end to end.
+// company switch goes to real; P934: no view control for them any more.
 export function resolveMode({ show, view, canPreview, isTest = false }) {
   if (canPreview && (view === 'sample' || view === 'real')) return view
   if (isTest) return 'sample'
   return show === false ? 'real' : 'sample'
 }
 
-// P852: the test VA (tesfulfill11, "Test Fulfill") can preview real data too, for the VA side's checks.
-export const PREVIEW_IDS = new Set(['402a7a07-c9b0-428f-9b9d-ff2b6480bed0'])
-export const canPreviewReal = profile => !!profile && (profile.role === 'admin' || isTestProfile(profile) || PREVIEW_IDS.has(profile.id))
+// P934 (Brayden, Nov 10): only admins pick their own view (the "Sample info" pill in the avatar menu, until real
+// agents are in). Agents and VAs have no view control: test accounts are the sandbox and always show their sample
+// info (P929), real accounts follow the company switch. (P852's test-VA preview is gone with it.)
+export const canPreviewReal = profile => !!profile && profile.role === 'admin'
 
 // The switch can only be flipped once the column is there; a missing column reads as "on" and can't be saved.
 export const switchReady = settings => !!settings && Object.prototype.hasOwnProperty.call(settings, 'show_sample_data')

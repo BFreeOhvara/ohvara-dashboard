@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, Check, Hand, CreditCard, PhoneCall, Radio, Megaphone, ChevronDown, ChevronUp, Shuffle, Rocket, CalendarOff } from 'lucide-react'
+import { ArrowUpRight, Check, Hand, CreditCard, PhoneCall, Radio, Megaphone, ChevronDown, ChevronUp, Shuffle, Rocket, CalendarOff, PhoneIncoming, ListChecks, Headset, Landmark, Users } from 'lucide-react'
 import { useAdmDay, useAdmMoney, useAdmAgents, useAdmDesk, useAdmCosts, useAdmSetup, useAdmRota, useAdmVas, SHIFT_MIN, dateText } from '../data'
 import { Avatar } from '../../template/kit'
 import { CountUp, usd } from '../../template/motion'
@@ -17,7 +17,7 @@ import { adminTodos, shortCover } from '../todos'
 // P906: "transferred" reads Live calls; no missed transfers (a missed one bounces back and is booked).
 // P914: "Needs you" is To-dos: a clean list of real admin jobs (todos.js), each with one action; what fits shows, the
 // rest wait behind "Show all" (never cut off). Empty: All caught up.
-const TODOS_SHOWN = 5
+const TODOS_SHOWN = 5 // P934: at least this many; the box shows as many as fit its height (useTodoFit)
 const TODO_ICON = { lead: Shuffle, card: CreditCard, launch: Rocket, cover: CalendarOff, late: Hand, ad: Megaphone }
 const money = usd()
 const cents = usd(true)
@@ -33,6 +33,29 @@ function CostLine({ costs, row }) {
       {[['Ad spend', money(t.spend)], ['Per lead', f(t.perLead)], ['Per booked', f(t.perBooked)], ['Per sale', f(t.perSale)]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd className="tp-money">{v}</dd></div>)}
     </dl>
   )
+}
+
+// P934: the To-dos box shows as many rows as its height holds (it's as tall as Leads this week beside it), so it is
+// never half empty; Show all sits pinned at the bottom of the box when more are waiting.
+const TODO_ROW = 64 // one row (58px) and the gap under it
+function useTodoFit(ref, all) {
+  const [fit, setFit] = useState(TODOS_SHOWN)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el || all) return undefined
+    const read = () => {
+      const head = el.querySelector('.fx-tile-h')
+      const cs = getComputedStyle(el)
+      const room = el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - (head?.offsetHeight || 0) - 10 - 46 // header gap, Show all
+      setFit(Math.max(TODOS_SHOWN, Math.floor((room + 6) / TODO_ROW)))
+    }
+    read()
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const ro = new ResizeObserver(read)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [ref, all])
+  return fit
 }
 
 function Todo({ t, i }) {
@@ -84,6 +107,8 @@ export default function Overview() {
   const { data: rota } = useAdmRota()
   const { data: vas } = useAdmVas()
   const [allTodos, setAllTodos] = useState(false)
+  const todoBox = useRef(null)
+  const fit = useTodoFit(todoBox, allTodos)
   const w = day.week
   const steps = [['in', 'Came in', w.in], ['booked', 'Booked', w.booked], ['transferred', 'Live calls', w.transferred], ['sold', 'Sold', w.sold]]
   const top = Math.max(4, ...day.byDay.map(d => d.in))
@@ -105,7 +130,7 @@ export default function Overview() {
   return (
     <div className="tp-page fx-page adm-ov">
       <div className="adm-ov-top" data-fold data-fold-next=".adm-ov-pair" data-fold-peek>
-        <Tile className="adm-ov-hero" i={0} title="Leads this week" sub={`${day.range} · ${money(w.premium)} a month in new premium`} to={ap('leads')} label="Open Leads">
+        <Tile className="adm-ov-hero" i={0} icon={PhoneIncoming} title="Leads this week" sub={`${day.range} · ${money(w.premium)} a month in new premium`} to={ap('leads')} label="Open Leads">
           <ol className="adm-funnel" aria-label="This week's leads">
             {steps.map(([k, label, n], i) => (
               <li key={k} className={`is-${k}`} style={{ '--i': i }}>
@@ -121,14 +146,15 @@ export default function Overview() {
 
         <div className="fx-ovl-side">
           <section className={`fx-tile is-deep fx-ovl-needs adm-todos${allTodos ? ' is-all' : ''}`} style={{ '--i': 4 }} aria-label="To-dos">
-            <div className="fx-ovl-needs-in">
+            <div className="fx-ovl-needs-in" ref={todoBox}>
               <header className="fx-tile-h">
+                <span className="adm-tile-ic" aria-hidden="true"><ListChecks size={16} /></span>
                 <span className="tp-grow"><h2>To-dos</h2><p>{todos.length ? `${todos.length} to do` : 'Nothing waiting'}</p></span>
               </header>
               {todos.length
-                ? <ul className="adm-todo-list">{(allTodos ? todos : todos.slice(0, TODOS_SHOWN)).map((t, i) => <Todo key={t.id} t={t} i={i} />)}</ul>
+                ? <ul className="adm-todo-list">{(allTodos ? todos : todos.slice(0, fit)).map((t, i) => <Todo key={t.id} t={t} i={i} />)}</ul>
                 : <p className="fx-calm"><Check size={16} aria-hidden="true" />All caught up.</p>}
-              {todos.length > TODOS_SHOWN && (
+              {todos.length > fit && (
                 <button type="button" className="fx-pillbtn fx-self adm-needs-more" aria-expanded={allTodos} onClick={() => setAllTodos(v => !v)}>
                   {allTodos ? <>Show fewer<ChevronUp size={14} /></> : <>Show all {todos.length}<ChevronDown size={14} /></>}
                 </button>
@@ -139,7 +165,7 @@ export default function Overview() {
       </div>
 
       <div className="adm-ov-pair">
-          <Tile className="is-fill is-teal adm-ov-shift" i={1} title="On shift today" sub={`${done} of ${todayCalls} calls done · ${day.late.length} past their time`} to={ap('team')} label="Open Fulfillment team">
+          <Tile className="is-fill is-teal adm-ov-shift" i={1} icon={Headset} title="On shift today" sub={`${done} of ${todayCalls} calls done · ${day.late.length} past their time`} to={ap('team')} label="Open Fulfillment team">
             <b className="fx-huge tp-num"><CountUp value={onShift.length} /><small>VAs</small></b>
             <ul className="adm-shift">
               {onShift.map(v => (
@@ -152,7 +178,7 @@ export default function Overview() {
             </ul>
           </Tile>
 
-          <Tile className="is-fill is-green adm-ov-rev" i={2} title="Revenue this week" sub={`Plans ${money(m.plans)} · 12% fee ${money(m.leadFee)} · setup ${money(m.setup)}`} to={ap('billing')} label="Open Revenue">
+          <Tile className="is-fill is-green adm-ov-rev" i={2} icon={Landmark} title="Revenue this week" sub={`Plans ${money(m.plans)} · booking desk ${money(m.leadFee)} · setup ${money(m.setup)}`} to={ap('billing')} label="Open Revenue">
             <b className="fx-huge tp-money"><CountUp value={m.total} format={money} /></b>
             <WeekGrid label={m.days.map(x => `${x.name}: ${x.later ? 'not yet' : money(x.revenue)}`).join(', ')}
               cells={m.days.map(x => ({ key: x.day, name: x.name, later: x.later, today: x.isToday, text: k(x.revenue), h: x.later ? 0 : x.revenue / revTop, part: x.revenue ? x.plans / x.revenue : 0 }))} />
@@ -164,7 +190,7 @@ export default function Overview() {
         <DayBars day={day} top={top} />
       </Tile>
 
-      <Tile className="adm-ov-agents" i={6} title="Agents" sub={`${day.onDuty.length} taking live transfers now · ${agents.length} in all`} to={ap('agents')} label="Open Agents">
+      <Tile className="adm-ov-agents" i={6} icon={Users} title="Agents" sub={`${day.onDuty.length} taking live transfers now · ${agents.length} in all`} to={ap('agents')} label="Open Agents">
         <ul className="adm-agents">
           {agents.slice().sort((a, b) => b.week.sold - a.week.sold || b.week.in - a.week.in).map(a => (
             <li key={a.id}>

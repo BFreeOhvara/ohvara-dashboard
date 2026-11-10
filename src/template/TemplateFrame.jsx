@@ -17,7 +17,6 @@ import { useClientStatusOf } from './checkSettings'
 import { Drawer, Avatar, Field, PillTabs, Seg, useAccount, useNote, initials } from './kit'
 import { ReportBug } from './ReportBug'
 import { avatarHue } from './avatarHue'
-import ViewToggle from './ViewToggle'
 import { DataLoading, DataError } from './DataState'
 import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit, useKeep } from './motion'
 import { armEntrance } from '../adminshell/entrance'
@@ -292,7 +291,6 @@ function AccountMenu({ open, onClose, theme, setTheme }) {
       <section className="fx-menu" role="dialog" aria-label="Your account">
         <header className="fx-menu-h"><span className="fx-av">{initials(account.name).toUpperCase()}</span><span className="tp-grow"><b>{account.name}</b><small>Agent</small></span></header>
         <button type="button" className="fx-mrow" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}<b className="tp-grow">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</b></button>
-        <ViewToggle />
         <i className="fx-mline" />
         {links.map(([to, label, Icon]) => <Link key={label} to={to()} className="fx-mrow" onClick={onClose}><Icon size={17} aria-hidden="true" /><b className="tp-grow">{label}</b><ChevronRight size={15} aria-hidden="true" /></Link>)}
         <i className="fx-mline" />
