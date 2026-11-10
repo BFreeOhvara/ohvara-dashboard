@@ -62,6 +62,11 @@ export function testAgent(agent: Agent | null, lead: Lead | null): Agent | null 
 }
 
 // The machine's phase for a stored call.
+// P940: +17373383859 → "737-338-3859" (read aloud digit by digit in the voicemail message).
+export const spokenNumber = (e164: string | null | undefined) => {
+  const d = String(e164 ?? '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '')
+  return d.length === 10 ? `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}` : String(e164 ?? '')
+}
 const phaseOf = (c: Call) => (c.status === 'queued' ? 'dialing' : c.status)
 const step = (c: Call, ev: Record<string, unknown>, ctx: Record<string, unknown> = {}) =>
   aiStep({ phase: phaseOf(c), attempt: c.attempt, outcome: null, reason: null, routed: c.routed }, ev, ctx)
@@ -92,7 +97,8 @@ export async function start(store: Store, provider: Provider, env: Env, callId: 
   try {
     const r = await provider.start({
       callId: c.id, to: lead.phone, from, fromId: ds?.phone ? ds.providerId : null, maxSecs: Math.min(live.maxSecs || AI_RULES.maxCallSecs, 900),
-      vars: { first_name: lead.first, agent_first_name: agent.first, state: lead.state ?? '', lead_tz: lead.tz ?? '', opening: env.words.opening.replace('{first}', lead.first) },
+      vars: { first_name: lead.first, agent_first_name: agent.first, state: lead.state ?? '', lead_tz: lead.tz ?? '', opening: env.words.opening.replace('{first}', lead.first),
+        callback_number: spokenNumber(from) }, // P940: the voicemail message gives the number that called them
     })
     await store.status(c.id, 'dialing', { provider_call_id: r.providerCallId })
     return { ok: true, provider_call_id: r.providerCallId }

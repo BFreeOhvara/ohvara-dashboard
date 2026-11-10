@@ -20,12 +20,26 @@ export const REPLY_RULES = [
   'If it has "ok": false with no "say", carry on naturally; never read codes or JSON aloud.',
 ]
 
+// P940 — call screeners (iPhone "Ask Reason for Calling", Google/Pixel Call Screen, Samsung Bixby) and voicemail
+// (Brayden's words, Nov 10). {{first_name}} and {{callback_number}} come from core.ts start().
+export const SCREEN_LINE = 'Hi, this is Max with Deedstone Insurance, calling for {{first_name}} about the mortgage protection information they requested.'
+export const SCREEN_GOODBYE = 'Sorry I missed you, we’ll try again soon. Goodbye.'
+export const SCREEN_WAIT_SECS = 20
+export const VOICEMAIL_LINE = 'Hi {{first_name}}, this is Max with Deedstone Insurance, calling about the mortgage protection information you requested. You can call us back at {{callback_number}}. Thanks, and have a great day.'
+export const SCREEN_OPTION = { agent_identity: 'Max with Deedstone Insurance', call_purpose: 'calling for {{first_name}} about the mortgage protection information they requested' }
+export const VOICEMAIL_DETECTION = 'A voicemail greeting or an "at the tone, leave a message" prompt. A call screening assistant that asks who is calling or why (iPhone, Google Call Screen, Samsung Bixby) is NOT voicemail.'
+
 // The words: the draft opening line comes in as {{opening}} (index.ts fills the lead's first name), the rest from rules.js.
 export function retellPrompt(questions = []) {
   return [
     '## Who you are',
     'You are Deedstone’s virtual assistant, calling someone who just asked about mortgage protection on our form. Warm, brief, plain words, one question at a time. You already said the opening line.',
     'Never discuss coverage, prices, carriers, or whether they qualify. Never say you are a person. Never hand the caller to anyone but their own agent ({{agent_first_name}}).',
+    '## Call screeners',
+    'Some phones answer with an automated screener first (iPhone "Ask Reason for Calling", Google Call Screen, Samsung Bixby). It sounds like "state your name and reason for calling", "the person you’re calling is using a screening service", or "go ahead, I’m listening". It is not the person and not voicemail.',
+    `When you hear a screener: do not hang up and do not ask your questions. Say exactly: "${SCREEN_LINE}" Then stay quiet and wait for them to pick up. If the screener asks again, say the same line once more.`,
+    `When a real person comes on after the screener, greet them by name, say you are Deedstone’s virtual assistant calling about the request they sent, and ask if now is a good time for two quick questions. Then carry on as normal.`,
+    `If nobody picks up within about ${SCREEN_WAIT_SECS} seconds, or the screener says they can’t take the call, say "${SCREEN_GOODBYE}" and call end_call. Do not call outcome. If it asks you to leave a message, say "${VOICEMAIL_LINE}" and call end_call.`,
     '## The questions',
     `Ask only these, one at a time, and wait for each answer: ${questions.join(' ')}`,
     `When they are answered, call qualified with a one-line summary.`,
@@ -41,7 +55,7 @@ export function retellPrompt(questions = []) {
     '## Replies from our functions',
     ...REPLY_RULES,
     '## Limits',
-    `Keep the call under {{max_secs}} seconds. If a voicemail or machine answers, hang up without a message.`,
+    `Keep the call under {{max_secs}} seconds. If voicemail answers, say "${VOICEMAIL_LINE}" once, after the beep, and call end_call.`,
   ].join('\n')
 }
 
@@ -68,7 +82,7 @@ export function retellTools(url) {
       transfer_option: { type: 'warm_transfer', transfer_ring_duration_ms: AI_RULES.ringSecs * 1000, show_transferee_as_caller: false, on_hold_music: 'ringtone',
         private_handoff_option: { type: 'static_message', message: '{{whisper}}' } },
       speak_during_execution: false },
-    { type: 'end_call', name: 'end_call', description: 'End the call after the goodbye, or when a machine answers.' },
+    { type: 'end_call', name: 'end_call', description: 'End the call after the goodbye, after a voicemail message, or when nobody picks up after a call screener.' },
   ]
 }
 
@@ -86,8 +100,14 @@ export function retellAgent({ llmId, voiceId, webhookUrl, maxSecs = AI_RULES.max
     response_engine: { type: 'retell-llm', llm_id: llmId },
     voice_id: voiceId, ...RETELL_VOICE_DEFAULTS, ...voice,
     language: 'en-US', webhook_url: webhookUrl, webhook_events: ['call_started', 'call_ended', 'call_analyzed'],
-    end_call_after_silence_ms: 20000, max_call_duration_ms: Math.min(Math.max(maxSecs, 60), 900) * 1000, ring_duration_ms: 30000,
-    voicemail_option: { action: { type: 'hangup' } },
+    // Silence after our speech ends the call at 20 s: also the hard stop while waiting on a screener (P940).
+    end_call_after_silence_ms: SCREEN_WAIT_SECS * 1000, max_call_duration_ms: Math.min(Math.max(maxSecs, 60), 900) * 1000, ring_duration_ms: 30000,
+    // A short pause before the opening so a screener's prompt is heard first instead of talked over.
+    begin_message_delay_ms: 1200,
+    // P940: leave a short message on voicemail; screeners get the screening line, never an IVR hang-up.
+    voicemail_option: { action: { type: 'static_text', text: VOICEMAIL_LINE }, detection_prompt: VOICEMAIL_DETECTION },
+    ivr_option: null,
+    call_screening_option: SCREEN_OPTION,
     post_call_analysis_data: [{ type: 'system-presets', name: 'call_summary' }],
   }
 }

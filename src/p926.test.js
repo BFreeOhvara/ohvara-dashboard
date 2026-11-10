@@ -45,7 +45,7 @@ test('llm + agent bodies: opening from {{opening}}, gpt-4.1, voice knobs, hang u
   assert.equal(a.voice_speed, 1.05)
   assert.equal(a.interruption_sensitivity, RETELL_VOICE_DEFAULTS.interruption_sensitivity)
   assert.equal(a.max_call_duration_ms, 300000)
-  assert.deepEqual(a.voicemail_option, { action: { type: 'hangup' } })
+  assert.equal(a.voicemail_option.action.type, 'static_text') // P940: leaves a message
   assert.deepEqual(a.webhook_events, ['call_started', 'call_ended', 'call_analyzed'])
 })
 
