@@ -7,9 +7,9 @@
 import { AI_RULES, ASK_AGENT_REASONS, SAID_OUTCOMES, WAIT_QUESTIONS, WAIT_RULE } from './rules.js'
 
 // P940: Retell's newest Claude Sonnet ($0.064/min standard, Nov 10 price list): natural conversation and reliable
-// tool calls at phone speed. GPT-4.1 takes over if it is slow. (Claude 5.5 Opus is $0.128/min and slower to answer.)
+// tool calls at phone speed. (Claude 5.5 Opus is $0.128/min and slower to answer.)
 export const RETELL_MODEL = 'claude-5.5-sonnet'
-export const RETELL_BACKUP_MODEL = 'gpt-4.1'
+
 // Sounds like a calm person (P940, Brayden's call 3 feedback): smooth over expressive (ElevenLabs Multilingual v2, the
 // most natural-flowing ElevenLabs model, $0.06/min; voice_temperature under 1 = steadier delivery), normal speed,
 // waits for the caller to finish (lower responsiveness, accurate speech-to-text), harder to cut off, light "mm-hmm"s.
@@ -136,7 +136,8 @@ export function retellTools(url) {
 export function retellLlm({ prompt, url }) {
   return {
     general_prompt: prompt, begin_message: '{{opening}}', start_speaker: 'agent',
-    model_config: { type: 'cascading', primary: { model: RETELL_MODEL, tier: 'standard' }, backup: { model: RETELL_BACKUP_MODEL }, temperature: 0.4 },
+    // No backup model: Retell bills a backup for the whole call (call 3: GPT-4.1 +4.5¢/min) even when it never speaks.
+    model_config: { type: 'cascading', primary: { model: RETELL_MODEL, tier: 'standard' }, temperature: 0.4 },
     general_tools: retellTools(url),
   }
 }

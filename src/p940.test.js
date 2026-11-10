@@ -57,10 +57,10 @@ test('prompt and tools never name the agent', () => {
   assert.ok(retellTools(HOOK).find(x => x.name === 'qualified').parameters.required.includes('free_now'))
 })
 
-test('model and voice: Claude Sonnet 5.5 with a GPT-4.1 backup; smooth voice, waits its turn, harder to interrupt', () => {
+test('model and voice: Claude Sonnet 5.5, no billed backup; smooth voice, waits its turn, harder to interrupt', () => {
   const l = retellLlm({ prompt: 'p', url: HOOK })
   assert.equal(l.model_config.primary.model, 'claude-5.5-sonnet')
-  assert.equal(l.model_config.backup.model, 'gpt-4.1')
+  assert.equal(l.model_config.backup, undefined)
   const a = retellAgent({ llmId: 'llm_1', voiceId: 'v1', webhookUrl: HOOK })
   assert.equal(a.voice_speed, 1)
   assert.equal(a.voice_model, 'eleven_multilingual_v2')

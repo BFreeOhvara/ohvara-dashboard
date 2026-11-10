@@ -40,7 +40,7 @@ test('llm + agent bodies: opening from {{opening}}, gpt-4.1, voice knobs, hang u
   assert.equal(l.begin_message, '{{opening}}')
   assert.equal(l.start_speaker, 'agent')
   assert.equal(l.model_config.primary.model, 'claude-5.5-sonnet') // P940
-  assert.equal(l.model_config.backup.model, 'gpt-4.1')
+  assert.equal(l.model_config.backup, undefined) // P940: a backup is billed for the whole call
   const a = retellAgent({ llmId: 'llm_1', voiceId: 'v1', webhookUrl: HOOK, maxSecs: 300, voice: { voice_speed: 1.05 } })
   assert.deepEqual(a.response_engine, { type: 'retell-llm', llm_id: 'llm_1' })
   assert.equal(a.voice_speed, 1.05)
