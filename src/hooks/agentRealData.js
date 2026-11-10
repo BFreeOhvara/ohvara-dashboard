@@ -463,6 +463,9 @@ export function useActionsReal() {
       talk: soon('Talk to someone'),
       sendFeedback: soon('Feedback on the team'),
       setSpend: soon('Changing your lead spend here'),
+      // P921: lead-spend plan_change (src/lib/leadSpend.js changePlan) is built and tested; wired with the rest of real Billing.
+      changePlan: soon('Changing your plan here'),
+      undoPlanChange: soon('Changing your plan here'),
       setTake: soon('Changing how you take leads here'),
       topUp: soon('Topping up here'),
       setProducts: soon('Switching products here'),

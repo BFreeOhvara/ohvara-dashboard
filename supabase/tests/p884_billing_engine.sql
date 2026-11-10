@@ -190,11 +190,13 @@ select public.admin_billing_setup_set('a8840000-0000-4000-8000-00000000000a', 'n
 select pg_temp.as_owner();
 select is((public.agent_membership_due('a8840000-0000-4000-8000-00000000000a'))->>'setup_cents', '0', 'i10 or none, with a minimum term');
 select pg_temp.as_user('a8840000-0000-4000-8000-00000000000a');
-select lives_ok($$ select public.lead_spend_set(10000, 5000) $$, 'i11 A raises to $150 a day');
+-- P921 (p921_plan_change): the plan no longer follows the spend. Over the plan's band is refused (switch plan first);
+-- a move down waits for the next bill.
+select throws_ok($$ select public.lead_spend_set(10000, 5000) $$, 'P0001', null, 'i11 A can''t raise to $150 a day on Growth');
+select is((public.billing_plan_change('starter'))->>'direction', 'down', 'i12 A moves down to Starter');
 select pg_temp.as_owner();
-select is((select tier_key || '>' || next_tier_key from public.agent_billing_plans where agent_id = 'a8840000-0000-4000-8000-00000000000a'), 'growth>pro', 'i12 Pro waits for the next bill');
 select lives_ok($$ select public.billing_period_rolled('a8840000-0000-4000-8000-00000000000a') $$, 'i13 the bill renews');
-select is((select tier_key from public.agent_billing_plans where agent_id = 'a8840000-0000-4000-8000-00000000000a'), 'pro', 'i14 now Pro');
+select is((select tier_key from public.agent_billing_plans where agent_id = 'a8840000-0000-4000-8000-00000000000a'), 'starter', 'i14 now Starter');
 
 -- ── j. who sees what ─────────────────────────────────────────────────────────
 select pg_temp.as_user('a8840000-0000-4000-8000-00000000000a');

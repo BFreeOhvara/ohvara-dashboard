@@ -11,6 +11,10 @@
 //                                            charged by the next lead-spend run (every 15 minutes).
 //         setSpend(db, { appts, live })      P884 lead-spend set_spend (per type). Superseded by setLeadProduct.
 //         payNow(db) / pauseSpend(db, bool)  lead-spend pay_now / pause
+//         planState(db) / planQuote(db, tier) P921 my_plan_state / billing_plan_quote: the plan, a scheduled
+//                                            downgrade, the billing month, an upgrade going through or declined
+//         changePlan(db, { tier, daily })    P921 lead-spend plan_change: up = the prorated difference charged now
+//                                            (result 'paid' | 'failed' | 'due'); down = from the next bill; same = Undo
 // Admin:  adminBilling(db, agentId), setupSet, adjustBalance, savePriceBook. P914: no pilot, so the pilot switch,
 //         the VA cost line and pilot → paid are gone (their functions refuse, migration 252_no_pilot.sql).
 // Shape:  toSampleBilling(view) maps the server view onto the sample billing shape the P878 Billing page draws.
@@ -40,6 +44,9 @@ export const setSpend = (db, { appts = 0, live = 0 }) => invoke(db, { action: 's
 export const payNow = db => invoke(db, { action: 'pay_now' })
 export const cardCheck = db => invoke(db, { action: 'card_check' })
 export const addedClientsQuote = (db, n) => rpc(db, 'billing_added_clients_quote', { p_new: n })
+export const planState = db => rpc(db, 'my_plan_state')
+export const planQuote = (db, tier) => rpc(db, 'billing_plan_quote', { p_tier: tier })
+export const changePlan = (db, { tier, daily = null }) => invoke(db, { action: 'plan_change', tier, daily_cents: daily == null ? null : toCents(daily) })
 export const pauseSpend = (db, paused) => invoke(db, { action: 'pause', paused: !!paused })
 export const acceptPaid = (db, termsVersion, device = typeof navigator !== 'undefined' ? navigator.userAgent : null) =>
   rpc(db, 'billing_accept_paid', { p_terms_version: termsVersion, p_device: device })

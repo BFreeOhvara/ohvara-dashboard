@@ -11,7 +11,7 @@ import { LANES, CLOSED_LANE, laneOf } from '../stages'
 import { agentCallTask, confirmedByText, atLabel, clockNow } from '../leadLifecycle'
 import { agentStatusOf, agentEvents, closedReason, needsResult, resultsFor, canMove, isLiveCall, liveCalls, RESULT_LABEL } from '../agentView'
 import { LiveCalls } from '../LiveCall'
-import { dailyTotal, openSlotsPerWeek, spendOk } from '../spendPlan'
+import { dailyTotal, openSlotsPerWeek, spendOk, planOf, bandOf } from '../spendPlan'
 import { usd } from '../motion'
 import { FeedbackDrawer } from '../Talk'
 import { CallOrCopy as CallOr } from '../CallOrCopy'
@@ -265,7 +265,7 @@ function SpendDrawer({ open, onClose }) {
   return (
     <Drawer open={open} onClose={onClose} title="Daily lead spend" sub="A change starts tomorrow at 12:00 AM your time"
       footer={<button type="button" className="tp-primary fx-accent" disabled={!spendOk(billing.plan, spend) || !takeOk(take)} onClick={() => { setSpend(spend); setTake(take); note('Lead spend saved. Starts tomorrow. Sample only, nothing was charged'); onClose() }}>Save lead spend</button>}>
-      <SpendSliders spend={spend} onSpend={setDraft} plan={billing.plan} mode={take.mode} id="leads-spend" openSlots={openSlotsPerWeek(settings.week)} />
+      <SpendSliders spend={spend} onSpend={setDraft} plan={billing.plan} mode={take.mode} id="leads-spend" openSlots={openSlotsPerWeek(settings.week)} band={{ tier: planOf(billing), ...bandOf(planOf(billing)) }} />
       <TakeLeads take={take} onTake={setTakeDraft} id="leads-take" />
     </Drawer>
   )

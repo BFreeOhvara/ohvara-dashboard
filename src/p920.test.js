@@ -45,7 +45,8 @@ test('Change plan: Other plans lists each other plan with range and price; switc
   assert.match(b, /<h3>Other plans<\/h3>/)
   assert.match(b, /TIERS\.filter\(t => t\.key !== tierNow\.key\)/)
   assert.match(b, /Switch to \{t\.label\}/)
-  assert.match(b, /Your plan becomes \{to\.label\}, \{money\(to\.monthly\)\} a month, from your next bill\. <\/b> Daily spend \{bandText\(to\)\}|Your plan becomes \{to\.label\}, \{money\(to\.monthly\)\} a month, from your next bill\.<\/b> Daily spend \{bandText\(to\)\}/)
+  // P921 replaced "Your plan becomes X from your next bill" with what it costs and when (src/p921.test.js).
+  assert.match(b, /<b>\{changeWords\(c\)\}<\/b>/)
   // the save only runs from the confirm's button, never from the plan row
   assert.match(b, /onClick=\{\(\) => setAsk\(t\.key\)\}/)
   assert.match(b, /onClick=\{\(\) => \{ onSwitch\(to, start\); setAsk\(null\) \}\}/)

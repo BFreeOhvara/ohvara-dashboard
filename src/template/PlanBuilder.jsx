@@ -65,8 +65,9 @@ export function TierBands({ daily }) {
 }
 
 // spend = { daily } dollars a day. plan = 'paid' (P914: the only plan). mode = how they take leads. openSlots = open 30-minute
-// slots a week on their calendar.
-export function SpendSliders({ spend, onSpend, plan, mode = 'both', id = 'sp', openSlots = null, max = MAX_DAILY }) {
+// slots a week on their calendar. P921: band = { tier, lo, hi } keeps the slider inside the plan the agent is on (the
+// server refuses a spend over the plan's band; moving up a plan is paid in Billing).
+export function SpendSliders({ spend, onSpend, plan, mode = 'both', id = 'sp', openSlots = null, max = MAX_DAILY, band = null }) {
   const daily = dailyTotal(spend)
   const night = nightlyFor(plan, daily)
   const ex = expected({ daily }, mode)
@@ -81,14 +82,14 @@ export function SpendSliders({ spend, onSpend, plan, mode = 'both', id = 'sp', o
           <label htmlFor={`${id}-daily`}>Daily lead spend</label>
           <b className="tp-money" aria-live="polite">{money(daily)}<small> / day</small></b>
         </div>
-        <input id={`${id}-daily`} className="pb-range" type="range" min={SLIDER.min} max={max} step={SLIDER.step} value={Math.min(daily, max)}
-          style={{ '--w': bandShare(daily) }} aria-valuetext={`${money(daily)} a day`} onChange={e => onSpend({ daily: Number(e.target.value) })} />
+        <input id={`${id}-daily`} className="pb-range" type="range" min={band ? band.lo : SLIDER.min} max={band ? band.hi : max} step={SLIDER.step} value={band ? Math.max(band.lo, Math.min(daily, band.hi)) : Math.min(daily, max)}
+          style={{ '--w': band ? (band.hi > band.lo ? (Math.max(band.lo, Math.min(daily, band.hi)) - band.lo) / (band.hi - band.lo) : 0) : bandShare(daily) }} aria-valuetext={`${money(daily)} a day`} onChange={e => onSpend({ daily: Number(e.target.value) })} />
         <div className="pb-outs">{outs.map(([k, v]) => <div key={k}><small>{k}</small><b className="tp-num">{daily ? v : 'Off'}</b></div>)}</div>
       </div>
       <div className="sp-total">
         <span className="tp-grow"><small>Charged each night for the next day</small><b className="tp-money">{money(night.total)}<small> = {money(daily)} + {feeWords}</small></b><small>About {rangeWords(ex.soldMonth)} sales a month · up to {money(max)} a day</small></span>
       </div>
-      <TierBands daily={daily} />
+      {band ? <p className="bl-band-note">Your {band.tier.label} plan covers ${band.tier.from}–{band.tier.to ?? max} a day. To spend more, switch plan in Billing.</p> : <TierBands daily={daily} />}
       {low && <p className="sp-warn" role="alert">Paid plans start at {money(PAID_MIN_DAILY)} a day. Pause instead if you need a break.</p>}
       {tight && <p className="sp-warn" role="alert">Your calendar has {openSlots} open half-hours a week. This spend books up to {ex.appts.booked.high} appointments, so open about {need}.</p>}
       <p className="pb-foot">100% of your lead spend goes to finding your leads. The {feeWords} on top {FEE_WHY}. Every lead gets a call within seconds. A range, not a promise. {RECOMMENDED}</p>

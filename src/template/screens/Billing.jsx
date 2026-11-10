@@ -6,7 +6,8 @@ import { Chip, Drawer, Field, SampleTag, Seg, useNote } from '../kit'
 import { Select } from '../Select'
 import { usd } from '../motion'
 import { TakeLeads } from '../PlanBuilder'
-import { bought, tierOf, dailyTotal, spendOk, nightlyFor, monthlyBill, feeWords, SETUP_FEE, PAID_MIN_DAILY, TIERS, bandOf, bandText, switchDaily } from '../spendPlan'
+import { bought, planOf, dailyTotal, spendOk, nightlyFor, monthlyBill, feeWords, SETUP_FEE, PAID_MIN_DAILY, TIERS, bandOf, bandText, switchDaily } from '../spendPlan'
+import { planChange, changeWords } from '../../lib/planChange'
 import { LEAD_MODES, liveHoursText, takeOk } from '../../lib/leadSplit'
 import { TalkDrawer } from '../Talk'
 import { cardOf, chargesOf } from '../billing917'
@@ -28,6 +29,9 @@ import '../bill910.css'
 // P917: looks like real billing: Your plan (current plan, daily spend, Change plan opens the spend slider), Payment
 // method (brand, last 4, expiry, Update card) with the next charge, Charges (nightly lead spend, monthly plan, setup
 // fee: date, amount, status), Paid ahead, Results, How you take leads, Pause or cancel. Founding lock in the plan.
+// P921: plan changes are paid fairly. Moving up charges the prorated difference now (the band opens once it's paid;
+// declined: nothing changes, Fix card); moving down starts on the next bill date, with Undo. The plan is saved
+// (planOf), not worked out from the spend. ?upgrade=declined previews a declined upgrade, ?plan=down a scheduled move down.
 const money = usd()
 const pct = v => (v == null ? '–' : `${Math.round(v * 100)}%`)
 const cost = v => (v == null ? '–' : money(Math.round(v)))
@@ -167,21 +171,32 @@ function PlanSpend({ tier, daily, onDaily, dirty, ok, onSave, onReset, forDay })
   )
 }
 
-// P920 — Other plans: each other plan with its spend range and monthly price, and Switch to {plan}. Switching asks first
-// (what the plan becomes, the price, the range, where the daily spend lands), then saves; the slider then shows the new band.
-function OtherPlans({ tierNow, daily, onSwitch }) {
+// P920 — Other plans: each other plan with its spend range and monthly price, and Switch to {plan}. Switching asks first.
+// P921: the confirm says what it costs and when: moving up, the prorated difference now and the full price on the bill
+// date (src/lib/planChange.js); moving down, from the bill date with no refund. A scheduled move down shows its date.
+const money00 = v => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const centsTiers = () => TIERS.map(t => ({ ...t, monthly_cents: Math.round(t.monthly * 100) }))
+const dayOf = iso => new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+function OtherPlans({ tierNow, daily, month, pending, onSwitch }) {
   const [ask, setAsk] = useState(null)
   const to = TIERS.find(t => t.key === ask)
   const others = TIERS.filter(t => t.key !== tierNow.key)
   if (to) {
     const start = switchDaily(daily, to)
+    const c = planChange({ tiers: centsTiers(), fromKey: tierNow.key, toKey: to.key, today: month.today, nextBill: month.next, monthStart: month.start, pending })
+    const up = c.direction === 'up'
+    const capped = !up && daily > bandOf(to).hi
     return (
-      <div className="bl-other is-confirm" role="alertdialog" aria-label={`Switch to ${to.label}`}>
-        <p className="bl-other-ask"><b>Your plan becomes {to.label}, {money(to.monthly)} a month, from your next bill.</b> Daily spend {bandText(to)}.</p>
-        <small className="bl-other-start">Your daily spend moves to {money(start)} a day. You can change it inside {to.label}.</small>
+      <div className="bl-other is-confirm" role="alertdialog" aria-label={`Switch to ${to.label}`} data-direction={c.direction}>
+        <p className="bl-other-ask"><b>{changeWords(c)}</b></p>
+        <small className="bl-other-start">{up
+          ? `Your daily spend moves to ${money(start)} a day once it’s paid. You can change it inside ${to.label} (${bandText(to)} a day).`
+          : capped ? `On ${dayOf(c.nextBill)} your daily spend is set to ${money(bandOf(to).hi)} a day, the top of ${to.label}.` : `Daily spend ${bandText(to)} a day on ${to.label}.`}</small>
         <div className="bl-spend-save">
           <button type="button" className="tp-btn ov-ghost" onClick={() => setAsk(null)}>Keep {tierNow.label}</button>
-          <button type="button" className="tp-primary fx-accent" data-confirm-switch={to.key} onClick={() => { onSwitch(to, start); setAsk(null) }}>Switch to {to.label}</button>
+          <button type="button" className="tp-primary fx-accent" data-confirm-switch={to.key} onClick={() => { onSwitch(to, start); setAsk(null) }}>
+            {up ? `Pay ${money00(c.chargeCents / 100)} and switch` : `Switch on ${dayOf(c.nextBill)}`}
+          </button>
         </div>
       </div>
     )
@@ -193,10 +208,13 @@ function OtherPlans({ tierNow, daily, onSwitch }) {
         {others.map(t => (
           <li key={t.key} data-plan={t.key}>
             <span className="tp-grow"><b>{t.label}</b><small>{bandText(t)} a day · <span className="tp-money">{money(t.monthly)}</span> a month</small></span>
-            <button type="button" className="tp-btn ov-ghost" onClick={() => setAsk(t.key)}>Switch to {t.label}</button>
+            {pending?.key === t.key
+              ? <Chip tone="blue">From {pending.on}</Chip>
+              : <button type="button" className="tp-btn ov-ghost" onClick={() => setAsk(t.key)}>Switch to {t.label}</button>}
           </li>
         ))}
       </ul>
+      <p className="pb-note">Moving up: you pay the difference for the days left this month, and the bigger range opens once it{'’'}s paid. Moving down: it starts with your next bill; no refund for this month.</p>
     </div>
   )
 }
@@ -265,7 +283,7 @@ function CardDrawer({ open, onClose, face }) {
 export default function Billing() {
   const { data: b } = useSampleBilling()
   const { data: appts } = useSampleAppointments()
-  const { setSpend, setTake, resume, keepPlan, addCard, fixCard } = useSampleActions()
+  const { setSpend, setTake, resume, keepPlan, addCard, fixCard, changePlan, undoPlanChange } = useSampleActions()
   const note = useNote()
   const { hash } = useLocation()
   // P893: Results lives here now; /activity?view=results lands on it (#results)
@@ -277,7 +295,8 @@ export default function Billing() {
   const dirty = dailyTotal(spend) !== dailyTotal(b.spend) || JSON.stringify(take) !== JSON.stringify(b.take)
   const n = b.nightNow
   const noCard = b.card && !b.card.onFile && b.products !== 'servicing'
-  const tierNow = tierOf(dailyTotal(b.spend))
+  const tierNow = planOf(b)
+  const pendingTo = b.planNext ? TIERS.find(t => t.key === b.planNext.key) : null
   const daily = dailyTotal(b.spend)
   const unpaid = n.ahead.find(d => d.status === 'failed')
   const running = !b.paused && !b.cancel && !noCard
@@ -288,12 +307,21 @@ export default function Billing() {
     setTake(take)
     note(`Lead spend set to ${money(dailyTotal(spend))} a day, ${LEAD_MODES.find(m => m.key === take.mode).label.toLowerCase()}. Starts with the next unpaid day. Sample only, nothing was charged`)
   }
-  // P920: switching plan saves the new plan's spend (the plan follows the band); from the next bill, as Save does.
+  // P921: switching plan. Up: charged now, the plan changes once it's paid (declined: nothing changes). Down: from the
+  // next bill. Back to the plan they're on: Undo.
   const switchPlan = (to, start) => {
-    setSpend({ daily: start })
-    setDraft({ daily: start })
-    note(`Your plan becomes ${to.label}, ${money(to.monthly)} a month, from your next bill. Daily spend ${money(start)}. Sample only, nothing was charged`)
+    const r = changePlan(to.key, start)
+    if (!r) return
+    if (r.direction === 'up' && r.result === 'failed') { note(`Your card was declined. Nothing changed: you’re still on ${tierNow.label}. Sample only`); return }
+    if (r.direction === 'up') {
+      setDraft({ daily: start })
+      note(`You’re on ${to.label}. Paid ${money00(r.chargeCents / 100)} for the ${r.left} days left this month, then ${money(to.monthly)} on ${b.nextBill}. Sample only, nothing was charged`)
+      return
+    }
+    if (r.direction === 'down') note(`Your plan changes to ${to.label} on ${b.nextBill}. You keep ${tierNow.label} until then. Sample only`)
+    else note(`You stay on ${tierNow.label}. Sample only`)
   }
+  const undo = () => { undoPlanChange(); note(`You stay on ${tierNow.label}. The change on ${b.planNext.on} is cancelled. Sample only`) }
   const lock = b.founding ? ['Founding price lock', `Until ${b.founding.until}`, `Founding agent #${b.founding.no}: your prices don’t change until then`] : null
   const next = unpaid
     ? { big: `${unpaid.day} first`, sub: `We try ${unpaid.day} again at 8 AM. ${n.forDay} is charged once it goes through` }
@@ -304,6 +332,12 @@ export default function Billing() {
         <section className="fx-tile fx-s12 sp-alert" style={{ '--i': 0 }} role="alert">
           <span className="tp-grow"><b>Your card didn{'’'}t go through</b><small>{unpaid.day} isn{'’'}t paid, so it brings no new leads unless it{'’'}s paid before it starts. Today is paid and runs. We try again at 8 AM. Servicing keeps going.</small></span>
           <button type="button" className="tp-primary fx-accent" onClick={() => { fixCard(); note(`Card updated and charged. ${unpaid.day} is paid. Sample only`) }}><CreditCard size={15} />Fix card</button>
+        </section>
+      )}
+      {b.upgradeFailed && (
+        <section className="fx-tile fx-s12 sp-alert" style={{ '--i': 0 }} role="alert" data-alert="upgrade">
+          <span className="tp-grow"><b>Your upgrade to {b.upgradeFailed.to} didn{'’'}t go through</b><small>Nothing changed: you{'’'}re still on {tierNow.label}, with its spend range. Fix your card, then switch again.</small></span>
+          <button type="button" className="tp-primary fx-accent" onClick={() => { fixCard(); note('Card updated. Switch plan again to upgrade. Sample only') }}><CreditCard size={15} />Fix card</button>
         </section>
       )}
       {noCard && (
@@ -323,6 +357,7 @@ export default function Billing() {
         </div>
         <dl className="bl-rows">
           <div><dt>Next plan bill</dt><dd><b>{b.nextBill || 'With your first charge'}</b><small>Covers the team, servicing, portal and app</small></dd></div>
+          {pendingTo && <div data-row="plan-next"><dt>Plan change</dt><dd><b>Changes to {pendingTo.label} on {b.planNext.on}</b><small>{money(pendingTo.monthly)} a month from then. You keep {tierNow.label} until then</small><button type="button" className="tp-btn ov-ghost bl-undo" onClick={undo}>Undo</button></dd></div>}
           {lock && <div data-row="lock"><dt>{lock[0]}</dt><dd><b>{lock[1]}</b><small>{lock[2]}</small></dd></div>}
         </dl>
         <div className="tp-row tp-wrap bl-plan-acts">
@@ -344,7 +379,7 @@ export default function Billing() {
       </section>
 
       <section className="fx-tile fx-s7 bl-ch" style={{ '--i': 2 }} aria-label="Charges">
-        <header className="fx-tile-h"><span className="tp-grow"><h2>Charges</h2><p>Lead spend each night, your plan each month, the {money(SETUP_FEE)} setup fee once. Sample amounts.</p></span></header>
+        <header className="fx-tile-h"><span className="tp-grow"><h2>Charges</h2><p>Lead spend each night, your plan each month (and the difference when you move up), the {money(SETUP_FEE)} setup fee once. Sample amounts.</p></span></header>
         <Charges rows={chargesOf(b)} />
       </section>
 
@@ -384,7 +419,7 @@ export default function Billing() {
         <div className="bl910">
           <PlanSpend tier={tierNow} daily={dailyTotal(spend)} onDaily={d => setDraft({ daily: d })} dirty={dailyTotal(spend) !== daily} ok={spendOk('paid', spend) && takeOk(take)}
             onSave={() => { save(); setPanel(null) }} onReset={() => setDraft({ daily: Math.max(PAID_MIN_DAILY, daily) })} forDay={n.forDay} />
-          <OtherPlans tierNow={tierNow} daily={daily} onSwitch={switchPlan} />
+          <OtherPlans tierNow={tierNow} daily={daily} month={b.planMonth || { today: '2026-11-02', start: '2026-11-01', next: '2026-12-01' }} pending={b.planNext} onSwitch={switchPlan} />
         </div>
       </Drawer>
       <CardDrawer open={panel === 'card'} onClose={() => setPanel(null)} face={face} />

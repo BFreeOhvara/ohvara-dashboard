@@ -52,6 +52,8 @@ export function bandOf(tier, max = MAX_DAILY) {
   const hi = Math.min(max, Math.floor((tier.to ?? max) / SLIDER.step) * SLIDER.step)
   return { lo, hi }
 }
+// P921: the plan an agent is on is saved (b.tier); it no longer follows the spend. Old records without one: the band.
+export const planOf = b => TIERS.find(t => t.key === b?.tier) || tierOf(dailyTotal(b?.spend))
 export const bandText = tier => `$${tier.from}–${tier.to ?? MAX_DAILY}`
 export const switchDaily = (daily, tier) => { const { lo, hi } = bandOf(tier); return Math.max(lo, Math.min(hi, Math.round(daily / SLIDER.step) * SLIDER.step)) }
 

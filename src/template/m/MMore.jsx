@@ -7,7 +7,7 @@ import { useAccount, useNote, initials } from '../kit'
 import { avatarHue } from '../avatarHue'
 import { SpendSliders, TakeLeads } from '../PlanBuilder'
 import { takeOk, inLiveHours } from '../../lib/leadSplit'
-import { dailyTotal, openSlotsPerWeek, spendOk, tierOf } from '../spendPlan'
+import { dailyTotal, openSlotsPerWeek, spendOk, planOf, bandOf } from '../spendPlan'
 import { usd } from '../motion'
 import { paths, isTemplateAddress } from '../paths'
 import { GetApp, Help } from '../TemplateFrame'
@@ -45,7 +45,7 @@ export default function MMore() {
     <div className="mx-page">
       <section className="mx-card mx-me-card">
         <span className={`mx-me is-big av-${avatarHue(account.name)}`} aria-hidden="true">{initials(account.name).toUpperCase()}</span>
-        <span className="tp-grow"><b>{account.name}</b><small>Agent · {tierOf(dailyTotal(b.spend)).label} plan</small></span>
+        <span className="tp-grow"><b>{account.name}</b><small>Agent · {planOf(b).label} plan</small></span>
         <button type="button" className="mx-ib is-soft" aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'} onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={20} aria-hidden="true" /> : <Moon size={20} aria-hidden="true" />}</button>
       </section>
       {account.view?.canPreview && <div className="mx-card mx-view"><ViewToggle /></div>}
@@ -100,7 +100,7 @@ export function SpendSheet({ open, onClose }) {
   return (
     <Sheet open={open} onClose={onClose} title="Daily lead spend" kicker="Starts with the next day not yet paid"
       footer={<button type="button" className="mx-btn is-primary is-wide" disabled={!spendOk(billing.plan, spend) || !takeOk(take)} onClick={() => { setSpend(spend); setTake(take); note('Lead spend saved. It starts with the next day not yet paid'); onClose() }}>Save lead spend</button>}>
-      <section className="mx-card mx-plan"><SpendSliders spend={spend} onSpend={setDraft} plan={billing.plan} mode={take.mode} id="m-spend" openSlots={openSlotsPerWeek(settings.week)} /></section>
+      <section className="mx-card mx-plan"><SpendSliders spend={spend} onSpend={setDraft} plan={billing.plan} mode={take.mode} id="m-spend" openSlots={openSlotsPerWeek(settings.week)} band={{ tier: planOf(billing), ...bandOf(planOf(billing)) }} /></section>
       <section className="mx-card mx-plan"><TakeLeads take={take} onTake={setTakeDraft} id="m-take" /></section>
     </Sheet>
   )

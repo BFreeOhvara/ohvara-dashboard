@@ -8,7 +8,7 @@ import { TimeZoneSelect } from '../Clock'
 import { PhoneInput } from '../PhoneInput'
 import { CountUp, usd } from '../motion'
 import { paths } from '../paths'
-import { dailyTotal, rangeWords, tierOf } from '../spendPlan'
+import { dailyTotal, rangeWords, planOf } from '../spendPlan'
 import { BookedMeter, TakeLeads } from '../PlanBuilder'
 import { inLiveHours, takeOk } from '../../lib/leadSplit'
 import { HoursEditor } from '../Hours'
@@ -174,7 +174,7 @@ export default function Settings() {
             <Head title="Billing" sub="Your plan and where receipts go. Change your lead spend on the Billing page." />
             <div className="fx-billsum">
               <div><small>Lead spend a day</small><b className="tp-money">{money(dailyTotal(billing.spend))}</b></div>
-              <div><small>Membership</small><b>{tierOf(dailyTotal(billing.spend)).label}</b></div>
+              <div><small>Membership</small><b>{planOf(billing).label}</b></div>
               <div><small>Next bill</small><b>{billing.nextBill}</b></div>
             </div>
             <div className="fx-form-grid">

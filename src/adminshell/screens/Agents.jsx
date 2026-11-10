@@ -42,6 +42,8 @@ function AgentCosts({ id }) {
 // ahead, the card on file and its last charge, Pause, the setup fee, the founding lock and the next charge. An admin can
 // change the daily spend (up to the max, or raise the max for this one agent), pause lead spend, and comp the account.
 // P914: no pilot, every agent pays from day one. Sample until the billing backend is wired.
+// P921: a scheduled move down shows with its date (it starts with the next bill); the last move up shows what it
+// charged (the difference for the days left in the month, charged at once).
 function PlanBudget({ a }) {
   const { data: st } = useAdmSettings()
   const { setAgentSpend, setAgentPaused, setComped, setMaxDaily } = useAdmActions()
@@ -59,7 +61,7 @@ function PlanBudget({ a }) {
   const saveSpend = () => {
     if (!setAgentSpend) { note('Changing spend here is wired with the billing backend'); return }
     setAgentSpend(a.id, want)
-    note(`${a.name}: ${money(want)} a day${nextBand.key !== a.plan ? `. ${nextBand.label} from the next monthly bill` : ''}`)
+    note(`${a.name}: ${money(want)} a day${nextBand.key !== a.plan ? `. Outside ${plan.label}: the agent switches plan in Billing (moving up is charged the difference)` : ''}`)
   }
   const flipMax = () => {
     if (!setMaxDaily) { note('Raising the max is wired with the billing backend'); return }
@@ -88,9 +90,11 @@ function PlanBudget({ a }) {
         ['Next charge', b.next],
         ['Setup fee', b.setup ? `${money(b.setup.amount)} paid ${b.setup.paid}` : a.comped ? 'Comped' : 'Not paid'],
         ['Founding lock', b.founding ? `Prices locked to ${b.founding.until}` : 'Not founding'],
+        ['Plan change', a.planNext ? <span data-pending="down">Moves down to {PLANS[a.planNext.key].label} on {a.planNext.on}</span>
+          : a.lastUpgrade ? `Moved up to ${PLANS[a.lastUpgrade.to].label} ${a.lastUpgrade.on}, ${cents(a.lastUpgrade.amount)} for ${a.lastUpgrade.days} days` : 'None scheduled'],
       ].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       {b.failed && <p className="adm-warn">{b.failed.what} {money(b.failed.amount)} failed {b.failed.when}: {b.failed.why}. Tomorrow's ads don't run until it goes through; it retries at {hourText(st.billing.retryHour)}.</p>}
-      <DField label="Daily lead spend" hint={`${money(PAID_MIN_DAILY)} to ${money(max)} a day${raised ? ' (raised for this agent)' : ''}. The plan follows the band from the next monthly bill.`}>
+      <DField label="Daily lead spend" hint={`${money(PAID_MIN_DAILY)} to ${money(max)} a day${raised ? ' (raised for this agent)' : ''}. Moving up a plan is charged the difference for the days left this month; moving down starts with the next bill.`}>
         <div className="adm-spend">
           <input className="tp-money" inputMode="numeric" aria-label="Daily lead spend in dollars" value={draft} onChange={e => setDraft(e.target.value.replace(/[^0-9]/g, ''))} />
           <button type="button" className="tp-primary fx-accent" disabled={bad || want === a.spend} onClick={saveSpend}>Save</button>
@@ -201,7 +205,7 @@ export default function Agents() {
           return (
             <div key={a.id} className="adm-tr" style={{ '--i': i }}>
               <Link to={ap('agents', a.id)} className="adm-who"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>{a.city}, {a.state} · {a.paused ? `leads paused${a.paused.until ? ` until ${a.paused.until}` : ''}` : a.access ? `on ${a.lastOn}` : 'access off'}</small></span></Link>
-              <span className="adm-cell"><b>{a.comped ? 'Comped' : PLANS[a.plan].label}</b><small>{money(a.spend)} a day + {feeWords}{a.paused ? ' · paused' : ''}</small></span>
+              <span className="adm-cell"><b>{a.comped ? 'Comped' : PLANS[a.plan].label}</b><small>{money(a.spend)} a day + {feeWords}{a.paused ? ' · paused' : ''}{a.planNext ? ` · ${PLANS[a.planNext.key].label} from ${a.planNext.on.replace(/^\w+, /, '')}` : ''}</small></span>
               <span className="adm-cell adm-sw"><Switch on={a.active} label={`${a.name} takes live transfers`} onChange={v => { setAgentActive(a.id, v); note(v ? `${a.name} takes live transfers` : `${a.name} is booking only`) }} /><small>{a.active ? (a.onDuty ? 'On duty' : 'Off duty') : 'Booking only'}</small></span>
               <span className="adm-cell"><Funnel w={a.week} /></span>
               <span className="adm-cell"><Chip tone={tone}>{word}</Chip><small>{a.billing.next}</small></span>

@@ -17,6 +17,11 @@
 //                                                       (billing_card_saved: brand + last 4 only). Leads need one.
 //     { action: 'pay_now' }                             after a card update: failed charges back to due, charged now.
 //     { action: 'pause', paused }                       lead_spend_pause.
+//     { action: 'plan_change', tier, daily_cents? }     P921 billing_plan_change. Up: the prorated difference is
+//                                                       charged now (a 'plan_upgrade' charge, run straight away) and
+//                                                       the plan changes only when it's paid; declined → nothing
+//                                                       changes. Down: from the next bill. Same plan: Undo.
+//                                                       Busy → 409 { code: 'busy' }; over the band → 400 'over_plan'.
 //   POST (pg_cron, header x-ohvara-cron)
 //     { action: 'run' }                                 every 15 minutes: charges everything due, re-checks processing.
 //
@@ -31,9 +36,10 @@
 import { type Stripe, StripeError } from '../_shared/fulfillmentPayouts.ts'
 
 export type Charge = {
-  id: string; agent_id: string; key: string; kind: 'weekly' | 'change' | 'va_cost' | 'nightly'; amount_cents: number
+  id: string; agent_id: string; key: string; kind: 'weekly' | 'change' | 'va_cost' | 'nightly' | 'plan_upgrade'; amount_cents: number
   attempts: number; stripe_pi: string | null; week_start: string; note: string | null; customer: string | null; recheck: boolean
   for_day?: string | null; spend_cents?: number | null; fee_cents?: number | null
+  note?: string | null; tier_to?: string | null
 }
 
 export type Store = {
@@ -66,8 +72,11 @@ export function outcomeOf(pi: any): { status: 'paid' | 'processing' | 'failed'; 
 }
 
 export const DESCRIPTOR_SUFFIX = 'LEADS'
+// P921: a plan upgrade shows as OHVARA PLAN, its line "Upgrade to Pro, 15 days".
+export const suffixOf = (c: Charge) => (c.kind === 'plan_upgrade' ? 'PLAN' : DESCRIPTOR_SUFFIX)
 export const words = (c: Charge) =>
-  c.kind === 'va_cost' ? 'Team time (pilot)'
+  c.kind === 'plan_upgrade' ? (c.note || `Upgrade to ${c.tier_to}`)
+  : c.kind === 'va_cost' ? 'Team time (pilot)'
     : c.kind === 'nightly' ? `Lead spend for ${c.for_day}${c.fee_cents ? ' + 12%' : ''}`
       : c.kind === 'change' ? 'Lead spend (raised this week)' : 'Lead spend, week of ' + c.week_start
 
@@ -84,10 +93,10 @@ async function chargeOne(store: Store, stripe: Stripe, c: Charge) {
       if (!pm) return store.rpc('lead_spend_charge_result', { p_id: c.id, p_status: 'failed', p_failure: 'No card on file' })
       pi = await stripe('POST', 'payment_intents', {
         amount: c.amount_cents, currency: 'usd', customer: c.customer, payment_method: pm,
-        off_session: true, confirm: true, description: words(c), statement_descriptor_suffix: DESCRIPTOR_SUFFIX,
+        off_session: true, confirm: true, description: words(c), statement_descriptor_suffix: suffixOf(c),
         payment_method_types: ['card'],
         metadata: { ohvara: 'lead_spend', charge_id: c.id, agent_id: c.agent_id, kind: c.kind, week_start: c.week_start,
-          for_day: c.for_day ?? '', spend_cents: String(c.spend_cents ?? ''), fee_cents: String(c.fee_cents ?? '') },
+          for_day: c.for_day ?? '', spend_cents: String(c.spend_cents ?? ''), fee_cents: String(c.fee_cents ?? ''), tier_to: c.tier_to ?? '' },
       }, { idempotencyKey: `lead_spend:${c.key}:${c.attempts}` })
     }
   } catch (e) {
@@ -163,6 +172,15 @@ export async function handle(req: Request, store: Store, stripe: Stripe | null, 
         const retried = await store.rpc('lead_spend_retry', { p_agent: me })
         return json({ retried, charged: await runCharges(store, stripe, key, me) })
       }
+      case 'plan_change': {
+        if (!['starter', 'growth', 'pro'].includes(body.tier)) return json({ error: 'Pick a plan' }, 400)
+        const d = body.daily_cents == null ? null : cents(body.daily_cents)
+        if (body.daily_cents != null && d == null) return json({ error: 'Spend must be whole cents, $0 to $1,000 a day' }, 400)
+        const q = await store.rpc('billing_plan_change', { p_tier: body.tier, p_daily_cents: d, p_agent: me })
+        const charged = q?.charge_id ? await runCharges(store, stripe, key, me) : null
+        const result = q?.charge_id ? (charged as any)?.results?.find((r: any) => r.id === q.charge_id)?.result?.status ?? 'due' : null
+        return json({ ...q, charged, result })
+      }
       case 'pause':
         if (typeof body.paused !== 'boolean') return json({ error: 'paused must be true or false' }, 400)
         await store.rpc('lead_spend_pause', { p_paused: body.paused, p_agent: me })
@@ -171,7 +189,8 @@ export async function handle(req: Request, store: Store, stripe: Stripe | null, 
         return json({ error: 'Unknown action' }, 400)
     }
   } catch (e: any) {
-    if (e?.hint === 'min_daily' || e?.hint === 'max_daily') return json({ error: e.message, code: e.hint }, 400)
+    if (e?.hint === 'min_daily' || e?.hint === 'max_daily' || e?.hint === 'over_plan' || e?.hint === 'servicing_only') return json({ error: e.message, code: e.hint }, 400)
+    if (e?.hint === 'busy') return json({ error: e.message, code: 'busy' }, 409)
     if (e?.code === '42501') return json({ error: e.message || 'Not allowed' }, 403)
     return json({ error: e?.message || 'Something went wrong' }, 500)
   }

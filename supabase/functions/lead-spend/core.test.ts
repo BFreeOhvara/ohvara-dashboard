@@ -14,7 +14,7 @@ const charge = (over: Partial<Charge> = {}): Charge => ({
   stripe_pi: null, week_start: '2026-11-16', note: null, customer: 'cus_a', recheck: false, ...over,
 })
 
-function world(claims: Charge[] = [charge()], over: { rpcError?: any; setResult?: any } = {}) {
+function world(claims: Charge[] = [charge()], over: { rpcError?: any; setResult?: any; changeResult?: any; changeError?: any } = {}) {
   const rpcs: { name: string; args: any }[] = []
   const store: Store = {
     userFromJwt: async jwt => (jwt === 'good' ? AGENT : null),
@@ -25,6 +25,7 @@ function world(claims: Charge[] = [charge()], over: { rpcError?: any; setResult?
       if (name === 'lead_spend_claim_charges') return claims.splice(0)
       if (name === 'lead_spend_set') return over.setResult ?? { from: '2026-11-12', charge_id: 'ch1', extra_cents: 30000 }
       if (name === 'lead_spend_retry') return 1
+      if (name === 'billing_plan_change') { if (over.changeError) throw over.changeError; return over.changeResult ?? { direction: 'down', next_bill: '2026-12-01' } }
       if (name === 'billing_customer_of') return 'cus_a'
       if (name === 'billing_card_saved') return null
       return { status: args.p_status }
@@ -226,4 +227,57 @@ test('set_spend: over the max says so (code max_daily)', async () => {
   const res = await handle(userReq({ action: 'set_spend', appts_cents: 60000, live_cents: 0 }), w.store, null, 'sk_test_x')
   assert.equal(res.status, 400)
   assert.equal((await res.json()).code, 'max_daily')
+})
+
+// P921: plan changes. Up: the prorated difference is charged straight away, for that agent, as OHVARA PLAN.
+const UP = { direction: 'up', amount_cents: 75000, days_left: 15, days_in_month: 30, next_bill: '2026-12-01', charge_id: 'up1' }
+const upCharge = () => charge({ id: 'up1', kind: 'plan_upgrade', key: 'plan_upgrade:a:pro:x', amount_cents: 75000, note: 'Upgrade to Pro, 15 days', tier_to: 'pro' })
+
+test('plan_change up: billing_plan_change for the caller, then the upgrade is charged now as OHVARA PLAN', async () => {
+  const w = world([upCharge()], { changeResult: UP })
+  const s = withCard({ id: 'pi_up', status: 'succeeded', livemode: false })
+  const res = await handle(userReq({ action: 'plan_change', tier: 'pro', daily_cents: 25000 }), w.store, s.stripe, 'sk_test_x')
+  const body = await res.json()
+  assert.equal(res.status, 200)
+  assert.deepEqual(w.rpcs.find(r => r.name === 'billing_plan_change')!.args, { p_tier: 'pro', p_daily_cents: 25000, p_agent: AGENT })
+  assert.equal(w.rpcs.find(r => r.name === 'lead_spend_claim_charges')!.args.p_agent, AGENT)
+  const post = s.calls.find(c => c.method === 'POST')!
+  assert.equal(post.params.amount, 75000)
+  assert.equal(post.params.description, 'Upgrade to Pro, 15 days')
+  assert.equal(post.params.statement_descriptor_suffix, 'PLAN')
+  assert.equal(body.result, 'paid')
+})
+
+test('plan_change up, declined: reported failed (the database keeps the old plan)', async () => {
+  const w = world([upCharge()], { changeResult: UP })
+  const s = fakeStripe({
+    'GET customers/cus_a': () => ({ invoice_settings: { default_payment_method: 'pm_1' } }),
+    'POST payment_intents': () => { throw new StripeError({ message: 'Your card was declined.', code: 'card_declined', payment_intent: { id: 'pi_d' } }, 402, 'x') },
+  })
+  const res = await handle(userReq({ action: 'plan_change', tier: 'pro' }), w.store, s.stripe, 'sk_test_x')
+  assert.equal((await res.json()).result, 'failed')
+  assert.equal(w.results()[0].p_status, 'failed')
+})
+
+test('plan_change down or undo: nothing charged, no Stripe call', async () => {
+  const w = world([upCharge()])
+  const s = withCard({ id: 'pi_x', status: 'succeeded' })
+  const res = await handle(userReq({ action: 'plan_change', tier: 'starter' }), w.store, s.stripe, 'sk_test_x')
+  assert.equal((await res.json()).direction, 'down')
+  assert.equal(s.calls.length, 0)
+  assert.ok(!w.rpcs.some(r => r.name === 'lead_spend_claim_charges'))
+})
+
+test('plan_change: a bad plan is 400; busy is 409; over the band says over_plan', async () => {
+  const w = world([])
+  assert.equal((await handle(userReq({ action: 'plan_change', tier: 'scale' }), w.store, null, 'sk_test_x')).status, 400)
+  assert.equal((await handle(userReq({ action: 'plan_change', tier: 'pro', daily_cents: -5 }), w.store, null, 'sk_test_x')).status, 400)
+  const busy = world([], { changeError: { message: 'Your last plan change is still going through.', hint: 'busy' } })
+  const r = await handle(userReq({ action: 'plan_change', tier: 'pro' }), busy.store, null, 'sk_test_x')
+  assert.equal(r.status, 409)
+  assert.equal((await r.json()).code, 'busy')
+  const over = world([], { rpcError: { message: 'Your Growth plan goes up to $200 a day. Switch plan to spend more.', hint: 'over_plan' } })
+  const o = await handle(userReq({ action: 'set_spend', appts_cents: 30000, live_cents: 0 }), over.store, null, 'sk_test_x')
+  assert.equal(o.status, 400)
+  assert.equal((await o.json()).code, 'over_plan')
 })

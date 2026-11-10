@@ -7,6 +7,7 @@ import { canMove, clientCards, unsubmittedSales, followUpPick } from '../agentVi
 import { wallOf } from '../../lib/agentReal.js'
 import { leadText, SENDER } from '../leadTexts.js'
 import { nightly as nightlyOf, expected, startsText, TIERS, SETUP_FEE } from '../spendPlan.js'
+import { planChange, upgradeLabel, shortDate } from '../../lib/planChange.js'
 
 // P901: sample invoices use the price book's Growth price, never a number of their own.
 const GROWTH = TIERS.find(t => t.key === 'growth').monthly
@@ -301,6 +302,11 @@ const seed = {
   billing: {
     plan: 'paid', products: 'both',
     spend: { daily: 100 }, pending: null,
+    // P921: the plan is saved (it no longer follows the spend). planMonth = this billing month (Nov 1 to Dec 1; the
+    // sample's today is Nov 2). planNext = a scheduled move down ({ key, on }); ?plan=down previews one to Starter.
+    // upgradeFailed = the last upgrade was declined (nothing changed); ?upgrade=declined makes the next upgrade decline.
+    tier: 'growth', planMonth: { today: '2026-11-02', start: '2026-11-01', next: '2026-12-01' },
+    planNext: param('plan') === 'down' ? { key: 'starter', on: 'Tue, Dec 1' } : null, upgradeFailed: null,
     take: { mode: param('take') === 'appts' ? 'appts' : 'both', hours: DEFAULT_LIVE_HOURS, tz: 'America/Chicago' },
     // P923: live = live calls that reached the agent this week (bought.week.transferred); delivered = booked + live.
     booked: sampleAgent().none ? 0 : 4, live: sampleAgent().none ? 0 : 2, usual: 5,
@@ -570,6 +576,31 @@ function useActionsSample() {
     })),
     // Lead spend (N-A-23): a change starts at midnight; a tier change starts with the next bill.
     setSpend: spend => set(s => ({ ...s, billing: { ...s.billing, pending: { spend, starts: startsText('Wed, Nov 4') }, spend } })),
+    // P921: Change plan. Up: the prorated difference is charged now (sample: paid, or declined with ?upgrade=declined:
+    // nothing changes); the plan and band change once it's paid. Down: from the next bill. Back to the plan they're
+    // on: Undo a scheduled move down. Returns what happened, for the note.
+    changePlan: (toKey, daily) => {
+      let out = null
+      set(s => {
+        const b = s.billing
+        const m = b.planMonth
+        const tiers = TIERS.map(t => ({ ...t, monthly_cents: Math.round(t.monthly * 100) }))
+        const c = planChange({ tiers, fromKey: b.tier, toKey, today: m.today, nextBill: m.next, monthStart: m.start, pending: b.planNext })
+        out = c
+        if (c.direction === 'undo' || c.direction === 'same') return { ...s, billing: { ...b, planNext: null } }
+        if (c.direction === 'down') return { ...s, billing: { ...b, planNext: { key: toKey, on: b.nextBill || shortDate(m.next) } } }
+        if (c.direction !== 'up') return s
+        const row = { id: `ch-up-${(b.charges || []).length + 1}`, at: 'Today', label: upgradeLabel(c.to.label, c.left), kind: 'plan', amount: c.chargeCents / 100 }
+        if (param('upgrade') === 'declined') {
+          out = { ...c, result: 'failed' }
+          return { ...s, billing: { ...b, upgradeFailed: { to: c.to.label, amount: c.chargeCents / 100 }, charges: [{ ...row, status: 'declined' }, ...(b.charges || [])] } }
+        }
+        out = { ...c, result: 'paid' }
+        return { ...s, billing: { ...b, tier: toKey, planNext: null, upgradeFailed: null, spend: { daily: daily ?? b.spend.daily }, charges: [{ ...row, status: 'paid' }, ...(b.charges || [])] } }
+      })
+      return out
+    },
+    undoPlanChange: () => set(s => ({ ...s, billing: { ...s.billing, planNext: null } })),
     // P889: how they take leads (mode + live-call hours). Starts at midnight like a spend change.
     setTake: take => set(s => ({ ...s, billing: { ...s.billing, take } })),
     addCard: () => set(s => ({ ...s, billing: { ...s.billing, card: { label: 'Visa ending 4242', brand: 'Visa', last4: '4242', exp: '08/28', onFile: true } } })),
@@ -578,7 +609,7 @@ function useActionsSample() {
     resume: () => set(s => ({ ...s, billing: { ...s.billing, paused: null } })),
     cancelPlan: c => set(s => ({ ...s, billing: { ...s.billing, cancel: c } })),
     keepPlan: () => set(s => ({ ...s, billing: { ...s.billing, cancel: null } })),
-    fixCard: () => set(s => ({ ...s, billing: { ...s.billing, payment: { ...s.billing.payment, failed: false }, charges: (s.billing.charges || []).map(c => (c.status === 'declined' ? { ...c, status: 'paid' } : c)),
+    fixCard: () => set(s => ({ ...s, billing: { ...s.billing, upgradeFailed: null, payment: { ...s.billing.payment, failed: false }, charges: (s.billing.charges || []).map(c => (c.status === 'declined' ? { ...c, status: 'paid' } : c)),
       nightly: { ...s.billing.nightly, nights: s.billing.nightly.nights.map(x => (x.status === 'failed' ? { ...x, status: 'paid' } : x)) } } })),
     saveSetup: patch => set(s => ({ ...s, setup: { ...(s.setup || {}), ...patch } })),
     addLeadNote: (id, text) => set(s => ({ ...s, leads: s.leads.map(l => (l.id === id ? { ...l, note: l.note ? `${l.note}\n${text}` : text } : l)) })),

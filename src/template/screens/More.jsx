@@ -5,7 +5,7 @@ import { useTheme } from '../../hooks/useTheme'
 import { useSampleBilling } from '../data'
 import { Avatar, Money, SampleTag, useNote, useAccount } from '../kit'
 import { paths, isTemplateAddress } from '../paths'
-import { dailyTotal, rangeWords, tierOf } from '../spendPlan'
+import { dailyTotal, rangeWords, planOf } from '../spendPlan'
 
 // The phone's fifth tab: profile, a Billing card, then the pages that have no tab of their own.
 export default function More() {
@@ -19,7 +19,7 @@ export default function More() {
   if (isTemplateAddress()) rows.push([paths.signup, 'Sign-up preview', ShieldCheck], [paths.welcome, 'Setup preview', Home], [paths.deedstone, 'What a lead sees', Globe])
   return (
     <div className="tp-page">
-      <section className="ov-card tp-card"><div className="tp-row"><Avatar name={account.name} /><div className="tp-grow"><b>{account.name}</b><p className="tp-sub">Agent · {tierOf(dailyTotal(b.spend)).label} plan</p></div></div></section>
+      <section className="ov-card tp-card"><div className="tp-row"><Avatar name={account.name} /><div className="tp-grow"><b>{account.name}</b><p className="tp-sub">Agent · {planOf(b).label} plan</p></div></div></section>
       <Link to={paths.billing()} className="ov-card ov-link tp-card tp-stack">
         <div className="tp-row"><CreditCard size={18} /><b className="tp-grow">Billing</b><SampleTag /></div>
         <div className="tp-row tp-between"><span><Money v={dailyTotal(b.spend)} size="lg" cents={false} /> <span className="tp-sub">/ day lead spend</span></span><span className="tp-sub">{b.booked} booked · about {rangeWords(b.expected.appts.booked)}</span></div>
