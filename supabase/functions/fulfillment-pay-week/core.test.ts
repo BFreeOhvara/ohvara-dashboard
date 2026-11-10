@@ -234,10 +234,11 @@ test('weekly minimum: topped up when the rep has a verified cancel that week', a
 
 test('P890: handle is off — nobody is paid, whoever calls (VA pay is hourly)', async () => {
   const w = world()
-  for (const headers of [{ Authorization: 'Bearer admin' }, { 'x-ohvara-cron': 'cron-secret' }]) {
-    const r = await handle(new Request('http://x', { method: 'POST', headers }), w.store, w.stripe, ENV, MON_805)
-    assert.equal(r.status, 200)
-    assert.equal((await r.json()).off, true)
-  }
+  // P922: the cron secret is checked first; anyone else gets 403, not the off note.
+  const admin = await handle(new Request('http://x', { method: 'POST', headers: { Authorization: 'Bearer admin' } }), w.store, w.stripe, ENV, MON_805)
+  assert.equal(admin.status, 403)
+  const cron = await handle(new Request('http://x', { method: 'POST', headers: { 'x-ohvara-cron': 'cron-secret' } }), w.store, w.stripe, ENV, MON_805)
+  assert.equal(cron.status, 200)
+  assert.equal((await cron.json()).off, true)
   assert.equal(w.transfers.length, 0)
 })

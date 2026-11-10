@@ -67,9 +67,10 @@ console.log(`\n# Tables (${tables.size}), signed out`)
 for (const t of [...tables].sort()) {
   const r = await hit(`/rest/v1/${t}?select=*&limit=1`, { headers: pub })
   const rows = r.status === 200 ? (() => { try { return JSON.parse(r.text).length } catch { return -1 } })() : 0
-  const ok = r.status !== 200 || rows === 0
-  // 200 with [] still means the door is unlocked (RLS hides rows today); report it once P922's revoke is live.
-  line(ok && r.status !== 200, 'table', t, r.status === 200 ? `200, ${rows} row(s) visible${rows === 0 ? ' (grant still open, RLS hides rows)' : ''}` : `${r.status}`)
+  // Locked = no grant (401/403) or not exposed (404). carriers is the one kept read
+  // (the phone app's list before sign-in): it must answer 200 with 0 rows.
+  const ok = t === 'carriers' ? (r.status !== 200 || rows === 0) : r.status !== 200
+  line(ok, 'table', t, r.status === 200 ? `200, ${rows} row(s) visible${t === 'carriers' ? ' (kept read, row rules give 0 rows)' : ' (grant open)'}` : `${r.status}`)
 }
 
 // 2. Functions

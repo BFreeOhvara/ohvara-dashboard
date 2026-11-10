@@ -209,11 +209,12 @@ export const PAY_PER_CANCEL_ON = false
 export async function handle(req: Request, store: Store, stripe: Stripe, env: Env, now?: Date): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
-  if (!PAY_PER_CANCEL_ON) return json({ ok: true, off: true, note: 'VA pay is hourly from timesheets. The per-cancel pay run is off.' })
+  // P922: the caller is checked first, so nobody without the cron secret gets any answer but 403.
   const secret = req.headers.get('x-ohvara-cron')
   if (!secret || !(await store.cronOk(secret))) {
     return json({ error: 'Payouts run by themselves every Monday at 8 AM Central. There is nothing to approve.', code: 'automatic' }, 403)
   }
+  if (!PAY_PER_CANCEL_ON) return json({ ok: true, off: true, note: 'VA pay is hourly from timesheets. The per-cancel pay run is off.' })
   try {
     return json(await runPayday(store, stripe, env, now))
   } catch (e) {

@@ -1033,9 +1033,9 @@ export async function handle(req: Request, admin: SupabaseClient): Promise<Respo
   if (!body || typeof body !== 'object') body = {}
   const action = body.action || 'status'
 
-  // Signed-out status only ever returns booleans, never values.
+  // P922: signed-in only, even for the yes/no status (it named the Stripe mode,
+  // test or live, to anyone holding the public key). Callers are all signed in.
   const { data: { user } } = jwt ? await admin.auth.getUser(jwt) : { data: { user: null } }
-  if (!user && action === 'status') return json(flags)
   if (!user) return json({ error: 'Not signed in' }, 401)
 
   const { data: me } = await admin.from('profiles').select(PROFILE_COLS).eq('id', user.id).single()
