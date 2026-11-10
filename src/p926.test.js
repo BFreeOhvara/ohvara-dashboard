@@ -14,9 +14,9 @@ const NOW = Date.parse('2026-11-10T21:00:00Z') // Tue 3 PM CT
 
 test('prompt: Deedstone virtual assistant, the VA questions, never coverage or price, wait questions, bounce words', () => {
   const p = retellPrompt()
-  assert.match(p, /Deedstone’s virtual assistant/)
+  assert.match(p, /the virtual assistant with Deedstone/)
   assert.match(p, /Never discuss coverage, prices, carriers/)
-  assert.match(p, /never leave silence/)
+  assert.match(p, /never leave long silence/)
   assert.match(p, /call ask_agent/)
   assert.match(p, /call transfer_failed/)
   assert.doesNotMatch(p, /\bVA\b|virtual agent hand/i)

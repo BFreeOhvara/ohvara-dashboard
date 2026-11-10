@@ -28,7 +28,8 @@ const senders = sendersFromEnv()
 // DRAFT words (src/lib/aiCaller.js DRAFT_WORDS) until Brayden approves them; the provider's agent prompt holds the rest.
 // The transfer beats' words (check, connecting, bounce, hold) live in rules.js TRANSFER_WORDS (P903).
 const WORDS = {
-  opening: 'Hey {first}! This is Max with Deedstone Insurance. How’s your day going?', // P940 (Brayden, Nov 10)
+  // P940 (Brayden, Nov 10): who it is and why it's calling, no small talk.
+  opening: 'Hi {first}, this is Max, the virtual assistant with Deedstone Insurance. I’m following up on the mortgage protection request you just sent in. I’ve just got a couple quick questions so I can get you to the right specialist.',
 }
 
 function provider(): Provider {
@@ -65,7 +66,8 @@ const store: Store = {
     // P926: only a sample lead can carry a test (admin test calls); a real lead never does.
     const test = l.is_sample && qa.test && typeof qa.test === 'object' ? qa.test as { check?: 'yes' | 'no' | 'none'; transferTo?: string } : null
     return { id: l.id, first: String(l.contact_name ?? '').split(' ')[0] || 'there', phone: l.phone, state: l.state, tz: (qa.tz as string) ?? null,
-      need: (l.inbound_product as string) ?? 'Mortgage protection', age: (qa.age_band as string) ?? null, test }
+      need: (l.inbound_product as string) ?? 'Mortgage protection', age: (qa.age_band as string) ?? null, test,
+      homeowner: typeof qa.homeowner === 'boolean' ? qa.homeowner : null, mortgage: (qa.mortgage_balance_band as string) ?? null }
   },
   async agent(id) {
     const [{ data: p }, { data: lp }, reach] = await Promise.all([
@@ -159,7 +161,8 @@ async function retellAction(action: string, body: any, d: { store: Store; provid
       if (transferTo && !E164.test(transferTo)) throw Object.assign(new Error('transfer_to must be +1XXXXXXXXXX'), { status: 400 })
       const { data: ag } = await admin.from('profiles').select('id').eq('full_name', 'Test Agent').eq('is_test', true).maybeSingle()
       if (!ag) throw Object.assign(new Error('no Test Agent'), { status: 400 })
-      const qa = { tz: 'America/Chicago', age_band: '45-54', test: { check: SCENARIOS[scenario], transferTo, scenario } }
+      // The same answers the Deedstone form (submit-mp-lead) collects, so the AI confirms them (P940).
+      const qa = { tz: 'America/Chicago', age_band: '45-54', homeowner: true, mortgage_balance_band: '200-300k', smoker: false, test: { check: SCENARIOS[scenario], transferTo, scenario } }
       // No phone on insert, so the new-lead router never queues it for a VA; the phone goes on right after.
       const { data: lead, error: le } = await admin.from('leads').insert({ business_name: 'P926 test call', contact_name: `Brayden (test ${scenario.replace('_', ' ')})`,
         lead_type: 'mortgage_protection', is_sample: true, assigned_rep_id: ag.id, state: 'TX', qualifier_answers: qa }).select('id').single()

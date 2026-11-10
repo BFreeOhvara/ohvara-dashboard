@@ -33,8 +33,9 @@ export const TRANSFER_WORDS = {
 }
 // P940 — what the AI caller says (Brayden, Nov 10): never the agent's name, always "a licensed specialist".
 export const AI_CALL_WORDS = {
-  connecting: 'Perfect, I’m bringing a licensed specialist on the line now. Just one moment.',
-  bounce: 'Looks like our specialists are all with clients right now. No problem, let’s get you a time instead.',
+  check: 'Give me one second, let me see if one of our licensed specialists is free right now.',
+  connecting: 'Good news, I’ve got one. I’ll bring them on now.',
+  bounce: 'Looks like they’re all with clients at the moment. No worries, let’s get you a time.',
   noTimes: 'A licensed specialist will reach out to find a time that works for you. Thanks so much for your time today.',
 }
 // While the agent decides (up to 30 s): light, useful questions, one at a time. Never coverage or price.

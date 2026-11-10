@@ -18,6 +18,7 @@ export type Call = {
   booked_for: string | null
 }
 export type Lead = { id: string; first: string; phone: string; state: string | null; tz: string | null; need: string | null; age: string | null
+  homeowner?: boolean | null; mortgage?: string | null // P940: the form's answers
   // P926: an admin test call (a sample lead): the switch and the lead rules are skipped, the agent's check is answered
   // for them (check), and transfer_to stands in for the agent's phone. Never set on a real lead.
   test?: { check?: 'yes' | 'no' | 'none'; transferTo?: string | null } | null }
@@ -98,7 +99,9 @@ export async function start(store: Store, provider: Provider, env: Env, callId: 
   try {
     const r = await provider.start({
       callId: c.id, to: lead.phone, from, fromId: ds?.phone ? ds.providerId : null, maxSecs: Math.min(live.maxSecs || AI_RULES.maxCallSecs, 900),
+      // P940: what the form already told us, so the AI confirms it instead of asking ('' = not on the form, ask it).
       vars: { first_name: lead.first, state: lead.state ?? '', lead_tz: lead.tz ?? '', opening: env.words.opening.replace('{first}', lead.first),
+        form_state: lead.state ?? '', form_homeowner: lead.homeowner == null ? '' : lead.homeowner ? 'yes' : 'no', form_mortgage: lead.mortgage ?? '', form_age: lead.age ?? '',
         callback_number: spokenNumber(from) }, // P940: the voicemail message gives the number that called them
     })
     await store.status(c.id, 'dialing', { provider_call_id: r.providerCallId })
@@ -150,7 +153,8 @@ export async function onEvent(store: Store, provider: Provider, env: Env, ev: Ev
 
 // Beat 3: no dead air while the agent decides. A provider that can talk while a tool call is pending keeps the caller
 // company with light, useful questions (never coverage or price); one that can't plays a short hold line instead.
-const checkSay = (p: Provider) => (p.talksWhileWaiting ? transferSay('check') : `${transferSay('check')} ${transferSay('holdOnly')}`)
+// P940: the AI says Brayden's check line out loud, then pauses while the agent is checked.
+const checkSay = (p: Provider) => (p.talksWhileWaiting ? AI_CALL_WORDS.check : `${AI_CALL_WORDS.check} ${transferSay('holdOnly')}`)
 function waiting(p: Provider, first: boolean) {
   if (!p.talksWhileWaiting) return { hold: true }
   return first ? { keep_talking: true, ask: WAIT_QUESTIONS, rule: WAIT_RULE } : { keep_talking: true }
@@ -194,7 +198,8 @@ export async function tool(store: Store, provider: Provider, env: Env, c: Call, 
       const notNow = args.free_now === false || String(args.free_now ?? '').toLowerCase() === 'no'
       if (notNow || !r.act.includes('check_agent')) {
         await store.status(c.id, 'booking', { routed: notNow ? 'lead_not_free' : r.s.routed, summary: args.summary ?? null })
-        return slotsReply(store, env, c, pre, agent.first)
+        // P940: they said they're free but no specialist can take it (out of hours, appointments only): check out loud, then times.
+        return slotsReply(store, env, c, notNow ? pre : [pre, AI_CALL_WORDS.check, AI_CALL_WORDS.bounce].filter(Boolean).join(' '), agent.first)
       }
       const lead = lead0
       const chk = await store.insertCheck({ agent_id: agent.id, lead_id: c.lead_id, ai_call_id: c.id,

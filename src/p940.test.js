@@ -24,17 +24,25 @@ test('prompt: screener is not a hang-up, says the line, waits ~20 s, polite good
   assert.doesNotMatch(p, /hang up without a message/)
 })
 
-test('prompt: warm open, virtual assistant early, the why reflected back, the 4 qualifiers, free now → transfer or two times', () => {
+test('prompt: no small talk, why NOW reflected back, form answers confirmed not asked, free now → check out loud → transfer or two times', () => {
   const p = retellPrompt()
-  assert.match(p, /Hey \{\{first_name\}\}! This is Max with Deedstone Insurance\. How’s your day going\?/)
-  assert.match(p, /I’m Deedstone’s virtual assistant/)
-  assert.match(p, /What has you looking into mortgage protection\?/i)
-  assert.match(p, /so you want to make sure the house is covered for your family/)
-  for (const q of [/homeowner/, /left on the mortgage/, /what state/, /age range/]) assert.match(p, q)
+  assert.match(p, /never ask how they are or how their day is going/)
+  assert.doesNotMatch(p, /How’s your day going\?"$/m)
+  assert.match(p, /What has you looking into mortgage protection right now\?/)
+  assert.match(p, /Reflect it back in one natural sentence/)
+  assert.match(p, /No other filler questions/)
+  assert.match(p, /I see you’re in \{\{form_state\}\}, is that right\?/)
+  for (const v of ['form_homeowner', 'form_mortgage', 'form_age']) assert.ok(p.includes(`{{${v}}}`), v)
+  assert.match(p, /only if \{\{form_age\}\} is empty/)
+  assert.match(p, /natural, flowing sentences/)
+  assert.match(p, /Do not force enthusiasm/)
+  assert.match(p, /Is there anything else I can help with\?/)
+  assert.match(p, /let them hang up first/)
   assert.match(p, /Are you free right now\? I can bring a licensed specialist on the line\./)
   assert.match(p, /What works better, later today or tomorrow\?/)
   assert.match(p, /offer TWO of those times/)
   assert.match(p, /You’ll get a text confirming it/)
+  for (const w of [AI_CALL_WORDS.check, AI_CALL_WORDS.connecting, AI_CALL_WORDS.bounce]) assert.ok(p.includes(w), w)
   assert.match(p, /Never end a call with a real person without trying to transfer or book/)
   for (const o of [/Just send me info/, /How much is it/, /already have coverage/, /spouse/, /robot/, /Not interested/, /Stop calling/]) assert.match(p, o)
 })
@@ -49,21 +57,25 @@ test('prompt and tools never name the agent', () => {
   assert.ok(retellTools(HOOK).find(x => x.name === 'qualified').parameters.required.includes('free_now'))
 })
 
-test('model and voice: Claude Sonnet 5.5 with a GPT-4.1 backup; backchannel on, quick, normal speed, less stable voice', () => {
+test('model and voice: Claude Sonnet 5.5 with a GPT-4.1 backup; smooth voice, waits its turn, harder to interrupt', () => {
   const l = retellLlm({ prompt: 'p', url: HOOK })
   assert.equal(l.model_config.primary.model, 'claude-5.5-sonnet')
   assert.equal(l.model_config.backup.model, 'gpt-4.1')
   const a = retellAgent({ llmId: 'llm_1', voiceId: 'v1', webhookUrl: HOOK })
   assert.equal(a.voice_speed, 1)
-  assert.ok(a.voice_temperature > 1 && a.voice_temperature <= 2)
+  assert.equal(a.voice_model, 'eleven_multilingual_v2')
+  assert.ok(a.voice_temperature < 1)
+  assert.ok(a.responsiveness <= 0.6 && a.interruption_sensitivity <= 0.6)
+  assert.equal(a.stt_mode, 'accurate')
   assert.equal(a.enable_backchannel, true)
   assert.deepEqual(a.backchannel_words, RETELL_VOICE_DEFAULTS.backchannel_words)
-  assert.equal(a.responsiveness, 1)
 })
 
-test('opening line is the warm open', () => {
+test('opening line: who it is and why it is calling, no small talk; test leads carry the form answers', () => {
   const src = readFileSync(new URL('../supabase/functions/ai-caller/index.ts', import.meta.url), 'utf8')
-  assert.match(src, /opening: 'Hey \{first\}! This is Max with Deedstone Insurance\. How’s your day going\?'/)
+  assert.match(src, /opening: 'Hi \{first\}, this is Max, the virtual assistant with Deedstone Insurance\. I’m following up on the mortgage protection request you just sent in\./)
+  assert.doesNotMatch(src, /opening: '[^']*(how’s your day|how are you)/i)
+  assert.match(src, /homeowner: true, mortgage_balance_band: '200-300k'/)
 })
 
 test('agent: voicemail leaves the message with the callback number, screeners are not voicemail, no IVR hang-up, 20 s silence stop', () => {
@@ -102,6 +114,15 @@ function fakes() {
   const env = { now: () => Date.parse('2026-11-10T19:00:00Z'), from: '+17373383859', words: { opening: '' } }
   return { log, call, store, provider, env }
 }
+
+test('free_now true but no specialist can take it (appointments only): the check line, then "all with clients", then times', async () => {
+  const f = fakes()
+  f.store.agent = async () => ({ id: 'ag', first: 'Test', phone: '+15125550100', mode: 'appts', hours: {}, tz: 'America/Chicago', reachable: true })
+  f.store.lead = async () => ({ id: 'l1', first: 'Brayden', phone: '+15125550123', state: 'TX', tz: 'America/Chicago', test: null })
+  const r = await core.tool(f.store, f.provider, f.env, { ...f.call }, 'qualified', { summary: 's', free_now: true })
+  assert.equal(r.say, `${AI_CALL_WORDS.check} ${AI_CALL_WORDS.bounce}`)
+  assert.equal(r.slots.length, 2)
+})
 
 test('free_now false: no agent check, straight to times', async () => {
   const f = fakes()
