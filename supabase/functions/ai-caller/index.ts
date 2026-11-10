@@ -20,6 +20,7 @@ import { isCron } from '../_shared/cronAuth.ts'
 import { sendersFromEnv } from '../notify-push/senders.ts'
 import { checkPush, clearPush, sendAll } from '../notify-push/transfer.ts'
 import { retellVoices, retellSetup, retellNumber, retellNumbers, retellCall } from './retellAdmin.ts'
+import { retellPrompt } from './retellSpec.js'
 
 const env = (k: string) => Deno.env.get(k) ?? ''
 const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'))
@@ -143,7 +144,7 @@ async function retellAction(action: string, body: any, d: { store: Store; provid
     case 'retell_setup': {
       if (!env('AI_WEBHOOK_SECRET')) throw Object.assign(new Error('AI_WEBHOOK_SECRET not set'), { status: 400 })
       const { data: s } = await admin.from('ai_caller_settings').select('max_call_secs').eq('id', true).maybeSingle()
-      return retellSetup(f, key, hook, { prompt: String(body?.prompt ?? ''), voice_id: String(body?.voice_id ?? ''), voice: body?.voice ?? {}, max_secs: s?.max_call_secs ?? 300,
+      return retellSetup(f, key, hook, { prompt: String(body?.prompt || retellPrompt()) /* P940: our prompt from retellSpec.js when none is sent */, voice_id: String(body?.voice_id ?? ''), voice: body?.voice ?? {}, max_secs: s?.max_call_secs ?? 300,
         llm_id: env('RETELL_LLM_ID') || null, agent_id: env('RETELL_AGENT_ID') || null })
     }
     case 'retell_number': {
