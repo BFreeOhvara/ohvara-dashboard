@@ -6,6 +6,7 @@ import { typeOfKind, isCallKind, callType, CALL_TYPES, RETRY_KINDS, CALLBACK_WHY
 import { draftIn } from '../../lib/clientCheck.js'
 import { SUPPORT_THREAD } from '../support911.js'
 import { makeBrief } from '../brief.js'
+import { isTrained } from '../../fulshell/training/store.js'
 
 // P845 — the one door to the Fulfillment (VA) side's sample info, like ../data for the agent side. Screens read only
 // through the hooks below; every read returns { data, isLoading: false, error: null }, the react-query shape, so the
@@ -60,7 +61,7 @@ const SAMPLE_LOAD = { 'va-leo': 4, 'va-sasha': 5, 'va-devon': 3 }
 // The rota at an instant (by the day on the team's clock), each VA with their zone and whether they're off.
 export function teamOn(iso, offDays = [], meTz = VA_TZ) {
   const d = dayNumOf(iso, VA_TZ)
-  return (ROTA[d] || []).map(id => { const v = VAS.find(x => x.id === id); return { ...v, tz: v.me ? meTz : v.tz, off: !!v.me && offDays.includes(d) } })
+  return (ROTA[d] || []).map(id => { const v = VAS.find(x => x.id === id); return { ...v, tz: v.me ? meTz : v.tz, off: !!v.me && offDays.includes(d), trained: isTrained(v.name) } })
 }
 // Every call start a VA has: Maya's calls (not passed on) and the ones that went to other VAs.
 // P907: plus every booked servicing call (extra carries them with their VA).
@@ -76,7 +77,9 @@ export function pickVa(day, time, calls = [], extra = []) {
   const hit = freeVa({ iso, team: teamOn(iso), calls: busy, load })
   if (hit) return VAS.find(v => v.id === hit.id)
   // Nobody on shift (a weekend): the whole team, like the live pick, so nothing sits unassigned.
-  const on = ROTA[day] || VAS.map(v => v.id)
+  // P936: never a VA still in training (if nobody trained is left, the call stays unassigned for an admin to give).
+  const on = (ROTA[day] || VAS.map(v => v.id)).filter(id => isTrained(VAS.find(v => v.id === id).name))
+  if (!on.length) return null
   return VAS.find(v => v.id === on.slice().sort((a, b) => load(a, iso) - load(b, iso) || on.indexOf(a) - on.indexOf(b))[0])
 }
 export const rotaOf = day => (ROTA[day] || []).map(id => VAS.find(v => v.id === id))

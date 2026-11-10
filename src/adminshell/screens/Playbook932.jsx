@@ -1,53 +1,15 @@
 import { useRef, useState } from 'react'
-import { Music, Play, Pause, Upload, Bot, Pencil, History, Clock3, Phone } from 'lucide-react'
+import { Music, Play, Pause, Upload, Bot } from 'lucide-react'
 import { Chip, Switch, SampleTag, Empty, useNote } from '../../template/kit'
 import { Dropdown, DField } from '../kit'
 import { useAdmSettings } from '../data'
-import { PLAYBOOK_CARRIERS, METHOD, ACTION_WORD, ACTIONS, PLAYBOOK_CHECKED, hoursLine } from '../../lib/servicing/playbook.js'
-import { findCarrier } from '../../lib/carriers/catalog.js'
 import { usePlaybookState, playbookActions } from '../../template/ful/playbook932Store'
-import { PlaybookEditor, FrontDeskNote } from '../../template/ful/Playbook932'
+import { FrontDeskNote } from '../../template/ful/Playbook932'
 import '../../template/ful/playbook932.css'
 
-// P932 — admin Settings › Carrier playbook (every carrier's way for each change, edit + log) and › Hold line (the
-// music, the timings and the AI front desk). Admin and VAs can edit the playbook; every edit is logged.
-
-export function CarrierPlaybookAdmin() {
-  const s = usePlaybookState()
-  const [edit, setEdit] = useState(null)
-  const [q, setQ] = useState('')
-  const rows = PLAYBOOK_CARRIERS.filter(c => !q.trim() || c.name.toLowerCase().includes(q.trim().toLowerCase()))
-  const added = Object.keys(s.edits).filter(k => k.startsWith('new-'))
-  return (
-    <>
-      <header className="fx-form-h"><h2>Carrier playbook</h2><p>How each carrier does each change: e-sign their form, the owner online, or the owner on a merge call. The system picks the easiest way and shows it on the VA{'’'}s call. Researched {PLAYBOOK_CHECKED}; anything not confirmed says “check on first call”. Admin and VAs can edit; every edit is logged.</p></header>
-      <div className="tp-row tp-wrap"><input className="pba-q" value={q} onChange={e => setQ(e.target.value)} placeholder="Find a carrier" aria-label="Find a carrier" /><SampleTag>Sample</SampleTag></div>
-      <div className="pba-scroll">
-        <table className="pba-t">
-          <thead><tr><th scope="col">Carrier</th>{ACTIONS.map(a => <th key={a} scope="col">{ACTION_WORD[a]}</th>)}</tr></thead>
-          <tbody>{rows.map(c => {
-            const own = s.edits[c.key] || {}
-            return (
-              <tr key={c.key}>
-                <th scope="row"><b>{c.name}</b><small><Phone size={11} aria-hidden="true" />{c.phone || 'No line yet'}</small><small><Clock3 size={11} aria-hidden="true" />{hoursLine(findCarrier(c.name))}</small></th>
-                {ACTIONS.map(a => {
-                  const e = own[a] || c.actions[a] || { method: 'check' }
-                  const m = METHOD[e.method] || METHOD.check
-                  return <td key={a}><button type="button" className="pba-cell" onClick={() => setEdit({ key: c.key, name: c.name, action: a, entry: e })} aria-label={`${c.name} ${ACTION_WORD[a]}: ${m.label}. Edit`}>
-                    <Chip tone={m.tone}>{m.short}</Chip>{e.form && <small>{e.form}</small>}<Pencil size={12} aria-hidden="true" className="pba-pen" /></button></td>
-                })}
-              </tr>
-            )
-          })}</tbody>
-        </table>
-      </div>
-      {added.length > 0 && <p className="tp-sub">Learned by VAs: {added.map(k => Object.values(s.edits[k])[0] && k.replace(/^new-/, '').replace(/-/g, ' ')).join(', ')}</p>}
-      <h3 className="fx-h3"><History size={15} aria-hidden="true" /> Edit log</h3>
-      {s.log.length ? <ul className="tp-list pba-log">{s.log.map(l => <li key={l.id}><b>{l.by}</b> · {l.at} · {l.carrier} {ACTION_WORD[l.action]?.toLowerCase()}: {l.what}</li>)}</ul> : <Empty title="No edits yet" />}
-      {edit && <PlaybookEditor carrierKey={edit.key} name={edit.name} action={edit.action} entry={edit.entry} onClose={() => setEdit(null)} />}
-    </>
-  )
-}
+// P932 — the Hold line (the music, the timings and the AI front desk), on Lines & pods › Limits and hold line.
+// P936: the admin Carrier playbook page is off the rail. The playbook stays in the database and on the VA call panel,
+// and VAs still fill "check on first call" entries after calls (template/ful/Playbook932.jsx).
 
 const TRACKS = [{ key: 'calm', label: 'Calm', sub: 'Soft piano chords' }, { key: 'warm', label: 'Warm', sub: 'Mellow pads' }, { key: 'bright', label: 'Bright', sub: 'Light and upbeat' }]
 const SECS = [15, 20, 30].map(v => ({ value: v, label: `${v} seconds` }))

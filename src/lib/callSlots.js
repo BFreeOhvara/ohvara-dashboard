@@ -1,4 +1,5 @@
 import { inferTimezoneFromState, zonedTimeToUtcIso, SELECTABLE_TIMEZONES, SPLIT_STATES, US_STATES, timezoneAbbr } from './timezones.js'
+import { canTakeCalls } from './trainingGate.js'
 
 // P854 — the one place for booking-time rules. Every picker (an agent's Book a call, a VA's booking, callback or
 // Move, Pass on) reads these; nothing re-implements them.
@@ -171,10 +172,10 @@ export const inShift = (iso, tz, shift = SHIFT_MIN) => { const m = minuteOf(iso,
 
 // Who takes a call at `iso`: team = the VAs on the rota then ([{ id, name, tz, off }], or iso => that list).
 // The usual VA (prefer) when they're free, else the free VA with the lightest load (rota order on a tie), else null.
-// skip = VA ids that can't take it (Pass on skips yourself).
+// skip = VA ids that can't take it (Pass on skips yourself). P936: a VA still in training (trained: false) never does.
 export function freeVa({ iso, team, calls = [], prefer = null, exceptId = null, load = () => 0, skip = [] }) {
   const crew = (typeof team === 'function' ? team(iso) : team) || []
-  const ok = crew.filter(v => !v.off && !skip.includes(v.id) && inShift(iso, v.tz || CT) && vaFree(v.id, iso, calls, exceptId))
+  const ok = crew.filter(v => canTakeCalls(v) && !v.off && !skip.includes(v.id) && inShift(iso, v.tz || CT) && vaFree(v.id, iso, calls, exceptId))
   if (!ok.length) return null
   const mine = ok.find(v => v.id === prefer)
   if (mine) return mine
@@ -187,7 +188,7 @@ export function vaSlots({ date, clocks, clientTz, team, calls = [], prefer = nul
   if (!clientTz) return []
   return clocks.map(clock => {
     const iso = instantOf(date, clock, clientTz)
-    const crew = ((typeof team === 'function' ? team(iso) : team) || []).filter(v => !v.off && !skip.includes(v.id) && inShift(iso, v.tz || CT))
+    const crew = ((typeof team === 'function' ? team(iso) : team) || []).filter(v => canTakeCalls(v) && !v.off && !skip.includes(v.id) && inShift(iso, v.tz || CT))
     const va = crew.length ? freeVa({ iso, team: crew, calls, prefer, exceptId, load }) : null
     return { clock, iso, va, open: !!va, why: va ? null : crew.length ? 'taken' : 'off' }
   })

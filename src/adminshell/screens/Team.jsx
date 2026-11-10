@@ -15,6 +15,7 @@ import { ap } from '../paths'
 import { CALL_WORD, CALL_TONE, BANK_WORD } from '../words'
 import { SwapsAndOpen, HoursPay, Holidays } from './Team879'
 import { DAYS_OFF_DEFAULT, daysUsed, daysLeft } from '../../lib/dayOff'
+import { canTakeCalls, TRAIN_FIRST } from '../../lib/trainingGate.js'
 
 // P849 — the Fulfillment team: today's desk (every VA's calls on one timeline, the calls past their time and Give to,
 // as admin_give_call does today), the weekly rota builder (two or three on shift every day; drag a VA onto a day, drag
@@ -25,9 +26,12 @@ const NOW = 13 * 60 + 30 // the sample "now", 1:30 PM
 
 // Pick someone free for a call: on shift today, not on a call now.
 function GivePicker({ call, vas, onPick }) {
-  const free = vas.filter(v => v.onShift && v.id !== call.va_id)
+  // P936: a VA still in training can't be given calls; they show greyed with why.
+  const free = vas.filter(v => v.onShift && v.id !== call.va_id && canTakeCalls(v))
+  const training = vas.filter(v => v.onShift && v.id !== call.va_id && !canTakeCalls(v))
   return (
     <ul className="tp-list">
+      {training.map(v => <li key={v.id} className="fx-mrow is-off" aria-disabled="true"><Avatar name={v.name} /><span className="tp-grow"><b>{v.name}</b><small>{TRAIN_FIRST}</small></span></li>)}
       {free.map(v => (
         <li key={v.id}><button type="button" className="fx-mrow" onClick={() => onPick(v)}>
           <Avatar name={v.name} /><span className="tp-grow"><b>{v.name}</b><small>{v.onCall ? 'On a call now' : 'Free now'} · {v.today.total - v.today.done} calls left today</small></span>

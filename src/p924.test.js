@@ -85,10 +85,11 @@ test('agent side: no Request a service, no Log a call, no Closed on Leads, one s
   assert.equal((st.match(/<HoursEditor\b/g) || []).length, 1)
 })
 
-// P929 replaced P924's left list: Settings is back to the profile card + tabs (src/p929.test.js). Wording stays.
-test('P934: Wording to approve is its own admin rail page', () => {
-  assert.match(src('src/adminshell/screens/Work934.jsx'), /<WordingToApprove \/>/)
-  assert.match(src('src/adminshell/AdminFrame.jsx'), /ap\('wording'\)/)
+// P929 replaced P924's left list: Settings is back to the profile card + tabs (src/p929.test.js).
+// P936: Wording to approve is gone; every wording that waited there is the live wording as written.
+test('P936: no Wording to approve page anywhere', () => {
+  assert.doesNotMatch(src('src/adminshell/screens/Work934.jsx'), /WordingToApprove/)
+  assert.doesNotMatch(src('src/adminshell/AdminFrame.jsx'), /ap\('wording'\)/)
 })
 
 test('no "draft" notes on screen in any role', () => {

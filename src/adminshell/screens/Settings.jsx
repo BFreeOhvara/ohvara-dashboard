@@ -33,7 +33,7 @@ import { useCallOpenMin, saveCallOpenMin } from '../../hooks/useCallOpen'
 // setup checks are their own tab so no section scrolls. Old ?tab= links land where the section went (MOVED).
 const TABS = [['profile', 'Profile', User], ['people', 'People', Users], ['golive', 'Go live', Power], ['pay', 'Pay', Wallet], ['stripe', 'Stripe', CreditCard],
   ['servicing', 'Servicing', Hand], ['ai', 'AI caller', Bot], ['audit', 'Audit log', History], ['prefs', 'Preferences', SlidersHorizontal]]
-const MOVED = { bugs: 'bugs', numbers: 'numbers', wording: 'wording', training: 'training', compliance: 'compliance', playbook: 'playbook', hold: 'numbers' }
+const MOVED = { bugs: 'bugs', numbers: 'numbers', compliance: 'compliance', hold: 'numbers' } // P936: wording, training, playbook gone
 const RENAMED = { switches: 'golive', billing: 'stripe', split: 'golive' }
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
 

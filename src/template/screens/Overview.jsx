@@ -12,6 +12,7 @@ import { clientStatusOf, clientStatus } from '../../lib/clientCheck.js'
 import { useCheckSettings, todayFor } from '../checkSettings'
 import { paths } from '../paths'
 import '../p893.css'
+import Chart from '../Chart'
 
 // P841: a little more page. Next up is the second colour-filled tile (the Booked blue); under the pair, a This week
 // strip of the working week's calls (leads blue, clients yellow, as on Calendar); under Needs you, a Lead mix tile
@@ -36,48 +37,23 @@ function Tile({ className = '', i, title, sub, to, label, children, ...rest }) {
   )
 }
 
-// P844: the chart follows how long the agent has been on Ohvara (see data/index.js bookedChart). Weeks: a smooth line
-// that draws itself in, over the budget range band (dashed edges). Days (first 2 weeks): one column per day this week.
+// P844: the chart follows how long the agent has been on Ohvara (see data/index.js bookedChart). Weeks: a smooth area
+// over the expected range band (dashed edges). Days (first 2 weeks): one rounded bar per day this week.
+// P936: drawn by the one chart (../Chart.jsx); days still to come are a faint label, never an empty bar.
+const DL_SERIES = [{ key: 'v', label: 'Delivered', color: 'var(--ox-1)' }]
 function BookedChart({ chart, lo, hi }) {
   const { points, mode } = chart
   const days = mode === 'days'
-  const top = Math.max(days ? 4 : hi + 2, ...points.map(w => w[1]))
-  const W = 640
-  const H = 210
-  const x = i => (i / (points.length - 1)) * W
-  const y = v => H - (v / top) * (H - 12) - 2
-  const pts = points.map(([, v], i) => [x(i), y(v)])
-  const line = pts.reduce((d, [px, py], i) => {
-    if (i === 0) return `M${px},${py}`
-    const [qx, qy] = pts[i - 1]
-    const cx = (qx + px) / 2
-    return `${d} C${cx},${qy} ${cx},${py} ${px},${py}`
-  }, '')
-  const last = pts[pts.length - 1]
-  const ticks = days ? [top, Math.round(top / 2), 0] : [top, hi, lo, 0]
   const lastIdx = days ? points.findIndex(p => p[2]) - 1 : points.length - 1
-  const colW = W / points.length
+  const nowAt = days ? (lastIdx < 0 ? points.length - 1 : lastIdx) : points.length - 1
+  const data = points.map(([w, v, later], i) => ({
+    name: !days && i === points.length - 1 ? 'This week' : days && i === nowAt ? 'Today' : w,
+    full: days ? w : `Week of ${w}`, later: !!later, today: i === nowAt, v,
+  }))
   return (
-    <div className={`fx-chart fx-wchart${days ? ' is-days' : ''}`}>
-      <div className="fx-wchart-y" aria-hidden="true">{ticks.map(v => <span key={v} style={{ top: `${(y(v) / H) * 100}%` }}>{v}</span>)}</div>
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`Delivered per ${days ? 'day' : 'week'}: ${points.filter(p => !p[2]).map(([w, v]) => `${w} ${v}`).join(', ')}.${days ? '' : ` Expected at your spend ${lo} to ${hi}.`}`}>
-        {days ? (
-          <g>{points.map(([d, v, later], i) => {
-            const h = Math.max(v ? (v / top) * (H - 12) : 0, 3)
-            return <rect key={d} x={i * colW + colW * 0.2} width={colW * 0.6} y={H - h} height={h} rx="6" className={`fx-bar${later ? ' is-later' : ''}${v === 0 ? ' is-zero' : ''}`} style={{ '--i': i }} />
-          })}</g>
-        ) : (<>
-          <defs><linearGradient id="fx-warea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style={{ stopColor: 'var(--ov-data-a)', stopOpacity: 0.34 }} /><stop offset="1" style={{ stopColor: 'var(--ov-data-a)', stopOpacity: 0 }} /></linearGradient></defs>
-          <rect x="0" width={W} y={y(hi)} height={y(lo) - y(hi)} className="fx-band" />
-          <line x1="0" x2={W} y1={y(hi)} y2={y(hi)} className="fx-target" />
-          <line x1="0" x2={W} y1={y(lo)} y2={y(lo)} className="fx-target" />
-          <path d={`${line} L${W},${H} L0,${H} Z`} fill="url(#fx-warea)" className="fx-area" />
-          <path d={line} pathLength="1" className="fx-line-draw" />
-          <circle cx={last[0]} cy={last[1]} r="5" className="fx-pt is-now" style={{ '--i': 3 }} />
-        </>)}
-      </svg>
-      <div className="fx-xs">{points.map(([w], i) => <span key={w} className={i === (days ? lastIdx : points.length - 1) ? 'is-now' : ''}>{!days && i === points.length - 1 ? 'This week' : days && i === lastIdx ? 'Today' : w}</span>)}</div>
-    </div>
+    <Chart kind={days ? 'bar' : 'area'} data={data} series={DL_SERIES} legend={false} height={168} className="fx-dchart is-stretch"
+      band={days ? null : { lo, hi }}
+      label={`Delivered per ${days ? 'day' : 'week'}: ${points.filter(p => !p[2]).map(([w, v]) => `${w} ${v}`).join(', ')}.${days ? '' : ` Expected at your spend ${lo} to ${hi}.`}`} />
   )
 }
 

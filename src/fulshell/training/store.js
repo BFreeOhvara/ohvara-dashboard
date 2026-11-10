@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react'
 import { LESSONS } from './lessons.js'
-import { fp } from '../../template/ful/paths'
+import { fp } from '../../template/ful/paths.js'
 import { emptyProgress, lessonStates, summary, scoreCheck, recordAttempt, recordTry, matchesTry, endsInQuiz, assignLesson, resetLesson } from './model.js'
 
 // P872 — training progress and lesson edits, sample only (this browser). One store, so the rail badge, the Overview
@@ -12,11 +12,13 @@ const KEY = 'ful-training:v1'
 const allRight = id => { const l = LESSONS.find(x => x.id === id); return scoreCheck(l, l.check.map(c => c.answer)) }
 const AT = '2026-11-02T15:00:00Z'
 const passFirst = (n, extra = p => p) => extra(LESSONS.slice(0, n).reduce((p, l) => (endsInQuiz(l) ? recordAttempt(p, l.id, allRight(l.id), AT) : recordTry(p, l.id, AT)), emptyProgress))
-const transfer = LESSONS.find(l => l.id === 'transfer')
+// P936: a VA takes calls only once training is complete, so every sample VA on a rota (the VA side's Maya, Leo, Sasha
+// and Devon; admin's Maya, Andre, Keisha, Omar and Lily) has finished it. Rosa Diaz (invited, not on the team yet)
+// hasn't started: she gets no calls until she finishes.
+const ALL = () => passFirst(LESSONS.length)
 const SEED = {
-  'Maya Brooks': passFirst(4),
-  'Andre Lewis': passFirst(LESSONS.length),
-  'Keisha Grant': passFirst(7, p => assignLesson(recordAttempt(p, transfer.id, { correct: 1, total: transfer.check.length, pass: false }, '2026-11-05T19:10:00Z'), 'optout')),
+  'Maya Brooks': ALL(), 'Leo Grant': ALL(), 'Sasha Ortiz': ALL(), 'Devon Hale': ALL(),
+  'Andre Lewis': ALL(), 'Keisha Grant': ALL(), 'Omar Haddad': ALL(), 'Lily Chen': ALL(),
   'Rosa Diaz': emptyProgress,
 }
 export const TRAINEES = Object.keys(SEED)
@@ -125,6 +127,14 @@ export function useTraining(name) {
   const startTry = useCallback(id => set({ ...state, trying: { name, id }, justTried: null }), [name])
   const stopTry = useCallback(() => set({ ...state, trying: null }), [])
   return { progress, states, sum, submit, trying, justTried: s.justTried || null, startTry, stopTry }
+}
+
+// P936 — the training gate (lib/trainingGate): has this VA finished training? Read outside React by the pickers;
+// useTrainedOf re-renders when anyone's progress changes.
+export const isTrained = name => summary(progressOf(name)).complete
+export function useTrainedOf() {
+  const s = useSyncExternalStore(subscribe, snap)
+  return useCallback(name => summary(s.people[name] || SEED[name] || emptyProgress).complete, [s.people])
 }
 
 export function useTrainingAdmin() {

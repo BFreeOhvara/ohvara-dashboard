@@ -1,0 +1,71 @@
+/* P936 — the one chart (src/template/Chart.jsx). Colours are tokens only: on a plain card the brand sky leads, with
+   calm companions; on a coloured card (tone fill) every colour comes from that card's own ink, so it reads in light
+   and dark. No grey tracks behind bars; future days are a faint label only. */
+.ox-chart {
+  --ox-1: var(--sh-sky, var(--ov-data-a));
+  --ox-2: color-mix(in srgb, var(--sh-sky, var(--ov-data-a)) 36%, transparent);
+  --ox-3: var(--sh-sage, var(--ov-up));
+  --ox-4: var(--sh-butter, var(--ov-data-b));
+  --ox-grid: color-mix(in srgb, var(--ov-hi) 7%, transparent);
+  --ox-axis: var(--ov-mid);
+  --ox-cursor: color-mix(in srgb, var(--ov-hi) 5%, transparent);
+  --ox-band: color-mix(in srgb, var(--sh-sky, var(--ov-data-a)) 9%, transparent);
+  --ox-band-edge: color-mix(in srgb, var(--sh-sky, var(--ov-data-a)) 45%, transparent);
+  --ox-dot-ring: var(--sh-surface, var(--bg-surface));
+  display: flex; flex-direction: column; gap: 8px; margin: 0; min-width: 0; min-height: 0;
+}
+.ox-chart.is-fill {
+  --ox-1: color-mix(in srgb, currentColor 82%, transparent);
+  --ox-2: color-mix(in srgb, currentColor 30%, transparent);
+  --ox-3: color-mix(in srgb, currentColor 55%, transparent);
+  --ox-4: color-mix(in srgb, currentColor 18%, transparent);
+  --ox-grid: color-mix(in srgb, currentColor 12%, transparent);
+  --ox-axis: color-mix(in srgb, currentColor 78%, transparent);
+  --ox-cursor: color-mix(in srgb, currentColor 8%, transparent);
+  --ox-dot-ring: color-mix(in srgb, currentColor 10%, white);
+}
+.ox-plot { position: relative; flex: 1 1 auto; height: var(--ox-h, 160px); min-height: 60px; min-width: 0; }
+.ox-plot .recharts-wrapper, .ox-plot svg { overflow: visible; }
+.ox-plot svg:focus, .ox-plot .recharts-wrapper:focus, .ox-plot .recharts-surface:focus { outline: none; }
+
+.ox-tick { font-size: 11.5px; font-weight: 500; fill: var(--ox-axis); }
+.ox-tick.is-today { font-weight: 700; fill: currentColor; }
+.ox-chart.is-plain .ox-tick.is-today { fill: var(--ov-hi); }
+.ox-tick.is-later { opacity: 0.38; }
+.ox-today-dot { fill: var(--ox-1); }
+.ox-ytick, .ox-plot .recharts-cartesian-axis-tick-value { font-size: 11px; fill: var(--ox-axis); opacity: 0.85; font-variant-numeric: tabular-nums; }
+.ox-chart.is-compact .ox-tick { font-size: 11px; }
+
+.ox-seg { transition: filter 160ms ease; }
+.ox-plot .recharts-bar-rectangle:hover .ox-seg { filter: brightness(1.08) saturate(1.05); }
+
+/* The tooltip: a small solid card, values in mono */
+.ox-tip { min-width: 150px; padding: 9px 11px; border-radius: 12px; background: var(--sh-surface, var(--bg-surface)); color: var(--ov-hi);
+  border: 1px solid var(--ov-line); box-shadow: 0 10px 28px -12px rgb(0 0 0 / 0.45); font-size: 12px; }
+.ox-tip > b { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 700; }
+.ox-tip ul { margin: 0; padding: 0; display: grid; gap: 4px; }
+.ox-tip li { list-style: none; display: grid; grid-template-columns: 8px 1fr auto; align-items: center; gap: 8px; color: var(--ov-mid); }
+.ox-tip li i { width: 8px; height: 8px; border-radius: 3px; }
+.ox-tip li i.is-none { background: transparent; }
+.ox-tip li b { color: var(--ov-hi); font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11.5px; font-weight: 600; }
+
+/* The legend: small chips */
+.ox-key { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; }
+.ox-key li { list-style: none; display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px 0 8px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 600; color: var(--ox-axis); background: color-mix(in srgb, currentColor 6%, transparent); }
+.ox-chart.is-plain .ox-key li, .ox-key:not(.ox-chart *) li { color: var(--ov-mid); background: color-mix(in srgb, var(--ov-hi) 5%, transparent); }
+.ox-key li i { width: 8px; height: 8px; border-radius: 3px; }
+
+@media (prefers-reduced-motion: reduce) { .ox-seg { transition: none; } }
+
+/* A chart that fills what's left of its card (the agent's Delivered hero fills the first screen) */
+.ox-chart.is-stretch { flex: 1 1 auto; }
+.ox-chart.is-stretch .ox-plot { height: auto; min-height: var(--ox-h, 160px); }
+
+/* P936 — the VA's training gate on Overview (template/ful/screens/Overview.jsx) */
+.fs-gate { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 4px; border-radius: 14px;
+  background: color-mix(in srgb, var(--sh-f-apricot, var(--ov-warn)) 22%, transparent); border: 1px solid color-mix(in srgb, var(--sh-f-apricot, var(--ov-warn)) 45%, transparent); }
+.fs-gate-ic { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--sh-f-apricot, var(--ov-warn)); color: var(--sh-fi-apricot, var(--ov-hi)); }
+.fs-gate .tp-grow { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.fs-gate b { font-size: 13.5px; font-weight: 600; color: var(--ov-hi); }
+.fs-gate small { font-size: 12px; color: var(--ov-mid); }

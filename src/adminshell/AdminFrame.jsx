@@ -4,7 +4,7 @@ import {
   Home, Users, Headset, PhoneIncoming, BookUser, Landmark, Plug, Settings, Search, Bell, Sun, Moon, MessageSquare, ChevronRight, LogOut,
   Ellipsis, CircleHelp, Mail, Keyboard, UserPlus, Shuffle, Hand, Bug, History, TriangleAlert, Wallet, CalendarDays, CalendarOff,
   ShieldCheck, PhoneForwarded, CircleDollarSign, CheckCircle2, Radio, Link2, Copy, Plus, Rocket, BadgeCheck, Hourglass,
-  PhoneCall, MessageSquareText, GraduationCap, Scale, BookOpen,
+  PhoneCall, Scale,
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
 import { useIsTestAccount } from '../hooks/useIsTestAccount'
@@ -298,9 +298,6 @@ export default function AdminFrame() {
         {/* P934: the working pages that left Settings, each its own page (screens/Work934.jsx). */}
         <NavLink to={ap('bugs')} className="fx-ri tp-wig" aria-label="Bug reports" data-tip="Bug reports" {...wig}><Bug size={18} /></NavLink>
         <NavLink to={ap('numbers')} className="fx-ri tp-wig" aria-label="Deedstone numbers" data-tip="Deedstone numbers and VA pods" {...wig}><PhoneCall size={18} /></NavLink>
-        <NavLink to={ap('playbook')} className="fx-ri tp-wig" aria-label="Carrier playbook" data-tip="Carrier playbook" {...wig}><BookOpen size={18} /></NavLink>
-        <NavLink to={ap('wording')} className="fx-ri tp-wig" aria-label="Wording to approve" data-tip="Wording to approve" {...wig}><MessageSquareText size={18} /></NavLink>
-        <NavLink to={ap('training')} className="fx-ri tp-wig" aria-label="Training" data-tip="Training" {...wig}><GraduationCap size={18} /></NavLink>
         <NavLink to={ap('compliance')} className="fx-ri tp-wig" aria-label="Compliance" data-tip="Compliance" {...wig}><Scale size={18} /></NavLink>
         <i className="fx-hair" />
         <button type="button" className="fx-ri tp-wig" aria-label="Help and support" aria-expanded={panel === 'help'} data-tip="Help and support" {...wig} onClick={open('help')}><CircleHelp size={18} /></button>

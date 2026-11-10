@@ -94,3 +94,9 @@
 .adm .ai-golive { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--ov-mid); font-size: 13px; }
 .adm .ai-words-open { width: 100%; }
 .adm .ai-agent-pills { flex-wrap: wrap; }
+
+/* P936 — admin client cards match the agent's (P911) with the agent's name along the bottom; no premium. */
+.adm .adm-ccard .adm-ccard-bot { margin-top: auto; }
+.adm .adm-cagent { position: relative; display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-size: 12.5px; font-weight: 600; color: var(--ov-mid); }
+.adm .adm-cagent .tp-av { width: 22px; height: 22px; font-size: 9.5px; }
+.adm .adm-cagent > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

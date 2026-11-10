@@ -1,8 +1,0 @@
-/* P924 — admin Settings › Wording to approve. */
-.wd-group { margin-top: 18px; }
-.wd-where { margin: 2px 0 8px; font-size: 13px; color: var(--ov-mid); }
-.wd-list { display: flex; flex-direction: column; gap: 6px; }
-.wd-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--sh-edge); border-radius: 12px; }
-.wd-row small { display: block; font-size: 12px; color: var(--ov-mid); }
-.wd-row q { display: block; margin-top: 2px; font-size: 13.5px; line-height: 1.45; color: var(--ov-hi); quotes: '“' '”'; }
-@media (max-width: 640px) { .wd-row { flex-direction: column; align-items: stretch; } }

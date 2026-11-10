@@ -1,0 +1,23 @@
+/* P936 — a button on a coloured to-do row is neutral in every role (admin To-dos, agent Needs you cards and rows,
+   VA Overview cards): the plain surface with ink text and a soft border, its own hover and pressed states. Light: a
+   near-white chip with dark text; dark: the dark surface with light text. The row keeps its colour. */
+html .tp :is(.adm-todo, .fx-ncard, .lc-row[class*=" is-"]) :is(.tp-primary, .fx-pillbtn, .tp-btn, .fx-accent) {
+  color: var(--sh-ink); background: var(--sh-surface); border: 1px solid color-mix(in srgb, var(--sh-ink) 14%, transparent);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--sh-ink) 10%, transparent); font-weight: 600; text-shadow: none;
+  transition: background-color .16s var(--fx-ease, ease), border-color .16s var(--fx-ease, ease), transform .12s var(--fx-ease, ease), box-shadow .16s var(--fx-ease, ease);
+}
+html .tp :is(.adm-todo, .fx-ncard, .lc-row[class*=" is-"]) :is(.tp-primary, .fx-pillbtn, .tp-btn, .fx-accent):hover {
+  background: color-mix(in srgb, var(--sh-ink) 6%, var(--sh-surface)); border-color: color-mix(in srgb, var(--sh-ink) 24%, transparent);
+  box-shadow: 0 3px 10px -4px color-mix(in srgb, var(--sh-ink) 30%, transparent);
+}
+html .tp :is(.adm-todo, .fx-ncard, .lc-row[class*=" is-"]) :is(.tp-primary, .fx-pillbtn, .tp-btn, .fx-accent):active {
+  background: color-mix(in srgb, var(--sh-ink) 11%, var(--sh-surface)); transform: scale(.97); box-shadow: none;
+}
+html .tp :is(.adm-todo, .fx-ncard, .lc-row[class*=" is-"]) :is(.tp-primary, .fx-pillbtn, .tp-btn, .fx-accent):focus-visible {
+  outline: 2px solid var(--sh-ink); outline-offset: 2px;
+}
+html .tp :is(.adm-todo, .fx-ncard, .lc-row[class*=" is-"]) :is(.tp-primary, .fx-pillbtn, .tp-btn, .fx-accent) svg { color: inherit; }
+@media (prefers-reduced-motion: reduce) {
+  html .tp :is(.adm-todo, .fx-ncard, .lc-row[class*=" is-"]) :is(.tp-primary, .fx-pillbtn, .tp-btn, .fx-accent) { transition: none; }
+  html .tp :is(.adm-todo, .fx-ncard, .lc-row[class*=" is-"]) :is(.tp-primary, .fx-pillbtn, .tp-btn, .fx-accent):active { transform: none; }
+}

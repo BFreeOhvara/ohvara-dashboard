@@ -5,6 +5,7 @@ import { PRICES, SETTINGS, bandText, nightlyCharge } from '../lib/priceBook.js'
 import { tierOf } from '../template/spendPlan.js'
 import { TIMESHEET, HOURLY, sheetTotals } from './p879.js'
 import { matchAgent } from '../lib/leadMatch.js'
+import { isTrained } from '../fulshell/training/store.js'
 
 // P849 — the one door to the Admin side's sample info, like src/template/ful/data.js for the VA side. Screens read only
 // through the hooks below; every read returns { data, isLoading: false, error: null }, the react-query shape, so the
@@ -201,21 +202,21 @@ const seedLeads = (() => {
 
 // Clients across every agent's book (sold policies) and the servicing steps open on them.
 // P906: stage = the P899 client status (working | needs_attention | protected | closed); tag = an open request.
-const mkClient = (id, name, agent, va, o) => ({ id, name, agent_id: agent, va_id: va, phone: '(555) 555-0100', state: 'TX', carrier: 'Mutual of Omaha', product: 'Term Life 20', policy: 'MO-4471023', premium: 64.5, stage: 'protected', sold: 'Oct 21', attention: null, tag: null, ...o })
+const mkClient = (id, name, agent, va, o) => ({ id, name, agent_id: agent, va_id: va, phone: '(555) 555-0100', state: 'TX', carrier: 'Mutual of Omaha', product: 'Term Life 20', policy: 'MO-4471023', premium: 64.5, stage: 'protected', sold: 'Oct 21', city: 'Austin', draft: 12, attention: null, tag: null, ...o })
 const seedClients = [
-  mkClient('cl-gloria', 'Gloria Santos', 'ag-dana', 'va-maya', { phone: '(305) 555-0156', state: 'FL', stage: 'working', attention: 'New policy being set up', carrier: 'Americo', product: 'Mortgage Protection 25', policy: 'AM-2209184', premium: 88.4, sold: 'Nov 2' }),
-  mkClient('cl-robert', 'Robert Chen', 'ag-marcus', 'va-keisha', { phone: '(480) 555-0142', state: 'AZ', carrier: 'Foresters', product: 'Strong Foundation', policy: 'FF-7712406', premium: 52.1, sold: 'Oct 14' }),
-  mkClient('cl-luis', 'Luis Ortega', 'ag-priya', 'va-omar', { phone: '(813) 555-0119', state: 'FL', stage: 'working', attention: 'Draft failed on Nov 1: the team is fixing it', carrier: 'Transamerica', product: 'Trendsetter Super 20', policy: 'TA-5530981', premium: 71.25, sold: 'Oct 9' }),
-  mkClient('cl-denise', 'Denise Walker', 'ag-dana', 'va-maya', { phone: '(214) 555-0171', tag: 'Address change in progress', carrier: 'Mutual of Omaha', policy: 'MO-4471188', premium: 47.9, sold: 'Sep 30' }),
-  mkClient('cl-harold', 'Harold Nguyen', 'ag-marcus', 'va-keisha', { phone: '(713) 555-0188', stage: 'working', attention: 'New policy being set up', carrier: 'Americo', policy: 'AM-2209377', premium: 96, sold: 'Nov 3' }),
-  mkClient('cl-carla', 'Carla Jones', 'ag-james', 'va-andre', { phone: '(404) 555-0133', state: 'GA', carrier: 'Foresters', policy: 'FF-7712589', premium: 39.75, sold: 'Oct 2' }),
-  mkClient('cl-renee', 'Renee Ortiz', 'ag-grace', 'va-lily', { phone: '(303) 555-0127', state: 'CO', stage: 'needs_attention', attention: 'Still on the books? Draft on the 20th', carrier: 'Transamerica', policy: 'TA-5531044', premium: 58.3, sold: 'Oct 20' }),
-  mkClient('cl-walter', 'Walter Price', 'ag-james', 'va-omar', { phone: '(678) 555-0194', state: 'GA', stage: 'working', attention: 'New policy being set up', carrier: 'Mutual of Omaha', policy: 'MO-4471342', premium: 61, sold: 'Nov 4' }),
-  mkClient('cl-irene', 'Irene Baker', 'ag-priya', 'va-omar', { phone: '(727) 555-0109', state: 'FL', carrier: 'Americo', policy: 'AM-2209455', premium: 73.6, sold: 'Sep 22' }),
-  mkClient('cl-tom', 'Tom Fischer', 'ag-dana', 'va-maya', { phone: '(512) 555-0122', tag: 'Beneficiary change in progress', carrier: 'Foresters', policy: 'FF-7712633', premium: 44.2, sold: 'Oct 6' }),
-  mkClient('cl-nadia', 'Nadia Khan', 'ag-elena', 'va-andre', { phone: '(210) 555-0177', carrier: 'Transamerica', policy: 'TA-5531102', premium: 82.9, sold: 'Oct 27' }),
-  mkClient('cl-agnes', 'Agnes Moore', 'ag-james', 'va-andre', { phone: '(404) 555-0181', state: 'GA', stage: 'closed', attention: 'Lapsed after the save call', carrier: 'Americo', policy: 'AM-2208810', premium: 49, sold: 'Aug 12' }),
-  mkClient('cl-paul', 'Paul Rivera', 'ag-priya', 'va-lily', { phone: '(813) 555-0165', state: 'FL', stage: 'needs_attention', attention: 'Still on the books? Draft on the 4th', carrier: 'Mutual of Omaha', policy: 'MO-4471399', premium: 55.5, sold: 'Nov 4' }),
+  mkClient('cl-gloria', 'Gloria Santos', 'ag-dana', 'va-maya', { city: 'Miami', draft: 3, phone: '(305) 555-0156', state: 'FL', stage: 'working', attention: 'New policy being set up', carrier: 'Americo', product: 'Mortgage Protection 25', policy: 'AM-2209184', premium: 88.4, sold: 'Nov 2' }),
+  mkClient('cl-robert', 'Robert Chen', 'ag-marcus', 'va-keisha', { city: 'Mesa', draft: 14, phone: '(480) 555-0142', state: 'AZ', carrier: 'Foresters', product: 'Strong Foundation', policy: 'FF-7712406', premium: 52.1, sold: 'Oct 14' }),
+  mkClient('cl-luis', 'Luis Ortega', 'ag-priya', 'va-omar', { city: 'Tampa', draft: 1, phone: '(813) 555-0119', state: 'FL', stage: 'working', attention: 'Draft failed on Nov 1: the team is fixing it', carrier: 'Transamerica', product: 'Trendsetter Super 20', policy: 'TA-5530981', premium: 71.25, sold: 'Oct 9' }),
+  mkClient('cl-denise', 'Denise Walker', 'ag-dana', 'va-maya', { city: 'Dallas', draft: 18, phone: '(214) 555-0171', tag: 'Address change in progress', carrier: 'Mutual of Omaha', policy: 'MO-4471188', premium: 47.9, sold: 'Sep 30' }),
+  mkClient('cl-harold', 'Harold Nguyen', 'ag-marcus', 'va-keisha', { city: 'Houston', draft: 5, phone: '(713) 555-0188', stage: 'working', attention: 'New policy being set up', carrier: 'Americo', policy: 'AM-2209377', premium: 96, sold: 'Nov 3' }),
+  mkClient('cl-carla', 'Carla Jones', 'ag-james', 'va-andre', { city: 'Atlanta', draft: 2, phone: '(404) 555-0133', state: 'GA', carrier: 'Foresters', policy: 'FF-7712589', premium: 39.75, sold: 'Oct 2' }),
+  mkClient('cl-renee', 'Renee Ortiz', 'ag-grace', 'va-lily', { city: 'Denver', draft: 20, phone: '(303) 555-0127', state: 'CO', stage: 'needs_attention', attention: 'Still on the books? Draft on the 20th', carrier: 'Transamerica', policy: 'TA-5531044', premium: 58.3, sold: 'Oct 20' }),
+  mkClient('cl-walter', 'Walter Price', 'ag-james', 'va-omar', { city: 'Marietta', draft: 9, phone: '(678) 555-0194', state: 'GA', stage: 'working', attention: 'New policy being set up', carrier: 'Mutual of Omaha', policy: 'MO-4471342', premium: 61, sold: 'Nov 4' }),
+  mkClient('cl-irene', 'Irene Baker', 'ag-priya', 'va-omar', { city: 'Clearwater', draft: 22, phone: '(727) 555-0109', state: 'FL', carrier: 'Americo', policy: 'AM-2209455', premium: 73.6, sold: 'Sep 22' }),
+  mkClient('cl-tom', 'Tom Fischer', 'ag-dana', 'va-maya', { city: 'Austin', draft: 6, phone: '(512) 555-0122', tag: 'Beneficiary change in progress', carrier: 'Foresters', policy: 'FF-7712633', premium: 44.2, sold: 'Oct 6' }),
+  mkClient('cl-nadia', 'Nadia Khan', 'ag-elena', 'va-andre', { city: 'San Antonio', draft: 27, phone: '(210) 555-0177', carrier: 'Transamerica', policy: 'TA-5531102', premium: 82.9, sold: 'Oct 27' }),
+  mkClient('cl-agnes', 'Agnes Moore', 'ag-james', 'va-andre', { city: 'Savannah', draft: 12, phone: '(404) 555-0181', state: 'GA', stage: 'closed', attention: 'Lapsed after the save call', carrier: 'Americo', policy: 'AM-2208810', premium: 49, sold: 'Aug 12' }),
+  mkClient('cl-paul', 'Paul Rivera', 'ag-priya', 'va-lily', { city: 'Tampa', draft: 4, phone: '(813) 555-0165', state: 'FL', stage: 'needs_attention', attention: 'Still on the books? Draft on the 4th', carrier: 'Mutual of Omaha', policy: 'MO-4471399', premium: 55.5, sold: 'Nov 4' }),
 ]
 const mkStep = (id, kind, client, va, o) => ({ id, kind, client_id: client, va_id: va, due: 'Today', late: false, status: 'requested', ...o })
 const seedSteps = [
@@ -499,7 +500,7 @@ export function useAdmVas() {
     const pay = sheet ? sheetTotals(sheet, HOURLY[v.id] || rate) : { hours: 0, pay: 0 }
     const calls = s.calls.filter(c => c.va_id === v.id)
     return {
-      ...v, onShift: (s.rota[s.clock?.today ?? TODAY] || []).includes(v.id), onCall: calls.some(c => c.status === 'live'),
+      ...v, onShift: (s.rota[s.clock?.today ?? TODAY] || []).includes(v.id), onCall: calls.some(c => c.status === 'live'), trained: s.real ? undefined : isTrained(v.name),
       today: { total: calls.length, done: calls.filter(c => ['cancelled', 'no_answer'].includes(c.status)).length, late: calls.filter(c => c.status === 'late').length },
       week: { hours: pay.hours, pay: pay.pay },
       days: WEEK.filter(d => (s.rota[d] || []).includes(v.id)).length,

@@ -156,6 +156,7 @@ export function toClient(p, openSteps = 0) {
     id: p.id, name: `${p.client_first_name || ''} ${p.client_last_name || ''}`.trim() || 'No name', agent_id: p.agent_id, va_id: p.assigned_fulfillment_id || null,
     phone: fmtPhone(p.client_phone), state: p.state || '', carrier: p.carrier_name || '', product: p.product_name || p.product_type || '', policy: p.policy_number || '',
     premium: Number(p.monthly_premium) || 0, stage, sold: shortDate(p.policy_sold_date || p.created_at), real: true,
+    city: p.city || '', draft: Number(p.draft_day) || null,
     attention: stage === 'needs_attention' ? 'Still on the books?' : stage === 'working' ? (p.status === 'lapsed' ? 'Lapsed: the team is on it' : 'Our team is on it') : null,
     tag: openSteps > 0 ? `${openSteps} request${openSteps === 1 ? '' : 's'} in progress` : null,
   }

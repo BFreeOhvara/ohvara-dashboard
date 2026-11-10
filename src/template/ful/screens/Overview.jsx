@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, Check, PhoneCall, MessageSquare, CalendarClock } from 'lucide-react'
+import { ArrowUpRight, Check, PhoneCall, MessageSquare, CalendarClock, GraduationCap } from 'lucide-react'
 import { useFulDay, useFulPay, useFulSource, minutesOf } from '../data'
 import { Avatar, useAccount } from '../../kit'
 import { CountUp, usd } from '../../motion'
@@ -9,6 +9,11 @@ import { CALL_TONE } from '../words'
 import { TrainingTile } from '../../../fulshell/training/Training'
 import { useTraining } from '../../../fulshell/training/store'
 import { MY_SHEET, MY_RATE, hoursOf, weekPay } from '../p879'
+import Chart from '../../Chart'
+import '../../rowbtn936.css'
+import { TRAIN_FIRST } from '../../../lib/trainingGate.js'
+
+const HOUR_SERIES = [{ key: 'h', label: 'Hours', color: 'var(--ox-1)' }]
 
 // P845 — the VA Overview. Same Solvik shape as the agent's (head stats, one dominant tile, a right column, colour
 // carried by a few filled tiles) but VA content. P907: the VA works in bookings. The dominant tile is the next booked
@@ -138,7 +143,7 @@ export default function Overview() {
   const open = day.today.filter(k => !isDone(k))
   const cents = usd(true)
   const hrs = weekPay()
-  const hourDays = MY_SHEET.map(r => ({ day: r.day, name: r.d, h: hoursOf(r) }))
+  const hourDays = MY_SHEET.map(r => ({ day: r.day, name: r.d, h: hoursOf(r), live: r.live }))
   const nextAgent = next?.agent ? next.agent.split(' ')[0] : ''
   useFillScreen(ref, [tr.complete, day.today.length])
 
@@ -146,6 +151,14 @@ export default function Overview() {
     <div ref={ref} className={`tp-page fx-page fx-ovl fs-ov${tr.complete ? ' is-trained' : ''}`}>
       <div className="fx-ovl-main">
         <Tile className="fs-ov-hero" i={0} title="Next call" sub={next ? `${wordOf(next)}${next.agent ? ` · ${nextAgent}'s client` : ''}` : 'No more booked calls today'} to={fp('calendar')} label="Open Calendar">
+          {/* P936: the training gate. No calls are given or booked to a VA until every lesson is done (lib/trainingGate). */}
+          {!tr.complete && (
+            <div className="fs-gate" role="status">
+              <span className="fs-gate-ic" aria-hidden="true"><GraduationCap size={18} /></span>
+              <span className="tp-grow"><b>{TRAIN_FIRST}</b><small>No calls are given or booked to you until training is done · {tr.left} {tr.left === 1 ? 'lesson' : 'lessons'} left</small></span>
+              <Link to={fp('training')} className="tp-primary sm fx-accent">Open training</Link>
+            </div>
+          )}
           {next ? (
             <div className="fs-next">
               <div className="fs-next-l">
@@ -181,14 +194,10 @@ export default function Overview() {
           ) : (
             <Tile className="is-fill is-green fs-ov-pay" i={1} title="Hours this week" sub={`${cents(hrs.pay)} so far · ${cents(MY_RATE)} an hour · paid ${pay.payday}`} to={fp('schedule')} label="Open Schedule">
               <b className="fx-huge tp-num"><CountUp value={hrs.hours} format={n => n.toFixed(1)} /><small>hours</small></b>
-              <div className="fs-minibars" role="img" aria-label={hourDays.map(d => `${d.name} ${d.h.toFixed(1)} hours`).join(', ')}>
-                {hourDays.map(d => (
-                  <span key={d.day}>
-                    <i style={{ '--h': d.h / 11 }}><em style={{ '--h': 1 }} /></i>
-                    <small>{d.name}</small>
-                  </span>
-                ))}
-              </div>
+              <Chart tone="fill" compact yAxis={false} legend={false} height={96} className="fs-hourchart"
+                format={n => `${n.toFixed(1)} h`} series={HOUR_SERIES}
+                label={hourDays.map(d => `${d.name} ${d.h.toFixed(1)} hours`).join(', ')}
+                data={hourDays.map(d => ({ name: d.name, today: !!d.live, h: d.h }))} />
             </Tile>
           )}
           <TrainingTile i={2} />

@@ -9,6 +9,8 @@ import { useGhlRow } from '../useGhlRow'
 import { ap } from '../paths'
 import { adAlerts } from '../p879'
 import { adminTodos, shortCover } from '../todos'
+import Chart from '../../template/Chart'
+import '../../template/rowbtn936.css'
 
 // P849 — the admin Overview: the whole business at a glance on the Solvik shape (head stats, one dominant tile, a
 // right column, colour carried by a few filled tiles). Dominant tile = leads this week as a funnel (in, booked,
@@ -21,6 +23,7 @@ const TODOS_SHOWN = 5 // P934: at least this many; the box shows as many as fit 
 const TODO_ICON = { lead: Shuffle, card: CreditCard, launch: Rocket, cover: CalendarOff, late: Hand, ad: Megaphone }
 const money = usd()
 const cents = usd(true)
+const REV_SERIES = [{ key: 'plans', label: 'Plan fees', color: 'var(--ox-1)' }, { key: 'fee', label: 'Booking desk', color: 'var(--ox-3)' }, { key: 'setup', label: 'Setup fees', color: 'var(--ox-4)' }]
 
 // P858: what the ads cost per lead, per booked and per sale this week, from real spend and real outcomes. Until
 // GoHighLevel's ad spend is connected, the engine slot.
@@ -69,30 +72,15 @@ function Todo({ t, i }) {
   )
 }
 
-// P913 — this week as a clean grid: one equal cell per day, Mon to Sun, with the bar inside. A day with no data yet is
-// the same empty cell (no dashed blobs). Leads this week: came in, with the sold part. Revenue this week: the same.
-function WeekGrid({ cells, label }) {
+// P936 — this week as the one chart (src/template/Chart.jsx): stacked Sold on Came in per day, rounded bars that grow
+// in, values in the tooltip. Days still to come are a faint label on the axis, never an empty box.
+const LEAD_SERIES = [{ key: 'sold', label: 'Sold', color: 'var(--ox-1)' }, { key: 'rest', label: 'Came in', color: 'var(--ox-2)' }]
+const leadRows = day => day.byDay.map(d => ({ name: d.name, later: d.later, today: d.day === day.today, sold: d.sold, rest: Math.max(0, d.in - d.sold), in: d.in }))
+function DayBars({ day, height = 150 }) {
   return (
-    <ol className="adm-weekgrid" role="img" aria-label={label}>
-      {cells.map((c, i) => (
-        <li key={c.key} className={c.today ? 'is-today' : ''} style={{ '--i': i }}>
-          <b className="tp-num">{c.later ? '' : c.text}</b>
-          <span className="adm-wg-bar" aria-hidden="true"><i style={{ '--h': c.h }}><em style={{ '--h': c.part }} /></i></span>
-          <small>{c.name}</small>
-        </li>
-      ))}
-    </ol>
-  )
-}
-const leadCells = (day, top) => day.byDay.map(d => ({
-  key: d.day, name: d.name, later: d.later, today: d.day === day.today, text: d.in, h: d.later ? 0 : d.in / top, part: d.in ? d.sold / d.in : 0,
-}))
-function DayBars({ day, top }) {
-  return (
-    <>
-      <WeekGrid cells={leadCells(day, top)} label={day.byDay.map(d => `${d.name}: ${d.later ? 'not yet' : `${d.in} in, ${d.sold} sold`}`).join('. ')} />
-      <div className="fx-key"><span><i className="adm-k is-sold" />Sold</span><span><i className="adm-k is-in" />Came in</span></div>
-    </>
+    <Chart data={leadRows(day)} series={LEAD_SERIES} stacked height={height} className="adm-daychart"
+      label={day.byDay.map(d => `${d.name}: ${d.later ? 'not yet' : `${d.in} in, ${d.sold} sold`}`).join('. ')}
+      tip={r => [['Came in', r.in, 'var(--ox-2)'], ['Sold', r.sold, 'var(--ox-1)']]} />
   )
 }
 
@@ -111,8 +99,6 @@ export default function Overview() {
   const fit = useTodoFit(todoBox, allTodos)
   const w = day.week
   const steps = [['in', 'Came in', w.in], ['booked', 'Booked', w.booked], ['transferred', 'Live calls', w.transferred], ['sold', 'Sold', w.sold]]
-  const top = Math.max(4, ...day.byDay.map(d => d.in))
-  const revTop = Math.max(1, ...m.days.map(x => x.revenue))
   const k = n => (n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : money(n))
   const ahead = Object.keys(rota.rota || {}).map(Number).filter(d => Number.isFinite(d) && d >= day.today).sort((a, b) => a - b).slice(0, 10)
   const cover = shortCover({ rota: rota.rota, dayOff: rota.dayOff, days: ahead, min: SHIFT_MIN, nameOf: id => (vas.find(v => v.id === id)?.name || 'A VA').split(' ')[0] })
@@ -140,7 +126,7 @@ export default function Overview() {
               </li>
             ))}
           </ol>
-          <DayBars day={day} top={top} />
+          <DayBars day={day} />
           <CostLine costs={costs} row={row} />
         </Tile>
 
@@ -180,14 +166,17 @@ export default function Overview() {
 
           <Tile className="is-fill is-green adm-ov-rev" i={2} icon={Landmark} title="Revenue this week" sub={`Plans ${money(m.plans)} · booking desk ${money(m.leadFee)} · setup ${money(m.setup)}`} to={ap('billing')} label="Open Revenue">
             <b className="fx-huge tp-money"><CountUp value={m.total} format={money} /></b>
-            <WeekGrid label={m.days.map(x => `${x.name}: ${x.later ? 'not yet' : money(x.revenue)}`).join(', ')}
-              cells={m.days.map(x => ({ key: x.day, name: x.name, later: x.later, today: x.isToday, text: k(x.revenue), h: x.later ? 0 : x.revenue / revTop, part: x.revenue ? x.plans / x.revenue : 0 }))} />
+            <Chart tone="fill" stacked compact height={112} format={k} className="adm-revchart"
+              label={m.days.map(x => `${x.name}: ${x.later ? 'not yet' : money(x.revenue)}`).join(', ')}
+              data={m.days.map(x => ({ name: x.name, later: x.later, today: x.isToday, plans: x.plans, fee: x.fee, setup: x.setup || 0, total: x.revenue }))}
+              series={REV_SERIES} yAxis={false}
+              tip={r => [...REV_SERIES.map(s => [s.label, money(r[s.key]), s.color]), ['Total', money(r.total)]]} />
             <small className="adm-note">{money(m.lastWeek)} last week · lead spend ({money(m.leadSpend)}) passes to Meta and isn't counted · {day.real ? 'from billing' : 'sample prices'}</small>
           </Tile>
       </div>
 
       <Tile className="adm-ov-days" i={5} title="Leads by day" sub="This week, Monday to today">
-        <DayBars day={day} top={top} />
+        <DayBars day={day} height={190} />
       </Tile>
 
       <Tile className="adm-ov-agents" i={6} icon={Users} title="Agents" sub={`${day.onDuty.length} taking live transfers now · ${agents.length} in all`} to={ap('agents')} label="Open Agents">

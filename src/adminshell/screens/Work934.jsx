@@ -5,15 +5,13 @@ import { Seg, Chip, Avatar, Empty, useNote } from '../../template/kit'
 import { BUG_STATUS } from '../../template/bugReport'
 import '../../template/reportbug.css'
 import '../../template/settings929.css'
-import { WordingToApprove } from './Wording924'
-import TrainingAdmin from './TrainingAdmin'
 import { Compliance } from './Compliance879'
 import { DeedstoneNumbers } from './Numbers916'
-import { CarrierPlaybookAdmin, HoldLineSettings } from './Playbook932'
 
 // P934 (Brayden, Nov 10): the admin's working pages left Settings for their own page on the left rail, so Settings is
 // only things that are set: Bug reports, Deedstone numbers (and the VA pods), Wording to approve, Training and
 // Compliance, plus P932's Carrier playbook. Each is the same section it was; old Settings links (?tab=bugs ...) land here (Settings.jsx MOVED).
+// P936: Training, Wording to approve and Carrier playbook left the rail (paths.js ADM_OLD sends their old addresses to Overview).
 const Page = ({ label, children }) => (
   <div className="tp-page adm-work">
     <section className="fx-tile fx-panel" aria-label={label}><div className="fx-form">{children}</div></section>
@@ -51,8 +49,5 @@ export function BugsPage() {
 }
 
 // The numbers page also holds the P932 hold line (its music and the AI front desk), the same phone lines.
-export const NumbersPage = () => <Page label="Deedstone numbers"><DeedstoneNumbers /><HoldLineSettings /></Page>
-export const PlaybookPage = () => <Page label="Carrier playbook"><CarrierPlaybookAdmin /></Page>
-export const WordingPage = () => <Page label="Wording to approve"><WordingToApprove /></Page>
-export const TrainingPage = () => <Page label="Training"><TrainingAdmin /></Page>
+export const NumbersPage = () => <Page label="Deedstone numbers"><DeedstoneNumbers /></Page>
 export const CompliancePage = () => <Page label="Compliance"><Compliance /></Page>

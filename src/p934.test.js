@@ -49,6 +49,8 @@ test('Settings: one row of tabs, working pages on the rail, old links land where
   for (const k of ['bugs', 'numbers', 'wording', 'training', 'compliance', 'split', 'switches']) assert.ok(!tabs.includes(`['${k}'`), k)
   assert.match(s, /MOVED\[asked\]/)
   const f = src('./adminshell/AdminFrame.jsx')
-  for (const k of ['bugs', 'numbers', 'wording', 'training', 'compliance']) assert.ok(f.includes(`ap('${k}')`), k)
+  for (const k of ['bugs', 'numbers', 'compliance']) assert.ok(f.includes(`ap('${k}')`), k)
+  // P936: Training, Wording to approve and Carrier playbook left the rail.
+  for (const k of ['wording', 'training', 'playbook']) assert.ok(!f.includes(`ap('${k}')`), k)
   assert.doesNotMatch(src('./adminshell/screens/Clients.jsx'), /PillTabs label="Clients and servicing"/)
 })

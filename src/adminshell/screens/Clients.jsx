@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Search, MessageSquare, Phone, FileText, Hand, Eye, Tag } from 'lucide-react'
+import { Search, MessageSquare, FileText, Hand, Eye, Tag } from 'lucide-react'
 import { useAdmClients, useAdmAgents, useAdmVas, useAdmActions } from '../data'
 import { Avatar, Chip, Empty, Switch, useNote } from '../../template/kit'
 import { FilterPills } from '../../template/FilterPills'
@@ -9,6 +9,9 @@ import { usd } from '../../template/motion'
 import { Dropdown, DField } from '../kit'
 import { ap } from '../paths'
 import { CLIENT_STAGE, CLIENT_ORDER } from '../words'
+import { ordinal } from '../../lib/clientCheck.js'
+import { canTakeCalls } from '../../lib/trainingGate.js'
+import '../../template/p911.css'
 
 // P934: one Clients list (the Servicing switch is gone: every client is serviced, and the status pills show where each
 // stands). A client's open steps and who has them are on the card and in the drawer, where a step can be given to
@@ -20,6 +23,11 @@ import { CLIENT_STAGE, CLIENT_ORDER } from '../words'
 // (an address change...) is a tag on the card, not a status.
 const money = usd(true)
 const STAGE_ORDER = CLIENT_ORDER
+// P936: admin client cards match the agent's (P911): carrier · city, state, "Drafts the 12th", sold date, where it
+// stands, the agent. No monthly premium on a card; the drawer shows it only if it was entered.
+const whereOf = c => [c.carrier, [c.city, c.state].filter(Boolean).join(', ')].filter(Boolean).join(' · ')
+const STAND = { working: 'Working', needs_attention: 'Monthly check', protected: 'Protected', closed: 'Closed' }
+const standText = c => c.attention || (c.steps.length ? `${c.steps[0].kind}${c.steps.length > 1 ? ` +${c.steps.length - 1}` : ''} with ${(c.va || 'the team').split(' ')[0]}${c.steps.some(x => x.late) ? ' · late' : ''}` : c.tag) || 'Nothing needed'
 
 function ClientDrawer({ id, onClose }) {
   const { data: clients } = useAdmClients()
@@ -35,7 +43,7 @@ function ClientDrawer({ id, onClose }) {
         <div className="fx-hero-top"><span className="fx-when"><Eye size={13} aria-hidden="true" />View only</span><Chip tone={tone}>{word}</Chip></div>
         <h2>{c.name}</h2>
         <p><FileText size={13} aria-hidden="true" />{c.carrier} · {c.product} · {c.policy}</p>
-        <div className="fx-hero-bot"><b className="fx-hero-big tp-money">{money(c.premium)}<small> a month</small></b><Avatar name={c.name} tone={tone} /></div>
+        <div className="fx-hero-bot">{c.premium > 0 ? <b className="fx-hero-big tp-money">{money(c.premium)}<small> a month</small></b> : <b className="fx-hero-big">Sold {c.sold}</b>}<Avatar name={c.name} tone={tone} /></div>
       </>}
       actions={<>
         <Link to={`${ap('messages')}?to=${c.agent_id}`} className="tp-primary fx-accent"><MessageSquare size={16} />Message {c.agent.split(' ')[0]}</Link>
@@ -52,7 +60,7 @@ function ClientDrawer({ id, onClose }) {
         <ul className="tp-list">{c.steps.map(s => (
           <li key={s.id} className="fx-mrow adm-cstep"><Hand size={15} aria-hidden="true" /><span className="tp-grow"><b>{s.kind}</b><small>{s.due}</small></span>
             <Chip tone={s.late ? 'warn' : 'blue'}>{s.late ? 'Late' : s.status === 'scheduled' ? 'Scheduled' : 'Asked'}</Chip>
-            <DField label="With"><Dropdown className="adm-dd-sm" label={`${s.kind} for ${c.name} is with`} value={s.va_id} options={vas.map(v => ({ value: v.id, label: v.name, sub: v.onShift ? 'On shift today' : 'Off today' }))}
+            <DField label="With"><Dropdown className="adm-dd-sm" label={`${s.kind} for ${c.name} is with`} value={s.va_id} options={vas.filter(v => canTakeCalls(v) || v.id === s.va_id).map(v => ({ value: v.id, label: v.name, sub: v.onShift ? 'On shift today' : 'Off today' }))}
               onChange={v => { giveStep(s.id, v); note(`${s.kind} given to ${vas.find(x => x.id === v).name}`) }} /></DField>
           </li>
         ))}</ul>
@@ -78,7 +86,6 @@ export default function Clients() {
   const pool = closed ? clients : open
   const shown = pool.filter(c => (agent === 'all' || c.agent_id === agent) && (stage === 'all' || c.stage === stage) && (!n || `${c.name} ${c.phone} ${c.agent} ${c.carrier} ${c.policy}`.toLowerCase().includes(n)))
     .sort((a, b) => [...STAGE_ORDER, 'closed'].indexOf(a.stage) - [...STAGE_ORDER, 'closed'].indexOf(b.stage))
-  const total = shown.reduce((t, c) => t + c.premium, 0)
   return (
     <div className="tp-page fx-page adm-clients">
       <div className="fx-tools">
@@ -93,20 +100,20 @@ export default function Clients() {
         {shown.map((c, i) => {
           const [tone, word] = CLIENT_STAGE[c.stage]
           return (
-            <article key={c.id} className={`fx-card fx-ccard is-${tone}`} style={{ '--i': i }}>
+            <article key={c.id} className={`fx-card fx-ccard ck-card adm-ccard is-${tone}`} style={{ '--i': i }}>
               <Link to={ap('clients', c.id)} className="fx-cover" aria-label={`Open ${c.name}`} />
-              <div className="fx-lcard-top"><span className="fx-kind">{word}</span><span className="fx-tag">{c.agent.split(' ')[0]}</span></div>
+              <div className="fx-ccard-top"><Avatar name={c.name} tone={tone} /><span className="fx-tag">{word}</span></div>
               <h3>{c.name}</h3>
-              <p>{c.carrier} · {c.policy}</p>
-              {c.tag && <small className="adm-ctag"><Tag size={11} aria-hidden="true" /> {c.tag}</small>}
-              {c.steps.length > 0 && <small className={`adm-ctag adm-csteps${c.steps.some(x => x.late) ? ' is-late' : ''}`}><Hand size={11} aria-hidden="true" /> {c.steps[0].kind}{c.steps.length > 1 ? ` +${c.steps.length - 1}` : ''} · {c.va.split(' ')[0]}{c.steps.some(x => x.late) ? ' · late' : ''}</small>}
-              <div className="fx-ccard-bot"><span className="tp-money">{money(c.premium)}/mo</span><span className="adm-came"><Phone size={12} aria-hidden="true" />{c.phone}</span></div>
+              <p className="ck-where">{whereOf(c) || 'Details to be added'}</p>
+              <p className="ck-dates">{c.draft ? <span>Drafts the <b>{ordinal(Number(c.draft))}</b></span> : <span>Draft day not set</span>}<span>Sold {c.sold}</span></p>
+              <div className={`ck-stand is-${c.stage}`}><small>{STAND[c.stage] || word}</small><span>{standText(c)}</span></div>
+              <div className="fx-ccard-bot adm-ccard-bot"><span className="adm-cagent"><Avatar name={c.agent} /><span>{c.agent}</span></span></div>
             </article>
           )
         })}
         {shown.length === 0 && <Empty title="No client" sub="No client matches that." />}
       </div>
-      <p className="tp-sub adm-hint">{shown.length} clients · {money(total)} a month in premium · view only</p>
+      <p className="tp-sub adm-hint">{shown.length} clients · view only</p>
       {id && <ClientDrawer id={id} onClose={() => navigate(ap('clients'))} />}
     </div>
   )

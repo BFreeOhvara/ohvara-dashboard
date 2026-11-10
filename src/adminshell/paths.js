@@ -18,13 +18,12 @@ export const ADM = {
   // P934: the working pages that left Settings for the rail (screens/Work934.jsx).
   bugs: '/admin/bugs',
   numbers: '/admin/numbers',
-  wording: '/admin/wording',
-  training: '/admin/training',
   compliance: '/admin/compliance',
-  playbook: '/admin/playbook',
 }
 // Old admin addresses that now land on a page of the shell (Users is a Settings section, Payouts a Billing tab).
-export const ADM_OLD = { users: '/admin/users', payouts: '/admin/payouts', more: '/admin/more' }
+// P936: Training, Wording to approve and Carrier playbook left the rail; their addresses land on Overview.
+export const ADM_GONE = ['wording', 'training', 'playbook']
+export const ADM_OLD = { users: '/admin/users', payouts: '/admin/payouts', more: '/admin/more', wording: '/admin/wording', training: '/admin/training', playbook: '/admin/playbook' }
 
 // Pages whose records open in a drawer at their own address (/admin/agents/:id, /admin/setup/:id ...).
 const RECORD_PAGES = ['agents', 'setup', 'team', 'leads', 'clients']
@@ -54,6 +53,7 @@ export function admPageOf(pathname) {
   if (p === ADM.overview) return 'overview'
   if (p === ADM_OLD.users || p === ADM_OLD.more) return 'settings'
   if (p === ADM_OLD.payouts) return 'billing'
+  if (ADM_GONE.some(k => p === ADM_OLD[k])) return 'overview'
   for (const [key, base] of Object.entries(ADM)) {
     if (key === 'overview') continue
     if (p === base) return key
@@ -108,13 +108,13 @@ export const ADM_TABS = [
   ['overview', 'Overview'], ['agents', 'Agents'], ['team', 'Fulfillment'], ['leads', 'Leads'], ['clients', 'Clients'], ['setup', 'Setup'], ['billing', 'Revenue'],
 ]
 // Every page's short name (tabs, the phone bar, search), including the rail-only pages.
-export const ADM_LABELS = { ...Object.fromEntries(ADM_TABS), messages: 'Messages', settings: 'Settings', connect: 'Connect', bugs: 'Bug reports', numbers: 'Deedstone numbers', wording: 'Wording to approve', training: 'Training', compliance: 'Compliance', playbook: 'Carrier playbook' }
+export const ADM_LABELS = { ...Object.fromEntries(ADM_TABS), messages: 'Messages', settings: 'Settings', connect: 'Connect', bugs: 'Bug reports', numbers: 'Deedstone numbers', compliance: 'Compliance' }
 
 const TITLES = {
   overview: ['The business', 'Overview'], agents: ['Who sells', 'Agents'], setup: ['Paid agents to live', 'Setup'], team: ['Who serves', 'Fulfillment team'],
   leads: ['Every agent', 'Leads'], clients: ['Every book', 'Clients'], billing: ['In, out and split', 'Revenue'],
   messages: ['Admin lines', 'Messages'], settings: ['Run the portal', 'Settings'], connect: ['Plug it in', 'Connect'],
-  bugs: ['What people sent', 'Bug reports'], numbers: ['Lines and pods', 'Deedstone numbers'], wording: ['Before it goes out', 'Wording to approve'],
-  training: ['What VAs learn', 'Training'], compliance: ['Kept on record', 'Compliance'], playbook: ['How each carrier works', 'Carrier playbook'],
+  bugs: ['What people sent', 'Bug reports'], numbers: ['Lines and pods', 'Deedstone numbers'],
+  compliance: ['Kept on record', 'Compliance'],
 }
 export const admTitleOf = page => TITLES[page] || TITLES.overview

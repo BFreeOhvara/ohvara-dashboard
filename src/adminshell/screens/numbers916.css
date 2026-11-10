@@ -46,3 +46,41 @@
 .dn-pod small { font-size: 12.5px; }
 .dn-pod b { color: var(--ov-hi); font-weight: 600; }
 .dn-pod-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* P936 — Lines & pods: one card per number (number, its VAs, calls today, Change VAs); the rest in a slide-in. */
+.dn-head .dn-head-acts { margin-left: auto; display: inline-flex; gap: 8px; flex-wrap: wrap; }
+.dn-head .dn-head-acts > button { display: inline-flex; align-items: center; gap: 6px; }
+.dn-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.dn-card { position: relative; display: flex; flex-direction: column; gap: 14px; padding: 16px; border-radius: 16px; min-width: 0;
+  border: 1px solid var(--ov-line); background: color-mix(in srgb, var(--ov-hi) 3%, transparent);
+  transition: transform .18s var(--fx-ease), border-color .18s var(--fx-ease), background-color .18s var(--fx-ease), opacity .2s var(--fx-ease);
+  animation: dn-in .42s var(--fx-ease) both; animation-delay: calc(var(--i, 0) * 50ms); }
+.dn-card:hover { border-color: color-mix(in srgb, var(--ov-hi) 18%, transparent); background: color-mix(in srgb, var(--ov-hi) 5%, transparent); transform: translateY(-1px); }
+.dn-card:active { transform: translateY(0); }
+.dn-card.is-off { opacity: .6; }
+.dn-card-open { position: absolute; inset: 0; z-index: 0; border: 0; padding: 0; border-radius: inherit; background: transparent; cursor: pointer; }
+.dn-card-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dn-card > :not(.dn-card-open) { position: relative; z-index: 1; pointer-events: none; }
+.dn-card .dn-change { pointer-events: auto; }
+.dn-num { font-family: var(--font-mono); font-size: 17px; font-weight: 600; color: var(--ov-hi); }
+.dn-avs { display: flex; align-items: center; min-width: 0; }
+.dn-avs .tp-av { margin-left: -6px; box-shadow: 0 0 0 2px var(--sh-surface, var(--bg-surface)); }
+.dn-avs .tp-av:first-child { margin-left: 0; }
+.dn-avs small { margin-left: 10px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; color: var(--ov-mid); }
+.dn-av-none { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; color: var(--ov-mute); border: 1px dashed var(--ov-line); }
+.dn-card-foot { display: flex; align-items: flex-end; gap: 10px; }
+.dn-today-n { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; }
+.dn-today-n b { font-family: var(--font-mono); font-size: 26px; line-height: 1.1; font-weight: 600; color: var(--ov-hi); }
+.dn-card.is-hot .dn-today-n b { color: var(--ov-warn); }
+.dn-today-n small { font-size: 12px; color: var(--ov-mute); }
+.dn-detail { display: flex; flex-direction: column; gap: 14px; }
+.dn-detail .fx-h3 { display: flex; align-items: center; gap: 8px; margin: 4px 0 0; }
+.dn-detail .dn-add { grid-template-columns: minmax(0, 1fr); }
+.dn-detail .dn-limits .tp-field { flex: 1 1 100%; }
+.dn-detail-state { align-items: center; gap: 10px; }
+.dn-pod-list { display: flex; flex-direction: column; gap: 8px; }
+.dn-pod-list li { display: flex; align-items: center; gap: 10px; }
+.dn-pod-edit { display: flex; flex-direction: column; gap: 10px; }
+.dn-pod-acts { gap: 8px; justify-content: flex-end; }
+@keyframes dn-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .dn-card { animation: none; transition: none; } }
