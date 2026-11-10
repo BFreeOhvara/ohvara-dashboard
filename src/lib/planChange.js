@@ -1,5 +1,5 @@
 // P921 — Plan changes are paid fairly (Brayden, Nov 9). No imports, so Deno, the screens and the tests share it, and
-// supabase/migrations/p921_plan_change.sql does the same sums (src/p921.test.js checks them against each other).
+// supabase/migrations/257_plan_change.sql does the same sums (src/p921.test.js checks them against each other).
 //
 //   Moving up (Starter → Growth → Pro): the prorated difference is charged now for the days left in this billing
 //   month: (new price − old price) × days left ÷ days in the month, rounded to the cent. The higher band opens only

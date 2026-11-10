@@ -1,4 +1,4 @@
--- p921_plan_change.sql (Prompt 921, NOT APPLIED: needs Brayden's yes; gets the next free number when applied, Brayden Nov 9 17:16): plan changes are paid fairly.
+-- 257_plan_change (Prompt 921, Brayden Nov 9 17:16; applied on live Nov 9 with Brayden's yes): plan changes are paid fairly.
 --
 -- Before: a plan followed the daily spend band and changed "from the next bill" (P884/P920), so an agent could move
 -- to Pro, spend up to $500 a day for the rest of the month and pay Pro only from next month. Lead spend itself was

@@ -69,7 +69,7 @@ test('moving down: from the next bill, nothing charged; same plan with one pendi
 })
 
 test('the database does the same sums, and the band is closed until the upgrade is paid', () => {
-  const sql = read('../supabase/migrations/p921_plan_change.sql')
+  const sql = read('../supabase/migrations/257_plan_change.sql')
   assert.match(sql, /round\(\(\(t->>'monthly_cents'\)::int - \(cur->>'monthly_cents'\)::int\)::numeric \* \(m->>'left'\)::int \/ \(m->>'days'\)::int\)/)
   assert.match(sql, /if c\.kind <> 'plan_upgrade' then return lead_spend_charge_result_p910/)
   assert.match(sql, /perform billing_plan_apply\(c\.agent_id, c\.tier_to, c\.plan_daily_cents/)

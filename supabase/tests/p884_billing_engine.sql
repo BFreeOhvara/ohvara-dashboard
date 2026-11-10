@@ -190,7 +190,7 @@ select public.admin_billing_setup_set('a8840000-0000-4000-8000-00000000000a', 'n
 select pg_temp.as_owner();
 select is((public.agent_membership_due('a8840000-0000-4000-8000-00000000000a'))->>'setup_cents', '0', 'i10 or none, with a minimum term');
 select pg_temp.as_user('a8840000-0000-4000-8000-00000000000a');
--- P921 (p921_plan_change): the plan no longer follows the spend. Over the plan's band is refused (switch plan first);
+-- P921 (257_plan_change): the plan no longer follows the spend. Over the plan's band is refused (switch plan first);
 -- a move down waits for the next bill.
 select throws_ok($$ select public.lead_spend_set(10000, 5000) $$, 'P0001', null, 'i11 A can''t raise to $150 a day on Growth');
 select is((public.billing_plan_change('starter'))->>'direction', 'down', 'i12 A moves down to Starter');
