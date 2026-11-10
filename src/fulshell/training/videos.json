@@ -74,8 +74,8 @@
    "helpAt": {
     "booking": 41.8
    },
-   "sizeBytes": 5553290,
-   "builtAt": "2026-11-10T00:13:53.946Z"
+   "sizeBytes": 5524881,
+   "builtAt": "2026-11-10T02:36:38.830Z"
   },
   "callbacks": {
    "kind": "walkthrough",
@@ -134,8 +134,8 @@
    "helpAt": {
     "callback": 23.7
    },
-   "sizeBytes": 5465970,
-   "builtAt": "2026-11-10T00:14:33.065Z"
+   "sizeBytes": 5385720,
+   "builtAt": "2026-11-10T02:35:53.142Z"
   },
   "carrier": {
    "kind": "walkthrough",
@@ -238,8 +238,8 @@
    "helpAt": {
     "carrier_call": 124.7
    },
-   "sizeBytes": 7997512,
-   "builtAt": "2026-11-09T23:55:44.728Z"
+   "sizeBytes": 8021763,
+   "builtAt": "2026-11-10T02:39:10.010Z"
   },
   "changes": {
    "kind": "walkthrough",
@@ -332,13 +332,13 @@
     }
    ],
    "helpAt": {
+    "draft_date_change": 12.1,
     "address_change": 25,
     "beneficiary_change": 139.3,
-    "annual_review": 158,
-    "draft_date_change": 12.1
+    "annual_review": 158
    },
-   "sizeBytes": 7434890,
-   "builtAt": "2026-11-10T00:17:47.163Z"
+   "sizeBytes": 7559189,
+   "builtAt": "2026-11-10T02:46:32.465Z"
   },
   "checkins": {
    "kind": "explainer",
@@ -403,8 +403,8 @@
     }
    ],
    "helpAt": {},
-   "sizeBytes": 7280398,
-   "builtAt": "2026-11-10T00:45:32.695Z"
+   "sizeBytes": 7280190,
+   "builtAt": "2026-11-10T02:47:16.023Z"
   },
   "desk": {
    "kind": "explainer",
@@ -467,13 +467,13 @@
    "helpAt": {
     "dayoff": 66.1
    },
-   "sizeBytes": 7313966,
-   "builtAt": "2026-11-10T00:47:27.004Z"
+   "sizeBytes": 7313673,
+   "builtAt": "2026-11-10T02:50:15.633Z"
   },
   "escalate": {
    "kind": "explainer",
    "title": "When to escalate, and to whom",
-   "duration": 164.2,
+   "duration": 155.9,
    "src": "escalate.mp4",
    "poster": "escalate-poster.jpg",
    "captions": "escalate.captions.json",
@@ -513,26 +513,22 @@
     },
     {
      "t": 87.7,
-     "label": "The exact wording is a draft"
-    },
-    {
-     "t": 96.1,
      "label": "Stay calm"
     },
     {
-     "t": 104.6,
+     "t": 96.2,
      "label": "Threats and legal claims"
     },
     {
-     "t": 116.1,
+     "t": 107.7,
      "label": "A caller threatens a complaint"
     },
     {
-     "t": 126.9,
+     "t": 118.5,
      "label": "Recap"
     },
     {
-     "t": 157.9,
+     "t": 149.5,
      "label": "Now take the check"
     }
    ],
@@ -540,13 +536,13 @@
     "conversion": 17,
     "claim_help": 11
    },
-   "sizeBytes": 7471373,
-   "builtAt": "2026-11-10T01:04:42.705Z"
+   "sizeBytes": 7045808,
+   "builtAt": "2026-11-10T02:55:39.407Z"
   },
   "inbound": {
    "kind": "walkthrough",
    "title": "Answering a call that comes in",
-   "duration": 150.1,
+   "duration": 157,
    "src": "inbound.mp4",
    "poster": "inbound-poster.jpg",
    "captions": "inbound.captions.json",
@@ -561,63 +557,63 @@
      "label": "Your phone"
     },
     {
-     "t": 16.1,
+     "t": 23,
      "label": "A call comes in"
     },
     {
-     "t": 23.8,
+     "t": 30.7,
      "label": "Answer"
     },
     {
-     "t": 36.1,
+     "t": 43,
      "label": "Calling is off for now"
     },
     {
-     "t": 46,
+     "t": 52.9,
      "label": "The greeting"
     },
     {
-     "t": 58.7,
+     "t": 65.6,
      "label": "What they need"
     },
     {
-     "t": 71.2,
+     "t": 78.2,
      "label": "Her record"
     },
     {
-     "t": 80.8,
+     "t": 87.8,
      "label": "Ask before a hold"
     },
     {
-     "t": 91.4,
+     "t": 98.4,
      "label": "Add her agent"
     },
     {
-     "t": 99,
+     "t": 105.9,
      "label": "Merge"
     },
     {
-     "t": 104.8,
+     "t": 111.7,
      "label": "Sliding away never hangs up"
     },
     {
-     "t": 115.3,
+     "t": 122.3,
      "label": "Hang up: the red button"
     },
     {
-     "t": 123.8,
+     "t": 130.7,
      "label": "Recap"
     },
     {
-     "t": 142.9,
+     "t": 149.8,
      "label": "Now take the check"
     }
    ],
    "helpAt": {
-    "answer": 23.8
+    "answer": 30.7
    },
-   "sizeBytes": 6466572,
-   "builtAt": "2026-11-10T00:20:38.298Z"
+   "sizeBytes": 6719258,
+   "builtAt": "2026-11-10T02:57:54.986Z"
   },
   "logging": {
    "kind": "walkthrough",
@@ -689,13 +685,13 @@
     "dialer": 12.3,
     "logging": 42.2
    },
-   "sizeBytes": 6229810,
-   "builtAt": "2026-11-10T00:24:58.966Z"
+   "sizeBytes": 6198580,
+   "builtAt": "2026-11-10T03:01:52.141Z"
   },
   "never": {
    "kind": "explainer",
    "title": "What never to say",
-   "duration": 171.6,
+   "duration": 163.2,
    "src": "never.mp4",
    "poster": "never-poster.jpg",
    "captions": "never.captions.json",
@@ -747,33 +743,29 @@
     },
     {
      "t": 121.4,
-     "label": "The exact wording is a draft"
-    },
-    {
-     "t": 129.8,
      "label": "Send to agent"
     },
     {
-     "t": 138.6,
+     "t": 130.2,
      "label": "The one phrase to remember"
     },
     {
-     "t": 147.5,
+     "t": 139.2,
      "label": "Recap"
     },
     {
-     "t": 165.4,
+     "t": 157,
      "label": "Now take the check"
     }
    ],
    "helpAt": {},
-   "sizeBytes": 7973382,
-   "builtAt": "2026-11-10T01:00:32.077Z"
+   "sizeBytes": 7484318,
+   "builtAt": "2026-11-10T03:07:29.822Z"
   },
   "optout": {
    "kind": "explainer",
    "title": "Opt-outs and do-not-call",
-   "duration": 162.5,
+   "duration": 154.2,
    "src": "optout.mp4",
    "poster": "optout-poster.jpg",
    "captions": "optout.captions.json",
@@ -797,44 +789,40 @@
     },
     {
      "t": 47,
-     "label": "The exact wording is a draft"
-    },
-    {
-     "t": 55.4,
      "label": "Rule 1: Never try to change their mind"
     },
     {
-     "t": 65.5,
+     "t": 57.1,
      "label": "Do not call"
     },
     {
-     "t": 87.6,
+     "t": 79.2,
      "label": "Not on a call"
     },
     {
-     "t": 95.5,
+     "t": 87.1,
      "label": "When they text STOP"
     },
     {
-     "t": 108.5,
+     "t": 100.1,
      "label": "Rule 2: Never opt anyone back in"
     },
     {
-     "t": 124.5,
+     "t": 116.1,
      "label": "Quiet hours"
     },
     {
-     "t": 134.3,
+     "t": 125.9,
      "label": "Recap"
     },
     {
-     "t": 155.7,
+     "t": 147.3,
      "label": "Now take the check"
     }
    ],
    "helpAt": {},
-   "sizeBytes": 7318223,
-   "builtAt": "2026-11-10T00:59:52.076Z"
+   "sizeBytes": 6899194,
+   "builtAt": "2026-11-10T03:08:40.979Z"
   },
   "packets": {
    "kind": "walkthrough",
@@ -918,8 +906,8 @@
     "packet_check": 31,
     "review_call": 133.5
    },
-   "sizeBytes": 7748710,
-   "builtAt": "2026-11-10T00:27:51.143Z"
+   "sizeBytes": 7675540,
+   "builtAt": "2026-11-10T03:11:18.677Z"
   },
   "payments": {
    "kind": "walkthrough",
@@ -1003,13 +991,13 @@
     "payment_change": 10,
     "chargeback_watch": 124.3
    },
-   "sizeBytes": 7174748,
-   "builtAt": "2026-11-10T00:28:37.894Z"
+   "sizeBytes": 7195182,
+   "builtAt": "2026-11-10T03:17:02.016Z"
   },
   "reminders": {
    "kind": "explainer",
    "title": "Reminders, no-shows and rebooks",
-   "duration": 153.4,
+   "duration": 145,
    "src": "reminders.mp4",
    "poster": "reminders-poster.jpg",
    "captions": "reminders.captions.json",
@@ -1037,41 +1025,37 @@
     },
     {
      "t": 70.9,
-     "label": "The exact wording is a draft"
-    },
-    {
-     "t": 79.3,
      "label": "Keep it warm"
     },
     {
-     "t": 90.2,
+     "t": 81.9,
      "label": "Reached, or not"
     },
     {
-     "t": 101.9,
+     "t": 93.5,
      "label": "Our own missed calls"
     },
     {
-     "t": 114.2,
+     "t": 105.8,
      "label": "Your week on the Calendar"
     },
     {
-     "t": 122.5,
+     "t": 114.1,
      "label": "Recap"
     },
     {
-     "t": 142.3,
+     "t": 134,
      "label": "Now try it"
     }
    ],
    "helpAt": {},
-   "sizeBytes": 6779779,
-   "builtAt": "2026-11-10T00:47:28.421Z"
+   "sizeBytes": 6517729,
+   "builtAt": "2026-11-10T03:18:33.067Z"
   },
   "saves": {
    "kind": "explainer",
    "title": "Cancellation saves",
-   "duration": 156.8,
+   "duration": 150.8,
    "src": "saves.mp4",
    "poster": "saves-poster.jpg",
    "captions": "saves.captions.json",
@@ -1095,42 +1079,38 @@
     },
     {
      "t": 45.7,
-     "label": "The exact wording is a draft"
-    },
-    {
-     "t": 54.1,
      "label": "Fix it, or book the agent"
     },
     {
-     "t": 70,
+     "t": 63.4,
      "label": "A payment problem"
     },
     {
-     "t": 81.4,
+     "t": 74.8,
      "label": "A client says it’s too expensive"
     },
     {
-     "t": 95.2,
+     "t": 88.6,
      "label": "Never pressure"
     },
     {
-     "t": 105,
-     "label": "They still want to cancel"
+     "t": 98.4,
+     "label": "It can't be saved"
     },
     {
-     "t": 125,
+     "t": 118,
      "label": "Recap"
     },
     {
-     "t": 147.9,
+     "t": 142,
      "label": "Now try it"
     }
    ],
    "helpAt": {
     "lapse_save": 12.8
    },
-   "sizeBytes": 6931948,
-   "builtAt": "2026-11-10T00:58:21.070Z"
+   "sizeBytes": 6583882,
+   "builtAt": "2026-11-10T03:22:50.295Z"
   },
   "speed": {
    "kind": "walkthrough",
@@ -1195,8 +1175,8 @@
     "calendar": 52.6,
     "handoff_call": 68.2
    },
-   "sizeBytes": 5893903,
-   "builtAt": "2026-11-10T00:32:27.444Z"
+   "sizeBytes": 5869154,
+   "builtAt": "2026-11-10T03:24:25.518Z"
   },
   "transfer": {
    "kind": "walkthrough",
@@ -1263,8 +1243,8 @@
    "helpAt": {
     "transfer": 61.2
    },
-   "sizeBytes": 5820401,
-   "builtAt": "2026-11-10T00:34:27.150Z"
+   "sizeBytes": 5769728,
+   "builtAt": "2026-11-10T03:25:42.430Z"
   },
   "fromai": {
    "kind": "walkthrough",
@@ -1319,8 +1299,8 @@
    "helpAt": {
     "ai_handoff": 40.8
    },
-   "sizeBytes": 5138064,
-   "builtAt": "2026-11-10T00:19:56.294Z"
+   "sizeBytes": 5112847,
+   "builtAt": "2026-11-10T02:53:31.968Z"
   },
   "welcome": {
    "kind": "walkthrough",
@@ -1399,8 +1379,8 @@
    "helpAt": {
     "welcome_call": 63.7
    },
-   "sizeBytes": 6995283,
-   "builtAt": "2026-11-10T00:35:44.117Z"
+   "sizeBytes": 6956229,
+   "builtAt": "2026-11-10T03:28:01.945Z"
   }
  }
 }
