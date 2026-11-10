@@ -17,3 +17,41 @@
 /* A day opened keeps the window's height (the P867 rule let it grow, so the page scrolled). */
 @media (min-width: 1000px) { .fx .adm-cal[data-fold-fit]:has(.fx-week.is-day) { height: var(--fold-h, auto); } }
 .adm .adm-daycall .fx-form-row > .tp-grow { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+/* Revenue: two coloured tiles on top (agent Billing's "Your plan" look): a big number, a small label, inner panels. */
+.adm .adm-rev-top { margin-bottom: 14px; }
+.adm .adm-rev-hero { display: flex; flex-direction: column; gap: 12px; }
+.adm .adm-hero-ic { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 12px; color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 12%, transparent); }
+.adm .adm-hero-big { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.adm .adm-hero-big b { font-family: var(--font-mono); font-size: clamp(36px, 3.4vw, 48px); font-weight: 600; line-height: 1; letter-spacing: -0.02em; color: var(--ov-hi); white-space: nowrap; }
+.adm .adm-hero-big small { font-size: 13px; color: var(--ov-mid); }
+.adm .adm-inner { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: auto; }
+.adm .adm-inner.is-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.adm .adm-inner > span { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 12px; border-radius: 16px; background: color-mix(in srgb, var(--bg-surface) 38%, transparent); }
+.adm .adm-inner small { font-size: 12px; color: var(--ov-mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.adm .adm-inner b { font-size: 21px; font-weight: 600; color: var(--ov-hi); letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.adm .adm-inner b small { font-size: 12px; font-weight: 500; }
+.adm .adm-hero-foot { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; color: var(--ov-mid); }
+.adm .adm-hero-foot b { color: var(--ov-hi); }
+@media (max-width: 999.98px) { .adm .adm-inner { grid-template-columns: minmax(0, 1fr); } .adm .adm-inner.is-two { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Revenue › Agent results: a bar per agent (kept, then each cost), numbers beside it. */
+.adm .adm-rev-key .is-kept, .adm .adm-res-bar .is-kept { background: var(--sh-sage); }
+.adm .adm-rev-key .is-va, .adm .adm-res-bar .is-va { background: var(--sh-apricot); }
+.adm .adm-rev-key .is-ai, .adm .adm-res-bar .is-ai { background: var(--sh-lilac); }
+.adm .adm-rev-key .is-fees, .adm .adm-res-bar .is-fees { background: var(--sh-stone, var(--ov-mute)); }
+.adm .adm-res-bars { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.adm .adm-res-bars > li { display: grid; grid-template-columns: minmax(130px, 180px) minmax(0, 1fr) 130px 110px; align-items: center; gap: 14px; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--ov-hi) 4%, transparent); }
+.adm .adm-res-bars > li.is-total { background: color-mix(in srgb, var(--ov-hi) 8%, transparent); }
+.adm .adm-res-who { display: flex; flex-direction: column; min-width: 0; }
+.adm .adm-res-who a, .adm .adm-res-who b { font-weight: 600; color: var(--ov-hi); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.adm .adm-res-who a:hover { text-decoration: underline; }
+.adm .adm-res-who small, .adm .adm-res-n small, .adm .adm-res-out small { font-size: 11.5px; color: var(--ov-mute); }
+.adm .adm-res-bar { display: flex; height: 14px; border-radius: 999px; overflow: hidden; background: color-mix(in srgb, var(--ov-hi) 6%, transparent); }
+.adm .adm-res-bar i { display: block; height: 100%; }
+.adm .adm-res-sum { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ov-mid); font-family: var(--font-mono); }
+.adm .adm-res-n, .adm .adm-res-out { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.adm .adm-res-n b { font-size: 17px; font-weight: 600; color: var(--ov-hi); }
+.adm .adm-res-n b.is-loss { color: var(--sh-fi-coral, var(--ov-hi)); }
+.adm .adm-res-out b { font-size: 13px; color: var(--ov-mid); }
+@media (max-width: 760px) { .adm .adm-res-bars > li { grid-template-columns: minmax(0, 1fr) auto; } .adm .adm-res-bar, .adm .adm-res-sum { grid-column: 1 / -1; order: 3; } .adm .adm-res-out { display: none; } }

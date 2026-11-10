@@ -43,18 +43,20 @@ test('Money adds up for every period: brought in minus costs is profit, and the 
     assert.deepEqual(p.split.map(o => o.name), OWNERS.map(o => o.name))
     for (const o of p.split) assert.equal(o.owed, Math.max(0, o.amount - o.paid))
   }
-  // 50/50 by default; a different split still sums to the profit
+  // P934: 50/50, fixed; the two shares still sum to the profit
   assert.deepEqual(moneyFor(s, 'week').split.map(o => o.pct), [50, 50])
-  const t = { ...s, settings: { ...s.settings, split: { brayden: 63, changed: null } } }
-  const p = moneyFor(t, 'last')
-  assert.deepEqual(p.split.map(o => o.pct), [63, 37])
+  const p = moneyFor(s, 'last')
   assert.equal(p.split[0].amount + p.split[1].amount, p.profit)
 })
 
-test('the split is a setting written to the audit log, and both owners show as payees', () => {
+test('P934: the split is fixed at 50/50 (no admin can change it), and both owners show as payees', () => {
   const d = src('./data.js')
-  assert.match(d, /setSplit: brayden => set\(s => \{[\s\S]*?audit\(s, 'Changed the profit split'/)
+  assert.match(d, /export const OWNER_SPLIT = 50/)
+  assert.doesNotMatch(d, /setSplit/)
+  assert.doesNotMatch(src('../hooks/admRealData.js'), /setSplit/)
   const b = src('./screens/Billing.jsx')
+  assert.doesNotMatch(b, /Change split|setSplit|Save split/)
+  assert.match(b, /Split 50 \/ 50/)
   assert.match(b, /function OwnerPayouts\(\)/)
   assert.match(b, /\['week', 'This week'|PERIODS/)
   assert.match(b, /Agent lead spend \(passed to Meta\)/) // P913: shown apart, in no total

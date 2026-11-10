@@ -276,6 +276,8 @@ const seedRevenue = [
   { wk: 'Oct 19', plans: 1891, leads: 2960 }, { wk: 'Oct 26', plans: 1891, leads: 3105 },
 ]
 
+// P934: Brayden's share of the profit, in percent (Jordan gets the rest). Fixed: no admin can change it in the portal.
+export const OWNER_SPLIT = 50
 // P864 — Money: the owners who split the profit, their draws, and what each period cost besides VA pay (sample).
 // Brought in = what agents paid (lead budgets charged, servicing plans, setup fees). VA payouts count when the run is paid.
 export const OWNERS = [{ id: 'ow-brayden', name: 'Brayden' }, { id: 'ow-jordan', name: 'Jordan' }]
@@ -360,7 +362,6 @@ const seedSettings = {
   // the founding lock. maxOverride = agents an admin raised by hand.
   billing: { ...SETTINGS, maxOverride: { 'ag-priya': 750 } },
   payoutsPaused: false,
-  split: { brayden: 50, changed: null },
   liveRoom: 'https://meet.example.com/ohvara-room',
   notifications: [
     { key: 'lead', label: 'A lead comes in with no agent', push: true, email: false },
@@ -622,7 +623,7 @@ export function moneyFor(s, period) {
   // P913: Profit = revenue minus VA pay, AI minutes and card fees.
   const costTotal = vaPay + ai + fees
   const profit = inTotal - costTotal
-  const bp = s.settings.split.brayden
+  const bp = OWNER_SPLIT
   const split = OWNERS.map((o, i) => {
     const pct = i === 0 ? bp : 100 - bp
     const amount = i === 0 ? Math.round((profit * pct) / 100) : profit - Math.round((profit * bp) / 100)
@@ -632,7 +633,7 @@ export function moneyFor(s, period) {
   })
   return {
     period, budgets, leadSpend, leadFee, servicing, setup, setupCount: setup / SETUP_FEE, inTotal,
-    ads, vaPay, runs, fees, ai, aiMins, costTotal, profit, split, splitChanged: s.settings.split.changed,
+    ads, vaPay, runs, fees, ai, aiMins, costTotal, profit, split,
   }
 }
 // P914 — Agent results (was Pilot results; there is no pilot, every agent pays from day one). Per agent for the period:
@@ -828,11 +829,7 @@ const SAMPLE_ACTIONS = {
       return out
     }),
     // P890: no per-cancel decisions (VA pay is hourly). The Monday run can still be paused.
-    // P864: the owners' profit split (Brayden's share; Jordan gets the rest). Written to the audit log.
-    setSplit: brayden => set(s => {
-      const b = Math.max(0, Math.min(100, Math.round(brayden)))
-      return { settings: { ...s.settings, split: { brayden: b, changed: { who: ME.name, at: `Today, ${stamp()}` } } }, ...audit(s, 'Changed the profit split', `Brayden ${b}% · Jordan ${100 - b}%`) }
-    }),
+    // P934: no setSplit. The owners' profit split is fixed at 50/50 (OWNER_SPLIT); changing it is a code and migration change.
     setPaused: on => set(s => ({ settings: { ...s.settings, payoutsPaused: on }, ...audit(s, on ? 'Paused payouts' : 'Resumed payouts', 'Monday pay run') })),
     // Settings
     setSwitch: (key, on) => set(s => ({ settings: { ...s.settings, switches: { ...s.settings.switches, [key]: on } }, ...audit(s, `${on ? 'Turned on' : 'Turned off'} ${SWITCHES.find(x => x.key === key).label}`, 'Sample only') })),

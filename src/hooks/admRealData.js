@@ -142,7 +142,6 @@ export function useAdmRealActions() {
       giveStep: notYet('Giving a servicing step to a VA'),
       addShift: notYet('The rota'), removeShift: notYet('The rota'), moveShift: notYet('The rota'),
       decideDayOff: (id, approve) => rpc('va_decide_day_off', { p_request: id, p_approve: approve }),
-      setSplit: notYet('The profit split'),
       setPaused: on => run(supabase.from('recovery_config').update({ payouts_paused: on }).eq('id', true)),
       setSwitch: (key, on) => {
         const home = SWITCH_HOME[key]

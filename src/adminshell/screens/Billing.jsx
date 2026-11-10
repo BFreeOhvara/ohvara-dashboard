@@ -1,6 +1,6 @@
 import { lazy, Suspense, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { CircleCheck, Landmark, ArrowUpRight, CreditCard, MessageSquare, RotateCw, Wallet, Megaphone, Headset, Receipt, BadgeDollarSign, PiggyBank, Pencil, History, Bot } from 'lucide-react'
+import { CircleCheck, Landmark, ArrowUpRight, CreditCard, MessageSquare, RotateCw, Wallet, Megaphone, Headset, Receipt, BadgeDollarSign, PiggyBank, Lock, Bot } from 'lucide-react'
 import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, useAdmSettings, useAdmSource, useAdmAgentResults, PLANS, PERIODS, SETUP_FEE, CARD_FEE, AI_RATE } from '../data'
 import { PRICES } from '../../lib/priceBook.js'
 import { deskAdminLabel } from '../../lib/bookingDesk'
@@ -21,7 +21,7 @@ const ConnectEmbed = lazy(() => import('../../components/fulfillment/ConnectEmbe
 
 // P866 — the tab and page read Revenue (Brayden didn't like Money). P864 — Money (it was Billing & revenue): at the top, for This week / This month / Last month, what came in (what agents
 // paid), what it cost (ad spend, VA payouts, card fees, tools), the profit, and the owners' split (Brayden and Jordan,
-// 50/50 by default, a setting with an audit line). Both admins see everything, each other's payouts too. Below it, kept:
+// P934: fixed at 50/50, read-only). Both admins see everything, each other's payouts too. Below it, kept:
 // P849 — Billing & revenue: money in (agents' plans and lead spend, by week, each agent's bill and the failed
 // payments) and money out (the Monday VA pay run: hours from clock in and out x the hourly rate, P890: no per-cancel pay;
 // past runs, the Stripe balance and the pause switch). Sample amounts and prices.
@@ -55,6 +55,10 @@ function AgentResults({ period }) {
   const src = useAdmSource()
   const t = r.total
   const ok = t.paid > 0 && t.va / t.paid <= OWNER_LIMIT
+  const top = Math.max(1, ...r.rows.map(x => x.paid))
+  const pct = n => `${(Math.max(0, n) / top) * 100}%`
+  // P934: a bar per agent instead of the plain table. The bar is what they paid Ohvara: kept (green), then VA pay,
+  // AI minutes and card fees. Lead spend passed to Meta is named apart and is in no total.
   return (
     <div className="adm-rev-view">
       <div className="adm-res-head">
@@ -62,20 +66,26 @@ function AgentResults({ period }) {
         <Chip tone={ok ? 'green' : 'warn'}>{t.vaPct == null ? 'No revenue yet' : `VA ${t.vaPct}% of revenue · rule ${Math.round(OWNER_LIMIT * 100)}% or less`}</Chip>
         {src !== 'real' && <SampleTag>Sample</SampleTag>}
       </div>
-      <div className="p879-scroll" role="region" aria-label="Agent results" tabIndex={0}>
-        <table className="p879-tbl adm-res-tbl">
-          <thead><tr>{['Agent', 'Paid Ohvara', 'VA cost', 'AI cost', 'Card fees', 'Ohvara kept', 'Lead spend (to Meta)'].map(h => <th key={h} scope="col">{h}</th>)}</tr></thead>
-          <tbody>{r.rows.map(x => (
-            <tr key={x.id}>
-              <th scope="row"><Link to={ap('agents', x.id)}>{x.name}</Link><small>{x.comped ? 'Comped' : x.plan}</small></th>
-              <td>{money(x.paid)}</td><td>{x.va ? `−${money(x.va)}` : money(0)}</td><td>{x.ai ? `−${money(x.ai)}` : money(0)}</td><td>{x.fees ? `−${money(x.fees)}` : money(0)}</td>
-              <td className={x.kept < 0 ? 'is-loss' : 'is-kept'}>{money(x.kept)}</td><td className="is-out">{money(x.leadSpend)}</td>
-            </tr>
-          ))}</tbody>
-          <tfoot><tr><th scope="row">All agents</th><td>{money(t.paid)}</td><td>−{money(t.va)}</td><td>−{money(t.ai)}</td><td>−{money(t.fees)}</td><td className={t.kept < 0 ? 'is-loss' : 'is-kept'}>{money(t.kept)}</td><td className="is-out">{money(t.leadSpend)}</td></tr></tfoot>
-        </table>
-      </div>
-      <p className="adm-rev-out"><Headset size={14} aria-hidden="true" />VA pay and AI minutes are shared out by each agent's leads and clients worked until team time is recorded per agent.</p>
+      <div className="adm-rev-key"><span><i className="adm-rev-sw is-kept" />Ohvara kept</span><span><i className="adm-rev-sw is-va" />VA pay</span><span><i className="adm-rev-sw is-ai" />AI minutes</span><span><i className="adm-rev-sw is-fees" />Card fees</span></div>
+      <ul className="adm-res-bars" aria-label="Agent results">
+        {r.rows.map(x => (
+          <li key={x.id}>
+            <span className="adm-res-who"><Link to={ap('agents', x.id)}>{x.name}</Link><small>{x.comped ? 'Comped' : x.plan}</small></span>
+            <span className="adm-res-bar" role="img" aria-label={`${x.name}: paid ${money(x.paid)}, kept ${money(x.kept)}, VA ${money(x.va)}, AI ${money(x.ai)}, card fees ${money(x.fees)}`}>
+              <i className="is-kept" style={{ width: pct(x.kept) }} /><i className="is-va" style={{ width: pct(x.va) }} /><i className="is-ai" style={{ width: pct(x.ai) }} /><i className="is-fees" style={{ width: pct(x.fees) }} />
+            </span>
+            <span className="adm-res-n"><b className={`tp-money${x.kept < 0 ? ' is-loss' : ''}`}>{money(x.kept)}</b><small>kept of {money(x.paid)}</small></span>
+            <span className="adm-res-out"><small>Lead spend</small><b className="tp-money">{money(x.leadSpend)}</b></span>
+          </li>
+        ))}
+        <li className="is-total">
+          <span className="adm-res-who"><b>All agents</b><small>{r.rows.length} agents</small></span>
+          <span className="adm-res-sum"><span>VA −{money(t.va)}</span><span>AI −{money(t.ai)}</span><span>Card fees −{money(t.fees)}</span></span>
+          <span className="adm-res-n"><b className={`tp-money${t.kept < 0 ? ' is-loss' : ''}`}>{money(t.kept)}</b><small>kept of {money(t.paid)}</small></span>
+          <span className="adm-res-out"><small>Lead spend</small><b className="tp-money">{money(t.leadSpend)}</b></span>
+        </li>
+      </ul>
+      <p className="adm-rev-out"><Headset size={14} aria-hidden="true" />VA pay and AI minutes are shared out by each agent's leads and clients worked until team time is recorded per agent. Lead spend is passed to Meta and is in no total.</p>
     </div>
   )
 }
@@ -116,24 +126,12 @@ const Line = ({ icon: Icon, label, sub, n, extra, neg }) => (
   <li><Icon size={14} aria-hidden="true" /><span className="tp-grow">{label}{sub && <small>{sub}</small>}{extra}</span><b className="tp-money">{neg && n > 0 ? '−' : ''}{money(n)}</b></li>
 )
 
+// P934: the profit split is fixed at 50 / 50 and read-only for both admins. Changing it is a code and migration change.
 function Split({ p }) {
-  const { setSplit } = useAdmActions()
-  const note = useNote()
-  const [edit, setEdit] = useState(false)
-  const [b, setB] = useState(p.split[0].pct)
-  const valid = Number.isFinite(b) && b >= 0 && b <= 100
-  const save = () => { setSplit(b); setEdit(false); note(`Split saved: Brayden ${b}% · Jordan ${100 - b}%`) }
   const sum = p.split.reduce((t, o) => t + o.amount, 0)
   return (
     <Tile className="adm-split" i={3} title="Profit split" sub={`${p.split.map(o => `${o.name} ${o.pct}%`).join(' · ')} · adds up to ${money(sum)}`}
-      aside={!edit && <button type="button" className="fx-pillbtn" onClick={() => { setB(p.split[0].pct); setEdit(true) }}><Pencil size={13} />Change split</button>}>
-      {edit && (
-        <div className="adm-split-edit">
-          <label className="tp-field"><span>Brayden's share (%)</span><input className="tp-num" inputMode="numeric" value={Number.isFinite(b) ? b : ''} aria-invalid={!valid} onChange={e => setB(e.target.value === '' ? NaN : Number(e.target.value.replace(/[^0-9]/g, '')))} /></label>
-          <p className="tp-sub">Jordan gets the rest: <b className="tp-num">{valid ? 100 - b : '–'}%</b></p>
-          <footer className="fx-form-f"><button type="button" className="tp-btn ov-ghost" onClick={() => setEdit(false)}>Cancel</button><button type="button" className="tp-primary fx-accent" disabled={!valid || b === p.split[0].pct} onClick={save}>Save split</button></footer>
-        </div>
-      )}
+      aside={<Chip tone="blue">Split 50 / 50</Chip>}>
       <ul className="tp-list adm-owners">{p.split.map(o => (
         <li key={o.id} className="adm-owner">
           <Avatar name={o.name} />
@@ -143,20 +141,37 @@ function Split({ p }) {
           <b className="tp-money adm-owner-n">{money(o.amount)}</b>
         </li>
       ))}</ul>
-      <p className="adm-audit-line"><History size={13} aria-hidden="true" />{p.splitChanged ? `Changed by ${p.splitChanged.who}, ${p.splitChanged.at}. In the audit log.` : '50/50 since the start. Any change goes in the audit log.'}</p>
+      <p className="adm-audit-line"><Lock size={13} aria-hidden="true" />Fixed at 50 / 50 for Brayden and Jordan. It isn't a setting.</p>
     </Tile>
   )
 }
 
-// P913 — the headline numbers: Revenue, Costs, Profit, and Agent lead spend set apart (passed to Meta, not ours).
-function Headline({ p }) {
+// P913 — the headline numbers. P934: on the agent side's look: two coloured tiles, a big number with a small label and
+// inner panels below it (agent Billing's "Your plan"). Revenue (green) = plan fees + the booking desk + setup fees;
+// Profit (blue) = revenue minus costs, with the fixed 50 / 50 split. Agent lead spend is set apart (not Ohvara's money).
+function Headline({ p, label }) {
   const margin = p.inTotal ? Math.round((p.profit / p.inTotal) * 100) : 0
   return (
-    <div className="adm-rev-head" role="group" aria-label="Revenue for the period">
-      <div className="is-main"><small>Revenue</small><b><CountUp value={p.inTotal} format={money} /></b><em>Plan fees + {deskAdminLabel(PRICES.leadFee)} + setup fees</em></div>
-      <div><small>Costs</small><b>{money(p.costTotal)}</b><em>VA pay, AI minutes, card fees</em></div>
-      <div className={p.profit < 0 ? 'is-loss' : ''}><small>Profit</small><b><CountUp value={p.profit} format={money} /></b><em>{margin}% of revenue kept</em></div>
-      <div className="is-out"><small>Agent lead spend (passed to Meta)</small><b>{money(p.leadSpend)}</b><em>Not Ohvara's money · in no total</em></div>
+    <div className="fx-grid adm-rev-top" role="group" aria-label="Revenue for the period">
+      <section className="fx-tile is-fill is-green fx-s7 adm-rev-hero" style={{ '--i': 0 }} aria-label="Revenue">
+        <header className="fx-tile-h"><span className="tp-grow"><h2>Revenue</h2><p>{label} · what agents paid Ohvara</p></span><span className="adm-hero-ic"><BadgeDollarSign size={18} aria-hidden="true" /></span></header>
+        <div className="adm-hero-big"><b className="tp-money"><CountUp value={p.inTotal} format={money} /></b><small>brought in</small></div>
+        <div className="adm-inner">
+          <span><small>Plan fees</small><b className="tp-money">{money(p.servicing)}</b></span>
+          <span><small>{deskAdminLabel(PRICES.leadFee)}</small><b className="tp-money">{money(p.leadFee)}</b></span>
+          <span><small>Setup fees</small><b className="tp-money">{money(p.setup)}</b></span>
+        </div>
+        <p className="adm-hero-foot"><Megaphone size={13} aria-hidden="true" />Agent lead spend (passed to Meta): <b className="tp-money">{money(p.leadSpend)}</b> · not Ohvara's money, in no total</p>
+      </section>
+      <section className={`fx-tile is-fill ${p.profit < 0 ? 'is-warn' : 'is-blue'} fx-s5 adm-rev-hero`} style={{ '--i': 1 }} aria-label="Profit">
+        <header className="fx-tile-h"><span className="tp-grow"><h2>Profit</h2><p>{margin}% of revenue kept</p></span><span className="adm-hero-ic"><Wallet size={18} aria-hidden="true" /></span></header>
+        <div className="adm-hero-big"><b className="tp-money"><CountUp value={p.profit} format={money} /></b><small>after costs</small></div>
+        <div className="adm-inner is-two">
+          <span><small>Costs</small><b className="tp-money">−{money(p.costTotal)}</b></span>
+          <span><small>Split 50 / 50</small><b className="tp-money">{money(p.split[0].amount)}<small> each</small></b></span>
+        </div>
+        <p className="adm-hero-foot"><Headset size={13} aria-hidden="true" />Costs: VA pay, AI minutes and card fees</p>
+      </section>
     </div>
   )
 }
@@ -181,7 +196,7 @@ function Breakdown({ p }) {
           <li className="is-total"><Wallet size={14} aria-hidden="true" /><span className="tp-grow">Profit</span><b className="tp-money">{money(p.profit)}</b></li>
         </ul>
       </Tile>
-      <Split p={p} key={p.split[0].pct} />
+      <Split p={p} />
     </div>
   )
 }
@@ -321,7 +336,7 @@ export default function Billing() {
         <Seg label="Period" value={period} onChange={v => put('period', v, 'week')} options={PERIODS.map(([k, label]) => ({ key: k, label }))} />
         <small className="tp-sub">{span[2]} · {src === 'real' ? 'from billing' : 'sample numbers'}</small>
       </div>
-      <Headline p={p} />
+      <Headline p={p} label={span[1]} />
       <section className="fx-tile adm-rev-stage" style={{ '--i': 1 }} aria-label="Revenue views">
         <PillTabs label="Revenue details" className="fx-ptabs adm-pagetabs" itemClass="fx-ptab" value={tab} onChange={t => put('tab', t, 'revenue')}
           items={VIEWS.map(([k, label]) => ({ key: k, label, count: k === 'agents' && m.failed.length ? m.failed.length : undefined }))} />
