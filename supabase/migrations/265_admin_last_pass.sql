@@ -28,6 +28,13 @@ comment on column public.policies.call_nudged_at is 'P945: the VA was pinged 5 m
 comment on column public.policies.call_handed_at is 'P945: given to the next free VA 10 minutes after the booked time (once).';
 comment on column public.policies.call_rebook_at is 'P945: nobody was free; the AI front desk rebooks the client.';
 
+-- The notifications the sweep sends (notify() refuses unknown types). The +5 ping reuses call_not_started.
+insert into public.notification_types (type, roles, label, in_bell, push, money, fires, sort) values
+  ('call_handed_to_you', array['fulfillment'], 'A call nobody started was given to you', true, true,  false, true, 23),
+  ('call_moved_away',    array['fulfillment'], 'Your call moved to another VA',          true, false, false, true, 24),
+  ('call_nobody_free',   array['admin'],       'No VA free for a missed call, AI rebooking', true, false, false, true, 108)
+on conflict (type) do nothing;
+
 -- The next free VA for a call at p_at: on shift then, not live on a call, not the VA who has it, no other open call
 -- within 30 minutes; the agent's Deedstone number pod first. (P936's training gate has no column yet, so it isn't
 -- checked here; the sample and the VA side check it.)
@@ -87,7 +94,7 @@ begin
     if pol.call_nudged_at is null then
       update policies set call_nudged_at = now() where id = pol.id;
       if pol.assigned_fulfillment_id is not null then
-        perform public.notify(pol.assigned_fulfillment_id, 'fulfillment_call_not_started',
+        perform public.notify(pol.assigned_fulfillment_id, 'call_not_started',
                   'Your ' || v_when || ' call hasn''t started', v_client || ' is waiting. Start it now or it moves on at 10 minutes.',
                   '/fulfillment', true, 'call-nudge:' || pol.id, jsonb_build_object('policy_id', pol.id));
       end if;
@@ -105,17 +112,17 @@ begin
         values (pol.id, pol.agent_id, 'reassigned', null, 'Ohvara', 'system',
                 jsonb_build_object('from', pol.assigned_fulfillment_id, 'from_name', v_from_name, 'to', v_to, 'to_name', v_to_name,
                                    'scheduled_call_at', pol.scheduled_call_at, 'why', 'not started 10 minutes after its time'));
-        perform public.notify(v_to, 'fulfillment_call_handed', v_client || '''s ' || v_when || ' call is yours now',
+        perform public.notify(v_to, 'call_handed_to_you', v_client || '''s ' || v_when || ' call is yours now',
                   'Nobody started it. Call them now.', '/fulfillment', true, 'call-hand:' || pol.id, jsonb_build_object('policy_id', pol.id));
         if pol.assigned_fulfillment_id is not null then
-          perform public.notify(pol.assigned_fulfillment_id, 'fulfillment_unassigned', v_client || ' moved to ' || v_to_name,
+          perform public.notify(pol.assigned_fulfillment_id, 'call_moved_away', v_client || ' moved to ' || v_to_name,
                     'It wasn''t started 10 minutes after its time.', '/fulfillment', false, 'call-moved:' || pol.id, jsonb_build_object('policy_id', pol.id, 'to', v_to));
         end if;
       else
         -- The AI front desk (P932) texts or calls the client to rebook; it reads call_rebook_at (still gated by
         -- ai_caller_live / sms_live, so nothing goes out while those are off).
         update policies set call_rebook_at = now(), call_handed_at = now() where id = pol.id;
-        perform public.notify(a.id, 'fulfillment_call_rebook', v_client || '''s ' || v_when || ' call: nobody free',
+        perform public.notify(a.id, 'call_nobody_free', v_client || '''s ' || v_when || ' call: nobody free',
                   'The AI front desk is asking them to rebook.', '/admin/fulfillment?tab=calendar', false, 'call-rebook:' || pol.id || ':' || a.id,
                   jsonb_build_object('policy_id', pol.id))
           from profiles a where a.role = 'admin' and a.is_active and a.is_demo = pol.is_demo;
