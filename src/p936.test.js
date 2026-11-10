@@ -17,7 +17,8 @@ test('one chart component (Recharts, the shadcn way) in admin, agent and VA', ()
   assert.match(css, /\.ox-tick\.is-later \{ opacity/)
   assert.doesNotMatch(css, /#[0-9a-fA-F]{3,8}\b/, 'tokens only, no hex')
   // P942: the agent Overview's Delivered chart is the shadcn interactive area chart (AreaTrend) instead
-  for (const f of ['./adminshell/screens/Overview.jsx', './adminshell/screens/Billing.jsx', './adminshell/screens/Numbers916.jsx', './template/ful/screens/Overview.jsx']) {
+  // P943: Revenue › By week is the stock-style line (adminshell/RevenueStock.jsx) instead
+  for (const f of ['./adminshell/screens/Overview.jsx', './adminshell/screens/Numbers916.jsx', './template/ful/screens/Overview.jsx']) {
     assert.match(src(f), /<Chart\b/, f)
   }
   assert.match(src('./template/screens/Overview.jsx'), /<AreaTrend\b/)
@@ -28,7 +29,8 @@ test('one chart component (Recharts, the shadcn way) in admin, agent and VA', ()
   assert.doesNotMatch(src('./template/screens/Overview.jsx'), /fx-wchart-y|className=\{`fx-bar/)
   // stacked where it means something
   assert.match(src('./adminshell/screens/Overview.jsx'), /label: 'Came in'[\s\S]*label: 'Sold'/) // P942: back to front
-  assert.match(src('./adminshell/screens/Billing.jsx'), /'Plan fees'[\s\S]*deskAdminLabel[\s\S]*'Setup fees'/)
+  assert.match(src('./adminshell/screens/Billing.jsx'), /<RevenueStock roll=/)
+  assert.match(src('./adminshell/RevenueStock.jsx'), /Plan fees[\s\S]*deskAdminLabel[\s\S]*Setup fees/)
 })
 
 test('a button on a coloured to-do row is neutral, with hover and pressed, in every role', () => {

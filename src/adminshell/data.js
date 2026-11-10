@@ -1,5 +1,6 @@
 import { useSyncExternalStore, createContext, useContext, createElement } from 'react'
 import { sampleTrend } from '../template/leadTrend.js'
+import { addDays, buildDays, isoFromText, rolling, sampleHistory, spreadWeek } from './revTrend.js'
 import { useSampleBugs, setSampleBugStatus } from '../template/bugReport.js'
 import { SETUP_STEPS, setupOf, isPaid } from './setup.js'
 import { PRICES, SETTINGS, bandText, nightlyCharge } from '../lib/priceBook.js'
@@ -611,6 +612,54 @@ export function useAdmMoney() {
     stripeBalance: s.real ? s.stripeBalance : 2140, rate, paused: s.settings.payoutsPaused, live: s.settings.switches.payouts_live,
     adSpend: s.connect.ads.reduce((t, a) => t + a.spent, 0), adBudget: s.connect.ads.reduce((t, a) => t + a.budget, 0),
   })
+}
+
+// P943 — the Revenue page's stock-style chart: every day's revenue and costs (revTrend.js), then rolling 7-day sums.
+// This week is useAdmMoney's own days (so the chart and By week agree). Before it: sample = a year of sample weeks
+// growing into the seeded weeks (s.revenue), spread over their days, the seeded setup fees and pay runs on the day
+// paid; real = the last 91 days of leads charged to agents (lib/admReal.js leadSpendTrendOf), plan fees from each
+// paying agent's join day, pay runs on their pay date. Real AI minutes and setup fees aren't recorded yet (0).
+export function useAdmRevTrend() {
+  const s = useS()
+  const { data: m } = useAdmMoney()
+  return okS(s, revTrendOf(s, m))
+}
+// The pure part (tests call it with a real or sample store and useAdmMoney's days).
+export function revTrendOf(s, m) {
+  const todayIso = s.clock?.todayIso || SAMPLE_TODAY_ISO
+  const weekStart = s.clock?.weekStartIso || addDays(SAMPLE_TODAY_ISO, -3)
+  const feeRate = PRICES.leadFee
+  // This week's AI minutes (sample) shared out by each day's lead spend, so the week adds up to the card.
+  const weekSpend = m.days.reduce((t, d) => t + (d.later ? 0 : d.leadSpend), 0)
+  const weekAi = s.real ? 0 : Math.round(((s.periodCosts || PERIOD_COSTS).week.aiMins || 0) * AI_RATE)
+  const aiRate = weekSpend > 0 ? weekAi / weekSpend : 0
+  const week = m.days.filter(d => !d.later).map((d, i) => ({ date: addDays(weekStart, i), plans: d.plans, fee: d.fee, setup: d.setup, leadSpend: d.leadSpend, ai: d.leadSpend * aiRate }))
+  let before
+  let runs
+  if (s.real) {
+    const paying = s.agents.filter(a => !a.comped && a.billing.status !== 'past_due')
+    before = (s.spendTrend || []).filter(r => r.date < weekStart).map(r => {
+      const leadSpend = (r.appointment || 0) * LEAD_PRICE.appointment + (r.live || 0) * LEAD_PRICE.live
+      const plans = paying.filter(a => !a.joinedIso || a.joinedIso <= r.date).reduce((t, a) => t + PLANS[a.plan].price, 0)
+      return { date: r.date, plans: weekShare(plans) / 7, leadSpend, fee: leadSpend * feeRate }
+    })
+    runs = (s.runs || []).map(r => ({ date: r.payIso, amount: r.amount }))
+  } else {
+    const year = Number(todayIso.slice(0, 4))
+    const seeded = (s.revenue || []).map(w => ({ startIso: isoFromText(w.wk, year), plans: w.plans, leads: w.leads, setup: 0 })).filter(w => w.startIso)
+    const older = seeded.length ? sampleHistory(seeded[0].startIso, seeded[0]) : []
+    const weeks = [...older, ...seeded]
+    before = weeks.map(w => spreadWeek(w.startIso, { plans: w.plans, leads: w.leads, setup: w.setup * SETUP_FEE }, { feeRate, aiRate, wobble: 0.55 }))
+    // Last month's setup fees, the day each was paid.
+    before.push((s.setupFees || []).filter(f => f.period === 'last').map(f => ({ date: isoFromText(f.paid, year), setup: SETUP_FEE })))
+    // Pay runs: the seeded ones on their Monday; before them, a run each Monday for the week before (about 14% of
+    // that week's lead spend, the seeded runs' rate).
+    const seededRuns = (s.runs || []).map(r => ({ date: isoFromText(r.paid, year), amount: r.amount })).filter(r => r.date)
+    const firstRun = seededRuns.map(r => r.date).sort()[0] || weekStart
+    runs = [...seededRuns, ...weeks.map(w => ({ date: addDays(w.startIso, 7), amount: Math.round(w.leads * 0.14) })).filter(r => r.date < firstRun)]
+  }
+  const days = buildDays({ todayIso, parts: [...before, week], runs, cardRate: CARD_FEE })
+  return { todayIso, days, roll: rolling(days), real: !!s.real }
 }
 
 // P864 — Money for one period ('week' | 'month' | 'last'): brought in, costs, profit and the owners' split. Every number

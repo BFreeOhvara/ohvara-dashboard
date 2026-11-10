@@ -1,14 +1,14 @@
 import { lazy, Suspense, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { CircleCheck, Landmark, ArrowUpRight, CreditCard, MessageSquare, RotateCw, Wallet, Megaphone, Headset, Receipt, BadgeDollarSign, PiggyBank, Lock, Bot } from 'lucide-react'
-import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, useAdmSettings, useAdmSource, useAdmAgentResults, PLANS, PERIODS, SETUP_FEE, CARD_FEE, AI_RATE } from '../data'
+import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, useAdmSettings, useAdmSource, useAdmAgentResults, useAdmRevTrend, PLANS, PERIODS, SETUP_FEE, CARD_FEE, AI_RATE } from '../data'
 import { PRICES } from '../../lib/priceBook.js'
 import { deskAdminLabel } from '../../lib/bookingDesk'
 import { RecentCharges } from './Billing933'
 import { Avatar, Chip, Drawer, PillTabs, SampleTag, Seg, Switch, useNote } from '../../template/kit'
 import { CountUp, usd } from '../../template/motion'
 import { Tile } from '../kit'
-import Chart from '../../template/Chart'
+import RevenueStock from '../RevenueStock'
 import { ap } from '../paths'
 import { BILL_WORD, BANK_WORD } from '../words'
 import { OWNER_LIMIT } from '../p879'
@@ -28,7 +28,6 @@ const ConnectEmbed = lazy(() => import('../../components/fulfillment/ConnectEmbe
 // past runs, the Stripe balance and the pause switch). Sample amounts and prices.
 const money = usd()
 const money2 = usd(true)
-const kMoney = n => (n >= 1000 ? `$${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : money(n))
 
 // P914 — the stage grows to fit the view: its top stays put and its bottom eases to the new height, so nothing scrolls
 // inside it and the mouse wheel always scrolls the page (the old fixed-height box trapped the wheel on By week).
@@ -92,23 +91,16 @@ function AgentResults({ period }) {
   )
 }
 
-// P913 — By week: the one main chart. Revenue = plan fees + the 12% fee + setup fees, stacked per week. Agent lead
-// spend is never in it: it's the agents' money passed to Meta, named on its own line under the chart.
+// P913 — By week: the one main chart. P943: a stock-style line (RevenueStock): rolling 7-day revenue, what was kept
+// after costs, the gap between them is costs. Agent lead spend is never in it: it's the agents' money passed to Meta,
+// named on its own line under the chart.
 function Revenue() {
   const src = useAdmSource()
   const { data: m } = useAdmMoney()
+  const { data: t } = useAdmRevTrend()
   return (
     <div className="adm-rev-view">
-      <div className="fx-chart-head fx-bk-head">
-        <b className="tp-money fx-bk-num"><CountUp value={m.total} format={money} /></b>
-        <span className="fx-bk-side"><b>revenue this week so far</b><small>{money(m.lastWeek)} last week</small>{m.lastWeek > 0 && <i className={`fx-delta is-${m.total >= m.lastWeek ? 'up' : 'warn'}`}>{m.total >= m.lastWeek ? 'Up' : 'Behind'} {Math.abs(Math.round(((m.total - m.lastWeek) / m.lastWeek) * 100))}%</i>}</span>
-      </div>
-      {/* P936: the one chart (template/Chart.jsx), stacked plan fees, booking desk and setup fees, legend as chips. */}
-      <Chart stacked height={240} format={kMoney} className="adm-revweeks"
-        label={m.weeks.map(w => `Week of ${w.wk}: ${money(w.revenue)}`).join('. ')}
-        data={m.weeks.map(w => ({ name: w.now ? 'This week' : w.wk, full: w.now ? 'This week' : `Week of ${w.wk}`, today: w.now, plans: w.plans, fee: w.fee, setup: w.setup || 0, total: w.revenue }))}
-        series={[{ key: 'plans', label: 'Plan fees', color: 'var(--ox-1)' }, { key: 'fee', label: deskAdminLabel(PRICES.leadFee), color: 'var(--ox-3)' }, { key: 'setup', label: 'Setup fees', color: 'var(--ox-4)' }]}
-        tip={r => [['Plan fees', money(r.plans), 'var(--ox-1)'], [deskAdminLabel(PRICES.leadFee), money(r.fee), 'var(--ox-3)'], ['Setup fees', money(r.setup), 'var(--ox-4)'], ['Total', money(r.total)]]} />
+      <RevenueStock roll={t.roll} />
       {src !== 'real' && <div className="adm-rev-key"><SampleTag>Sample</SampleTag></div>}
       <p className="adm-rev-out"><Megaphone size={14} aria-hidden="true" />Agent lead spend (passed to Meta): <b className="tp-money">{money(m.leadSpend)}</b> this week. Not Ohvara's money, so it's in no total.</p>
     </div>

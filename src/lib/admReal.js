@@ -83,7 +83,7 @@ export function toAgent(p, { settings = [], onDuty = [], plans = {} } = {}) {
   return {
     id: p.id, name: nameOf(p), role: 'agent', city: '', state: states[0] || '', email: p.email || '', phone: fmtPhone(p.phone),
     spend, active: !!s?.active, onDuty: onDuty.includes(p.id), servicing: !!p.has_servicing, access: p.is_active !== false,
-    comped: !!p.billing_exempt, joined: shortDate(p.created_at), lastOn: p.last_login_at ? dayText(p.last_login_at) : 'Never',
+    comped: !!p.billing_exempt, joined: shortDate(p.created_at), joinedIso: isoDay(p.created_at), lastOn: p.last_login_at ? dayText(p.last_login_at) : 'Never',
     billing: billingOf(p, plans[plan]), states, plan, paused: p.leads_status === 'paused' ? { since: '', until: '' } : null, real: true,
   }
 }
@@ -373,7 +373,7 @@ export function buildAdmState(raw = {}, { now = Date.now(), clock = realClock(no
   const app = raw.app || {}
   const rc = raw.rc || {}
   const meP = profiles.find(p => p.id === me?.id) || me || {}
-  const runs = (raw.runs || []).map(r => ({ id: r.id, week: r.period_start ? `Week of ${shortDate(r.period_start)}` : '', paid: whenText(r.pay_date, now) || shortDate(r.pay_date), amount: Math.round((r.paid_cents || 0) / 100), people: r.paid_reps || 0, status: r.status || 'paid' }))
+  const runs = (raw.runs || []).map(r => ({ id: r.id, week: r.period_start ? `Week of ${shortDate(r.period_start)}` : '', paid: whenText(r.pay_date, now) || shortDate(r.pay_date), amount: Math.round((r.paid_cents || 0) / 100), people: r.paid_reps || 0, status: r.status || 'paid', payIso: r.pay_date ? String(r.pay_date).slice(0, 10) : null }))
   const campaigns = (raw.campaigns || []).filter(c => notTest(c.agent_id)).map(c => toCampaign(c, agents))
   const costs = costsOf(raw.costsWeek || [])
   const weekSpend = Object.values(costs).reduce((t, c) => t + c.spend, 0)
@@ -395,10 +395,23 @@ export function buildAdmState(raw = {}, { now = Date.now(), clock = realClock(no
     bugs: (raw.bugs || []).map(b => toBug(b, now)), audit, connect, setupFees: [], draws: [], onboard, setupLog: {},
     clock, costs, costsMonth: costsOf(raw.costsMonth || []), costsLast: costsOf(raw.costsLast || []), periodCosts: { week: { adsExtra: 0, tools: 0 }, month: { adsExtra: 0, tools: 0 }, last: { ads: 0, tools: 0 } },
     stripeBalance: null, real: true, trend: leadTrendOf(raw.history || [], clock, notTest),
+    spendTrend: leadSpendTrendOf(raw.history || [], clock, notTest), // P943: the Revenue chart's booking desk history
     // P942: the Leads board's "Showing: All" (the last 91 days; this week's list stays "leads").
     allLeads: (() => { const ids = new Set(leads.map(l => l.id)); return [...leads, ...(raw.history || []).filter(l => !l.is_sample && notTest(l.assigned_rep_id) && !ids.has(l.id)).map(l => toLead(l, { clock, now, intake }))] })(),
   }
 }
+
+// P943: the Revenue stock chart's lead history: per day (Central), the leads charged to an agent, by kind (an
+// appointment or a live call), counted the day they came in. Test and sample leads stay out. data.js prices them.
+export function leadSpendTrendOf(history, clock, notTest = () => true) {
+  const rows = (history || []).filter(l => !l.is_sample && l.assigned_rep_id && notTest(l.assigned_rep_id) && Number.isFinite(Date.parse(l.created_at)))
+  const day = l => ymd(partsOf(Date.parse(l.created_at)))
+  return dailyCounts(clock.todayIso, {
+    appointment: rows.filter(l => l.inbound_product !== 'live_call').map(day),
+    live: rows.filter(l => l.inbound_product === 'live_call').map(day),
+  })
+}
+const isoDay = iso => { const ms = Date.parse(iso || ''); return Number.isFinite(ms) ? ymd(partsOf(ms)) : null }
 
 // P942: the Overview leads chart, one row per day for the last 91 days (Central): came in, delivered (an appointment or
 // a live call that reached an agent) and sold, each counted on the day the lead came in. Test and sample leads stay out.
