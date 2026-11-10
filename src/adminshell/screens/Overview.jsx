@@ -10,7 +10,9 @@ import { ap } from '../paths'
 import { adAlerts } from '../p879'
 import { adminTodos, shortCover } from '../todos'
 import Chart from '../../template/Chart'
+import AreaTrend from '../../template/AreaTrend'
 import '../../template/rowbtn936.css'
+import '../p942.css'
 
 // P849 — the admin Overview: the whole business at a glance on the Solvik shape (head stats, one dominant tile, a
 // right column, colour carried by a few filled tiles). Dominant tile = leads this week as a funnel (in, booked,
@@ -72,16 +74,17 @@ function Todo({ t, i }) {
   )
 }
 
-// P936 — this week as the one chart (src/template/Chart.jsx): stacked Sold on Came in per day, rounded bars that grow
-// in, values in the tooltip. Days still to come are a faint label on the axis, never an empty box.
-const LEAD_SERIES = [{ key: 'sold', label: 'Sold', color: 'var(--ox-1)' }, { key: 'rest', label: 'Came in', color: 'var(--ox-2)' }]
-const leadRows = day => day.byDay.map(d => ({ name: d.name, later: d.later, today: d.day === day.today, sold: d.sold, rest: Math.max(0, d.in - d.sold), in: d.in }))
-function DayBars({ day, height = 150 }) {
-  return (
-    <Chart data={leadRows(day)} series={LEAD_SERIES} stacked height={height} className="adm-daychart"
-      label={day.byDay.map(d => `${d.name}: ${d.later ? 'not yet' : `${d.in} in, ${d.sold} sold`}`).join('. ')}
-      tip={r => [['Came in', r.in, 'var(--ox-2)'], ['Sold', r.sold, 'var(--ox-1)']]} />
-  )
+// P942 — the leads chart is shadcn/ui's "Area Chart - Interactive" (src/template/AreaTrend.jsx, same on the agent
+// Overview): Came in (light, behind), Delivered, Sold (dark, front); range This week · Last 30 days · Last 3 months.
+// It takes all the height the box has left under the funnel, so there is no empty bottom half.
+const LEAD_SERIES = [
+  { key: 'in', label: 'Came in', color: 'var(--ox-soft)' },
+  { key: 'delivered', label: 'Delivered', color: 'var(--ox-mid-tone)' },
+  { key: 'sold', label: 'Sold', color: 'var(--ox-sold)' },
+]
+function LeadTrend({ day, className = '' }) {
+  return <AreaTrend rows={day.trend} series={LEAD_SERIES} todayIso={day.todayIso} label="Leads" className={className}
+    head={<p className="adm-trend-what">Came in, delivered and sold, day by day</p>} />
 }
 
 export default function Overview() {
@@ -126,7 +129,7 @@ export default function Overview() {
               </li>
             ))}
           </ol>
-          <DayBars day={day} />
+          <LeadTrend day={day} className="adm-ov-trend" />
           <CostLine costs={costs} row={row} />
         </Tile>
 
@@ -175,8 +178,8 @@ export default function Overview() {
           </Tile>
       </div>
 
-      <Tile className="adm-ov-days" i={5} title="Leads by day" sub="This week, Monday to today">
-        <DayBars day={day} height={190} />
+      <Tile className="adm-ov-days" i={5} title="Leads by day" sub="Came in, delivered and sold">
+        <LeadTrend day={day} />
       </Tile>
 
       <Tile className="adm-ov-agents" i={6} icon={Users} title="Agents" sub={`${day.onDuty.length} taking live transfers now · ${agents.length} in all`} to={ap('agents')} label="Open Agents">

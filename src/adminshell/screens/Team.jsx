@@ -11,6 +11,7 @@ import { GRID_END, GRID_ROWS, GRID_START, lanes, minutesOf, rotaCell, shiftSpan,
 import { RecordDrawer, Block } from '../../template/Record'
 import { usd, CountUp } from '../../template/motion'
 import { Dropdown, DField, Tile } from '../kit'
+import '../../template/cal910.css' // P942: the agent Calendar's day headers and call hover, exactly
 import { ap } from '../paths'
 import { CALL_WORD, CALL_TONE, BANK_WORD } from '../words'
 import { SwapsAndOpen, HoursPay, Holidays } from './Team879'
@@ -131,11 +132,12 @@ function TeamCalendar() {
       <WeekList days={days} today={TODAY} onOpen={open} name={dayName} itemsOf={callsOf} line={c => `${c.time} ${c.client}`} />
 
       <div className="fx-grid adm-cal adm-big-cal" data-fold data-fold-fit="320">
-        <section className={`fx-tile ${view != null ? 'fx-s8 is-day' : 'fx-s12 is-week'} fx-week adm-week`} style={{ '--i': 0, '--days': cols.length, '--rows': GRID_ROWS }} aria-label={view != null ? label(view) : (week ? 'Next week' : 'This week')}>
+        <section className={`fx-tile ${view != null ? 'fx-s8 is-day' : 'fx-s12 is-week'} fx-week cal910 adm-week`} style={{ '--i': 0, '--days': cols.length, '--rows': GRID_ROWS }} aria-label={view != null ? label(view) : (week ? 'Next week' : 'This week')}>
           <div className="tp-tgrid-h"><span />{cols.map(d => (
-            <button key={d} type="button" aria-pressed={d === view} title={d === view ? 'Back to the week' : `Open ${dayName(d)} ${d}`} className={`adm-dayhead${d === TODAY ? ' today is-today' : ''}${d === view ? ' is-on' : ''}`} onClick={() => toggle(d)}>
-              {dayName(d)} <span>{d}</span>{d === TODAY ? <small>Today</small> : <small className="adm-cal-n">{(rotaData.rota[d] || []).length} on</small>}
-            </button>
+            // P942: the agent Calendar's day header exactly (cal910: same size, colour, hover, pressed)
+            <b key={d} role="button" tabIndex={0} aria-pressed={d === view} title={d === view ? 'Back to the week' : `Open ${dayName(d)} ${d}`} className={`${d === TODAY ? 'today' : ''}${d === view ? ' is-on' : ''}`} onClick={() => toggle(d)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(d) } }}>
+              {dayName(d)} <span>{d}</span>{d === TODAY && <small>Today</small>}
+            </b>
           ))}</div>
           <div className="tp-tgrid-b">
             <div className="tp-hours">{HOURS_ADM.map(h => <span key={h}>{hourLabel(h)}</span>)}</div>

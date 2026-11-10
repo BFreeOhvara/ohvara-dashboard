@@ -8,15 +8,17 @@
 // show's old apricot. A live call isn't a status: it waits on Booked tagged "Mark result". A lead that matched no agent
 // (no agent ID in the ad link and no Meta campaign ID that points at one) is not on the board at all: it raises an
 // admin alert with Assign (Unmatched913.jsx).
+// P942: the first status reads Delivered (an appointment or a live call that reached the agent, as the agent's
+// "Delivered this week", P923); the stage key stays 'booked'.
 export const LEAD_LANES = [
-  { key: 'booked', label: 'Booked', tone: 'blue', stages: ['booked'], empty: 'No appointments booked.' },
+  { key: 'booked', label: 'Delivered', tone: 'blue', stages: ['booked'], empty: 'Nothing delivered yet.' },
   { key: 'no_show', label: 'No show', tone: 'mute', stages: ['no_show'], empty: 'No missed appointments.' },
   { key: 'follow_up', label: 'Follow up', tone: 'teal', stages: ['follow_up'], empty: 'No follow-ups set.' },
-  { key: 'sold', label: 'Sold', tone: 'green', stages: ['sold'], empty: 'No sales yet this week.' },
+  { key: 'sold', label: 'Sold', tone: 'green', stages: ['sold'], empty: 'No sales yet.' },
   { key: 'not_interested', label: 'Not interested', tone: 'warn', stages: ['not_interested'], empty: 'No one said no.' },
 ]
 export const LEAD_STAGES = LEAD_LANES.map(l => l.key)
-export const STAGE_WORD = { unassigned: 'Not matched', booked: 'Booked', no_show: 'No show', follow_up: 'Follow up', sold: 'Sold', not_interested: 'Not interested' }
+export const STAGE_WORD = { unassigned: 'Not matched', booked: 'Delivered', no_show: 'No show', follow_up: 'Follow up', sold: 'Sold', not_interested: 'Not interested' }
 export const stageTone = stage => LEAD_LANES.find(l => l.stages.includes(stage))?.tone || 'warn'
 // Who owns a Follow up: 'team' (the AI or the no-answer cadence is still trying) or 'agent' (their own callback).
 export const FOLLOW_OWNER = { team: 'Our team', agent: 'Agent' }

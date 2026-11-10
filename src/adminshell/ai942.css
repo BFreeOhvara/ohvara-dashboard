@@ -1,0 +1,51 @@
+/* P942 — Leads › AI calls: colour stat cards, then call cards coloured by what happened. Tokens only (light + dark).
+   Delivered = the Delivered blue (sky), Not now = lilac, No answer = butter, Not interested = coral. */
+.ai942 .is-sky { --tf: var(--sh-f-sky); --ti: var(--sh-fi-sky); }
+.ai942 .is-lilac { --tf: var(--sh-f-lilac); --ti: var(--sh-fi-lilac); }
+.ai942 .is-butter { --tf: var(--sh-f-butter); --ti: var(--sh-fi-butter); }
+.ai942 .is-sage { --tf: var(--sh-f-sage); --ti: var(--sh-fi-sage); }
+.ai942 .is-stone { --tf: var(--sh-f-stone); --ti: var(--sh-fi-stone); }
+.ai942 .is-delivered, .ai942-sheet.is-delivered { --tf: var(--sh-f-sky); --ti: var(--sh-fi-sky); }
+.ai942 .is-not_now, .ai942-sheet.is-not_now { --tf: var(--sh-f-lilac); --ti: var(--sh-fi-lilac); }
+.ai942 .is-no_answer, .ai942-sheet.is-no_answer { --tf: var(--sh-f-butter); --ti: var(--sh-fi-butter); }
+.ai942 .is-not_interested, .ai942-sheet.is-not_interested { --tf: var(--sh-f-coral); --ti: var(--sh-fi-coral); }
+
+.ai942-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.ai942-stats li { position: relative; display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 16px 16px 14px; border-radius: 18px;
+  background: var(--tf); color: var(--ti); animation: fx-up .5s var(--fx-ease, ease) both; animation-delay: calc(var(--i, 0) * 40ms); }
+.ai942-stats small { font-size: 12.5px; font-weight: 600; opacity: .85; }
+.ai942-stats b { font-size: 32px; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
+.ai942-stats span:last-child { font-size: 12px; opacity: .78; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai942-ic { position: absolute; top: 12px; right: 12px; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px;
+  background: color-mix(in srgb, currentColor 12%, transparent); }
+
+.ai942-calls { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.ai942-call { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 14px 14px 12px; border-radius: 18px;
+  background: var(--sh-surface, var(--bg-surface)); border: 1px solid var(--ov-line); box-shadow: inset 4px 0 0 var(--tf);
+  animation: fx-up .5s var(--fx-ease, ease) both; animation-delay: calc(min(var(--i, 0), 12) * 30ms); }
+.ai942-call-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ai942-call-top small { font-size: 12px; color: var(--ov-mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai942-out { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700;
+  background: var(--tf); color: var(--ti); white-space: nowrap; }
+.ai942-call h3 { margin: 2px 0 0; font-size: 15.5px; font-weight: 700; color: var(--ov-hi); }
+.ai942-where { display: flex; align-items: center; gap: 5px; margin: 0; font-size: 12.5px; color: var(--ov-mid); }
+.ai942-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 4px 0 2px; }
+.ai942-facts div { min-width: 0; padding: 7px 9px; border-radius: 10px; background: color-mix(in srgb, var(--ov-hi) 4%, transparent); }
+.ai942-facts dt { font-size: 11px; color: var(--ov-mid); }
+.ai942-facts dd { margin: 0; font-size: 12.5px; font-weight: 600; color: var(--ov-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ai942-facts .tp-money { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+.ai942-open { align-self: flex-start; gap: 6px; }
+
+.ai942-sheet { display: flex; align-items: baseline; gap: 10px; padding: 16px 18px; border-radius: 16px; background: var(--tf); color: var(--ti); margin-bottom: 12px; }
+.ai942-sheet .ai942-out { background: color-mix(in srgb, currentColor 14%, transparent); color: inherit; }
+.ai942-sheet b { font-size: 30px; font-weight: 700; margin-left: auto; }
+.ai942-sheet small { font-size: 12px; opacity: .8; }
+.ai942-script { display: grid; gap: 8px; }
+.ai942-script li { padding: 9px 12px; border-radius: 12px; background: color-mix(in srgb, var(--ov-hi) 5%, transparent); }
+.ai942-script li.is-ai { background: color-mix(in srgb, var(--sh-sky, var(--ov-data-a)) 12%, transparent); }
+.ai942-script small { font-size: 11px; font-weight: 700; color: var(--ov-mid); }
+.ai942-script p { margin: 2px 0 0; color: var(--ov-hi); font-size: 13.5px; }
+
+@media (max-width: 1100px) { .ai942-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .ai942-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ai942-stats b { font-size: 26px; } }
+@media (prefers-reduced-motion: reduce) { .ai942-stats li, .ai942-call { animation: none; } }

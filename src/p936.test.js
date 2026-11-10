@@ -16,16 +16,18 @@ test('one chart component (Recharts, the shadcn way) in admin, agent and VA', ()
   const css = src('./template/chart936.css')
   assert.match(css, /\.ox-tick\.is-later \{ opacity/)
   assert.doesNotMatch(css, /#[0-9a-fA-F]{3,8}\b/, 'tokens only, no hex')
-  for (const f of ['./adminshell/screens/Overview.jsx', './adminshell/screens/Billing.jsx', './adminshell/screens/Numbers916.jsx', './template/screens/Overview.jsx', './template/ful/screens/Overview.jsx']) {
+  // P942: the agent Overview's Delivered chart is the shadcn interactive area chart (AreaTrend) instead
+  for (const f of ['./adminshell/screens/Overview.jsx', './adminshell/screens/Billing.jsx', './adminshell/screens/Numbers916.jsx', './template/ful/screens/Overview.jsx']) {
     assert.match(src(f), /<Chart\b/, f)
   }
+  assert.match(src('./template/screens/Overview.jsx'), /<AreaTrend\b/)
   // the old hand-made bars are gone
   assert.doesNotMatch(src('./adminshell/screens/Overview.jsx'), /function WeekGrid|adm-wg-bar/)
   assert.doesNotMatch(src('./adminshell/screens/Billing.jsx'), /adm-rev-chart|adm-wg-bar/)
   assert.doesNotMatch(src('./template/ful/screens/Overview.jsx'), /fs-minibars/)
   assert.doesNotMatch(src('./template/screens/Overview.jsx'), /fx-wchart-y|className=\{`fx-bar/)
   // stacked where it means something
-  assert.match(src('./adminshell/screens/Overview.jsx'), /label: 'Sold'[\s\S]*label: 'Came in'/)
+  assert.match(src('./adminshell/screens/Overview.jsx'), /label: 'Came in'[\s\S]*label: 'Sold'/) // P942: back to front
   assert.match(src('./adminshell/screens/Billing.jsx'), /'Plan fees'[\s\S]*deskAdminLabel[\s\S]*'Setup fees'/)
 })
 

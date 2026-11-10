@@ -1,0 +1,7 @@
+/* P942 — admin: the Overview leads area chart fills the rest of the Leads this week box; on a phone it moves to its
+   own Leads by day tile (the hero is the funnel only there, as before). */
+.adm-ov-hero { display: flex; flex-direction: column; }
+.adm-ov-hero > .adm-ov-trend { flex: 1 1 auto; min-height: 220px; }
+.adm-trend-what { margin: 8px 0 0; font-size: 12.5px; font-weight: 600; color: var(--ov-mid); }
+.adm-ov-days .ox-trend { min-height: 260px; }
+@media (max-width: 767px) { .adm-ov-hero > .adm-ov-trend { display: none; } }

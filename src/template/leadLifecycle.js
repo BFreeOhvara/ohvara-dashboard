@@ -58,7 +58,7 @@ export const MAX_TRIES = 3
 // src/adminshell/words.js LEAD_LANES; P915 brought the VA side in line). Each stage sits in one lane; a Follow up still
 // being worked by the AI or the no-answer texts is owned by Our team (STAGES[k].owner), the agent's own callback by Agent.
 export const LEAD_LANES = [
-  { key: 'booked', label: 'Booked', tone: 'blue', empty: 'No appointments booked.' },
+  { key: 'booked', label: 'Delivered', tone: 'blue', empty: 'Nothing delivered yet.' }, // P942: Delivered, as admin's
   { key: 'no_show', label: 'No show', tone: 'mute', empty: 'No missed appointments.' },
   { key: 'follow_up', label: 'Follow up', tone: 'teal', empty: 'No follow-ups set.' },
   { key: 'sold', label: 'Sold', tone: 'green', empty: 'No sales yet this week.' },

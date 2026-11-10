@@ -206,7 +206,8 @@ export default function Calendar() {
     <div className="tp-page fx-page fs-sched fs-cal">
       {/* P931: no type filters or status chips, just This week · Next week. */}
       <div className="fx-tools fs-cal-tools">
-        <Seg label="Week" value={week} onChange={pickWeek} options={WEEK_LABEL.map((label, key) => ({ key, label }))} />
+        {/* P942: the agent Calendar's week switch exactly (Seg .cal-wk, with each week's count), as on admin Fulfillment */}
+        <Seg label="Week" className="cal-wk" value={week} onChange={pickWeek} options={WEEK_LABEL.map((label, key) => ({ key, label, count: items.filter(i => WEEKS[key].includes(i.day)).length }))} />
         <HelpDot lesson="calendar" />
       </div>
 

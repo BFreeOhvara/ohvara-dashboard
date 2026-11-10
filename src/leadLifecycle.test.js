@@ -20,7 +20,7 @@ test('every stage sits in exactly one lane and maps to a real inbound_stage', ()
     assert.ok(db.includes(STAGES[k].db), k)
   }
   // P915: the VA side uses admin's and the agent's five statuses (P913).
-  assert.deepEqual(LEAD_LANES.map(l => l.label), ['Booked', 'No show', 'Follow up', 'Sold', 'Not interested'])
+  assert.deepEqual(LEAD_LANES.map(l => l.label), ['Delivered', 'No show', 'Follow up', 'Sold', 'Not interested'])
 })
 
 test('stage moves set the stage, the db fields and add a timeline row by the agent', () => {

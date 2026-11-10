@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
 import { Search, PhoneIncoming, CalendarCheck, PhoneForwarded, PhoneOff, MapPin, Clock, Shuffle, Check, Lock } from 'lucide-react'
-import { useAdmLeads, useAdmAgents, useAdmActions } from '../data'
+import { useAdmLeads, useAdmAgents, useAdmActions, useAdmDay } from '../data'
 import { Avatar, Chip, Empty, Seg, useNote } from '../../template/kit'
 import { RecordDrawer, Block } from '../../template/Record'
 import { Dropdown, DField } from '../kit'
@@ -35,13 +35,13 @@ function LeadCard({ l, i }) {
 }
 
 function LeadDrawer({ id, onClose }) {
-  const { data: leads } = useAdmLeads()
+  const { data: leads } = useAdmLeads({ all: true })
   const { data: agents } = useAdmAgents()
   const { assignLead } = useAdmActions()
   const note = useNote()
   const l = leads.find(x => x.id === id)
   const [pick, setPick] = useState(null)
-  if (!l) return <RecordDrawer label="Not found" kicker="Leads" onClose={onClose} hero={<h2>No lead here</h2>}><p className="fx-calm">This lead is not in this week's list.</p></RecordDrawer>
+  if (!l) return <RecordDrawer label="Not found" kicker="Leads" onClose={onClose} hero={<h2>No lead here</h2>}><p className="fx-calm">This lead is not in the last 3 months of leads.</p></RecordDrawer>
   const tone = stageTone(l.stage)
   const none = isUnassigned(l)
   const fits = agents.filter(a => a.access && a.states.includes(l.state))
@@ -77,16 +77,20 @@ function LeadDrawer({ id, onClose }) {
   )
 }
 
+// P942: one toolbar row: search first, then what's showing (Today · This week · All, default This week), the agent,
+// and the Board / AI calls switch at the end. No status list (the columns are the statuses) and no All /
+// Appointments / Live calls switch: both are Delivered.
+const RANGES = [{ key: 'today', label: 'Today' }, { key: 'week', label: 'This week' }, { key: 'all', label: 'All' }]
+
 export default function Leads() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [sp, setSp] = useSearchParams()
-  const { data: leads } = useAdmLeads()
-  const { data: agents } = useAdmAgents()
-  const [q, setQ] = useState('')
-  const [kind, setKind] = useState('all')
   const [when, setWhen] = useState('week')
-  const [status, setStatus] = useState('all')
+  const { data: leads } = useAdmLeads({ all: when === 'all' })
+  const { data: agents } = useAdmAgents()
+  const { data: day } = useAdmDay()
+  const [q, setQ] = useState('')
   const agent = sp.get('agent') || 'all'
   const setAgent = v => setSp(v === 'all' ? {} : { agent: v }, { replace: true })
   // P892: Board (every lead by status) or AI calls (the AI caller's numbers and calls), kept in the address.
@@ -96,29 +100,27 @@ export default function Leads() {
   if (view === 'ai') {
     return (
       <div className="tp-page fx-page fx-leads adm-leads">
-        <div className="fx-tools">{viewSeg}</div>
+        <div className="fx-tools"><span className="tp-grow" />{viewSeg}</div>
         <AiCallsView />
       </div>
     )
   }
   const n = q.trim().toLowerCase()
-  const match = l => (when === 'week' || l.day === 5) && (!n || `${l.name} ${l.city} ${l.phone} ${l.agent || ''}`.toLowerCase().includes(n))
+  const match = l => (when !== 'today' || l.day === day.today) && (!n || `${l.name} ${l.city} ${l.phone} ${l.agent || ''}`.toLowerCase().includes(n))
   const assigned = leads.filter(l => !isUnassigned(l))
-  const shown = assigned.filter(l => match(l) && (kind === 'all' || l.kind === kind) && (agent === 'all' || l.agent_id === agent))
-  const lanes = LEAD_LANES.filter(b => status === 'all' || b.key === status)
+  const shown = assigned.filter(l => match(l) && (agent === 'all' || l.agent_id === agent))
+  const lanes = LEAD_LANES
   let card = 0
   return (
     <div className="tp-page fx-page fx-leads adm-leads">
-      <div className="fx-tools">
-        {viewSeg}
+      <div className="fx-tools adm-leads-tools">
         <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a lead" placeholder="Find by name, city, phone or agent" value={q} onChange={e => setQ(e.target.value)} /></label>
-        <Seg label="Type" value={kind} onChange={setKind} options={[{ key: 'all', label: 'All', count: assigned.length }, { key: 'appointment', label: 'Appointments', count: assigned.filter(l => l.kind === 'appointment').length }, { key: 'live', label: 'Live calls', count: assigned.filter(l => l.kind === 'live').length }]} />
-        <Seg label="When" value={when} onChange={setWhen} options={[{ key: 'week', label: 'This week' }, { key: 'today', label: 'Today' }]} />
-        <span className="tp-grow" />
-        <Dropdown className="adm-dd-sm" label="Status" value={status} onChange={setStatus} options={[{ value: 'all', label: 'Every status' }, ...LEAD_LANES.map(b => ({ value: b.key, label: b.label, sub: `${assigned.filter(l => b.stages.includes(l.stage)).length} this week` }))]} />
+        <div className="adm-showing" role="group" aria-label="Showing"><span aria-hidden="true">Showing</span><Seg label="Showing" value={when} onChange={setWhen} options={RANGES} /></div>
         <Dropdown className="adm-dd-sm" label="Agent" value={agent} onChange={setAgent} options={[{ value: 'all', label: 'Every agent' }, ...agents.map(a => ({ value: a.id, label: a.name }))]} />
+        <span className="tp-grow" />
+        {viewSeg}
       </div>
-      <div className={`fx-board adm-board5${lanes.length === 1 ? ' is-one' : ''}`} role="region" aria-label="Leads by status">
+      <div className="fx-board adm-board5" role="region" aria-label="Leads by status">
         {lanes.map((b, li) => {
           const rows = shown.filter(l => b.stages.includes(l.stage)).slice().reverse()
           return (

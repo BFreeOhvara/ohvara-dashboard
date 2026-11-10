@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react'
-import { Bot, Clock3, PhoneOutgoing, ShieldAlert, PhoneOff, MessageSquareText, ChevronRight, Power } from 'lucide-react'
+import { Bot, Clock3, ShieldAlert, PhoneOff, MessageSquareText, ChevronRight, Power, Play, PhoneCall, Timer, Target, CheckCircle2, Wallet, MapPin } from 'lucide-react'
 import { Chip, Switch, SampleTag, Empty, Drawer, useNote } from '../../template/kit'
 import { Dropdown, DField } from '../kit'
 import { useAdmSettings, useAdmAgents, useAdmSource } from '../data'
 import { supabase } from '../../lib/supabase'
 import { usd } from '../../template/motion'
 import {
-  AI_RULES, PROVIDERS, providerOf, DRAFT_WORDS, SAMPLE_AI_CALLS, SAMPLE_AI_SETTINGS, SAMPLE_CENTS_PER_MIN, OUTCOME_WORD, OUTCOME_TONE,
+  AI_RULES, PROVIDERS, providerOf, DRAFT_WORDS, SAMPLE_AI_CALLS, SAMPLE_AI_SETTINGS, SAMPLE_CENTS_PER_MIN, OUTCOME_WORD,
   SAMPLE_BAD_LEADS, aiStats, beatsOf,
 } from '../../lib/aiCaller'
 import { FIRST_CALL_OUTCOMES, OUTCOME_LABEL, flowFor, planFlow, fillWords } from '../../lib/leadFlows'
 import '../../template/ai892.css'
+import '../ai942.css'
 
 // P892 — AI speed to lead, admin only. Settings › AI caller holds the switch (ai_caller_live, off), which agents it
 // calls for, the longest call, and the provider (an engine slot: nothing is connected or paid for). Leads › AI calls
@@ -93,6 +94,7 @@ export function AiCallerSettings() {
 // P926: a real call row (admin_ai_calls_view, migration 263) in the sample rows' shape.
 const when = iso => { try { return new Date(iso).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }) } catch { return '' } }
 const fromView = r => ({
+  iso: r.at || null, summary: r.summary || '',
   id: r.id, lead_id: r.lead_id, name: r.name || 'Lead', state: r.state || '', agent: r.agent || '', at: when(r.at), attempt: r.attempt || 1,
   secs: r.secs ?? '–', duration: r.duration || 0, outcome: r.outcome, test: !!r.test, costCents: r.cost_cents == null ? null : Number(r.cost_cents),
   note: [r.summary, r.booked_for ? `Booked ${when(r.booked_for)}` : null, r.callback_at ? `Callback ${when(r.callback_at)}` : null].filter(Boolean).join(' · '),
@@ -108,32 +110,80 @@ function useRealAiCalls(on) {
   return v
 }
 
-// Leads › AI calls: the numbers and every call. Sample on /preview; the real last 7 days for a signed-in admin (P926).
+// P942 — Leads › AI calls, redesigned: five colour stat cards (calls today, average time to first call, reached %,
+// delivered %, cost today), then one card per call coloured by what happened: Delivered (booked or a live transfer,
+// the Delivered blue), Not now, No answer, Not interested (also a wrong number or stop calling). Each card has the
+// lead, state, when, length and cost, and a Transcript button that opens the call in a slide-in.
+// Sample on /preview; the real last 7 days for a signed-in admin (P926).
+const GROUP = { booked: 'delivered', transferred: 'delivered', not_now: 'not_now', no_answer: 'no_answer', hard_no: 'not_interested', wrong_number: 'not_interested', opt_out: 'not_interested' }
+const GROUP_WORD = { delivered: 'Delivered', not_now: 'Not now', no_answer: 'No answer', not_interested: 'Not interested' }
+const length = secs => (secs ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}` : '0:00')
+const isToday = (c, real) => (real ? !!c.iso && new Date(c.iso).toDateString() === new Date().toDateString() : String(c.at).startsWith('Today'))
+const costOf = (c, centsPerMin) => (c.costCents != null ? c.costCents : c.duration ? Math.ceil(c.duration / 60) * centsPerMin : 0)
+
+// The call, in a slide-in: what happened, the transfer beat by beat, and the transcript (sample: the AI's own lines).
+function CallSheet({ c, real, onClose }) {
+  const g = c ? GROUP[c.outcome] || 'no_answer' : 'no_answer'
+  const lines = c && !real && c.duration ? [['AI', DRAFT_WORDS.opening], ['Lead', 'Yes, this is them.'], ...(c.note ? [['AI', `${c.note}.`]] : [])] : []
+  const cost = c ? (c.costCents != null ? money(c.costCents / 100) : real ? '–' : money(costOf(c, SAMPLE_CENTS_PER_MIN) / 100)) : ''
+  return (
+    <Drawer open={!!c} onClose={onClose} title={c?.name || 'Call'} sub={c ? `${OUTCOME_WORD[c.outcome]} · ${c.at}` : ''}>
+      {c && <>
+        <div className={`ai942-sheet is-${g}`}><span className="ai942-out">{GROUP_WORD[g]}</span><b className="tp-num">{length(c.duration)}</b><small>{c.duration ? 'call length' : 'no answer'}</small></div>
+        <dl className="fx-facts">{[['Lead', c.name], ['State', c.state || '–'], ['Agent', c.agent || '–'], ['When', c.at], ['To first call', c.secs === '–' ? '–' : `${c.secs} s`], ['Try', c.attempt], ['Cost', cost]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+        {(c.summary || c.note) && <><h3 className="fx-h3">What happened</h3><p className="tp-mid">{c.summary || c.note}</p></>}
+        {c.transfer && <><h3 className="fx-h3">The transfer</h3><ol className="ai-beats">{beatsOf(c).map(b => <li key={b}>{b}</li>)}</ol></>}
+        <h3 className="fx-h3">Transcript</h3>
+        {lines.length
+          ? <ul className="tp-list ai942-script">{lines.map(([who, t], i) => <li key={i} className={who === 'AI' ? 'is-ai' : ''}><small>{who}</small><p>{t}</p></li>)}</ul>
+          : <p className="tp-sub">{c.duration ? 'Retell keeps the transcript and the summary with the call; recording stays off until the notice wording is picked.' : 'No one answered, so there is nothing to read.'}</p>}
+        {!real && <SampleTag>Sample</SampleTag>}
+      </>}
+    </Drawer>
+  )
+}
+
 export function AiCallsView() {
   const real = useAdmSource() === 'real'
   const r = useRealAiCalls(real)
   const calls = real ? (r.data?.rows || []).map(fromView) : SAMPLE_AI_CALLS
+  const [open, setOpen] = useState(null)
   const st = aiStats(calls, SAMPLE_CENTS_PER_MIN)
-  if (real) { st.minutes = r.data?.minutes ?? 0; st.costCents = r.data?.cost_cents == null ? null : Number(r.data.cost_cents) }
+  const today = calls.filter(c => isToday(c, real))
+  const leads = new Set(calls.map(c => c.lead_id)).size
+  const delivered = new Set(calls.filter(c => GROUP[c.outcome] === 'delivered').map(c => c.lead_id)).size
+  const costToday = today.reduce((t, c) => t + costOf(c, SAMPLE_CENTS_PER_MIN), 0)
+  const costKnown = !real || today.some(c => c.costCents != null) || today.length === 0
   const tiles = [
-    ['Calls', st.calls, `${st.leads} leads`], ['Reached', `${st.reachedPct}%`, `${st.reached} of ${st.leads}`], ['Booked', st.booked], ['Transferred', st.transferred],
-    ['Not now', st.notNow], ['Wrong number', st.wrongNumber], ['To first call', st.avgSecs == null ? '–' : `${st.avgSecs} s`, 'average'], ['Minutes', st.minutes], ['Cost', st.costCents == null ? '–' : money(st.costCents / 100), real ? 'from Retell' : `at ${SAMPLE_CENTS_PER_MIN}¢ a minute`],
+    ['sky', PhoneCall, 'Calls today', today.length, `${calls.length} ${real ? 'in the last 7 days' : 'in all'}`],
+    ['lilac', Timer, 'To first call', st.avgSecs == null ? '–' : `${st.avgSecs} s`, 'average, form to first dial'],
+    ['butter', Target, 'Reached', `${st.reachedPct}%`, `${st.reached} of ${st.leads} leads`],
+    ['sage', CheckCircle2, 'Delivered', `${leads ? Math.round((delivered / leads) * 100) : 0}%`, `${delivered} booked or transferred`],
+    ['stone', Wallet, 'Cost today', costKnown ? money(costToday / 100) : '–', real ? 'from Retell' : `at ${SAMPLE_CENTS_PER_MIN}¢ a minute`],
   ]
   return (
-    <section className="ai-view" aria-label="AI calls">
+    <section className="ai-view ai942" aria-label="AI calls">
       <div className="tp-row tp-wrap ai-view-h"><h2 className="fx-h3"><Bot size={17} aria-hidden="true" />AI calls · {real ? 'last 7 days' : 'today'}</h2><span className="tp-grow" />{real ? null : <><AiSlot /><SampleTag>Sample</SampleTag></>}</div>
       {real && r.error ? <p className="adm-warn" role="alert">Couldn{'’'}t load AI calls: {r.error}</p> : null}
-      <div className="ai-tiles">{tiles.map(([k, v, sub]) => <div key={k}><small>{k}</small><b className="tp-num">{v}</b>{sub != null && <span>{sub}</span>}</div>)}</div>
+      <ul className="ai942-stats" aria-label="AI call numbers">{tiles.map(([tone, Icon, k, v, sub], i) => (
+        <li key={k} className={`is-${tone}`} style={{ '--i': i }}><span className="ai942-ic" aria-hidden="true"><Icon size={16} /></span><small>{k}</small><b className="tp-num">{v}</b><span>{sub}</span></li>
+      ))}</ul>
       {real && r.loading ? <p className="tp-sub">Loading…</p> : calls.length === 0 ? <Empty title="No AI calls yet" sub="They show here once the AI caller is on." /> : (
-        <ul className="tp-list ai-rows">{calls.map(c => (
-          <li key={c.id} className="fx-mrow">
-            <PhoneOutgoing size={15} aria-hidden="true" />
-            <span className="tp-grow"><b>{c.name}{c.attempt > 1 ? ` · try ${c.attempt}` : ''}{c.test ? <> <Chip tone="outline">Test</Chip></> : null}</b><small>{[c.state, c.agent, c.at, `${c.secs} s to call`, c.duration ? `${Math.floor(c.duration / 60)}:${String(c.duration % 60).padStart(2, '0')}` : 'no answer', c.costCents != null ? money(c.costCents / 100) : null].filter(Boolean).join(' · ')}</small><small>{c.note}</small>
-              {c.transfer && <ol className="ai-beats" aria-label={`${c.name}: the transfer, beat by beat`}>{beatsOf(c).map(b => <li key={b}>{b}</li>)}</ol>}</span>
-            <Chip tone={OUTCOME_TONE[c.outcome]}>{OUTCOME_WORD[c.outcome]}</Chip>
-          </li>
-        ))}</ul>
+        <ul className="ai942-calls">{calls.map((c, i) => {
+          const g = GROUP[c.outcome] || 'no_answer'
+          const cost = c.costCents != null ? money(c.costCents / 100) : real ? null : money(costOf(c, SAMPLE_CENTS_PER_MIN) / 100)
+          return (
+            <li key={c.id} className={`ai942-call is-${g}`} style={{ '--i': i }}>
+              <div className="ai942-call-top"><span className="ai942-out">{GROUP_WORD[g]}</span><small>{OUTCOME_WORD[c.outcome]}{c.attempt > 1 ? ` · try ${c.attempt}` : ''}</small>{c.test ? <Chip tone="outline">Test</Chip> : null}</div>
+              <h3>{c.name}</h3>
+              <p className="ai942-where"><MapPin size={12} aria-hidden="true" />{[c.state, c.agent].filter(Boolean).join(' · ')}</p>
+              <dl className="ai942-facts">{[['When', String(c.at).replace('Today, ', '')], ['Length', c.duration ? length(c.duration) : 'No answer'], ['Cost', cost ?? '–']].map(([k, v]) => <div key={k}><dt>{k}</dt><dd className={k === 'Cost' ? 'tp-money' : 'tp-num'}>{v}</dd></div>)}</dl>
+              <button type="button" className="fx-pillbtn ai942-open" onClick={() => setOpen(c)} aria-label={`Open the call with ${c.name}`}><Play size={13} aria-hidden="true" />Transcript</button>
+            </li>
+          )
+        })}</ul>
       )}
+      <CallSheet c={open} real={real} onClose={() => setOpen(null)} />
       <p className="tp-sub"><Clock3 size={12} aria-hidden="true" /> Speed is from the form arriving to the first dial. Only no answer and booked start texts; the rest are recorded and sent to GoHighLevel.</p>
       <LeadFlows />
       <LeadQuality />

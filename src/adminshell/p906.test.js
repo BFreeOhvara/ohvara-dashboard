@@ -15,7 +15,7 @@ test('nav order (P913): Overview · Agents · Fulfillment · Leads · Clients ·
 })
 
 test('lead statuses are the five (P913), and a lead with no agent is an alert, not a status', () => {
-  assert.deepEqual(LEAD_LANES.map(l => l.label), ['Booked', 'No show', 'Follow up', 'Sold', 'Not interested'])
+  assert.deepEqual(LEAD_LANES.map(l => l.label), ['Delivered', 'No show', 'Follow up', 'Sold', 'Not interested'])
   assert.equal(new Set(LEAD_LANES.map(l => l.tone)).size, LEAD_LANES.length, 'no two statuses share a colour')
   const leads = admSnapshot().leads
   for (const l of leads.filter(x => !isUnassigned(x))) assert.ok(LEAD_STAGES.includes(l.stage), `${l.name}: ${l.stage}`)

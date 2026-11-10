@@ -1,4 +1,5 @@
 import { useSyncExternalStore, createContext, useContext, createElement } from 'react'
+import { sampleTrend } from '../template/leadTrend.js'
 import { useSampleBugs, setSampleBugStatus } from '../template/bugReport.js'
 import { SETUP_STEPS, setupOf, isPaid } from './setup.js'
 import { PRICES, SETTINGS, bandText, nightlyCharge } from '../lib/priceBook.js'
@@ -14,6 +15,7 @@ import { isTrained } from '../fulshell/training/store.js'
 // leaves the browser. The sample day is Thursday, Nov 5; the week is Mon Nov 2 to Sun Nov 8. Prices are sample prices.
 
 export const TODAY = 5
+const SAMPLE_TODAY_ISO = '2026-11-05' // P942: the sample clock's today (Thu, Nov 5)
 const WEEKDAY = { 0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat' }
 // November 2026 starts on a Sunday, so date d falls on weekday d % 7 ... with Nov 1 = Sun (0).
 export const dayName = d => WEEKDAY[(d - 1) % 7]
@@ -527,9 +529,10 @@ export function useAdmVas() {
   }))
 }
 export function useAdmInvites() { const s = useS(); return okS(s, s.invites) }
-export function useAdmLeads() {
+// P942: { all: true } = every lead we have (real: the last 91 days; sample: the sample week), for "Showing: All".
+export function useAdmLeads({ all = false } = {}) {
   const s = useS()
-  return okS(s, s.leads.map(l => ({ ...l, agent: l.agent_id ? nameOf(s, l.agent_id) : null })))
+  return okS(s, (all && s.allLeads ? s.allLeads : s.leads).map(l => ({ ...l, agent: l.agent_id ? nameOf(s, l.agent_id) : null })))
 }
 export function useAdmClients() {
   const s = useS()
@@ -712,8 +715,15 @@ export function useAdmDay() {
   const late = s.calls.filter(c => c.status === 'late')
   const requests = s.dayOff.filter(d => d.status === 'pending').map(d => ({ ...d, va: nameOf(s, d.va_id) }))
   const failed = s.agents.filter(a => a.billing.failed)
+  // P942: 91 days for the Overview leads chart (real: lib/admReal.js leadTrendOf; sample: a steady history whose
+  // current week is the sample week, so the chart and the numbers agree).
+  const todayIso = s.clock?.todayIso || SAMPLE_TODAY_ISO
+  const trend = s.real ? (s.trend || []) : sampleTrend(todayIso, {
+    base: 13, ratio: { delivered: 0.6, sold: 0.15 },
+    week: byDay.filter(d => !d.later).map((d, i) => ({ offset: i, values: { in: d.in, delivered: d.booked + d.transferred, sold: d.sold } })),
+  })
   return okS(s, {
-    week, byDay, today, unassigned, late, requests, failed, real: !!s.real,
+    week, byDay, today, todayIso, trend, unassigned, late, requests, failed, real: !!s.real,
     range: s.clock ? `${s.clock.dateText(s.clock.week[0])} to today` : 'Mon, Nov 2 to today',
     payingAgents: s.agents.filter(a => !a.comped && a.billing.status === 'current' && a.access).length,
     onShift: (s.rota[today] || []).map(id => s.vas.find(v => v.id === id)).filter(Boolean),

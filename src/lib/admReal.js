@@ -5,6 +5,7 @@
 import { PRICES } from './priceBook.js'
 import { tierOf } from '../template/spendPlan.js'
 import { isTestProfile } from './testAccounts.js'
+import { dailyCounts } from '../template/leadTrend.js'
 
 export const TZ = 'America/Chicago'
 const DAY = 864e5
@@ -393,6 +394,21 @@ export function buildAdmState(raw = {}, { now = Date.now(), clock = realClock(no
     },
     bugs: (raw.bugs || []).map(b => toBug(b, now)), audit, connect, setupFees: [], draws: [], onboard, setupLog: {},
     clock, costs, costsMonth: costsOf(raw.costsMonth || []), costsLast: costsOf(raw.costsLast || []), periodCosts: { week: { adsExtra: 0, tools: 0 }, month: { adsExtra: 0, tools: 0 }, last: { ads: 0, tools: 0 } },
-    stripeBalance: null, real: true,
+    stripeBalance: null, real: true, trend: leadTrendOf(raw.history || [], clock, notTest),
+    // P942: the Leads board's "Showing: All" (the last 91 days; this week's list stays "leads").
+    allLeads: (() => { const ids = new Set(leads.map(l => l.id)); return [...leads, ...(raw.history || []).filter(l => !l.is_sample && notTest(l.assigned_rep_id) && !ids.has(l.id)).map(l => toLead(l, { clock, now, intake }))] })(),
   }
+}
+
+// P942: the Overview leads chart, one row per day for the last 91 days (Central): came in, delivered (an appointment or
+// a live call that reached an agent) and sold, each counted on the day the lead came in. Test and sample leads stay out.
+export function leadTrendOf(history, clock, notTest = () => true) {
+  const rows = (history || []).filter(l => !l.is_sample && notTest(l.assigned_rep_id) && Number.isFinite(Date.parse(l.created_at)))
+  const day = l => ymd(partsOf(Date.parse(l.created_at)))
+  const delivered = l => l.assigned_rep_id && !teamOwned(l)
+  return dailyCounts(clock.todayIso, {
+    in: rows.map(day),
+    delivered: rows.filter(delivered).map(day),
+    sold: rows.filter(l => leadStage(l) === 'sold').map(day),
+  })
 }
