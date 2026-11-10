@@ -55,7 +55,7 @@ test('the Setup page (P906): tickets for paying agents only, no adding by hand, 
   assert.match(s, /<EngineSlot settings=\{row\} \/>/)
   // P913: the test lead moved into the launch checks; Campaign on is the locked Turn campaign on button.
   assert.deepEqual(SETUP_STAGES.map(x => x.label), ['New ticket', 'Campaign', 'Launch checks', 'Done this week'])
-  assert.deepEqual(SETUP_STEPS.map(x => x.key), ['states', 'campaign', 'checks', 'on', 'live'])
+  assert.deepEqual(SETUP_STEPS.map(x => x.key), ['signup', 'campaign', 'checks', 'on', 'live']) // P941: the sign-up, not a states tick
   assert.match(s, /Turn campaign on/)
   assert.doesNotMatch(s, /\['states', 'on', 'test'\]\.includes/) // Campaign on is never a switch
 })
@@ -79,17 +79,17 @@ test('the sample tickets: only paid agents, someone at every step, every % match
 
 test('stage, blocker and campaign request follow the checklist', () => {
   assert.equal(setupOf({ done: ['paid'] }).stage, 'new')
-  assert.equal(setupOf({ done: ['paid', 'states'] }).stage, 'campaign')
-  assert.equal(setupOf({ done: ['paid', 'states'] }).owner, 'engine')
-  assert.equal(setupOf({ done: ['paid', 'states'] }).req, 'none')
-  assert.equal(setupOf({ done: ['paid', 'states'], campaignReq: { status: 'sent' } }).blocker, 'Campaign requested · waiting on GoHighLevel')
-  const failed = setupOf({ done: ['paid', 'states'], campaignReq: { status: 'failed', why: 'template missing' } })
+  assert.equal(setupOf({ done: ['paid'] }).owner, 'engine')
+  assert.equal(setupOf({ done: ['paid'] }).req, 'none')
+  assert.equal(setupOf({ done: ['paid'], campaignReq: { status: 'sent' } }).stage, 'campaign')
+  assert.equal(setupOf({ done: ['paid'], campaignReq: { status: 'sent' } }).blocker, 'Campaign requested · waiting on GoHighLevel')
+  const failed = setupOf({ done: ['paid'], campaignReq: { status: 'failed', why: 'template missing' } })
   assert.equal(failed.warn, true)
   assert.match(failed.blocker, /template missing/)
   // P913: created → launch checks; on/live count only while every check passes (see launch913.test.js)
-  assert.equal(setupOf({ done: ['paid', 'states', 'campaign'] }).stage, 'checks')
-  assert.equal(setupOf({ done: ['paid', 'states', 'campaign', 'on'] }).stage, 'checks')
-  assert.equal(setupOf({ done: ['paid', 'states', 'campaign', 'on'] }).canLive, false)
+  assert.equal(setupOf({ done: ['paid', 'campaign'] }).stage, 'checks')
+  assert.equal(setupOf({ done: ['paid', 'campaign', 'on'] }).stage, 'checks')
+  assert.equal(setupOf({ done: ['paid', 'campaign', 'on'] }).canLive, false)
   assert.equal(stepsFor({ lead: 'appointment' }).length, stepsFor({ lead: 'live' }).length)
 })
 

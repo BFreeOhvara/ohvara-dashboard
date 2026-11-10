@@ -98,10 +98,28 @@ const seedInvites = [
 // `done` lists the SETUP_STEPS keys ticked (src/adminshell/setup.js works out the column, % and blocker).
 // spend = daily lead spend; lead = 'appointment' or 'live' (Appointments + live transfers); paid = when and for how
 // many days of leads; campaignReq = the "Create campaign" request sent through the GoHighLevel engine slot.
-const mkNew = (id, name, o) => ({
-  id, name, city: '', state: '', states: [], lead: 'appointment', spend: 0, done: [], since: 'Mon, Nov 2', campaignReq: null,
-  agentRef: `DS-${id.slice(3, 7).toUpperCase()}`, ...o, plan: o.spend ? planFor(o) : null,
-})
+// P941: a paid ticket carries its sign-up (signupFor): plan, daily spend, the one sign-up charge (setup + first month +
+// the first 2 days of leads with the booking desk), hours by day and time zone, live transfers yes/no.
+const WEEKDAY_ROWS = (start, end, days = [1, 2, 3, 4, 5]) => days.map(weekday => ({ weekday, start, end }))
+const TZ = { Central: 'America/Chicago', Eastern: 'America/New_York', Mountain: 'America/Denver', Pacific: 'America/Los_Angeles' }
+const signupFor = (o, plan) => {
+  if (!o.paid) return null
+  const leads = Math.round(nightlyCharge({ daily: (o.spend || 0) * 2 }).total * 100)
+  const planCents = Math.round((PLANS[plan]?.price || 0) * 100)
+  const setupCents = Math.round(PRICES.setupFee * 100)
+  return {
+    tier: plan, dailyCents: Math.round((o.spend || 0) * 100), paidOn: o.paid.on, paidShort: o.paid.short || o.paid.on,
+    paidCents: setupCents + planCents + leads, setupCents, planCents, leadCents: leads,
+    tz: TZ[o.launch?.tz] || 'America/Chicago', hours: o.hours || WEEKDAY_ROWS('09:00', '17:00'), live: o.lead === 'live',
+  }
+}
+const mkNew = (id, name, o) => {
+  const plan = o.spend ? planFor(o) : null
+  return {
+    id, name, city: '', state: '', states: [], lead: 'appointment', spend: 0, done: [], since: 'Mon, Nov 2', campaignReq: null,
+    agentRef: `DS-${id.slice(3, 7).toUpperCase()}`, ...o, plan, signup: signupFor(o, plan),
+  }
+}
 const made = (name, at) => ({ status: 'created', at, name })
 // P913: the launch checks' sample facts (src/adminshell/setup.js launchChecks). launchOk(ref, extra) = every check passes.
 const launchOk = (ref, o = {}) => ({
@@ -113,21 +131,21 @@ const seedOnboard = [
   mkNew('ob-nadia', 'Nadia Brooks', { city: 'Dallas', state: 'TX', states: ['TX'], spend: 75, since: 'Wed, Nov 4' }),
   mkNew('ob-monique', 'Monique Price', { city: 'Orlando', state: 'FL', states: ['FL'], spend: 100, since: 'Tue, Nov 3' }),
   mkNew('ob-carl', 'Carl Jensen', { city: 'Mesa', state: 'AZ', states: ['AZ', 'NM'], spend: 60, note: 'Card declined on the setup fee', since: 'Mon, Nov 2' }),
-  mkNew('ob-rachel', 'Rachel Nguyen', { city: 'Houston', state: 'TX', states: ['TX', 'LA'], spend: 65, done: ['paid'], paid: { on: 'Today, 9:12 AM', days: 2 }, since: 'Thu, Nov 5',
-    launch: { licence: true, card: 'Visa •••• 5120' } }),
-  mkNew('ob-luis', 'Luis Ortega', { city: 'El Paso', state: 'TX', states: ['TX', 'NM', 'AZ'], lead: 'live', spend: 150, done: ['paid', 'states'], paid: { on: 'Wed, Nov 4', days: 2 }, since: 'Wed, Nov 4',
+  mkNew('ob-rachel', 'Rachel Nguyen', { city: 'Houston', state: 'TX', states: ['LA', 'OK', 'TX'], spend: 65, done: ['paid'], paid: { on: 'Today, 9:12 AM', short: 'Nov 10', days: 2 }, since: 'Thu, Nov 5',
+    launch: { licence: true, hours: '9:00 AM to 5:00 PM', tz: 'Central', card: 'Visa •••• 5120' } }),
+  mkNew('ob-luis', 'Luis Ortega', { city: 'El Paso', state: 'TX', states: ['TX', 'NM', 'AZ'], lead: 'live', spend: 150, done: ['paid'], paid: { on: 'Wed, Nov 4', short: 'Nov 4', days: 2 }, since: 'Wed, Nov 4', hours: WEEKDAY_ROWS('08:00', '17:00', [1, 2, 3, 4, 5, 6]),
     launch: { licence: true, hours: '8:00 AM to 5:00 PM', tz: 'Mountain', card: 'Visa •••• 7781', app: { installed: true, pushAnswered: false } } }),
-  mkNew('ob-hannah', 'Hannah Wright', { city: 'Savannah', state: 'GA', states: ['GA', 'FL', 'SC'], spend: 90, done: ['paid', 'states'], paid: { on: 'Tue, Nov 3', days: 2 },
+  mkNew('ob-hannah', 'Hannah Wright', { city: 'Savannah', state: 'GA', states: ['GA', 'FL', 'SC'], spend: 90, done: ['paid'], paid: { on: 'Tue, Nov 3', short: 'Nov 3', days: 2 },
     campaignReq: { status: 'sent', at: 'Today, 9:05 AM' }, since: 'Tue, Nov 3', launch: { linkRef: 'DS-HANN', licence: true, hours: '9:00 AM to 5:00 PM', tz: 'Eastern', card: 'Mastercard •••• 3391' } }),
   // Every check passes but the test call: Place test call unlocks Turn campaign on.
-  mkNew('ob-owen', 'Owen Fisher', { city: 'Raleigh', state: 'NC', states: ['NC', 'SC', 'VA'], lead: 'live', spend: 220, done: ['paid', 'states', 'campaign'], paid: { on: 'Mon, Nov 2', days: 2 },
+  mkNew('ob-owen', 'Owen Fisher', { city: 'Raleigh', state: 'NC', states: ['NC', 'SC', 'VA'], lead: 'live', spend: 220, done: ['paid', 'campaign'], paid: { on: 'Mon, Nov 2', short: 'Nov 2', days: 2 },
     campaignReq: made('Deedstone · Owen Fisher · DS-OWEN', 'Wed, Nov 4'), since: 'Mon, Nov 2', launch: launchOk('DS-OWEN', { tz: 'Eastern', testCall: null }) }),
   // Was on; the card failed last night, so the campaign paused and the ticket reopened on that tick.
-  mkNew('ob-derek', 'Derek Shaw', { city: 'Tulsa', state: 'OK', states: ['OK', 'KS', 'MO'], lead: 'live', spend: 130, done: ['paid', 'states', 'campaign', 'on'], paid: { on: 'Fri, Oct 30', days: 2 },
+  mkNew('ob-derek', 'Derek Shaw', { city: 'Tulsa', state: 'OK', states: ['OK', 'KS', 'MO'], lead: 'live', spend: 130, done: ['paid', 'campaign', 'on'], paid: { on: 'Fri, Oct 30', short: 'Oct 30', days: 2 },
     campaignReq: made('Deedstone · Derek Shaw · DS-DERE', 'Mon, Nov 2'), since: 'Fri, Oct 30', launch: launchOk('DS-DERE', { cardFailed: 'declined Thu, Nov 5, 8:00 PM' }) }),
-  mkNew('ob-ivy', 'Ivy Morgan', { city: 'Scottsdale', state: 'AZ', states: ['AZ', 'NV', 'NM'], spend: 55, done: ['paid', 'states', 'campaign', 'on', 'live'], paid: { on: 'Thu, Oct 29', days: 2 },
+  mkNew('ob-ivy', 'Ivy Morgan', { city: 'Scottsdale', state: 'AZ', states: ['AZ', 'NV', 'NM'], spend: 55, done: ['paid', 'campaign', 'on', 'live'], paid: { on: 'Thu, Oct 29', short: 'Oct 29', days: 2 },
     campaignReq: made('Deedstone · Ivy Morgan · DS-IVY', 'Fri, Oct 30'), liveOn: 'Wed, Nov 4', since: 'Thu, Oct 29', launch: launchOk('DS-IVY', { tz: 'Mountain', testCall: { at: 'Fri, Oct 30, 11:02 AM', by: 'VA' } }) }),
-  mkNew('ob-paul', 'Paul Novak', { city: 'Columbus', state: 'OH', states: ['OH', 'IN', 'KY'], lead: 'live', spend: 110, done: ['paid', 'states', 'campaign', 'on', 'live'], paid: { on: 'Tue, Oct 27', days: 2 },
+  mkNew('ob-paul', 'Paul Novak', { city: 'Columbus', state: 'OH', states: ['OH', 'IN', 'KY'], lead: 'live', spend: 110, done: ['paid', 'campaign', 'on', 'live'], paid: { on: 'Tue, Oct 27', short: 'Oct 27', days: 2 },
     campaignReq: made('Deedstone · Paul Novak · DS-PAUL', 'Wed, Oct 28'), liveOn: 'Mon, Nov 2', since: 'Tue, Oct 27', launch: launchOk('DS-PAUL', { tz: 'Eastern' }) }),
 ]
 // What a ticket's agent paid to open it: the setup fee plus their first days of spend and its 12%.
@@ -139,9 +157,9 @@ export const paidFor = c => {
 }
 // Each ticket's history, newest first (the drawer's audit lines).
 const seedSetupLog = {
-  'ob-rachel': [{ at: 'Today, 9:12 AM', who: 'Stripe', what: 'Paid the setup fee and 2 days of leads' }],
-  'ob-luis': [{ at: 'Today, 8:30 AM', who: 'Sam Ellis', what: 'Ticked States and spend checked' }, { at: 'Wed, Nov 4', who: 'Stripe', what: 'Paid the setup fee and 2 days of leads' }],
-  'ob-hannah': [{ at: 'Today, 9:05 AM', who: 'Sam Ellis', what: 'Sent Create campaign to GoHighLevel' }, { at: 'Tue, Nov 3', who: 'Stripe', what: 'Paid the setup fee and 2 days of leads' }],
+  'ob-rachel': [{ at: 'Today, 9:12 AM', who: 'Stripe', what: 'Signed up and paid: setup, first month and 2 days of leads' }],
+  'ob-luis': [{ at: 'Wed, Nov 4', who: 'Stripe', what: 'Signed up and paid: setup, first month and 2 days of leads' }],
+  'ob-hannah': [{ at: 'Today, 9:05 AM', who: 'Sam Ellis', what: 'Sent Create campaign to GoHighLevel' }, { at: 'Tue, Nov 3', who: 'Stripe', what: 'Signed up and paid: setup, first month and 2 days of leads' }],
   'ob-owen': [{ at: 'Wed, Nov 4', who: 'GoHighLevel', what: 'Campaign created: Deedstone · Owen Fisher · DS-OWEN' }],
   'ob-derek': [{ at: 'Today, 8:40 AM', who: 'Sam Ellis', what: 'Ticked Campaign on' }, { at: 'Mon, Nov 2', who: 'GoHighLevel', what: 'Campaign created: Deedstone · Derek Shaw · DS-DERE' }],
   'ob-ivy': [{ at: 'Wed, Nov 4', who: 'Sam Ellis', what: 'Marked done' }],

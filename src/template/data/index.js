@@ -389,6 +389,16 @@ function useTalksSample() { const s = useStore(); return ok(s.talks) }
 function useFeedbackSample() { const s = useStore(); return ok(s.feedback) }
 function useBlocksSample() { const s = useStore(); return ok(s.blocks) }
 function useSetupSample() { const s = useStore(); return ok(s.setup) }
+// P941: the agent's own launch checks (their setup progress; the Setup ticket's words). Sample: signed up Oct 26,
+// every check passed, leads live since Nov 4.
+const SAMPLE_LAUNCH = {
+  agentRef: 'DS-SAMP', lead: 'live', states: ['LA', 'OK', 'TX'], launchState: 'on', paid: { on: 'Mon, Oct 26', short: 'Oct 26', days: 2 },
+  signup: { tier: 'growth', dailyCents: 10000, paidCents: 202200, setupCents: 29900, planCents: 149900, leadCents: 22400, paidOn: 'Mon, Oct 26', paidShort: 'Oct 26',
+    tz: 'America/Chicago', hours: [1, 2, 3, 4, 5].map(weekday => ({ weekday, start: '09:00', end: '17:00' })), live: true },
+  launch: { linkRef: 'DS-SAMP', campaignId: '120210000880', campaignRef: 'DS-SAMP', testLead: { at: 'Tue, Nov 3, 2:10 PM', matchedRef: 'DS-SAMP', by: 'link' },
+    licence: true, hours: '9:00 AM', tz: 'America/Chicago', card: 'Visa •••• 4242', app: { installed: true, pushAnswered: true }, testCall: { at: 'Tue, Nov 3, 2:14 PM', by: 'AI' } },
+}
+function useLaunchSample() { return ok(SAMPLE_LAUNCH) }
 function useSettingsSample() { const s = useStore(); return ok(s.settings) }
 // P910: Your to-dos (calls to mark, the monthly check) and, apart, billing notices (a declined card: Fix card).
 function useNeedsSample() { const s = useStore(); return ok(useMemo(() => ({ now: needsYouNow({ leads: s.leads, checks: checkLists(clientsOf(s), SAMPLE_NOW.slice(0, 10), CHECK_DEFAULTS), toSubmit: unsubmittedSales(s.leads, s.clients) }, SAMPLE_NOW), fyi: forYourInfo(s), notices: billingNeeds(s.billing) }), [s])) }
@@ -689,6 +699,7 @@ const SAMPLE = {
   useFeedback: useFeedbackSample,
   useBlocks: useBlocksSample,
   useSetup: useSetupSample,
+  useLaunch: useLaunchSample,
   useSettings: useSettingsSample,
   useNeeds: useNeedsSample,
   useSignup: useSignupSample,
@@ -724,6 +735,7 @@ export function useSampleTalks(...a) { return useImpl().useTalks(...a) }
 export function useSampleFeedback(...a) { return useImpl().useFeedback(...a) }
 export function useSampleBlocks(...a) { return useImpl().useBlocks(...a) }
 export function useSampleSetup(...a) { return useImpl().useSetup(...a) }
+export function useSampleLaunch() { const i = useImpl(); return (i.useLaunch || useLaunchSample)() }
 export function useSampleSettings(...a) { return useImpl().useSettings(...a) }
 export function useSampleNeeds(...a) { return useImpl().useNeeds(...a) }
 export function useSampleSignup(...a) { return useImpl().useSignup(...a) }

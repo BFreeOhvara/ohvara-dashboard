@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   Unplug, ArrowRight, Send, BadgeCheck, Check, CircleDashed, MapPin, Megaphone, MessageSquareText, ShieldCheck,
-  PhoneForwarded, Globe, Link2, Copy, Workflow, Plug, History, Hourglass, ExternalLink, CreditCard, RotateCw, Lock, Power, CircleX, CircleCheck, PhoneOutgoing, PauseCircle,
+  PhoneForwarded, Globe, Link2, Copy, Workflow, Plug, History, Hourglass, ExternalLink, RotateCw, Lock, Power, CircleX, CircleCheck, PhoneOutgoing, PauseCircle,
 } from 'lucide-react'
-import { useAdmSetup, useAdmActions, useAdmConnect, useAdmAgents, useAdmSource, PLANS, PLAYBOOK, TRACKING, paidFor } from '../data'
+import { useAdmSetup, useAdmActions, useAdmConnect, useAdmAgents, useAdmSource, PLANS, PLAYBOOK, TRACKING } from '../data'
 import { Chip, Empty, SampleTag, Switch, useNote } from '../../template/kit'
 import { RecordDrawer, Block } from '../../template/Record'
 import { usd } from '../../template/motion'
@@ -13,13 +13,15 @@ import { engineState } from '../engine'
 import { useGhlRow } from '../useGhlRow'
 import { ap } from '../paths'
 import { CAMPAIGN_WORD } from '../words'
-import { OWNERS, SETUP_STAGES, CAMPAIGN_REQ, readiness } from '../setup'
+import { OWNERS, SETUP_STAGES, CAMPAIGN_REQ, readiness, signupOf } from '../setup'
+import '../p941.css'
 
 // P866 — Setup (a top tab). P906: Setup = one ticket per agent who has PAID (setup fee + first days of lead spend).
 // No adding agents or clients by hand: agents sign up and pay themselves, and appear here once they've paid. Each
-// ticket is a short checklist: states and spend checked → Meta campaign created from the template with their agent
-// ID ("Create campaign" sends the request through the GoHighLevel engine slot; its status comes back to the ticket) →
-// every launch check passes (P913) → Turn campaign on → done. Meta Ads Manager and GoHighLevel refuse to be shown inside other
+// ticket is the agent's finished sign-up (P941: plan, spend, paid on, states, hours, transfers, read-only at the top),
+// then a short checklist: Meta campaign created from the template with their agent ID ("Create campaign" sends the
+// request through the GoHighLevel engine slot; its status comes back to the ticket) → every launch check passes (P913,
+// in plain words since P941) → Turn campaign on → done. Meta Ads Manager and GoHighLevel refuse to be shown inside other
 // sites, so anything done there opens in a new tab from a button on the ticket. Below: is the system ready?
 const money = usd()
 const cents = usd(true)
@@ -148,24 +150,42 @@ function LaunchChecks({ c }) {
           <button type="button" className="tp-primary fx-accent" disabled={!c.canLaunch} aria-disabled={!c.canLaunch} onClick={turnOn}>
             {c.canLaunch ? <Power size={16} /> : <Lock size={16} />}Turn campaign on
           </button>
-          {!c.canLaunch && <span className="adm-launch-lock"><Lock size={13} aria-hidden="true" />{ok ? 'Check their states and campaign first.' : `Locked until all ${list.length} checks pass. Admins can't skip one.`}</span>}
+          {!c.canLaunch && <span className="adm-launch-lock"><Lock size={13} aria-hidden="true" />{ok ? 'Create their campaign first.' : `Locked until all ${list.length} checks pass. Admins can't skip one.`}</span>}
         </div>}
     </Block>
   )
 }
 
-// C. The ticket: who paid, the checklist, the tools that open in a new tab, and the history.
+// P941 — the agent's finished sign-up, read-only at the top of the ticket.
+function SignupBlock({ c }) {
+  const s = signupOf(c, { plans: PLANS })
+  return (
+    <Block title="Their sign-up" sub="What they picked and paid for. Read-only.">
+      <dl className="adm-su" data-testid="adm-signup">
+        <div><dt>Agent</dt><dd>{c.name}</dd></div>
+        <div><dt>Plan</dt><dd>{s.plan}</dd></div>
+        <div><dt>Daily spend</dt><dd><span className="tp-money">{money(s.daily)}</span> a day</dd></div>
+        <div><dt>Paid</dt><dd>{s.paid ? <>On {s.paid.short} · <span className="tp-money">{cents(s.paid.total)}</span><small>Setup <span className="tp-money">{money(s.paid.setup)}</span> · first month <span className="tp-money">{money(s.paid.plan)}</span> · first 2 days of leads <span className="tp-money">{cents(s.paid.leads)}</span></small></> : s.paidOn ? `On ${s.paidOn}` : 'Not yet'}</dd></div>
+        <div className="is-wide"><dt>Licensed states</dt><dd className="adm-su-chips">{s.states.length ? s.states.map(x => <Chip key={x} tone="blue">{x}</Chip>) : 'None picked'}</dd></div>
+        <div><dt>Hours</dt><dd>{s.hours || 'Not set'}</dd></div>
+        <div><dt>Time zone</dt><dd>{s.tz || 'Not set'}</dd></div>
+        <div><dt>Live transfers</dt><dd>{s.live ? 'Yes' : 'No, appointments only'}</dd></div>
+      </dl>
+    </Block>
+  )
+}
+
+// C. The ticket: their sign-up, the checklist, the tools that open in a new tab, and the history.
 function SetupDrawer({ id, onClose, row }) {
   const { data: list } = useAdmSetup()
-  const { tickSetup, markLive } = useAdmActions()
+  const { markLive } = useAdmActions()
   const note = useNote()
   const c = list.find(x => x.id === id)
   if (!c) return <RecordDrawer label="Not found" kicker="Setup" onClose={onClose} hero={<h2>No ticket here</h2>}><p className="fx-calm">There's no Setup ticket for this agent. Agents show here once they've paid.</p></RecordDrawer>
   const stage = SETUP_STAGES.find(s => s.key === c.stage)
-  const paid = paidFor(c)
-  const tick = (s, v) => { tickSetup(c.id, s.key, v); note(`${v ? 'Ticked' : 'Unticked'} ${s.label.toLowerCase()}`) }
+  const paidOn = c.signup?.paidShort || c.paid?.short || c.paid?.on || c.since
   return (
-    <RecordDrawer label={c.name} kicker={`Setup ticket · paid ${paid?.on || c.since}`} tone={stage.tone} onClose={onClose}
+    <RecordDrawer label={c.name} kicker={`Setup ticket · paid ${paidOn}`} tone={stage.tone} onClose={onClose}
       hero={<>
         <div className="fx-hero-top"><span className="fx-when"><BadgeCheck size={13} aria-hidden="true" />{stage.label}</span><Chip tone={c.owner ? OWNERS[c.owner].tone : 'green'}>{c.owner ? `Next: ${OWNERS[c.owner].label}` : 'Done'}</Chip></div>
         <h2>{c.name}</h2>
@@ -176,15 +196,14 @@ function SetupDrawer({ id, onClose, row }) {
         {c.next?.key === 'campaign' && c.req === 'none' && <CampaignButton c={c} />}
         <button type="button" className="tp-primary fx-accent" disabled={!c.canLive} title={c.canLive ? undefined : 'Every other step first'} onClick={() => { markLive(c.id); note(`${c.name}'s ticket is done`) }}><BadgeCheck size={16} />Mark done</button>
       </>}>
+      <SignupBlock c={c} />
       {c.blocker && <p className={`adm-blocker${c.warn ? ' is-warn' : ''}`}><Hourglass size={14} aria-hidden="true" /><span className="tp-grow">{c.blocker}</span><Chip tone={OWNERS[c.owner].tone}>{OWNERS[c.owner].label}</Chip></p>}
-      {paid && <p className="adm-ticket-paid"><CreditCard size={14} aria-hidden="true" />Paid {money(paid.setup)} setup + {cents(paid.leads)} for {paid.days} days of leads ({cents(paid.total)}) · {paid.on}</p>}
       <Block title="Checklist" sub={`${c.steps.filter(s => s.done).length} of ${c.steps.length} done`}>
         <ul className="adm-steps">{c.steps.map(s => (
           <li key={s.key} className={s.done ? 'is-done' : ''}>
             {s.done ? <Check size={15} aria-hidden="true" /> : <CircleDashed size={15} aria-hidden="true" />}
             <span className="tp-grow">{s.label}{!s.done && c.next?.key === s.key && <small>Next step</small>}
-              {s.key === 'states' && <small>{c.states.join(', ') || 'No states'} · {money(c.spend)} a day · {LEAD_WORD[c.lead] || LEAD_WORD.appointment}</small>}</span>
-            {s.key === 'states' && <Switch on={s.done} label={s.label} onChange={v => tick(s, v)} />}
+              {s.key === 'signup' && s.done && <small>Paid {paidOn}</small>}</span>
           </li>
         ))}</ul>
         <CampaignRequest c={c} row={row} />

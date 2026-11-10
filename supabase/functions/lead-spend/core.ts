@@ -240,6 +240,14 @@ export async function handle(req: Request, store: Store, stripe: Stripe | null, 
         if (!['starter', 'growth', 'pro', 'servicing'].includes(body.tier)) return json({ error: 'Pick a plan' }, 400)
         const d = body.tier === 'servicing' ? null : cents(body.daily_cents)
         if (body.tier !== 'servicing' && d == null) return json({ error: 'Spend must be whole cents, $0 to $1,000 a day' }, 400)
+        // P941: a lead plan is charged only once the sign-up has everything the campaign needs (states + licence tick,
+        // time zone, hours; save_signup_details). Nothing is charged while anything is missing.
+        if (body.tier !== 'servicing') {
+          const missing = await store.rpc('signup_details_missing', { p_agent: me })
+          if (Array.isArray(missing) && missing.length) {
+            return json({ error: `Finish your details first: ${missing.join(', ')}. Nothing was charged.`, code: 'details_missing', missing }, 400)
+          }
+        }
         const q = await store.rpc('billing_signup_start', { p_tier: body.tier, p_daily_cents: d, p_agent: me })
         const charged: any = await runCharges(store, stripe, key, me)
         const mine = charged?.results?.find((r: any) => r.id === q.charge_id)?.result

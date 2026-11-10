@@ -5,6 +5,8 @@ import { cardCheck, signupPay, signupQuote } from '../../lib/leadSpend'
 import { BOOK, pricesOf, bandText } from '../../lib/priceBook'
 import { deskParts, monthlyEstimate } from '../../lib/bookingDesk'
 import { DeskInfo } from './DeskInfo'
+import { SignupDetails } from './SignupDetails'
+import { emptyDetails, fromSaved, detailsMissing, loadSignupDetails, saveSignupDetails, NOT_TAKING } from '../../lib/signupDetails'
 import './signupCheckout.css'
 
 // P933 — sign-up on the final prices (replaces the weekly Embedded Checkout). Pick a plan (Starter / Growth / Pro by
@@ -12,6 +14,9 @@ import './signupCheckout.css'
 // the plan + the first 2 days of lead spend + the booking desk. Statement: OHVARA LEADS. The amounts on the summary
 // come from the server (billing_signup_quote, price book v3); the picker's bands and prices come from the same book's
 // mirror (src/lib/priceBook.js, checked number for number against the database). Paid: the portal opens.
+// P941: a lead plan also asks for everything the campaign needs before the card is charged (SignupDetails: 3 to 10
+// licensed states + the tick, time zone and hours, live transfers yes/no). Pay saves them first
+// (save_signup_details), then charges; the server refuses the charge while one is missing. Servicing only skips them.
 
 const CardForm = lazy(() => import('./StripeForms').then(m => ({ default: m.CardForm })))
 
@@ -85,6 +90,7 @@ const FAIL_WORDS = {
   test_account: 'This is a test account. Test accounts are never charged.',
   already_paid: 'You’ve already signed up. Check again to open your portal.',
   no_card: 'Add your card first.',
+  details_missing: 'Finish your details above first. Nothing was charged.',
 }
 
 export function SignupCheckout({ portal, sectionRef }) {
@@ -99,6 +105,21 @@ export function SignupCheckout({ portal, sectionRef }) {
   const [adding, setAdding] = useState(false)
   const [state, setState] = useState({ busy: false, error: '', result: null })
   const rate = P.leadFee
+  const [details, setDetails] = useState(() => emptyDetails())
+  const [notTaking, setNotTaking] = useState(NOT_TAKING)
+  const lead = plan !== 'servicing'
+  const missing = lead ? detailsMissing(details, notTaking) : []
+
+  // What they already saved (back after a decline, or a reload) fills the form back in.
+  useEffect(() => {
+    let live = true
+    loadSignupDetails(supabase).then(d => {
+      if (!live || !d) return
+      if (Array.isArray(d.notTaking)) setNotTaking(d.notTaking)
+      setDetails(cur => fromSaved(d, cur))
+    }).catch(() => {})
+    return () => { live = false }
+  }, [])
 
   // Keep the daily spend inside the picked plan's band.
   const pickPlan = key => {
@@ -125,11 +146,12 @@ export function SignupCheckout({ portal, sectionRef }) {
     return () => { live = false }
   }, [])
 
-  const canPay = !!card && !!quote && !state.busy && !quoteErr
+  const canPay = !!card && !!quote && !state.busy && !quoteErr && missing.length === 0
   async function pay() {
     if (!canPay) return
     setState({ busy: true, error: '', result: null })
     try {
+      if (lead) await saveSignupDetails(supabase, details)
       const r = await signupPay(supabase, { tier: plan, daily: plan === 'servicing' ? null : daily })
       if (r.status === 'paid') {
         setState({ busy: false, error: '', result: 'paid' })
@@ -150,7 +172,10 @@ export function SignupCheckout({ portal, sectionRef }) {
       <h3 className="lk-big">Choose your plan</h3>
       <p className="lk-subline">Month to month. Cancel any time; unspent lead money is refunded.</p>
       <div className="lk-buy sc-buy">
-        <PlanPicker plan={plan} onPlan={pickPlan} daily={daily} onDaily={setDaily} rate={rate} />
+        <div className="sc-left">
+          <PlanPicker plan={plan} onPlan={pickPlan} daily={daily} onDaily={setDaily} rate={rate} />
+          {lead && <SignupDetails value={details} onChange={setDetails} notTaking={notTaking} missing={missing} />}
+        </div>
         <section className="ov-card lk-co sc-co" aria-label="Checkout">
           <div className="lk-co-top"><h3>Pay and open your portal</h3></div>
           <Summary quote={quote} rate={rate} />
@@ -172,6 +197,12 @@ export function SignupCheckout({ portal, sectionRef }) {
               <button type="button" className="ov-ghost lk-btn lk-wide" onClick={() => setAdding(true)}><CreditCard size={16} aria-hidden="true" />Add your card</button>
             )}
           </div>
+          {missing.length > 0 && (
+            <div className="sc-miss" data-testid="sc-missing">
+              <b>Before you pay</b>
+              <ul>{missing.map(m => <li key={m.key + m.text}>{m.text}</li>)}</ul>
+            </div>
+          )}
           {state.error && <p className="sc-err" role="alert"><AlertCircle size={15} aria-hidden="true" />{state.error}</p>}
           <button type="button" className="ov-hero-btn sc-pay" disabled={!canPay} onClick={pay} data-testid="sc-pay">
             {state.busy ? <><Loader2 size={16} className="animate-spin" /> Paying…</> : quote ? `Pay ${cents(quote.total_cents)} and start` : 'Pay and start'}

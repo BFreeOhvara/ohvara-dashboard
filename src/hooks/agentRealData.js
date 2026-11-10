@@ -14,6 +14,8 @@ import { nightly as nightlyOf, expected } from '../template/spendPlan'
 import { DEFAULT_LIVE_HOURS } from '../lib/leadSplit'
 import { useNote } from '../template/kit'
 import { REAL_DEEDSTONE } from './deedstoneReal'
+import { launchOf } from '../lib/admReal'
+import { isNotReadyError } from '../lib/clientPageLog'
 
 // P848 — the agent portal on real data. The same names and record shapes as the sample door (src/template/data/index.js), read through
 // the existing tables, views and RPCs under RLS (an agent reads only their own rows). Nothing here writes on its own.
@@ -396,6 +398,22 @@ export const useTalksReal = () => EMPTY
 export const useFeedbackReal = () => EMPTY
 export const useSetupReal = () => NONE
 
+// P941: the agent's own launch checks (my_launch_checks, migration 264), in the Setup ticket's shape. Not in the
+// database yet: null, and the setup progress stays hidden.
+export function useLaunchReal() {
+  const { profile } = useAuth()
+  return useQuery({
+    queryKey: ['p848', 'launch', profile?.id],
+    enabled: !!profile?.id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('my_launch_checks')
+      if (error) { if (isNotReadyError(error)) return null; throw error }
+      return data?.facts ? launchOf({ checks: data }) : null
+    },
+  })
+}
+
 // ── Actions: the writes that already have a backend, exactly as the old pages made them. Everything else says it
 // starts soon and changes nothing (the door list in brain/ohvara/agent-backend-map.md). ─────────────────────────
 export function useActionsReal() {
@@ -534,7 +552,7 @@ export const REAL = {
   source: 'real', useNow: useWallNow, useWeek: useWeekReal,
   useLeads: useLeadsReal, useLead: useLeadReal, useClients: useClientsBoardReal, useClient: useClientBoardReal, useAppointments: useAppointmentsReal,
   useThreads: useThreadsReal, useActivity: useActivityReal, useBilling: useBillingReal, useTalks: useTalksReal, useFeedback: useFeedbackReal,
-  useBlocks: useBlocksReal, useSetup: useSetupReal, useSettings: useSettingsReal, useNeeds: useNeedsReal, useSignup: useSignupReal,
+  useBlocks: useBlocksReal, useSetup: useSetupReal, useLaunch: useLaunchReal, useSettings: useSettingsReal, useNeeds: useNeedsReal, useSignup: useSignupReal,
   useOverview: useOverviewReal, useActions: useActionsReal,
   deedstone: REAL_DEEDSTONE,
 }

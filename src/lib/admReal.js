@@ -310,6 +310,17 @@ export function launchOf(row, done = [], now = Date.now()) {
     testCallAsked: f.testCallAskedAt ? when(f.testCallAskedAt) : '',
   }
   const out = { agentRef: f.agentRef, lead: f.lead === 'live' ? 'live' : 'appointment', states: f.states || [], launch, launchState: f.state || 'off' }
+  // P941: the sign-up block (migration 264): plan, daily spend, the sign-up charge and when, hours, time zone, transfers.
+  const S = f.signup
+  if (S) {
+    out.signup = {
+      tier: S.tier || null, dailyCents: S.dailyCents ?? null, paidCents: S.paidCents ?? null, setupCents: S.setupCents ?? 0,
+      planCents: S.planCents ?? 0, leadCents: S.leadCents ?? 0, paidOn: S.paidAt ? when(S.paidAt) : '', paidShort: S.paidAt ? shortDate(S.paidAt) : '',
+      tz: S.tz || '', hours: Array.isArray(S.hours) ? S.hours : [], live: !!S.live,
+    }
+    if (S.dailyCents != null) out.spend = Math.round(S.dailyCents / 100)
+    if (S.paidAt) out.paid = { on: when(S.paidAt), short: shortDate(S.paidAt), days: f.paidDays || 0 }
+  }
   if (f.state === 'on') out.done = [...new Set([...done, 'on'])]
   if (f.state === 'paused') out.pausedKey = f.pausedKey || ''
   out.push = (row.push || []).map(c => pushOf(c, now))

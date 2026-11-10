@@ -14,7 +14,7 @@ const charge = (over: Partial<Charge> = {}): Charge => ({
   stripe_pi: null, week_start: '2026-11-16', note: null, customer: 'cus_a', recheck: false, ...over,
 })
 
-function world(claims: Charge[] = [charge()], over: { rpcError?: any; setResult?: any; changeResult?: any; changeError?: any; live?: boolean; signupError?: any } = {}) {
+function world(claims: Charge[] = [charge()], over: { rpcError?: any; setResult?: any; changeResult?: any; changeError?: any; live?: boolean; signupError?: any; missing?: string[] } = {}) {
   const rpcs: { name: string; args: any }[] = []
   const store: Store = {
     userFromJwt: async jwt => (jwt === 'good' ? AGENT : null),
@@ -32,6 +32,7 @@ function world(claims: Charge[] = [charge()], over: { rpcError?: any; setResult?
       if (name === 'billing_live_charging') return over.live === true
       if (name === 'billing_signup_start') { if (over.signupError) throw over.signupError; return { charge_id: 'ch1', total_cents: 202200, status: 'due' } }
       if (name === 'billing_signup_quote') return { total_cents: 202200, fee_cents: 2400 }
+      if (name === 'signup_details_missing') return over.missing ?? []
       if (name === 'billing_live_check_start') return { charge_id: 'lc1' }
       if (name === 'billing_charge_refunded') return { refunded_cents: 100 }
       return { status: args.p_status }
@@ -107,6 +108,21 @@ test('P933: sign-up refusals come back as codes (test account, no card, already 
   }
   const bad = await handle(userReq({ action: 'signup', tier: 'gold', daily_cents: 5000 }), world([]).store, null, 'sk_test_x')
   assert.equal(bad.status, 400)
+})
+
+test('P941: a lead plan is never charged while sign-up details are missing; Servicing only skips the check', async () => {
+  const w = world([], { missing: ['states', 'hours'] })
+  const res = await handle(userReq({ action: 'signup', tier: 'growth', daily_cents: 10000 }), w.store, withCard({}).stripe, 'sk_test_x')
+  assert.equal(res.status, 400)
+  const body = await res.json()
+  assert.equal(body.code, 'details_missing')
+  assert.deepEqual(body.missing, ['states', 'hours'])
+  assert.ok(!w.rpcs.some(r => r.name === 'billing_signup_start'))
+  assert.deepEqual(w.rpcs.find(r => r.name === 'signup_details_missing')!.args, { p_agent: AGENT })
+  const s = world([], { missing: ['states'] })
+  await handle(userReq({ action: 'signup', tier: 'servicing' }), s.store, withCard({}).stripe, 'sk_test_x')
+  assert.ok(!s.rpcs.some(r => r.name === 'signup_details_missing'))
+  assert.ok(s.rpcs.some(r => r.name === 'billing_signup_start'))
 })
 
 test('P933: the booking desk is named on every receipt line; never a bare + 12%', () => {

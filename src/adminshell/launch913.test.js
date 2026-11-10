@@ -72,7 +72,7 @@ test('an unmatched lead raises the admin alert with Assign, not an Unassigned se
 })
 
 const ticket = (o = {}) => ({
-  agentRef: 'DS-T', states: ['TX', 'OK', 'KS'], lead: 'live', done: ['paid', 'states', 'campaign'], paid: { days: 2 },
+  agentRef: 'DS-T', states: ['TX', 'OK', 'KS'], lead: 'live', done: ['paid', 'campaign'], paid: { days: 2 },
   launch: {
     linkRef: 'DS-T', campaignId: '1202', campaignRef: 'DS-T', testLead: { at: 'now', matchedRef: 'DS-T', by: 'link' }, licence: true, hours: '9 to 5', tz: 'Central',
     card: 'Visa', app: { installed: true, pushAnswered: true }, testCall: { at: 'now', by: 'AI' }, ...o,
@@ -80,10 +80,10 @@ const ticket = (o = {}) => ({
 })
 
 test('the seatbelt: Turn campaign on stays locked until every check passes, each failure says what is wrong', () => {
-  assert.equal(LAUNCH_CHECKS.length, 6)
+  assert.equal(LAUNCH_CHECKS.length, 7) // P941: profile split into States picked + Hours set
   assert.equal(setupOf(ticket()).canLaunch, true)
   const breaks = {
-    link: { campaignId: '' }, testLead: { testLead: null }, profile: { tz: '' }, paid: { card: '' }, app: { app: { installed: true, pushAnswered: false } }, testCall: { testCall: null },
+    link: { campaignId: '' }, testLead: { testLead: null }, hours: { tz: '' }, states: { licence: false }, paid: { card: '' }, app: { app: { installed: true, pushAnswered: false } }, testCall: { testCall: null },
   }
   for (const [key, o] of Object.entries(breaks)) {
     const c = setupOf(ticket(o))
@@ -99,7 +99,7 @@ test('the seatbelt: Turn campaign on stays locked until every check passes, each
 })
 
 test('a check that breaks after launch pauses the campaign and reopens the ticket on the failed tick', () => {
-  const on = { ...ticket(), done: ['paid', 'states', 'campaign', 'on', 'live'] }
+  const on = { ...ticket(), done: ['paid', 'campaign', 'on', 'live'] }
   assert.equal(setupOf(on).stage, 'live')
   assert.equal(setupOf(on).paused, false)
   const broken = setupOf({ ...on, launch: { ...on.launch, cardFailed: 'declined' } })

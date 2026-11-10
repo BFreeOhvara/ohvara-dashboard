@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { User, Bell, Radio, CreditCard, SunMoon, Mail, LogOut, Trash2, ChevronRight, KeyRound, BadgeCheck } from 'lucide-react'
+import { User, Bell, Radio, CreditCard, SunMoon, Mail, LogOut, Trash2, ChevronRight, KeyRound, BadgeCheck, Rocket } from 'lucide-react'
+import { SetupProgress } from '../SetupProgress'
+import { useLaunchView } from '../launchView'
 import { useSampleSettings, useSampleActions, useSampleBilling, useSampleClients, useSampleLeads, useSampleOverview } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
 import { Drawer, Field, Seg, Switch, PillTabs, useNote, useAccount, initials } from '../kit'
@@ -19,7 +21,7 @@ import { DeedstonePhone } from '../DeedstonePhone'
 
 // P929: Settings back to the pre-P924 layout (profile card on the left, tabs on the right). Notifications is only the
 // switches; the carrier-email forwarding address that sat under it has its own Email tab, so no section is long.
-const TABS = [['profile', 'Profile', User], ['licence', 'Licence', BadgeCheck], ['alerts', 'Notifications', Bell], ['email', 'Email', Mail], ['calls', 'Hours and calls', Radio], ['billing', 'Billing', CreditCard], ['look', 'Appearance', SunMoon]]
+const TABS = [['profile', 'Profile', User], ['setup', 'Your setup', Rocket], ['licence', 'Licence', BadgeCheck], ['alerts', 'Notifications', Bell], ['email', 'Email', Mail], ['calls', 'Hours and calls', Radio], ['billing', 'Billing', CreditCard], ['look', 'Appearance', SunMoon]]
 const NEEDS = ['ringing', 'showed']
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
 
@@ -110,6 +112,7 @@ export default function Settings() {
   const DeleteDialog = account.DeleteDialog
   const flip = (key, field, v) => setAlerts(alerts.map(n => (n.key === key ? { ...n, [field]: v } : n)))
   const money = usd()
+  const setupView = useLaunchView()
 
   return (
     <div className="tp-page fx-set">
@@ -123,6 +126,10 @@ export default function Settings() {
         <PillTabs label="Settings sections" className="fx-ptabs" itemClass="fx-ptab" value={tab} onChange={setTab} items={TABS.map(([key, label, icon]) => ({ key, label, icon }))} />
 
         <div className="fx-form" key={tab} role="tabpanel" aria-label={TABS.find(t => t[0] === tab)[1]}>
+          {tab === 'setup' && <>
+            <Head title="Your setup" sub="The same steps our team sees on your setup ticket, from sign-up to your first leads." />
+            {setupView ? <SetupProgress view={setupView} /> : <p className="tp-sub">Your setup steps show here once you’ve signed up.</p>}
+          </>}
           {tab === 'profile' && <>
             <Head title="Profile" sub="How you show up to the team and on everything we send for you." />
             <div className="fx-form-grid">

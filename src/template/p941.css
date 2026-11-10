@@ -1,0 +1,14 @@
+/* P941 — the agent's setup progress (Settings › Your setup, Overview until live). Same steps as the admin's ticket. */
+.sp { display: flex; flex-direction: column; gap: 12px; }
+.sp-top { display: flex; align-items: center; gap: 12px; }
+.sp-top b { display: block; font-size: 15px; font-weight: 600; color: var(--ov-hi); }
+.sp-top small { display: block; font-size: 13px; color: var(--ov-mid); }
+.sp-ic { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--sh-f-sky); color: var(--sh-fi-sky); }
+.sp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.sp-list > li { display: flex; align-items: flex-start; gap: 10px; padding: 9px 10px; border-radius: 12px; background: color-mix(in srgb, var(--ov-hi) 5%, transparent); }
+.sp-list > li > svg { flex: none; margin-top: 2px; }
+.sp-list > li.is-ok > svg { color: var(--sh-sage); }
+.sp-list > li.is-open > svg { color: var(--ov-mute); }
+.sp-list b { display: block; font-size: 13.5px; font-weight: 600; color: var(--ov-hi); }
+.sp-list small { display: block; font-size: 12.5px; color: var(--ov-mid); }
+.sp.is-compact .sp-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }

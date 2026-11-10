@@ -5,6 +5,8 @@ import { countByStatus } from '../agentView'
 import { useDataSource, useSampleOverview, useSampleClients, useSampleBilling, useSampleLeads, useSampleAppointments, useSampleNeeds } from '../data'
 import { Avatar, Empty } from '../kit'
 import { CountUp } from '../motion'
+import { SetupProgress } from '../SetupProgress'
+import { useLaunchView } from '../launchView'
 import { NeedCard } from '../NeedsNow'
 import { useNeedAction } from '../needAction'
 import { laneOf, LANES } from '../stages'
@@ -157,10 +159,13 @@ export default function Overview() {
   const act = useNeedAction()
   const today = o.todayAppts[0]?.date ?? appts[0]?.date
   const weekCalls = workWeek(appts, today).reduce((n, d) => n + appts.filter(a => inDay(a, d)).length, 0)
+  // P941: until their leads are live, the setup steps (the admin's Setup ticket, in the same words) lead the page.
+  const setup = useLaunchView()
 
   return (
     <div className="tp-page fx-page fx-ovl">
       <div className="fx-ovl-main">
+        {setup && !setup.live && <section className="fx-tile fx-ovl-setup" style={{ '--i': 0 }} aria-label="Getting your leads live"><SetupProgress view={setup} compact /></section>}
         {/* P867: the hero fills the window (data-fold) so the Your book / Next up / Lead mix row peeks a third */}
         <Tile className="fx-ovl-hero" i={0} data-fold data-fold-next=".fx-ovl-book" title="Delivered this week" sub={`Your lead spend delivers about ${rangeWords(wk)} a week: booked calls and live calls`} to={paths.calendar()} label="Open Calendar">
           {/* P843: the number is the hero; the range already sits in the subtitle, so the side line only says what it is */}
