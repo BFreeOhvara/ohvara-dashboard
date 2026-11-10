@@ -189,7 +189,7 @@ Deno.serve(async req => {
   const url = new URL(req.url)
   try {
     const body = await req.json().catch(() => ({}))
-    const d = { store, provider: provider(), env: { now: () => Date.now(), from: env('AI_FROM_NUMBER') || null, words: WORDS } }
+    const d = { store, provider: provider(), env: { now: () => Date.now(), from: env('AI_FROM_NUMBER') || null, words: WORDS, pauseMs: 2500 } }
     if (url.searchParams.get('k')) {
       // The provider's webhook and tool calls.
       if (!env('AI_WEBHOOK_SECRET') || url.searchParams.get('k') !== env('AI_WEBHOOK_SECRET')) return new Response('forbidden', { status: 403 })

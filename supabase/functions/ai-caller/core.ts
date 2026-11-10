@@ -50,7 +50,7 @@ export interface Store {
   endStats?(callId: string, patch: Record<string, unknown>): Promise<void>
   deedstoneFrom?(agentId: string, callId: string): Promise<{ phone: string; providerId: string | null } | null>
 }
-export type Env = { now(): number; from: string | null; words: Record<string, string> }
+export type Env = { now(): number; from: string | null; words: Record<string, string> ; pauseMs?: number }
 
 const refuse = (code: string, status = 400) => Object.assign(new Error(code), { status, code })
 
@@ -160,15 +160,36 @@ function waiting(p: Provider, first: boolean) {
   return first ? { keep_talking: true, ask: WAIT_QUESTIONS, rule: WAIT_RULE } : { keep_talking: true }
 }
 
+// P940: an open time in plain words for the lead's own state: "today at 3:30 PM", "tomorrow at 10 AM", "Thursday at 9 AM".
+export function spokenSlot(iso: string, tz: string | null, nowMs: number) {
+  const zone = tz || 'America/Chicago'
+  const day = (ms: number) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms))
+  const at = Date.parse(iso)
+  const d = day(at) === day(nowMs) ? 'today' : day(at) === day(nowMs + 86400000) ? 'tomorrow'
+    : new Intl.DateTimeFormat('en-US', { timeZone: zone, weekday: 'long' }).format(new Date(at))
+  const t = new Intl.DateTimeFormat('en-US', { timeZone: zone, hour: 'numeric', minute: '2-digit' }).format(new Date(at)).replace(':00', '')
+  return `${d} at ${t}`
+}
+// Two times as one phrase: "later today at 3:30 PM, or 5 PM" (the day is said once when both are the same day).
+export function twoTimes(spoken: string[]) {
+  const [a, b] = spoken
+  if (!b) return (a ?? '').replace(/^today/, 'later today')
+  const [da, ta] = a.split(' at '), [db, tb] = b.split(' at ')
+  return da === db ? `${da === 'today' ? 'later today' : da} at ${ta}, or ${tb}` : `${da === 'today' ? 'later today' : da} at ${ta}, or ${db} at ${tb}`
+}
+
 async function slotsReply(store: Store, env: Env, c: Call, say?: string, _agentFirst?: string) {
   const slots = await store.slots(c.id)
+  if (say?.includes('{times}') && !slots.length) say = undefined // "all with clients" needs times; noTimes says the rest
   if (!slots.length) {
     // No time open in the next 3 days: "{agent} will call you to find a time" → not now, no time (the agent's Follow
     // up, no texts). Never a VA.
     await store.result(c.id, 'not_now', { summary: 'No open time in the agent’s calendar in the next 3 days.' })
     return { say: [say, AI_CALL_WORDS.noTimes].filter(Boolean).join(' '), end: true } // P940: never the agent's name
   }
-  return { say, slots, next: 'book' }
+  const tz = (await store.lead(c.lead_id))?.tz ?? null
+  const spoken = slots.map(s => spokenSlot(s, tz, env.now()))
+  return { say: say?.replace('{times}', twoTimes(spoken)), slots, spoken, next: 'book' }
 }
 
 export async function tool(store: Store, provider: Provider, env: Env, c: Call, name: string, args: Record<string, unknown>) {
@@ -198,8 +219,10 @@ export async function tool(store: Store, provider: Provider, env: Env, c: Call, 
       const notNow = args.free_now === false || String(args.free_now ?? '').toLowerCase() === 'no'
       if (notNow || !r.act.includes('check_agent')) {
         await store.status(c.id, 'booking', { routed: notNow ? 'lead_not_free' : r.s.routed, summary: args.summary ?? null })
-        // P940: they said they're free but no specialist can take it (out of hours, appointments only): check out loud, then times.
-        return slotsReply(store, env, c, notNow ? pre : [pre, AI_CALL_WORDS.check, AI_CALL_WORDS.bounce].filter(Boolean).join(' '), agent.first)
+        // P940: they said they're free but no specialist can take it (out of hours, appointments only): the check out
+        // loud, a real pause (check_status waits), then "all with clients" and two times.
+        if (notNow) return slotsReply(store, env, c, pre, agent.first)
+        return { say: [pre, AI_CALL_WORDS.check].filter(Boolean).join(' '), next: 'check_status', wait_secs: 2 }
       }
       const lead = lead0
       const chk = await store.insertCheck({ agent_id: agent.id, lead_id: c.lead_id, ai_call_id: c.id,
@@ -219,7 +242,8 @@ export async function tool(store: Store, provider: Provider, env: Env, c: Call, 
       return { say: [pre, checkSay(provider)].filter(Boolean).join(' '), next: 'check_status', wait_secs: 3, ...waiting(provider, true) }
     }
     case 'check_status': {
-      if (c.status !== 'checking') return c.status === 'booking' ? slotsReply(store, env, c, undefined, agent?.first) : { ok: false, code: 'not_checking' }
+      if (env.pauseMs) await new Promise(r => setTimeout(r, env.pauseMs)) // P940: a real 2-3 s pause while "checking"
+      if (c.status !== 'checking') return c.status === 'booking' ? slotsReply(store, env, c, c.check_id ? undefined : AI_CALL_WORDS.bounce, agent?.first) : { ok: false, code: 'not_checking' }
       const chk = c.check_id ? await store.check(c.check_id) : null
       const expired = !!chk?.expires_at && Date.parse(chk.expires_at) <= nowMs
       const answer = chk?.answer === 'yes' ? 'yes' : chk?.answer === 'no' || chk?.status === 'failed' || expired ? (chk?.answer ?? 'none') : null

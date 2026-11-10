@@ -52,6 +52,12 @@ function fakes({ talks = true } = {}) {
   return { log, call, tool, ev, setCheck, toCheck, kinds: k => log.filter(x => k.includes(x[0])) }
 }
 
+const bounceOk = say => {
+  assert.ok(say.startsWith('Okay, so unfortunately all of our specialists are with clients right now, but I can put you down for '), say)
+  assert.ok(say.endsWith('Do either of those work for you?'), say)
+  assert.ok(!say.includes('{times}'), say)
+}
+
 test('beats 1-3: qualify → "let me see who is free" → the agent push, and light questions while waiting (no dead air)', async () => {
   const f = fakes()
   const r = await f.toCheck()
@@ -98,7 +104,7 @@ test('beat 5, the agent taps No → back to the AI: "specialists are with client
   await f.toCheck()
   f.setCheck({ status: 'no', answer: 'no' })
   const r = await f.tool('check_status')
-  assert.equal(r.say, AI_CALL_WORDS.bounce) // P940
+  bounceOk(r.say)
   assert.deepEqual([r.slots, r.next], [[SLOT], 'book'])
   assert.ok(!f.log.some(x => x[0] === 'transfer' || x[0] === 'clear')) // the agent's own No already cleared their phones
   assert.equal((await f.tool('book', { at: SLOT })).ok, true)
@@ -111,7 +117,7 @@ test('beat 5, no answer to the push in 30 s → check marked no answer, the push
   await f.toCheck()
   f.setCheck({ expires_at: new Date(WED_9AM_CT - 1).toISOString() })
   const r = await f.tool('check_status')
-  assert.equal(r.say, AI_CALL_WORDS.bounce)
+  bounceOk(r.say)
   assert.deepEqual(r.slots, [SLOT])
   assert.deepEqual(f.kinds(['check', 'clear']), [['check', 'no_answer'], ['clear', 'booking', 'ag-1']])
   await f.tool('book', { at: SLOT }); await f.ev('ended', { reason: 'hangup' })
@@ -124,7 +130,7 @@ test('beat 5, Yes but the agent\'s phone isn\'t answered in about 20 s → bounc
   f.setCheck({ status: 'yes', answer: 'yes' })
   await f.tool('check_status')
   const r = await f.tool('transfer_failed')
-  assert.equal(r.say, AI_CALL_WORDS.bounce)
+  bounceOk(r.say)
   assert.deepEqual(r.slots, [SLOT])
   assert.equal(f.call.status, 'booking')
   assert.deepEqual(f.kinds(['check', 'clear']), [['check', 'ringing'], ['check', 'bounced'], ['clear', 'booking', 'ag-1']])

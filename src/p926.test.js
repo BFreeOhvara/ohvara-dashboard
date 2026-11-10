@@ -4,7 +4,6 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { AI_RULES } from './lib/aiCaller.js'
-import { AI_CALL_WORDS } from '../supabase/functions/ai-caller/rules.js'
 import { retellPrompt, retellTools, retellLlm, retellAgent, pickVoices, RETELL_VOICE_DEFAULTS } from '../supabase/functions/ai-caller/retellSpec.js'
 import * as core from '../supabase/functions/ai-caller/core.ts'
 import { noProvider } from '../supabase/functions/ai-caller/providers.ts'
@@ -16,7 +15,7 @@ test('prompt: Deedstone virtual assistant, the VA questions, never coverage or p
   const p = retellPrompt()
   assert.match(p, /the virtual assistant with Deedstone/)
   assert.match(p, /Never discuss coverage, prices, carriers/)
-  assert.match(p, /never leave long silence/)
+  assert.match(p, /Never go silent/)
   assert.match(p, /call ask_agent/)
   assert.match(p, /call transfer_failed/)
   assert.doesNotMatch(p, /\bVA\b|virtual agent hand/i)
@@ -35,10 +34,10 @@ test('tools: our functions on the secret URL, check_status maps transfer_to + wh
   assert.equal(tr.transfer_option.transfer_ring_duration_ms, AI_RULES.ringSecs * 1000)
 })
 
-test('llm + agent bodies: opening from {{opening}}, gpt-4.1, voice knobs, hang up on voicemail, webhook events', () => {
+test('llm + agent bodies: waits for the other side, gpt-4.1, voice knobs, hang up on voicemail, webhook events', () => {
   const l = retellLlm({ prompt: 'p', url: HOOK })
-  assert.equal(l.begin_message, '{{opening}}')
-  assert.equal(l.start_speaker, 'agent')
+  assert.equal(l.begin_message, '')
+  assert.equal(l.start_speaker, 'user') // waits for the other side (a screener or a person) first
   assert.equal(l.model_config.primary.model, 'claude-5.5-sonnet') // P940
   assert.equal(l.model_config.backup, null) // P940: a backup is billed for the whole call
   const a = retellAgent({ llmId: 'llm_1', voiceId: 'v1', webhookUrl: HOOK, maxSecs: 300, voice: { voice_speed: 1.05 } })
@@ -117,7 +116,8 @@ test('test "agent_no": check answered No → bounce words and times to book', as
   const t = fakes({ test: { check: 'no' } })
   await t.start(); await t.answered(); await t.tool('qualified', {})
   const s = await t.tool('check_status')
-  assert.ok(s.say.startsWith(AI_CALL_WORDS.bounce)) // P940: never "Test Agent"
+  assert.ok(s.say.startsWith('Okay, so unfortunately all of our specialists are with clients right now, but I can put you down for ')) // P940: never "Test Agent"
+  assert.ok(s.say.endsWith('Do either of those work for you?') && !s.say.includes('{times}'))
   assert.deepEqual(s.slots, ['2026-11-11T16:00:00Z'])
 })
 
@@ -125,7 +125,9 @@ test('test "booked": no check, straight to times', async () => {
   const t = fakes({ test: { check: null } })
   await t.start(); await t.answered()
   const r = await t.tool('qualified', {})
-  assert.deepEqual(r.slots, ['2026-11-11T16:00:00Z'])
+  assert.equal(r.next, 'check_status') // the check line, then the times
+  const s = await t.tool('check_status')
+  assert.deepEqual(s.slots, ['2026-11-11T16:00:00Z'])
 })
 
 test('edge function: only a sample lead can carry a test; test_call refuses anything but a +1 number', () => {

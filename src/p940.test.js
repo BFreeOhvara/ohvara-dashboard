@@ -3,7 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { retellPrompt, retellAgent, retellLlm, retellTools, SCREEN_LINE, SCREEN_GOODBYE, VOICEMAIL_LINE, SCREEN_OPTION, RETELL_VOICE_DEFAULTS } from '../supabase/functions/ai-caller/retellSpec.js'
+import { retellPrompt, retellAgent, retellLlm, retellTools, SCREEN_LINE, SCREEN_GOODBYE, VOICEMAIL_LINE, SCRIPT, RETELL_VOICE_DEFAULTS } from '../supabase/functions/ai-caller/retellSpec.js'
 import { AI_CALL_WORDS } from '../supabase/functions/ai-caller/rules.js'
 import * as core from '../supabase/functions/ai-caller/core.ts'
 import { noProvider } from '../supabase/functions/ai-caller/providers.ts'
@@ -17,32 +17,39 @@ test('screening line is Brayden’s words, with the lead’s first name', () => 
 test('prompt: screener is not a hang-up, says the line, waits ~20 s, polite goodbye, no outcome', () => {
   const p = retellPrompt()
   assert.ok(p.includes(SCREEN_LINE))
-  assert.match(p, /do not hang up/)
+  assert.match(p, /NOTHING after it/)
+  assert.match(p, /stay completely silent/)
   assert.match(p, /about 20 seconds/)
   assert.ok(p.includes(SCREEN_GOODBYE))
   assert.match(p, /Do not call outcome/)
   assert.doesNotMatch(p, /hang up without a message/)
 })
 
-test('prompt: no small talk, why NOW reflected back, form answers confirmed not asked, free now → check out loud → transfer or two times', () => {
+test('prompt: no small talk, why reflected back, form confirmed not asked, free now → check out loud → transfer or two times, the AI hangs up', () => {
   const p = retellPrompt()
-  assert.match(p, /never ask how they are or how their day is going/)
-  assert.doesNotMatch(p, /How’s your day going\?"$/m)
-  assert.match(p, /What has you looking into mortgage protection right now\?/)
-  assert.match(p, /Reflect it back in one natural sentence/)
-  assert.match(p, /No other filler questions/)
-  assert.match(p, /I see you’re in \{\{form_state\}\}, is that right\?/)
+  assert.match(p, /never ask how they are or how their day is/)
+  assert.doesNotMatch(p, /How’s your day/)
+  assert.match(p, /Never explain what mortgage protection is/)
+  assert.match(p, /Never mention time zones/)
+  assert.match(p, /Who are you mainly looking to protect/)
+  assert.ok(p.includes(SCRIPT.hello) && p.includes('Hi, is this {{first_name}}?'))
+  for (const k of ['open', 'why', 'whyAlt', 'reflect', 'confirmIntro', 'next', 'booked', 'bye']) assert.ok(p.includes(SCRIPT[k].replace('{day} at {time}', 'the day and time, in the same plain words you offered')), k)
+  assert.match(p, /You put down that you’re in \{\{form_state\}\}, correct\?/)
   for (const v of ['form_homeowner', 'form_mortgage', 'form_age']) assert.ok(p.includes(`{{${v}}}`), v)
   assert.match(p, /only if \{\{form_age\}\} is empty/)
-  assert.match(p, /natural, flowing sentences/)
-  assert.match(p, /Do not force enthusiasm/)
-  assert.match(p, /Is there anything else I can help with\?/)
-  assert.match(p, /let them hang up first/)
-  assert.match(p, /Are you free right now\? I can bring a licensed specialist on the line\./)
+  assert.match(p, /Natural, flowing, grammatical sentences/)
+  assert.match(p, /No forced enthusiasm/)
+  assert.match(p, /NOTHING after it/)
+  assert.ok(p.includes(SCRIPT.bye) && /end_call/.test(p))
+  assert.match(p, /never ask if there is anything else you can help with/) // the AI hangs up itself
+  assert.doesNotMatch(p, /let them hang up first/)
+  assert.doesNotMatch(p, /What has you looking into mortgage protection right now/)
   assert.match(p, /What works better, later today or tomorrow\?/)
-  assert.match(p, /offer TWO of those times/)
-  assert.match(p, /You’ll get a text confirming it/)
-  for (const w of [AI_CALL_WORDS.check, AI_CALL_WORDS.connecting, AI_CALL_WORDS.bounce]) assert.ok(p.includes(w), w)
+  assert.match(p, /Never say "does that sound about right"/)
+  assert.equal(p.split(/does that sound about right/i).length, 2) // only inside the "Never say" rule
+  assert.match(p, /Are you free right now\?/)
+  assert.ok(SCRIPT.next.endsWith('Are you free right now?'))
+  assert.ok(p.includes(AI_CALL_WORDS.check))
   assert.match(p, /Never end a call with a real person without trying to transfer or book/)
   for (const o of [/Just send me info/, /How much is it/, /already have coverage/, /spouse/, /robot/, /Not interested/, /Stop calling/]) assert.match(p, o)
 })
@@ -65,8 +72,11 @@ test('model and voice: Claude Sonnet 5.5, no billed backup; smooth voice, waits 
   assert.equal(a.voice_speed, 1)
   assert.equal(a.voice_model, 'eleven_multilingual_v2')
   assert.ok(a.voice_temperature < 1)
-  assert.ok(a.responsiveness <= 0.6 && a.interruption_sensitivity <= 0.6)
-  assert.equal(a.stt_mode, 'accurate')
+  assert.equal(a.responsiveness, 0.8)
+  assert.equal(a.enable_dynamic_responsiveness, true)
+  assert.equal(a.interruption_sensitivity, 0.5)
+  assert.equal(a.voice_temperature, 0.8)
+  assert.equal(a.stt_mode, 'fast')
   assert.equal(a.enable_backchannel, true)
   assert.deepEqual(a.backchannel_words, RETELL_VOICE_DEFAULTS.backchannel_words)
 })
@@ -84,8 +94,7 @@ test('agent: voicemail leaves the message with the callback number, screeners ar
   assert.match(VOICEMAIL_LINE, /\{\{callback_number\}\}/)
   assert.match(a.voicemail_option.detection_prompt, /screening assistant .* is NOT voicemail/)
   assert.equal(a.ivr_option, null)
-  assert.deepEqual(a.call_screening_option, SCREEN_OPTION)
-  assert.ok(SCREEN_OPTION.agent_identity.length <= 100 && SCREEN_OPTION.call_purpose.length <= 300)
+  assert.equal(a.call_screening_option, null) // our prompt says the screening line itself
   assert.equal(a.end_call_after_silence_ms, 20000)
   assert.ok(a.begin_message_delay_ms > 0 && a.begin_message_delay_ms <= 5000)
 })
@@ -120,8 +129,15 @@ test('free_now true but no specialist can take it (appointments only): the check
   f.store.agent = async () => ({ id: 'ag', first: 'Test', phone: '+15125550100', mode: 'appts', hours: {}, tz: 'America/Chicago', reachable: true })
   f.store.lead = async () => ({ id: 'l1', first: 'Brayden', phone: '+15125550123', state: 'TX', tz: 'America/Chicago', test: null })
   const r = await core.tool(f.store, f.provider, f.env, { ...f.call }, 'qualified', { summary: 's', free_now: true })
-  assert.equal(r.say, `${AI_CALL_WORDS.check} ${AI_CALL_WORDS.bounce}`)
-  assert.equal(r.slots.length, 2)
+  assert.equal(r.say, AI_CALL_WORDS.check)
+  assert.deepEqual([r.next, r.wait_secs], ['check_status', 2])
+  assert.ok(f.log.some(x => x[0] === 'status' && x[1] === 'booking') && !f.log.some(x => x[0] === 'check'))
+  const b = await core.tool(f.store, f.provider, f.env, { ...f.call, status: 'booking' }, 'check_status', {})
+  assert.ok(b.say.startsWith('Okay, so unfortunately all of our specialists are with clients right now, but I can put you down for '))
+  assert.ok(b.say.endsWith('Do either of those work for you?') && !b.say.includes('{times}'))
+  assert.equal(b.slots.length, 2)
+  assert.equal(b.next, 'book')
+  assert.equal(b.spoken.length, 2)
 })
 
 test('free_now false: no agent check, straight to times', async () => {
@@ -144,4 +160,14 @@ test('a call that ended with a result mid-call still gets its minutes and cost',
   f.call.status = 'done'
   await core.onEvent(f.store, f.provider, f.env, { type: 'ended', providerCallId: 'p1', callId: f.call.id, reason: 'hangup', durationSecs: 96, costCents: 26.88 })
   assert.deepEqual(f.log.at(-1), ['endStats', 96, 26.88])
+})
+
+test('spokenSlot and twoTimes: plain-word times for the lead’s own state', () => {
+  const now = Date.parse('2026-11-10T19:00:00Z')
+  const sp = iso => core.spokenSlot(iso, 'America/Chicago', now).replace(/\s/g, ' ')
+  assert.equal(sp('2026-11-10T21:30:00Z'), 'today at 3:30 PM')
+  assert.equal(sp('2026-11-10T23:00:00Z'), 'today at 5 PM')
+  assert.equal(sp('2026-11-11T16:00:00Z'), 'tomorrow at 10 AM')
+  assert.equal(core.twoTimes(['today at 3:30 PM', 'today at 5 PM']), 'later today at 3:30 PM, or 5 PM')
+  assert.equal(core.twoTimes(['today at 5 PM', 'tomorrow at 10 AM']), 'later today at 5 PM, or tomorrow at 10 AM')
 })
