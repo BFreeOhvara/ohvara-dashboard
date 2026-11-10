@@ -45,6 +45,20 @@ workflows:
         script: npx cap sync ios
       - name: Signing profiles
         script: xcode-project use-profiles --project ios/App/App.xcodeproj
+      # P928: build 4 carries the Time Sensitive entitlement (P880 live-transfer
+      # alerts). A profile made before that capability was ticked can't sign it,
+      # so stop here with the fix instead of a long Xcode signing error.
+      - name: Profile has Time Sensitive
+        script: |
+          for f in "$HOME/Library/MobileDevice/Provisioning Profiles/"*.mobileprovision; do
+            if security cms -D -i "$f" 2>/dev/null | grep -q "com.ohvara.portal" && security cms -D -i "$f" 2>/dev/null | grep -q "usernotifications.time-sensitive"; then
+              echo "Profile OK: $(basename "$f")"; exit 0
+            fi
+          done
+          echo "The App Store profile for com.ohvara.portal has no Time Sensitive Notifications."
+          echo "Fix: developer.apple.com > Identifiers > com.ohvara.portal > tick Time Sensitive Notifications > Save."
+          echo "Then Codemagic > Team settings > Code signing identities > iOS provisioning profiles: delete the old com.ohvara.portal App Store profile, Fetch profiles, pick the new one. Start the build again."
+          exit 1
       - name: Next build number
         script: |
           LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
@@ -66,7 +80,7 @@ workflows:
     # The free Personal plan only allows the Mac; it has the Android SDK too.
     instance_type: mac_mini_m2
     max_build_duration: 60
-    environment:
+    environment: &android_env
       groups:
         - ohvara_web
         - google_play
@@ -78,7 +92,7 @@ workflows:
       node: 22
       # Capacitor 8 compiles with Java 21 (android/app/capacitor.build.gradle).
       java: 21
-    scripts:
+    scripts: &android_scripts
       - name: Install
         script: npm ci
       - name: Build the portal
@@ -93,7 +107,10 @@ workflows:
             echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
             echo "Firebase file added"
           else
-            echo "No Firebase file yet: this build has no push"
+            # P928: push is on for Android builds 1+ (public/app/config.json), and
+            # push without this file crashes the app, so no build ships without it.
+            echo "GOOGLE_SERVICES_JSON is missing from the google_play group: stopping (push would crash the app)"
+            exit 1
           fi
       - name: Build the .aab
         script: |
@@ -101,11 +118,28 @@ workflows:
           NEXT=$((LATEST + 1))
           echo "Build $NEXT"
           cd android && chmod +x gradlew && ./gradlew bundleRelease -PversionCode=$NEXT
-    artifacts:
+    artifacts: &android_artifacts
       - android/app/build/outputs/**/*.aab
     publishing:
       google_play:
         credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
         track: internal
         # Required until the app has been published once.
+        submit_as_draft: true
+
+  # P928: the Play account is a personal one, so production needs 12+ testers
+  # opted in to a closed test for 14 days in a row first. Same build as above,
+  # sent to the closed track ("alpha" = Closed testing in the Play Console).
+  # Lands as a draft: Play Console > Closed testing > the release > Start rollout.
+  android-closed:
+    name: Android → Play closed testing
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment: *android_env
+    scripts: *android_scripts
+    artifacts: *android_artifacts
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: alpha
         submit_as_draft: true
