@@ -239,25 +239,21 @@ select is((select coalesce(string_agg(schemaname || '.' || tablename || '.' || p
 
 -- ── f. the anon sweep: today's answer, table by table ───────────────────────
 create temp table p_fh_expected (rel text primary key, expected text not null);
-insert into p_fh_expected
-select rel, 'rows: 0' from unnest(array[
-  'agent_billing_tiers', 'agent_carrier_appointments', 'agent_licenses', 'agent_monthly_goals', 'app_settings',
-  'appointments', 'calls', 'carriers', 'closer_followups', 'commission_schedule', 'commissions', 'direct_message_reads',
-  'direct_messages', 'follow_up_queue', 'fulfillment_pay', 'fulfillment_time_entries', 'leads', 'no_answer_queue',
-  'notification_types', 'notifications', 'policy_message_reads', 'policy_messages', 'rep_invites', 'secrets',
-  'team_conversations', 'team_messages', 'training_progress', 'training_videos']) rel;
--- Anon can select from these, and a policy they keep already refuses it.
-insert into p_fh_expected
-select rel, '42501: permission denied for table profiles' from unnest(array[
-  'batch_assignments', 'bug_reports', 'clients', 'closer_rotation', 'commission_payouts', 'messages', 'onboarding',
-  're_engagement_log', 'reminder_log', 'rep_credentials', 'subscriptions']) rel;
-insert into p_fh_expected
-select rel, '42501: permission denied for function can_view_agent' from unnest(array['policies', 'policy_events']) rel;
--- No anon grant at all: refused on the relation itself.
+-- P922 (migration 259): anon holds no grant on any public table any more, so every
+-- relation is refused on the relation itself. The one read kept is carriers (the
+-- phone app's list before sign-in), where row rules give 0 rows.
 insert into p_fh_expected
 select rel, '42501: permission denied for table ' || rel from unnest(array[
+  'agent_billing_tiers', 'agent_carrier_appointments', 'agent_licenses', 'agent_monthly_goals', 'app_settings',
+  'appointments', 'calls', 'closer_followups', 'commission_schedule', 'commissions', 'direct_message_reads',
+  'direct_messages', 'follow_up_queue', 'fulfillment_pay', 'fulfillment_time_entries', 'leads', 'no_answer_queue',
+  'notification_types', 'notifications', 'policy_message_reads', 'policy_messages', 'rep_invites', 'secrets',
+  'team_conversations', 'team_messages', 'training_progress', 'training_videos',
+  'batch_assignments', 'bug_reports', 'clients', 'closer_rotation', 'commission_payouts', 'messages', 'onboarding',
+  're_engagement_log', 'reminder_log', 'rep_credentials', 'subscriptions', 'policies', 'policy_events',
   'fulfillment_cancel_checks', 'fulfillment_cancel_events', 'fulfillment_cancels', 'fulfillment_hour_fixes',
   'fulfillment_pay_runs', 'fulfillment_payout_accounts', 'fulfillment_payouts', 'fulfillment_recordings', 'profiles']) rel;
+insert into p_fh_expected values ('carriers', 'rows: 0');
 
 -- Everything anon can select from, plus everything pinned, plus the one 217 changes.
 create temp table p_fh_sweep as
@@ -273,8 +269,8 @@ select is(s.got, e.expected, 'row f anon select limit 1 on ' || e.rel)
   from p_fh_expected e left join p_fh_sweep s on s.rel = e.rel
  order by e.rel;
 
-select is(public.p_fh_rows('anon', 'select * from public.policy_fulfillment_details limit 1'), 'rows: 0',
-          'hardening f policy_fulfillment_details is clean for anon (42501 on can_view_agent before 217)');
+select is(public.p_fh_rows('anon', 'select * from public.policy_fulfillment_details limit 1'), '42501: permission denied for table policy_fulfillment_details',
+          'hardening f policy_fulfillment_details is closed to anon (no grant since P922)');
 
 -- A table added later and not pinned must be clean for anon: no error, no rows.
 select is((select coalesce(string_agg(s.rel || ' => ' || s.got, '; ' order by s.rel), '')
@@ -298,7 +294,7 @@ select is(public.p_fh_rows('anon', 'select * from public.carriers order by name'
 -- ── g. anon can't change a lead ─────────────────────────────────────────────
 select is(public.p_fh_write('anon', format('update public.leads set contact_name = ''FH changed'' where id in (%L, %L, %L)',
                                            public.p_fh_id('leadA'), public.p_fh_id('leadB'), public.p_fh_id('leadC'))),
-          '42501: permission denied for table profiles', 'row g1 anon update leads: 42501 naming table profiles');
+          '42501: permission denied for table leads', 'row g1 anon update leads: 42501 on leads itself (no grant since P922)');
 select is((select count(*)::int from public.leads where contact_name = 'FH changed'), 0, 'row g2 anon update leads changed 0 rows');
 
 -- ── h. same rows as before, by role and table ───────────────────────────────
@@ -323,12 +319,12 @@ select is(public.p_fh_sees('Z', 'team_messages', array['tmChan', 'tmAZ', 'tmBZ',
 select is(public.p_fh_sees('A', 'team_messages', array['tmChan', 'tmAZ', 'tmBZ', 'tmAB']), 'tmAB,tmAZ,tmChan', 'row h14 agent team_messages');
 select is(public.p_fh_sees('F', 'team_messages', array['tmChan', 'tmAZ', 'tmBZ', 'tmAB']), 'tmChan', 'row h15 fulfillment team_messages');
 -- anon, on the same seeded rows
-select is(public.p_fh_sees('anon', 'leads', array['leadA', 'leadB', 'leadC']), '', 'row h16 anon leads');
-select is(public.p_fh_sees('anon', 'policy_messages', array['msgA', 'msgB']), '', 'row h17 anon policy_messages');
-select is(public.p_fh_sees('anon', 'team_conversations', array['chan', 'dmAZ', 'dmBZ', 'dmAB']), '', 'row h18 anon team_conversations');
-select is(public.p_fh_sees('anon', 'team_messages', array['tmChan', 'tmAZ', 'tmBZ', 'tmAB']), '', 'row h19 anon team_messages');
+select is(public.p_fh_sees('anon', 'leads', array['leadA', 'leadB', 'leadC']), '42501: permission denied for table leads', 'row h16 anon leads (no grant since P922)');
+select is(public.p_fh_sees('anon', 'policy_messages', array['msgA', 'msgB']), '42501: permission denied for table policy_messages', 'row h17 anon policy_messages (no grant since P922)');
+select is(public.p_fh_sees('anon', 'team_conversations', array['chan', 'dmAZ', 'dmBZ', 'dmAB']), '42501: permission denied for table team_conversations', 'row h18 anon team_conversations (no grant since P922)');
+select is(public.p_fh_sees('anon', 'team_messages', array['tmChan', 'tmAZ', 'tmBZ', 'tmAB']), '42501: permission denied for table team_messages', 'row h19 anon team_messages (no grant since P922)');
 select is(public.p_fh_sees('anon', 'policies', array['polA', 'polB']),
-          '42501: permission denied for function can_view_agent', 'row h20 anon policies');
+          '42501: permission denied for table policies', 'row h20 anon policies (no grant since P922)');
 
 -- ── i. moved write policies still work for the signed-in ────────────────────
 select is(public.p_fh_write('A', format('insert into public.policy_messages (policy_id, sender_id, body) values (%L, %L, ''fh write'')',

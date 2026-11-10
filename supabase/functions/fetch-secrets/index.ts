@@ -17,12 +17,13 @@ const corsHeaders = {
 
 // ── Crypto helpers ────────────────────────────────────────────────────────────
 
-const ENC_KEY_RAW = Deno.env.get('SECRETS_ENCRYPTION_KEY') || 'ohvara-dev-only-change-in-prod!!'
-if (!Deno.env.get('SECRETS_ENCRYPTION_KEY')) {
-  console.warn('[fetch-secrets] SECRETS_ENCRYPTION_KEY not set — using dev default, set it in Supabase secrets!')
-}
+// P922: no built-in fallback key. Without SECRETS_ENCRYPTION_KEY nothing is
+// encrypted or decrypted (POST answers 503), so a secret is never sealed with a
+// key that sits in this repo.
+const ENC_KEY_RAW = Deno.env.get('SECRETS_ENCRYPTION_KEY') ?? ''
 
 async function getCryptoKey(): Promise<CryptoKey> {
+  if (ENC_KEY_RAW.length < 16) throw new Error('SECRETS_ENCRYPTION_KEY not set')
   const rawBytes = new TextEncoder().encode(ENC_KEY_RAW.padEnd(32, '0').slice(0, 32))
   const keyMaterial = await crypto.subtle.importKey('raw', rawBytes, 'PBKDF2', false, ['deriveKey'])
   return crypto.subtle.deriveKey(
@@ -113,6 +114,13 @@ Deno.serve(async (req) => {
 
   const profile = await getCallerProfile(req)
   const isAdmin = profile?.role === 'admin'
+
+  // P922: signed-in people only, even for the yes/no capability flags.
+  if (!profile) {
+    return new Response(JSON.stringify({ error: 'Sign in first' }), {
+      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
 
   // ── GET: return capabilities (all users) + secret metadata (admin only) ────
   if (req.method === 'GET') {

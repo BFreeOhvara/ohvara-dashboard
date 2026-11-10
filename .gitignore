@@ -14,6 +14,9 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+# P922: every other .env file too (.env.production, .env.development, ...); only the example is tracked
+.env.*
+!.env.example
 supabase/.temp/
 
 # Editor directories and files
