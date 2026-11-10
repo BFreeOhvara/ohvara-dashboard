@@ -224,6 +224,10 @@ export function followReminders(at, now = clockNow()) {
     .filter(r => r.at > now && r.at < at)
 }
 
+// P931: when the AI caller rings a no-show to book them again: right after the short Undo (speed-to-lead rules).
+export const AI_REBOOK_MIN = 5
+export const aiRebookAt = now => addMin(now, AI_REBOOK_MIN)
+
 export function applyMove(lead, stage, extra = {}, now = clockNow()) {
   if (!AGENT_MOVES.includes(stage)) throw new Error(`An agent cannot move a lead to ${stage}`)
   const s = STAGES[stage]
@@ -234,13 +238,14 @@ export function applyMove(lead, stage, extra = {}, now = clockNow()) {
   if (changed) label = `Changed from ${STAGES[lead.stage].label} to ${label}`
   const rows = [{ id: `${lead.id}-m${(lead.events || []).length + 1}`, kind, at: now, label, state: 'done', by: 'You', role: 'you', ...(changed ? { audit: true } : {}) }]
   const id = () => `${lead.id}-m${(lead.events || []).length + rows.length + 1}`
-  // P910: vaCall = the re-engage call the system booked on the VA Schedule ({ at, va }); not a lead field.
-  const { vaCall, ...fields } = extra
+  // P931: aiCall = the AI caller's rebook call ({ at }); not a lead field. (P910 booked a VA; a no-show is an unsold lead.)
+  const { aiCall, ...fields } = extra
+  delete fields.vaCall
   if (stage === 'no_show') {
-    // The one-tap rebook text waits out the short Undo (N-C-45), then sends. P910: a VA re-engage call is booked at
-    // the next open slot in the lead's best window; it's dropped if they rebook from the link first.
+    // The one-tap rebook text waits out the short Undo (N-C-45), then sends. P931: the AI caller then calls to book
+    // them again (speed-to-lead rules); it's dropped if they rebook from the link first.
     rows.push({ id: id(), kind: 'text_sent', step: 'no_show_link', at: now, label: 'Text', state: 'scheduled', text: leadText('no_show_link', { lead: lead.first_name }), by: SENDER, role: 'auto' })
-    rows.push({ id: id(), kind: 'va_call', at: vaCall?.at || addMin(now, 45), label: `Calls to rebook${vaCall?.va ? `: ${vaCall.va} is booked` : ''} if they haven't picked a time`, state: 'scheduled', by: vaCall?.va ? `${vaCall.va}, Fulfillment` : TEAM, role: 'team' })
+    rows.push({ id: id(), kind: 'ai_call', at: aiCall?.at || aiRebookAt(now), label: 'Our AI caller calls to book them again if they haven’t picked a time', state: 'scheduled', by: 'AI caller', role: 'auto' })
   }
   if (stage === 'follow_up' && fields.followAt) {
     // P910 (Lead Text Workflows 7): the follow-up call on the agent's calendar and its two reminder texts.

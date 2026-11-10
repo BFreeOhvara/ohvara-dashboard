@@ -96,5 +96,5 @@ test('P879 VA screens carry the new pieces; pay is hourly, no dial pad. P907: no
   assert.match(pay, /an hour/); assert.doesNotMatch(pay, /for each cancellation/)
   assert.match(src('./screens/Schedule.jsx'), /<ClockTile /) // P918: clock in/out moved to Schedule
   assert.match(src('./screens/Schedule.jsx'), /<SwapsHolidays \/>/)
-  assert.match(src('./screens/Clients.jsx'), /<VerifyCaller/)
+  assert.doesNotMatch(src('./screens/Clients.jsx'), /<VerifyCaller/) // P931: no identity check on clients we call
 })

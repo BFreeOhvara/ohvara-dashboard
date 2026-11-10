@@ -1,0 +1,20 @@
+/* P931 — VA Clients: one tools row (a find box long enough for its words, the status pills, the Show closed switch on
+   the right) and the agent's card (P911): inner panels for the details, the same height, buttons pinned at the bottom. */
+.fs .fs-clients .fs-cl-tools { flex-wrap: wrap; align-items: center; row-gap: 10px; }
+.fs .fs-clients .fx-find.fs-cl-find { flex: 0 1 300px; min-width: 260px; }
+.fs .fs-clients .fs-closedsw { flex: none; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ov-mid); white-space: nowrap; }
+
+.fs-ccard.ck-card h3 { font-size: 16px; }
+.fs-ccard .fs-cc-pair { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-top: 4px; }
+.fs-ccard .fs-cc-pair > span, .fs-ccard .fs-cc-next { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 7px 10px; border-radius: 12px;
+  background: color-mix(in srgb, var(--ov-hi) 6%, transparent); }
+.fs-ccard .fs-cc-pair small, .fs-ccard .fs-cc-next small { font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--ov-mid); }
+.fs-ccard .fs-cc-pair b, .fs-ccard .fs-cc-next b { font-size: 13px; font-weight: 600; color: var(--ov-hi); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fs-ccard .fs-cc-next { position: relative; flex-direction: row; align-items: center; gap: 8px; margin-top: 6px; }
+.fs-ccard .fs-cc-next > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fs-ccard .fs-cc-next svg { flex: none; color: var(--ov-mid); }
+.fs-ccard .fs-cc-next b { font-variant-numeric: tabular-nums; }
+.fs-ccard .fs-cc-next.is-none b { font-weight: 500; color: var(--ov-mid); }
+.fs-ccard .fs-cc-open { position: relative; display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
+  color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 8%, transparent); }
+.fs-ccard .ck-stand { min-height: 72px; }

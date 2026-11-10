@@ -169,10 +169,10 @@ const seedTasks = [
   // P907: a cancel request is a save attempt; a name change is a change request.
   mkTask('st-15', 'cancel_request', 'fc-robert', { note: 'Robert called in and asked to cancel: money is tight this month. Try to save it (a lower amount, a later draft date).' }),
   mkTask('st-16', 'name_change', 'fc-irene', { window: 'Morning', note: 'Got married: Irene Baker becomes Irene Cole. Carrier needs the marriage certificate.' }),
-  // P907: callbacks. A missed incoming call, a text reply that needs a person, or someone who asked: each one is a
-  // booked call, never a queue. who = the person when they aren't a client yet.
-  mkTask('cb-1', 'callback', null, { why: 'asked', agent_id: 'ag-dana', who: { name: 'Angela Moore', phone: '(210) 555-0147', city: 'San Antonio', state: 'TX' }, window: 'Afternoon', note: 'Asked us to call back after lunch. A question about her Globe Life policy.' }),
-  mkTask('cb-2', 'callback', null, { why: 'missed_call', agent_id: 'ag-marcus', who: { name: 'Owen Price', phone: '(702) 555-0119', city: 'Henderson', state: 'NV' }, note: 'Called us at 8:31 AM and nobody picked up. The system booked this callback.' }),
+  // P907: callbacks. A missed incoming call or a client who asked: each one is a booked call, never a queue.
+  // P931: only clients (a VA only talks to someone whose policy is sold; leads are the AI caller's).
+  mkTask('cb-1', 'callback', 'fc-denise', { why: 'asked', window: 'Afternoon', note: 'Asked us to call back after lunch. A question about her draft date.' }),
+  mkTask('cb-2', 'callback', 'fc-tom', { why: 'missed_call', note: 'Called us at 8:31 AM and nobody picked up. The system booked this callback.' }),
   // P924: clients text and call our team, not the agent. A text becomes a booked call (or a pod task) and the
   // automatic reply has already gone; a coverage question ends with a live transfer or a call on the agent's calendar.
   mkTask('cb-4', 'callback', 'fc-robert', { why: 'client_text', agent_id: 'ag-marcus', intent: 'question', window: 'Afternoon', text: 'Does my policy cover my wife too?',
@@ -181,7 +181,6 @@ const seedTasks = [
   mkTask('cb-5', 'callback', 'fc-carla', { why: 'client_text', agent_id: 'ag-priya', intent: 'payment', text: 'my bank changed, the draft will bounce',
     reply: textToWork({ body: 'my bank changed, the draft will bounce', va: 'Maya', when: 'today at 4 PM' }).reply,
     note: 'A payment problem: get the new bank details and send the change to the carrier.' }),
-  mkTask('cb-3', 'callback', null, { why: 'reply', agent_id: 'ag-dana', who: { name: 'Hector Ruiz', phone: '(469) 555-0193', city: 'Plano', state: 'TX' }, note: 'Replied “yes call me” to the day-60 check-in text. The automatic answer already went.' }),
 ]
 
 // Pay: a flat amount per cancellation the carrier confirms (sample amount). status = verified | checking | needs_listen.
@@ -701,22 +700,6 @@ export function bookAfterSale({ who, phone = '', state = 'TX', city = '', carrie
   })
   return out
 }
-// P910 — the agent marked a lead No show: the system books a VA re-engage call (a callback, why no_show) at the next
-// open slot in the lead's best window on their clock (else afternoon), with a free VA on shift. If the lead rebooks
-// from the text link first, cancelNoShowCall takes it off the Schedule. Returns { id, iso, tz, va } or null.
-export function bookNoShowCall({ leadId, who, phone = '', state = 'TX', city = '', agent = 'ag-dana', window: win = null }) {
-  let out = null
-  set(s => {
-    const t0 = mkTask(`ns-${leadId}-${Date.now()}`, 'callback', null, { why: 'no_show', lead_id: leadId, agent_id: agent, who: { name: who, phone, city, state },
-      note: `Missed the booked call with ${agentName(agent)}. Book them again on ${agentName(agent).split(' ')[0]}'s calendar.` })
-    const t = bookTask(s, t0, { window: win })
-    out = t.iso ? { id: t.id, iso: t.iso, tz: t.tz, va: VAS.find(v => v.id === t.va_id) || null } : null
-    return { tasks: [...s.tasks, t], ...feedAdd(s, who || 'Lead', `Re-engage call booked: ${CALLBACK_WHY.no_show.toLowerCase()}`, 'call') }
-  })
-  return out
-}
-export const cancelNoShowCall = leadId => set(s => ({ tasks: s.tasks.filter(t => !(t.why === 'no_show' && t.lead_id === leadId && t.status !== 'done')) }))
-
 // P907: what Submit a policy shows before it's sent: the hand-off call the system would book for this window.
 export function useAfterSalePreview({ state, city, window: win }) {
   const s = useStore()

@@ -1,15 +1,16 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Search, Phone, MessageSquare, CalendarClock, MapPin, TriangleAlert, LifeBuoy, PhoneCall } from 'lucide-react'
-import { useFulClients, useFulCalls, useFulTasks, useFulThreads, useFulAgents, useFulActions, useFulClock } from '../data'
-import { Avatar, Chip, Money, SampleTag, Empty, PillTabs, useNote } from '../../kit'
+import { Search, Phone, MessageSquare, CalendarClock, MapPin, TriangleAlert, LifeBuoy, PhoneCall, Archive } from 'lucide-react'
+import { useFulClients, useFulCalls, useFulTasks, useFulThreads, useFulActions, useFulClock } from '../data'
+import { Avatar, Chip, Money, SampleTag, Empty, Switch, useNote } from '../../kit'
 import { RecordDrawer, Block } from '../../Record'
-import { clientStatusOf, clientStatus, requestTag } from '../../../lib/clientCheck.js'
+import { CLIENT_STATUS, STATUS_ORDER, clientStatusOf, clientStatus, requestTag } from '../../../lib/clientCheck.js'
+import { FilterPills } from '../../FilterPills'
+import './clients931.css'
 import { stagesOf } from '../../../lib/clientStages.js'
 import { StageBlock } from '../../Stages911'
 import { fp } from '../paths'
 import { CALL_WORD, CALL_TONE, KIND, kindTone } from '../words'
-import { VerifyCaller } from '../Clock879'
 
 // P845 — Clients: the agent's Clients grid and drawer, adapted for a VA: every client across the agents this VA
 // serves, each card naming its agent, a filter per agent beside the status filter. The drawer shows the policy, the
@@ -35,28 +36,38 @@ function useNextBooked() {
   }, [calls, tasks, today, dayName, nowIso])
 }
 const statusOf = (c, day) => clientStatus(clientStatusOf(c, day))
-// P918: the P911 card standard. Every card the same height, every row in a fixed place and one line (the full text
-// is in the drawer): name and status → carrier · city, state → stage line → agent → next booked call → what's open
-// for you and the buttons, pinned at the bottom.
+// P931: the agent's client card (P911 standard): name and status up top, carrier · city, then inner panels for the
+// details (drafts and agent; where it stands; the next booked call), every card the same height, the buttons pinned at
+// the bottom. Nothing reads like loose text.
+const ord = n => { const v = Number(n); if (!v) return null; const t = ['th', 'st', 'nd', 'rd'][(v % 100 > 10 && v % 100 < 14) ? 0 : v % 10] || 'th'; return `${v}${t}` }
 function ClientCard({ c, i, open, next, day }) {
-  const note = useNote()
   const { tone, label, sub } = statusOf(c, day)
+  const st = clientStatusOf(c, day)
   const req = requestTag(c)
-  const stage = clientStatusOf(c, day) === 'working' ? stagesOf(c) : null
-  const stageLine = stage ? (stage.current ? `Stage ${stage.at} of ${stage.of} · ${stage.current.label}` : stage.label) : req || sub || label
-  const nextLine = next ? next.text : 'No call booked'
+  const stage = st === 'working' ? stagesOf(c) : null
+  const stand = stage ? { kicker: stage.current ? `Stage ${stage.at} of ${stage.of}` : 'Working', text: stage.current ? stage.current.label : stage.label } : { kicker: label, text: req || sub }
   return (
     <article className={`fx-card fx-ccard ck-card fs-ccard is-${tone}`} style={{ '--i': i }}>
       <Link to={fp('clients', c.id)} className="fx-cover" aria-label={`Open ${c.name}`} />
-      <div className="fx-ccard-top fs-cc-top"><Avatar name={c.name} tone={tone} /><h3 title={c.name}>{c.name}</h3><span className="fx-tag">{label}</span></div>
+      <div className="fx-ccard-top"><Avatar name={c.name} tone={tone} /><span className="fx-tag">{label}</span></div>
+      <h3 title={c.name}>{c.name}</h3>
       <p className="ck-where" title={`${c.carrier_name} · ${c.city}, ${c.state}`}>{c.carrier_name} · {c.city}, {c.state}</p>
-      <p className="fs-cc-line fs-cc-stage" title={stageLine}>{stageLine}</p>
-      <p className="fs-cc-line"><small>Agent</small>{c.agent}</p>
-      <p className={`fs-cc-line fs-cc-next${next ? '' : ' is-none'}`} title={next ? `Next booked call: ${next.text} · ${next.word}` : nextLine}>{nextLine}</p>
+      <div className="fs-cc-pair">
+        <span><small>Drafts</small><b>{ord(c.draft_day) ? `The ${ord(c.draft_day)}` : 'Not given'}</b></span>
+        <span><small>Agent</small><b title={c.agent}>{c.agent}</b></span>
+      </div>
+      <div className={`ck-stand is-${st}`}>
+        <small>{stand.kicker}</small>
+        <span>{stand.text}</span>
+        {stage && <span className="sl-bar" aria-hidden="true">{stage.steps.map(s => <i key={s.key} className={`is-${s.state}`} />)}</span>}
+      </div>
+      <div className={`fs-cc-next${next ? '' : ' is-none'}`}>
+        <CalendarClock size={14} aria-hidden="true" />
+        <span><small>{next ? next.word : 'Next call'}</small><b>{next ? next.text : 'Nothing booked'}</b></span>
+      </div>
       <div className="fx-ccard-bot ck-bot">
-        <span>{open ? `${open} open for you` : 'Nothing open for you'}</span>
+        {open > 0 && <span className="fs-cc-open">{open} open for you</span>}
         <span className="tp-grow" />
-        <button type="button" className="fx-mini fx-over" aria-label={`Call ${c.name}`} onClick={() => note(`Dial ${c.client_phone} from your phone`)}><Phone size={14} /></button>
         <Link to={fp('messages')} className="fx-mini fx-over" aria-label={`Message ${c.agent} about ${c.name}`}><MessageSquare size={14} /></Link>
       </div>
     </article>
@@ -104,8 +115,6 @@ function ClientDrawer({ id, onClose }) {
           <p className="tp-mid">{c.agent} asked for help. It is booked as {c.next_step.toLowerCase()}.</p>
         </section>
       )}
-      {/* P879 (N-E-61): check the caller before any policy detail. */}
-      <VerifyCaller key={c.id} client={c} />
       {(statusOf(c, isoOf(today)).key === 'working' || c.track?.closed) && <StageBlock c={c} who="va" />}
       <Block title="Policy">
         <dl className="fx-facts">{[['Carrier', c.carrier_name], ['Product', c.product_name], ['Policy', c.policy_number], ['Phone', c.client_phone], ['Agent', c.agent]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
@@ -132,7 +141,6 @@ export default function Clients() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { data: clients } = useFulClients()
-  const { data: agents } = useFulAgents()
   const { data: calls } = useFulCalls()
   const { data: tasks } = useFulTasks()
   const { today, isoOf } = useFulClock()
@@ -140,38 +148,38 @@ export default function Clients() {
   const nextBooked = useNextBooked()
   const [params, setParams] = useSearchParams()
   const [q, setQ] = useState('')
+  const showClosed = params.get('closed') === '1'
   const stage = params.get('stage') || 'all'
-  const agent = params.get('agent') || 'all'
-  const setP = (k, v) => { const p = Object.fromEntries(params); if (v === 'all') delete p[k]; else p[k] = v; setParams(p) }
   const openFor = useMemo(() => {
     const m = {}
     calls.filter(k => k.status === 'booked' || k.status === 'no_answer').forEach(k => { m[k.client_id] = (m[k.client_id] || 0) + 1 })
     tasks.filter(t => t.due !== 'done').forEach(t => { m[t.client_id] = (m[t.client_id] || 0) + 1 })
     return m
   }, [calls, tasks])
-  const inAgent = clients.filter(c => agent === 'all' || c.agent_id === agent)
-  const st = new Map(inAgent.map(c => [c.id, clientStatusOf(c, day)]))
-  const rows = inAgent.filter(c => (stage === 'all' || st.get(c.id) === stage) && `${c.name} ${c.policy_number} ${c.client_phone} ${c.agent}`.toLowerCase().includes(q.trim().toLowerCase()))
-  const count = s => inAgent.filter(c => st.get(c.id) === s).length
-  // P899's order: Working · Needs attention · Protected · Closed.
-  const options = [{ key: 'all', label: 'All', count: inAgent.length }, ...['working', 'needs_attention', 'protected', 'closed'].map(k => ({ key: k, label: clientStatus(k).label, count: count(k) }))]
-  const toneOf = key => (key === 'all' ? '' : `is-tone is-${clientStatus(key).tone}`)
+  // P931: no filter by agent (each card names its agent). Status pills as on the agent side; Closed is a switch.
+  const st = useMemo(() => new Map(clients.map(c => [c.id, clientStatusOf(c, day)])), [clients, day])
+  const shown = clients.filter(c => showClosed || st.get(c.id) !== 'closed')
+  const rows = shown.filter(c => (stage === 'all' || st.get(c.id) === stage) && `${c.name} ${c.policy_number} ${c.client_phone} ${c.agent}`.toLowerCase().includes(q.trim().toLowerCase()))
+  const count = s => clients.filter(c => st.get(c.id) === s).length
+  const keys = showClosed ? [...STATUS_ORDER, 'closed'] : STATUS_ORDER
+  const options = [{ key: 'all', label: 'All', count: shown.length }, ...keys.map(k => ({ key: k, label: CLIENT_STATUS[k].label, count: count(k), tone: CLIENT_STATUS[k].tone, title: CLIENT_STATUS[k].sub }))]
+  const keep = extra => ({ ...(showClosed ? { closed: '1' } : {}), ...extra })
+  const setStage = k => setParams(keep(k === 'all' ? {} : { stage: k }), { replace: true })
+  const setClosed = on => setParams(on ? { closed: '1', stage: 'closed' } : {}, { replace: true })
   const back = () => navigate({ pathname: fp('clients'), search: params.toString() ? `?${params}` : '' })
   return (
     <div className="tp-page fx-page fs-clients">
-      {/* P867: one tools row (find, agent, status) so the cards start higher; the sample tag sits under the cards on a
-          desktop (the second row it had cost a card row at 1366x768) and stays up top on a phone. */}
-      <div className="fx-tools">
-        <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a client" placeholder="Find a client, phone, policy or agent" value={q} onChange={e => setQ(e.target.value)} /></label>
-        <PillTabs label="Agent" className="fx-filters" itemClass="fx-filter" value={agent} onChange={k => setP('agent', k)}
-          items={[{ key: 'all', label: 'Every agent' }, ...agents.map(a => ({ key: a.id, label: a.name.split(' ')[0], count: a.clients }))]} />
-        <PillTabs label="Status" className="fx-filters" itemClass="fx-filter" value={stage} onChange={k => setP('stage', k)} items={options.map(o => ({ ...o, className: toneOf(o.key) }))} />
+      <div className="fx-tools fs-cl-tools">
+        <label className="fx-find fs-cl-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a client" placeholder="Find a client, phone, policy…" value={q} onChange={e => setQ(e.target.value)} /></label>
+        <FilterPills label="Status" value={stage} onChange={setStage} items={options} />
+        <span className="tp-grow" />
         <span className="fs-cl-tag is-top"><SampleTag>Sample clients</SampleTag></span>
+        <label className="lc-closedsw fs-closedsw"><Archive size={15} aria-hidden="true" /><span>Show closed</span><Switch on={showClosed} label="Show closed clients" onChange={setClosed} /></label>
       </div>
 
       <div className="fx-cgrid ck-grid" aria-label="Clients">
         {rows.map((c, i) => <ClientCard key={c.id} c={c} i={i} open={openFor[c.id] || 0} next={nextBooked[c.id]} day={day} />)}
-        {rows.length === 0 && <section className="fx-tile"><Empty title="No clients match" sub="Check the spelling, or show every status and agent." /></section>}
+        {rows.length === 0 && <section className="fx-tile"><Empty title="No clients match" sub="Check the spelling, or show every status." /></section>}
       </div>
       <span className="fs-cl-tag is-end"><SampleTag>Sample clients</SampleTag></span>
 

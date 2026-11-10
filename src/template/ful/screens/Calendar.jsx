@@ -1,25 +1,27 @@
-import { useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Phone, MessageSquare, CalendarClock, MapPin, CircleCheck, PhoneMissed, Forward, ArrowRight, Users, ChevronRight, Handshake, FileX2, LifeBuoy, PencilLine, Ban, PhoneIncoming, HeartHandshake, CalendarHeart, UserX } from 'lucide-react'
-import { useFulCalls, useFulActions, useFulSchedule, useVaBooking, useFulClock, useFulSource, minutesOf, STATE_WORD } from '../data'
-import { Avatar, Chip, Drawer, Empty, Field, PillTabs, Seg, useNote } from '../../kit'
+import { Phone, MessageSquare, CalendarClock, CircleCheck, PhoneMissed, Forward, Users, ChevronRight } from 'lucide-react'
+import { useFulCalls, useFulActions, useFulSchedule, useVaBooking, useFulClock, useFulSource, minutesOf, bookedText } from '../data'
+import { Chip, Drawer, Empty, Field, Seg, useNote } from '../../kit'
 import { DayBox, WeekList } from '../../DayBox'
 import { SlotPick } from '../../SlotPick'
 import { useOpenDay, useStickyDay } from '../../useOpenDay'
 import { useClientZone } from '../../useClientZone'
 import { sampleSlots, hoursLine } from '../../carriers'
 import { vaSlots, freeVa, zoneAbbr } from '../../../lib/callSlots'
-import { RecordDrawer, Block } from '../../Record'
+import { RecordDrawer } from '../../Record'
 import { CountUp } from '../../motion'
 import { TaskDrawer } from './Servicing'
-import { CALL_TYPES, FILTERS, filterOf } from '../bookings'
 import { StartCall } from '../StartCall'
 import { fp } from '../paths'
 import { CALL_WORD, CALL_TONE } from '../words'
 import { HelpDot } from '../../../fulshell/training/HelpDot'
-import { DocsBlock, GateStep } from '../Docs886'
+import { GateStep } from '../Docs886'
 import { useGate } from '../../docs886/data'
-import { BeforeCall } from '../BeforeCall'
+import { CallBody } from '../CallPanel'
+import { whyShort } from '../callSteps'
+import { calLanes, boxMinutes } from '../../../lib/calLanes'
+import { clientStatus, clientStatusOf } from '../../../lib/clientCheck.js'
 
 // P918 — Calendar: every booked call (this was the Schedule page; Schedule is now the VA's own hours). This week ·
 // Next week with a chip per call type beside it; no day buttons, no Show panel, no colour key. A call opens its view
@@ -45,41 +47,15 @@ const HOURS = Array.from({ length: ROWS }, (_, i) => START + i)
 const label12 = h => `${((h + 11) % 12) + 1} ${h < 12 ? 'AM' : 'PM'}`
 const SAMPLE_NOW = '1:32 PM' // sample clock: the next call is 28 minutes after it
 const WEEK_LABEL = ['This week', 'Next week']
-const TYPE_ICON = { handoff: Handshake, cancel_old: FileX2, save: LifeBuoy, change: PencilLine, cancel_request: Ban, callback: PhoneIncoming, welcome: HeartHandshake, noshow: UserX, review: CalendarHeart }
-const typeWord = e => e.word || CALL_TYPES[e.type]?.label || CALL_WORD[e.status] || 'Call'
-const stateWord = e => (e.state ? STATE_WORD[e.state] : CALL_WORD[e.status]) || ''
-
-// Side-by-side lanes for items that overlap: { ref -> [lane, lanes in its cluster] }.
-function lanesOf(list) {
-  const out = new Map()
-  let cluster = []
-  let ends = []
-  let clusterEnd = -1
-  const flush = () => { const of = Math.max(1, ends.length); cluster.forEach(([e, k]) => out.set(e.ref, [k, of])); cluster = []; ends = []; clusterEnd = -1 }
-  for (const e of list) {
-    const s = minutesOf(e.time)
-    if (cluster.length && s >= clusterEnd) flush()
-    let k = ends.findIndex(end => end <= s)
-    if (k < 0) { k = ends.length; ends.push(0) }
-    ends[k] = s + SLOT
-    clusterEnd = Math.max(clusterEnd, s + SLOT)
-    cluster.push([e, k])
-  }
-  flush()
-  return out
-}
-
-// P918: the short script for a cancel-the-old-policy call.
-const sayCancel = k => `Hi ${k.client.client_first_name || k.name.split(' ')[0]}, this is (your name) with Deedstone, calling for ${k.agent.split(' ')[0]}. Your new ${k.carrier} policy is in place, so let’s call ${k.old_carrier} together and cancel the old one, so you never pay for both. Do you have ten minutes?`
 
 // A cancellation call (what the Calls page's drawer was, with every part kept). Start call opens the live-call overlay.
 export function CallDrawer({ id, onClose }) {
   const { data: calls } = useFulCalls()
-  const { markCall, saveCallNotes, moveCall, showLive } = useFulActions()
+  const { markCall, moveCall, showLive } = useFulActions()
   const note = useNote()
   const k = calls.find(x => x.id === id) || calls[0]
   const [panel, setPanel] = useState(null)
-  const [notes, setNotes] = useState(k.notes)
+  const notes = k.notes
   const [endNote, setEndNote] = useState('')
   // P854: Move picks a new time on the client's clock; a slot is open when a VA on shift is free then (you first).
   const book = useVaBooking()
@@ -103,8 +79,6 @@ export function CallDrawer({ id, onClose }) {
       hero={<>
         <div className="fx-hero-top"><span className="fx-when"><CalendarClock size={13} aria-hidden="true" />{k.day === TODAY ? 'Today' : `${dayName(k.day)}, ${dateText(k.day)}`} · {k.when}</span><Chip tone={tone}>{CALL_WORD[k.status]}</Chip></div>
         <h2>{k.name}</h2>
-        <p><MapPin size={13} aria-hidden="true" />{k.client.city}, {k.client.state} · {k.agent}'s client</p>
-        <div className="fx-hero-bot"><span className="fs-swap is-hero"><span><small>Closing</small><b>{k.old_carrier}</b></span><ArrowRight size={16} aria-hidden="true" /><span><small>Keeping</small><b>{k.carrier}</b></span></span><Avatar name={k.name} tone={tone} /></div>
       </>}
       actions={open ? <>
         <StartCall iso={k.iso} done={!open} blocked={!gate.open} why="Waits for the new policy to be issued" onStart={() => showLive(k.id)} />
@@ -118,26 +92,12 @@ export function CallDrawer({ id, onClose }) {
         <span className="tp-grow" />
         <Link to={fp('messages')} className="tp-btn ov-ghost"><MessageSquare size={14} />Message {k.agent.split(' ')[0]}</Link>
       </>}>
-      {/* P923: what the agent said under "Before our team calls" (the replacement, their note), first. */}
-      {open && <BeforeCall client={k.client} agent={k.agent} oldCarrier={k.old_carrier} cancelBy={gate.old_draft} />}
       {k.status === 'cancelled' && (
         <section className="fx-blk fs-done"><header><h3><CircleCheck size={16} aria-hidden="true" />Old policy cancelled</h3></header><p className="tp-mid">{k.confirmation ? `Confirmation ${k.confirmation}.` : `Done on the call with ${first}.`}</p></section>
       )}
-      {/* P888: the replacement gate and the cancellation papers are steps on this call, not boxes of their own. */}
-      <Block title="On this call">
-        <ol className="fs-steps">
-          {k.status !== 'cancelled' && <GateStep who={k.name} />}
-          {[['Confirm it is them', 'Name, date of birth, last four of the old policy'], ['Say why you’re calling', null], [`Call ${k.old_carrier} together`, gate.cancel_by ? `Cancel before the ${gate.old_draft} draft so they never pay twice` : 'Ask to cancel the old policy, end date today'], ['Questions about coverage', `Those go to ${k.agent}, not on this call`]].map(([a, b], i) => <li key={a} className={k.status === 'cancelled' ? 'done' : i === 0 && open && gate.open ? 'now' : ''}><i /><div><b>{a}</b>{b ? <span>{b}</span> : <p className="fs-say">“{sayCancel(k)}”</p>}</div></li>)}
-          <li className={k.status === 'cancelled' ? 'done' : ''}><i /><div><b>Cancellation papers</b><span>If {k.old_carrier} wants a signed form or a letter.</span><DocsBlock bare who={k.name} carrier={k.old_carrier} kinds={['cancellation_request']} /></div></li>
-        </ol>
-      </Block>
-      <Block title="Client">
-        <dl className="fx-facts">{[['Phone', k.client.client_phone], ['New policy', k.client.policy_number], ['Premium', `$${k.client.monthly_premium.toFixed(2)} a month`], ['Agent', k.agent]].map(([a, b]) => <div key={a}><dt>{a}</dt><dd>{b}</dd></div>)}</dl>
-      </Block>
-      <Block title="Notes" sub="The agent sees these">
-        <textarea className="tp-input fx-ta" aria-label="Notes" rows={3} placeholder="What happened on the call" value={notes} onChange={e => setNotes(e.target.value)} />
-        {notes !== k.notes && <button type="button" className="tp-primary sm fx-accent fx-self" onClick={() => { saveCallNotes(k.id, notes); note('Notes saved') }}>Save notes</button>}
-      </Block>
+      {/* P931: the call panel: why, the agent's note (P923), the client, the 3 steps of the real cancel call, Texts. */}
+      <CallBody item={k} oldCarrier={k.old_carrier} cancelBy={gate.old_draft} done={k.status === 'cancelled'} now={open && gate.open} bookedWhen={bookedText(k.iso, k.tz)}
+        gate={open && !gate.open ? <ol className="fs-steps cp-gatebox"><GateStep who={k.name} /></ol> : null} />
 
       <Drawer open={panel === 'cancelled'} center onClose={() => setPanel(null)} title="Old policy cancelled" sub={`${k.name} · ${k.old_carrier}`}
         footer={<button type="button" className="tp-primary fx-accent" onClick={() => { markCall(k.id, 'cancelled', { notes: [notes, endNote.trim()].filter(Boolean).join('\n') }); note(`Old policy cancelled for ${first}`); setPanel(null) }}><CircleCheck size={16} />Save</button>}>
@@ -166,10 +126,24 @@ export function CallDrawer({ id, onClose }) {
 
 
 
+// P931: one booked call on the grid: client name, time, one short why line, coloured by the client's status. Defined
+// here (not inside Calendar) so a click that opens the panel keeps every box as it is: no remount, no replayed pop-in.
+function Ev({ e, top, height, lane: [k, of], to }) {
+  return (
+    <Link to={to} className={`tp-ev fs-ev is-${e.st.tone}${e.done ? ' is-done' : ''}${of > 1 ? ' is-lane' : ''}`} aria-label={`${e.time}, ${e.name}, ${e.why}, ${e.st.label}`}
+      style={{ top: `${top}%`, height: `${height}%`, left: `calc(${(k / of) * 100}% + ${of > 1 ? 2 : 4}px)`, width: `calc(${100 / of}% - ${of > 1 ? 4 : 8}px)` }}>
+      <b>{e.name}</b><span className="tp-num">{e.time}</span><small>{e.why}</small>
+    </Link>
+  )
+}
+
+// The client behind a Calendar item (a call row's client, a task row's client), for its status colour.
+const clientOfItem = e => e.row?.client || e.client || null
+
 export default function Calendar() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { data: items } = useFulSchedule()
+  const { data: raw } = useFulSchedule()
   const clock = useFulClock()
   const real = useFulSource() === 'real'
   const { today: TODAY, weeks: WEEKS, dayName, dateText, dayNum } = clock
@@ -177,13 +151,17 @@ export default function Calendar() {
   // The red now-line: the sample clock (1:32 PM), or the real minute on the viewer's clock.
   const NOW = real ? new Date(clock.nowIso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: clock.tz }) : SAMPLE_NOW
   const [weekPick, setWeek] = useState(0)
-  const [show, setShow] = useState('all')
   const { day, open, close, search } = useOpenDay(ALL_DAYS, { esc: !id, isoOf: clock.isoOf })
   const { view, leaving } = useStickyDay(day)
+  // P931: a VA only talks to clients whose policy is sold. Each item carries its why line and its client's status.
+  const todayIso = clock.isoOf(TODAY)
+  const items = useMemo(() => raw.filter(i => !clientOfItem(i)?.lead).map(i => {
+    const c = clientOfItem(i)
+    return { ...i, why: whyShort(i), st: clientStatus(c ? clientStatusOf(c, todayIso) : 'working') }
+  }), [raw, todayIso])
   // An open day (from a link) shows its own week.
   const week = view != null ? (WEEKS[1].includes(view) ? 1 : 0) : weekPick
-  const shown = items.filter(i => show === 'all' || filterOf(i) === show)
-  const ofDay = d => shown.filter(i => i.day === d)
+  const ofDay = d => items.filter(i => i.day === d)
   const days = WEEKS[week]
   const cols = view != null ? [view] : days
   const pickWeek = w => { setWeek(w); if (day != null) close() }
@@ -193,47 +171,65 @@ export default function Calendar() {
   const kind = (items.find(i => i.ref === id) || {}).kind || (id ? (id.startsWith('cl-') ? 'call' : 'task') : null)
   const headKey = d => e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(d) } }
 
-  const Ev = ({ e, lane: [k, of] }) => {
-    const top = Math.max(0, Math.min(100, ((minutesOf(e.time) - START * 60) / (ROWS * 60)) * 100))
-    return (
-      <Link to={to(e.ref)} className={`tp-ev is-${e.tone}`} aria-label={`${e.when}, ${e.name}, ${typeWord(e)}, ${stateWord(e)}`} title={`${typeWord(e)} · ${e.name}`}
-        style={{ top: `${top}%`, height: `calc(${(SLOT / (ROWS * 60)) * 100}% - 2px)`, left: `calc(${(k / of) * 100}% + 3px)`, width: `calc(${100 / of}% - 6px)` }}>
-        <b>{e.when}</b><span>{e.name}</span>
-      </Link>
-    )
-  }
-  // P918: All plus one chip per call type, counted over the week on show.
-  const inWeek = items.filter(i => days.includes(i.day))
-  const chips = [{ key: 'all', label: 'All', count: inWeek.length }, ...FILTERS.map(([key, label]) => ({ key, label, count: inWeek.filter(i => filterOf(i) === key).length }))]
+  // P931 (P929 rule): text never cuts off and boxes never overlap. A box is as tall as its call, and never shorter than
+  // its words need (measured: if any box's words don't fit, every box grows to fit, and close calls sit side by side).
+  const gridRef = useRef(null)
+  const [pxPerMin, setPx] = useState(0)
+  const [minPx, setMinPx] = useState(40)
+  useLayoutEffect(() => {
+    const el = gridRef.current
+    if (!el) return undefined
+    const measure = () => setPx(el.getBoundingClientRect().height / (ROWS * 60))
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  useLayoutEffect(() => {
+    const el = gridRef.current
+    if (!el || !pxPerMin) return
+    let need = 0
+    el.querySelectorAll('.fs-ev').forEach(b => { if (b.scrollHeight > b.clientHeight + 1) need = Math.max(need, b.scrollHeight + 2) })
+    // Measured after layout on purpose: the box size depends on how the words wrapped. It only ever grows, so it settles.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (need > minPx && need <= pxPerMin * 60) setMinPx(Math.ceil(need))
+  }, [pxPerMin, minPx, items, view, week])
+  const total = ROWS * 60
+  const span = boxMinutes(SLOT, minPx, pxPerMin)
+  const startOf = e => minutesOf(e.time) - START * 60
+  const lanesOf = list => calLanes(list.map(e => ({ id: e.ref, start: startOf(e), end: startOf(e) + span })))
+
   const list = view != null ? ofDay(view) : []
-  const rest = view != null ? shown.filter(i => i.day > view && days.includes(i.day)).slice(0, 4) : []
+  const rest = view != null ? items.filter(i => i.day > view && days.includes(i.day)).slice(0, 4) : []
 
   return (
     <div className="tp-page fx-page fs-sched fs-cal">
+      {/* P931: no type filters or status chips, just This week · Next week. */}
       <div className="fx-tools fs-cal-tools">
         <Seg label="Week" value={week} onChange={pickWeek} options={WEEK_LABEL.map((label, key) => ({ key, label }))} />
-        <PillTabs label="Call type" className="fx-filters fs-cal-chips" itemClass="fx-filter" value={show} onChange={setShow} items={chips} />
         <HelpDot lesson="calendar" />
       </div>
 
       <WeekList days={days} today={TODAY} onOpen={open} name={dayName} num={dayNum} itemsOf={ofDay} line={e => `${e.time} ${e.name}`} />
 
-      <div className="fx-grid" data-fold data-fold-fit="360">
-        <section className={`fx-tile ${view != null ? 'fx-s8 is-day' : 'fx-s12 is-week'} fx-week`} style={{ '--i': 0, '--days': cols.length, '--rows': ROWS }} aria-label={view != null ? `${dayName(view)}, ${dateText(view)}` : WEEK_LABEL[week]}>
+      {/* P931: the grid keeps a set hour height (ful.css) instead of squeezing into the window, so every box can be read. */}
+      <div className="fx-grid" data-fold>
+        <section className={`fx-tile ${view != null ? 'fx-s8 is-day' : 'fx-s12 is-week'} fx-week cal910`} style={{ '--i': 0, '--days': cols.length, '--rows': ROWS }} aria-label={view != null ? `${dayName(view)}, ${dateText(view)}` : WEEK_LABEL[week]}>
           <div className="tp-tgrid-h"><span />{cols.map(d => (
             <b key={d} role="button" tabIndex={0} aria-pressed={d === view} title={d === view ? 'Back to the week' : `Open ${dayName(d)} ${dayNum(d)}`} className={`${d === TODAY ? 'today' : ''}${d === view ? ' is-on' : ''}`} onClick={() => open(d)} onKeyDown={headKey(d)}>
               {dayName(d)} <span>{dayNum(d)}</span>{d === TODAY && <small>Today</small>}
             </b>
           ))}</div>
-          <div className="tp-tgrid-b">
+          <div className="tp-tgrid-b" ref={gridRef}>
             <div className="tp-hours">{HOURS.map(h => <span key={h}>{label12(h)}</span>)}</div>
             {cols.map(d => {
               const dayItems = ofDay(d)
               const lanes = lanesOf(dayItems)
               return (
                 <div key={d} className={`tp-tcol${d === TODAY ? ' today' : ''}`} data-day={d} onClick={e => { if (view == null && e.target === e.currentTarget) open(d) }}>
-                  {dayItems.map(e => <Ev key={e.ref} e={e} lane={lanes.get(e.ref)} />)}
-                  {d === TODAY && <i className="tp-now" style={{ top: `${((minutesOf(NOW) - START * 60) / (ROWS * 60)) * 100}%` }} aria-hidden="true" />}
+                  {dayItems.map(e => <Ev key={e.ref} e={e} to={to(e.ref)} lane={lanes[e.ref] || [0, 1]}
+                    top={Math.max(0, Math.min(100, (startOf(e) / total) * 100))} height={(span / total) * 100} />)}
+                  {d === TODAY && <i className="tp-now" style={{ top: `${((minutesOf(NOW) - START * 60) / total) * 100}%` }} aria-hidden="true" />}
                 </div>
               )
             })}
@@ -242,17 +238,17 @@ export default function Calendar() {
 
         {view != null && (
           <DayBox title={`${dayName(view)}, ${dateText(view)}`} sub={list.length ? `${list.length} booked` : 'Nothing booked'} leaving={leaving} onClose={close}>
-            <b className="tp-num fx-huge2"><CountUp value={list.length} /><small> {list.length === 1 ? 'item' : 'items'}</small></b>
+            <b className="tp-num fx-huge2"><CountUp value={list.length} /><small> {list.length === 1 ? 'call' : 'calls'}</small></b>
             <ul className="fx-rows">
-              {list.map(e => { const Icon = TYPE_ICON[filterOf(e)] || Phone; return (
-                <li key={e.ref}><Link to={to(e.ref)} className={`fx-row is-${e.tone}`}><span className="fx-row-ic"><Icon size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{e.name}</b><small>{e.when} · {typeWord(e)} · {stateWord(e)}</small></span><ChevronRight size={16} aria-hidden="true" /></Link></li>
-              ) })}
+              {list.map(e => (
+                <li key={e.ref}><Link to={to(e.ref)} className={`fx-row is-${e.st.tone}`}><span className="fx-row-ic"><Phone size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{e.name}</b><small>{e.time} · {e.why}</small></span><ChevronRight size={16} aria-hidden="true" /></Link></li>
+              ))}
             </ul>
-            {list.length === 0 && <Empty title="A free day" sub={show === 'all' ? 'Nothing is booked for this day.' : 'Try All.'} />}
+            {list.length === 0 && <Empty title="A free day" sub="Nothing is booked for this day." />}
             {rest.length > 0 && <>
               <h3 className="fx-h3">Rest of the week</h3>
               <ul className="fx-rows">
-                {rest.map(e => <li key={e.ref}><Link to={to(e.ref)} className={`fx-row is-${e.tone}`}><span className="tp-grow"><b>{e.name}</b><small>{dayName(e.day)} {e.when} · {typeWord(e)}</small></span></Link></li>)}
+                {rest.map(e => <li key={e.ref}><Link to={to(e.ref)} className={`fx-row is-${e.st.tone}`}><span className="tp-grow"><b>{e.name}</b><small>{dayName(e.day)} {e.time} · {e.why}</small></span></Link></li>)}
               </ul>
             </>}
           </DayBox>

@@ -44,10 +44,10 @@ export const FUL_ROUTES = [
   ['pay', FUL.pay], ['more', FUL.more], ['training', FUL.training], ['training', `${FUL.training}/:id`],
 ]
 
-// P918: the six tabs, in order (Brayden: "I don't want tabs for no reason"). Messages and Settings live on the rail
-// and the top right, as on the agent side. Training moved here from the rail.
+// P918: the tabs, in order (Brayden: "I don't want tabs for no reason"). Messages and Settings live on the rail
+// and the top right, as on the agent side. P931: Training is back on the left rail only, not a tab.
 export const FUL_TABS = [
-  ['overview', 'Overview'], ['calendar', 'Calendar'], ['clients', 'Clients'], ['schedule', 'Schedule'], ['pay', 'Pay'], ['training', 'Training'],
+  ['overview', 'Overview'], ['calendar', 'Calendar'], ['clients', 'Clients'], ['schedule', 'Schedule'], ['pay', 'Pay'],
 ]
 
 const TITLES = {

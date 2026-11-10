@@ -1,0 +1,42 @@
+/* P931 — the VA call panel: why, the agent's note, the client, at most 3 steps, Texts closed. Tokens only. */
+.cp931 { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.cp931 .bc-box { margin: 0; }
+.cp-why { margin: 0; font-size: 15px; font-weight: 700; line-height: 1.4; color: var(--ov-hi); overflow-wrap: anywhere; }
+.cp-gate { margin: 0; padding: 8px 12px; border-radius: 12px; font-size: 13px; font-weight: 600; color: var(--ov-hi); background: var(--sh-cf-apricot); }
+
+.cp-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 0; padding: 12px; border-radius: 16px;
+  background: color-mix(in srgb, var(--ov-hi) 5%, transparent); box-shadow: inset 0 0 0 1px var(--ov-line); }
+.cp-facts > div, .cp-more > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cp-facts dt, .cp-more dt { font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--ov-mute); }
+.cp-facts dd, .cp-more dd { margin: 0; font-size: 13.5px; font-weight: 600; color: var(--ov-hi); overflow-wrap: anywhere; }
+
+.cp-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cp-steps > li { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 16px; min-width: 0;
+  background: color-mix(in srgb, var(--ov-hi) 4%, transparent); box-shadow: inset 0 0 0 1px var(--ov-line); }
+.cp-steps > li.is-now { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.cp-steps > li.is-done { opacity: .7; }
+.cp-n { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; font-size: 13px; font-weight: 700;
+  background: var(--sh-cs-sky); color: var(--sh-csi-sky, var(--ov-hi)); }
+.cp-steps > li.is-done .cp-n { background: var(--sh-cs-sage); color: var(--sh-csi-sage, var(--ov-hi)); }
+.cp-steps > li > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 auto; }
+.cp-steps b { font-size: 14px; font-weight: 700; color: var(--ov-hi); }
+.cp-steps span { font-size: 13px; line-height: 1.4; color: var(--ov-mid); }
+.cp-say { display: block; margin: 2px 0 0; padding: 8px 10px; border-radius: 12px; font-size: 13.5px; line-height: 1.45; color: var(--ov-hi);
+  background: color-mix(in srgb, var(--accent) 10%, transparent); quotes: '“' '”'; overflow-wrap: anywhere; }
+.cp-more { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px 10px; margin: 4px 0 0; }
+
+.cp-texts { border-radius: 16px; box-shadow: inset 0 0 0 1px var(--ov-line); overflow: hidden; }
+.cp-texts-h { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; cursor: pointer;
+  color: var(--ov-hi); font-size: 14px; transition: background-color .15s; }
+.cp-texts-h:hover { background: color-mix(in srgb, var(--ov-hi) 5%, transparent); }
+.cp-texts-h:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.cp-texts-h .tp-num { font-size: 12px; color: var(--ov-mid); }
+.cp-chev { transition: transform .2s; color: var(--ov-mid); }
+.cp-texts.is-open .cp-chev { transform: rotate(180deg); }
+.cp-texts-l { list-style: none; margin: 0; padding: 0 12px 12px; display: flex; flex-direction: column; gap: 6px; }
+.cp-texts-l li { display: flex; flex-direction: column; gap: 2px; max-width: 88%; padding: 8px 10px; border-radius: 12px; background: color-mix(in srgb, var(--ov-hi) 6%, transparent); }
+.cp-texts-l li.is-us { align-self: flex-end; background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.cp-texts-l small { font-size: 11px; font-weight: 600; color: var(--ov-mute); }
+.cp-texts-l span { font-size: 13px; line-height: 1.4; color: var(--ov-hi); overflow-wrap: anywhere; }
+.cp-none { margin: 0; padding: 0 12px 12px; font-size: 13px; color: var(--ov-mid); }
+@media (prefers-reduced-motion: reduce) { .cp-chev, .cp-texts-h { transition: none; } }

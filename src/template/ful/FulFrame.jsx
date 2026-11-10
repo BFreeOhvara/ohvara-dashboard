@@ -55,7 +55,7 @@ import '@fontsource/urbanist/700.css'
 // rail of actions, the rolling title with three headline numbers, the photo backdrop, light and dark. Same pieces
 // (kit, motion, Palette, flow.css); VA content. Sample info only (./data), at /template/fulfillment and the real VA URLs.
 const ICONS = { overview: Home, calendar: CalendarDays, clients: Users, schedule: Clock3, pay: Wallet, training: GraduationCap }
-const PAGES = [...FUL_TABS.map(([k, label]) => ({ to: () => fp(k), label })), { to: () => fp('messages'), label: 'Messages' }, { to: () => fp('settings'), label: 'Settings' }]
+const PAGES = [...FUL_TABS.map(([k, label]) => ({ to: () => fp(k), label })), { to: () => fp('training'), label: 'Training' }, { to: () => fp('messages'), label: 'Messages' }, { to: () => fp('settings'), label: 'Settings' }]
 const money = usd()
 // P907: a Calendar item still to call (sample rows carry done; a real call row is open while booked).
 const openItem = k => (k.done != null ? !k.done : k.status === 'booked')
@@ -313,7 +313,6 @@ export default function FulFrame() {
   const toggleMenu = e => { wig.onClick(e); setPanel(p => (p === 'menu' ? null : 'menu')) }
   const menuOn = panel === 'menu'
   const flipTheme = e => { wig.onClick(e); setTheme(theme === 'dark' ? 'light' : 'dark') }
-  const tabCount = { training: trainLeft } // P918: Training's badge moved from the rail to its tab
   const left = day.today.filter(openItem).length
   const callNow = () => { if (day.next) navigate(fp('calendar', day.next.id)); else { navigate(fp('calendar')); note('No more calls today') } }
 
@@ -453,7 +452,7 @@ export default function FulFrame() {
       <header className={`tp-top fx-top${menuOn ? ' is-menu' : ''}`}>
         <span className="fx-top-gap" aria-hidden="true" />
         <PillTabs as="nav" label="Pages" className="tp-tabs fx-tabs" itemClass="tp-tab fx-tab" value={FUL_TABS.some(([k]) => k === active) ? active : null} persistKey="ful-tabs"
-          items={FUL_TABS.map(([k, label]) => ({ key: k, to: fp(k), label, extra: tabCount[k] > 0 ? <span className="fx-tb">{tabCount[k]}</span> : null }))} />
+          items={FUL_TABS.map(([k, label]) => ({ key: k, to: fp(k), label }))} />
         <div className="fx-tr">
           {tops}
           <button type="button" className={`tp-me fx-me tp-wig av-${avatarHue(account.name)}`} aria-label={`Your account, ${account.name}`} aria-haspopup="dialog" aria-expanded={menuOn} {...wig} onClick={toggleMenu}>{initials(account.name).toUpperCase()}</button>
@@ -468,6 +467,8 @@ export default function FulFrame() {
         <i className="fx-hair" />
         <NavLink to={fp('messages')} className="fx-ri tp-wig" aria-label="Messages" data-tip="Messages" {...wig}><MessageSquare size={18} />{day.unread > 0 && <span className="fx-badge">{day.unread}</span>}</NavLink>
         <NavLink to={fp('calendar')} className="fx-ri tp-wig" aria-label="Calendar" data-tip="Calendar" {...wig}><CalendarDays size={18} /></NavLink>
+        {/* P931: Training lives on the rail only (not a header tab), with lessons still to do as its badge */}
+        <NavLink to={fp('training')} className="fx-ri tp-wig" aria-label={trainLeft ? `Training, ${trainLeft} lessons to go` : 'Training'} data-tip="Training" {...wig}><GraduationCap size={18} />{trainLeft > 0 && <span className="fx-badge">{trainLeft}</span>}</NavLink>
         <i className="fx-hair" />
         {phoneIcon('fx-ri fs-ri-phone')}
         <i className="fx-hair" />

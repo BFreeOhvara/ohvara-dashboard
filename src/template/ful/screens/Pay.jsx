@@ -7,7 +7,9 @@ import { Chip, Drawer, PillTabs, SampleTag, useNote } from '../../kit'
 import { CountUp, usd } from '../../motion'
 import { fp } from '../paths'
 import { TimesheetRows } from '../Clock879'
-import { MY_SHEET, MY_RATE, hoursOf, weekPay } from '../p879'
+import { MY_SHEET, MY_RATE, weekPay } from '../p879'
+import { hourGrid, hourLabel } from '../pay931'
+import './pay931.css'
 
 // P845 — Pay, built with the care of the agent's Billing. P879 (Q75/Q76): VA pay is hourly only, from clock in and
 // out. The hero is this week's hours × the rate with a bar per day, the detail is the timesheet (ask for a
@@ -63,9 +65,7 @@ function PaySample() {
   const [tab, setTab] = useState('week')
   const [how, setHow] = useState(false)
   const w = weekPay()
-  const days = [2, 3, 4, 5, 6].map(d => { const r = MY_SHEET.find(x => x.day === d); return { day: d, name: ['', '', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'][d], h: r ? hoursOf(r) : 0, live: !!r?.live } })
-  const top = Math.max(10, ...days.map(d => d.h))
-  const breakM = MY_SHEET.reduce((t, r) => t + (r.breakM || 0), 0)
+  const g = hourGrid(MY_SHEET)
   return (
     <div className="tp-page fx-page fx-ovl fs-pay">
       <div className="fx-ovl-main">
@@ -79,16 +79,27 @@ function PaySample() {
             <b className="tp-money fx-bk-num"><CountUp value={w.pay} format={cents} /></b>
             <span className="fx-bk-side"><b>so far</b><small>{money(pay.lastWeek)} last week</small><i className="fx-delta is-up">{w.hours.toFixed(1)} hours</i></span>
           </div>
-          <div className="fx-key"><span><i className="is-line" />Hours worked</span><span><i className="is-dash" />Today, still on the clock</span><SampleTag>Sample amounts</SampleTag></div>
-          <div className="fs-bars" role="img" aria-label={days.map(d => `${d.name}: ${d.h.toFixed(1)} hours`).join('. ')}>
-            {days.map((d, i) => (
-              <span key={d.day} style={{ '--i': i }}>
-                <b className="tp-num">{d.h ? `${d.h.toFixed(1)} h` : ''}</b>
-                <i style={{ '--h': d.h / top }}><em style={{ '--h': d.live ? 0 : 1 }} /></i>
-                <small>{d.name}</small>
-              </span>
+          {/* P931: the hours as one clean grid: days of the week × the hours of the day, each day's total and the week's. */}
+          <div className="pg931" role="table" aria-label="This week's hours by day">
+            <div className="pg-row pg-head" role="row">
+              <span role="columnheader" className="pg-day">Day</span>
+              {g.hours.map(h => <span key={h} role="columnheader" className="pg-h">{h % 2 ? '' : hourLabel(h)}</span>)}
+              <span role="columnheader" className="pg-tot">Hours</span>
+            </div>
+            {g.rows.map(r => (
+              <div key={r.day} role="row" className={`pg-row${r.off ? ' is-off' : ''}${r.live ? ' is-live' : ''}`} title={r.off ? `${r.name}: off` : `${r.name}: ${r.in} to ${r.out || 'now'}, ${r.breakM} min break${r.flag ? `. ${r.flag}` : ''}`}>
+                <span role="rowheader" className="pg-day"><b>{r.name}</b>{r.flag && <i className="pg-flag" aria-label={r.flag} />}</span>
+                {r.cells.map((f, i) => <span key={g.hours[i]} role="cell" className="pg-c" aria-hidden="true"><i style={{ '--f': f }} /></span>)}
+                <span role="cell" className="pg-tot tp-num">{r.off ? 'Off' : `${r.hours.toFixed(2)} h`}</span>
+              </div>
             ))}
+            <div className="pg-row pg-foot" role="row">
+              <span role="rowheader" className="pg-day"><b>Week</b></span>
+              <span role="cell" className="pg-sum">{g.breaks} min of breaks · {w.ot.toFixed(2)} h overtime · {MY_SHEET.filter(r => r.flag).length} flagged</span>
+              <span role="cell" className="pg-tot tp-num"><b>{g.total.toFixed(2)} h</b></span>
+            </div>
           </div>
+          <div className="fx-key"><span><i className="is-line" />On the clock</span><span><i className="is-dash" />Today, still on the clock</span><SampleTag>Sample amounts</SampleTag></div>
         </section>
 
         <section className="fx-tile fs-pay-list" style={{ '--i': 1 }} aria-label="Pay detail">
@@ -125,12 +136,6 @@ function PaySample() {
           <small>Hours so far × {cents(MY_RATE)}. Today's hours join when you clock out.</small>
           <span className="fx-next-who"><Landmark size={16} aria-hidden="true" /><span><b>{pay.account.bank} •••• {pay.account.last4}</b><small>{pay.account.status}</small></span></span>
           <Link to={fp('settings')} className="fx-pillbtn fx-self">Pay details<ArrowUpRight size={14} /></Link>
-        </section>
-        <section className="fx-tile fs-pay-sum" style={{ '--i': 3 }} aria-label="This week's hours">
-          <header className="fx-tile-h"><span className="tp-grow"><h2>Hours</h2><p>This week</p></span></header>
-          <ul className="fs-sum">
-            {[['Worked', `${w.hours.toFixed(2)} h`, 'green'], ['Overtime', `${w.ot.toFixed(2)} h`, 'blue'], ['Breaks', `${breakM} min`, 'mute'], ['Flagged days', String(MY_SHEET.filter(r => r.flag).length), 'warn']].map(([k, v, tone]) => <li key={k} className={`is-${tone}`}><i aria-hidden="true" /><span className="tp-grow">{k}</span><b className="tp-num">{v}</b></li>)}
-          </ul>
         </section>
       </div>
 

@@ -304,6 +304,8 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
           {theirTime && <small className="fs-ph-tz">{theirTime}</small>}
           {ring && <button type="button" className="fs-cs-rec" onClick={() => openRec(ringWho)}>{ring.agent}'s client · open the call<ArrowUpRight size={13} aria-hidden="true" /></button>}
           {offer?.pullHold && <small className="fs-cs-why">Your carrier hold goes to the next free VA when you answer.</small>}
+          {/* P931: no identity checks on calls we booked; only an unknown number calling in gets one light check. */}
+          {offer && !offer.leadId && !offer.policyId && <small className="fs-cs-why">A number we don't know. Before any policy detail, one light check: their name and date of birth.</small>}
         </div>
         {!CALLING_ON && !offer && <p className="fx-calm fs-off"><PhoneOff size={16} aria-hidden="true" /><span>Calling is off right now. Answer to keep the time and notes here, and dial <b className="tp-num">{ring.client.client_phone}</b> from your phone.</span></p>}
         <p className="tp-sub fs-cs-ringrule">Not answered in {left}s, it goes to the next free VA and counts as a missed ring.</p>

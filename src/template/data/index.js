@@ -1,8 +1,7 @@
 import { useSyncExternalStore, useMemo, createContext, useContext, createElement } from 'react'
 import { instantOf, clockOf, dateOf, zoneOf } from '../../lib/callSlots.js'
-import { bookNoShowCall, cancelNoShowCall } from '../ful/data.js'
 import { checkLists, CHECK_DEFAULTS } from '../../lib/clientCheck.js'
-import { seedEvents, applyMove, rebookLead, closeCallTask, whenLabel, needsYouNow, forYourInfo, addMin, STAGES, SAMPLE_NOW } from '../leadLifecycle.js'
+import { seedEvents, applyMove, rebookLead, closeCallTask, whenLabel, needsYouNow, forYourInfo, addMin, STAGES, SAMPLE_NOW, aiRebookAt } from '../leadLifecycle.js'
 import { canMove, clientCards, unsubmittedSales, followUpPick, agentStatusOf } from '../agentView.js'
 import { wallOf } from '../../lib/agentReal.js'
 import { leadText, SENDER } from '../leadTexts.js'
@@ -504,20 +503,19 @@ function useActionsSample() {
       return { ...s, leads: s.leads.map(l => (l.id === id ? { ...l, events: [...l.events, row] } : l)), activity: log(s, `${lead.first_name} ${lead.last_name}`, 'You asked our team to call.', 'call') }
     }),
     // No-show with a short Undo (N-C-45): the lead keeps a copy of itself until the rebook text goes.
-    // P910: and a VA re-engage call is booked on the VA Schedule (ful/data bookNoShowCall), next open slot in the lead's
-    // best window. Undo takes it off again; so does the lead rebooking first.
+    // P931: a no-show is an unsold lead, so the AI caller (not a VA) calls to book them again, same rules as speed to
+    // lead, right after the short Undo. Undo stops it; so does the lead rebooking from the link first.
     markNoShow: id => {
       const lead = state.leads.find(l => l.id === id)
       if (!lead || !canMove(lead, 'no_show')) return
-      const va = bookNoShowCall({ leadId: id, who: `${lead.first_name} ${lead.last_name}`, phone: lead.phone, state: lead.state, city: lead.city, window: lead.best_time })
       set(s => {
-        const vaCall = va ? { at: wallOf(va.iso, s.settings.timeZone || AGENT_TZ), va: va.va?.name?.split(' ')[0] || null } : null
-        return { ...s, leads: s.leads.map(l => (l.id === id ? { ...applyMove(l, 'no_show', { vaCall }, SAMPLE_NOW), vaCall, undo: { ...l, undo: null } } : l)),
-          activity: log(s, `${lead.first_name} ${lead.last_name}`, `No show. Rebook link sent${vaCall ? `, and ${vaCall.va || 'our team'} calls ${whenLabel(vaCall.at)} to book them again` : ''}.`, 'moved') }
+        const aiCall = { at: aiRebookAt(SAMPLE_NOW) }
+        return { ...s, leads: s.leads.map(l => (l.id === id ? { ...applyMove(l, 'no_show', { aiCall }, SAMPLE_NOW), aiCall, undo: { ...l, undo: null } } : l)),
+          activity: log(s, `${lead.first_name} ${lead.last_name}`, 'No show. Rebook link sent, and our AI caller calls to book them again.', 'moved') }
       })
     },
     // P894: they picked a new time from the one-tap link: back to Booked (the rebook page or the team does this, not the agent).
-    // P910: back on the same agent's calendar; the VA re-engage call comes off the Schedule. apptAt = the agent's
+    // P910: back on the same agent's calendar; P931: the AI rebook call stops. apptAt = the agent's
     // clock; none = the next open time in the lead's window (the sample "they picked a time" button).
     rebookLead: (id, apptAt) => {
       const lead = state.leads.find(l => l.id === id)
@@ -525,16 +523,15 @@ function useActionsSample() {
       const tz = state.settings.timeZone || AGENT_TZ
       const slot = apptAt ? { iso: instantOf(apptAt.slice(0, 10), clockOfWall(apptAt), tz) } : followUpFor(state, lead, {})
       if (!slot?.iso) return
-      cancelNoShowCall(id)
       set(s => {
         const at = wallOf(slot.iso, tz)
         const { day, date, time } = onAgentClock(slot.iso, tz)
         const appt = { id: `rb-${id}-${Date.now()}`, day, date, time, iso: slot.iso, tz: zoneOf(lead.state, lead.city), who: `${lead.first_name} ${lead.last_name}`, label: 'Appointment', kind: 'lead', ref: id }
-        return { ...s, leads: s.leads.map(l => (l.id === id ? { ...rebookLead(l, at, SAMPLE_NOW), vaCall: null } : l)), appointments: [...s.appointments.filter(a => !(a.ref === id && a.label === 'Appointment')), appt],
+        return { ...s, leads: s.leads.map(l => (l.id === id ? { ...rebookLead(l, at, SAMPLE_NOW), aiCall: null } : l)), appointments: [...s.appointments.filter(a => !(a.ref === id && a.label === 'Appointment')), appt],
           activity: log(s, appt.who, `Picked a new time: ${whenLabel(at)}. Back on Booked.`, 'moved') }
       })
     },
-    undoNoShow: id => { cancelNoShowCall(id); set(s => ({ ...s, leads: s.leads.map(l => (l.id === id && l.undo ? { ...l.undo, events: [...l.undo.events, { id: `${id}-u${l.events.length + 1}`, kind: 'outcome', at: SAMPLE_NOW, label: 'Undid the no-show. No text went out', state: 'done', by: 'You', role: 'you', audit: true }] } : l)) })) },
+    undoNoShow: id => { set(s => ({ ...s, leads: s.leads.map(l => (l.id === id && l.undo ? { ...l.undo, events: [...l.undo.events, { id: `${id}-u${l.events.length + 1}`, kind: 'outcome', at: SAMPLE_NOW, label: 'Undid the no-show. No text went out', state: 'done', by: 'You', role: 'you', audit: true }] } : l)) })) },
     sendNoShowText: id => set(s => ({ ...s, leads: s.leads.map(l => (l.id === id && l.undo ? { ...l, undo: null, events: l.events.map(e => (e.step === 'no_show_link' && e.state === 'scheduled' ? { ...e, label: 'Text', state: 'done' } : e)) } : l)) })),
     // Follow up: an automatic text with a link to book on the agent's calendar (N-D-22).
     sendBookingLink: id => set(s => {

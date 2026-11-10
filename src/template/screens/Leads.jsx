@@ -140,7 +140,7 @@ function LeadDrawer({ id, onClose }) {
       {lead.stage === 'sold' && !lead.submitted && <Link to={paths.submit(lead.id)} className="fx-nudge">Finish the servicing details. The team takes it from there.</Link>}
       {closed && <p className="lc-closed"><b>{closedReason(lead)}.</b> {lead.stage === 'opted_out' ? 'All calls and texts stopped.' : 'No more calls or texts.'} A reply from them brings them back as a new lead.</p>}
       {status === 'team' && <p className="lc-closed">Our team is calling {lead.first_name}. Nothing for you to do yet: they land on Booked.</p>}
-      {status === 'no_show' && !lead.undo && <div className="lc-closed"><p><b>No show{lead.appt ? ` at ${lead.appt}` : ''}.</b> We sent {lead.first_name} a one-tap link to rebook. {lead.vaCall ? `${lead.vaCall.va || 'Our team'} is booked to call ${atLabel(lead.vaCall.at, clockNow())} if they haven’t picked a time.` : 'If they don’t pick a time, our team calls to book them again.'} When they rebook, they go back to Booked on your calendar.</p>
+      {status === 'no_show' && !lead.undo && <div className="lc-closed"><p><b>No show{lead.appt ? ` at ${lead.appt}` : ''}.</b> We sent {lead.first_name} a one-tap link to rebook. If they haven’t picked a time, our AI caller calls them to book again. When they rebook, they go back to Booked on your calendar.</p>
         {source === 'sample' && <button type="button" className="tp-btn ov-ghost sm" onClick={() => { rebookLead(lead.id); note(`${lead.first_name} picked a new time. Back on Booked`) }}>Sample: they pick a new time</button>}</div>}
       <Block title="What they told us">
         <dl className="fx-facts">{asks.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>

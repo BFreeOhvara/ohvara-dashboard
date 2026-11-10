@@ -78,16 +78,15 @@ test('follow up: on the agent’s calendar, with reminder texts the day before a
   assert.deepEqual(m.events.filter(e => e.kind === 'text_sent').map(e => e.step), ['follow_day_before', 'follow_morning'])
 })
 
-test('no show: the rebook text goes out and a VA call is booked on the VA Schedule', () => {
-  const m = applyMove(lead('n', 'booked', { apptAt: '2026-11-02T11:00' }), 'no_show', { vaCall: { at: '2026-11-02T15:00', va: 'Maria' } }, SAMPLE_NOW)
+test('no show: the rebook text goes out and (P931) the AI caller, not a VA, calls to book them again', () => {
+  const m = applyMove(lead('n', 'booked', { apptAt: '2026-11-02T11:00' }), 'no_show', { aiCall: { at: '2026-11-02T15:00' } }, SAMPLE_NOW)
   assert.equal(m.events.some(e => e.step === 'no_show_link'), true)
-  const va = m.events.find(e => e.kind === 'va_call')
-  assert.equal(va.at, '2026-11-02T15:00')
-  assert.match(va.label, /Maria is booked/)
-  const ful = read('./template/ful/data.js')
-  assert.match(ful, /export function bookNoShowCall/)
-  assert.match(ful, /why: 'no_show'/)
-  assert.match(read('./template/data/index.js'), /cancelNoShowCall\(id\)/)
+  assert.equal(m.events.some(e => e.kind === 'va_call'), false)
+  const ai = m.events.find(e => e.kind === 'ai_call')
+  assert.equal(ai.at, '2026-11-02T15:00')
+  assert.match(ai.label, /AI caller/)
+  assert.doesNotMatch(read('./template/ful/data.js'), /bookNoShowCall|why: 'no_show'/)
+  assert.doesNotMatch(read('./template/data/index.js'), /cancelNoShowCall|bookNoShowCall/)
 })
 
 test('Sold pre-fills Submit a policy with what the AI took down', () => {

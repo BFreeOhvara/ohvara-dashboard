@@ -102,7 +102,8 @@ test('every "?" task opens a real lesson', () => {
 test('"How do I…?" search finds the right lesson first', () => {
   assert.equal(searchLessons('how do I book an appointment')[0].id, 'booking')
   assert.equal(searchLessons('someone says stop')[0].id, 'optout')
-  assert.equal(searchLessons('carrier confirms')[0].id, 'carrier') // P918: no confirmation number
+  assert.equal(searchLessons('cancel old policy')[0].id, 'carrier') // P931: the cancel call (was 'carrier confirms')
+  assert.equal(searchLessons('merge the client')[0].id, 'carrier')
   assert.equal(searchLessons('day off')[0].id, 'desk')
   assert.deepEqual(searchLessons('how do I'), [])
   assert.deepEqual(searchLessons('zebra'), [])

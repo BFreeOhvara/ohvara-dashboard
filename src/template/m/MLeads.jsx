@@ -132,7 +132,7 @@ function LeadSheet({ id, onClose }) {
       {closed && <p className="mx-note"><b>{closedReason(lead)}.</b> No more calls or texts. A reply from them brings them back as a new lead.</p>}
       {agentStatusOf(lead) === 'team' && <p className="mx-note">Our team is calling {lead.first_name}. Nothing for you to do yet: they land on Booked.</p>}
       {agentStatusOf(lead) === 'no_show' && !lead.undo && (
-        <div className="mx-note"><b>No show{lead.appt ? ` at ${lead.appt}` : ''}.</b> We sent {lead.first_name} a one-tap link to rebook. {lead.vaCall ? `${lead.vaCall.va || 'Our team'} is booked to call ${atLabel(lead.vaCall.at, clockNow())} if they haven’t picked a time.` : 'If they don’t pick a time, our team calls to book them again.'}
+        <div className="mx-note"><b>No show{lead.appt ? ` at ${lead.appt}` : ''}.</b> We sent {lead.first_name} a one-tap link to rebook. If they haven’t picked a time, our AI caller calls them to book again.
           {source === 'sample' && <button type="button" className="mx-btn is-wide mx-gap" onClick={() => { rebookLead(lead.id); note(`${lead.first_name} picked a new time. Back on Booked`) }}>Sample: they pick a new time</button>}</div>
       )}
       {!closed && (

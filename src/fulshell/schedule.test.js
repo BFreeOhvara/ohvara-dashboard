@@ -6,7 +6,7 @@ import { whenOf, minutesOf, WEEKS, atVa, teamOn, busyOf, pickVa } from '../templ
 
 // P846 — Calls became Schedule. P918 — booked calls are the Calendar; Schedule is the VA's own hours. Six tabs, no Servicing.
 test('six VA tabs: Overview, Calendar, Clients, Schedule, Pay, Training', () => {
-  assert.deepEqual(FUL_TABS.map(([, label]) => label), ['Overview', 'Calendar', 'Clients', 'Schedule', 'Pay', 'Training'])
+  assert.deepEqual(FUL_TABS.map(([, label]) => label), ['Overview', 'Calendar', 'Clients', 'Schedule', 'Pay']) // P931: Training on the rail only
   assert.equal(FUL_TABS.some(([k]) => k === 'calls' || k === 'servicing'), false)
   assert.equal(FUL.calendar, '/fulfillment/calendar')
   assert.equal(FUL.schedule, '/fulfillment/schedule')

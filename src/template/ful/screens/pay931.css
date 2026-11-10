@@ -1,0 +1,19 @@
+/* P931 — Pay: the week's hours as a grid (days × hours), each day's total on the right, the week's total underneath.
+   Tokens only. A cell fills by how much of that hour was on the clock (--f, 0..1). */
+.pg931 { --pg-cols: 12; display: flex; flex-direction: column; gap: 4px; margin: 4px 0 8px; min-width: 0; }
+.pg931 .pg-row { display: grid; grid-template-columns: 56px repeat(var(--pg-cols), minmax(0, 1fr)) 76px; align-items: center; gap: 3px; min-width: 0; }
+.pg931 .pg-head span { font-size: 11px; font-weight: 600; color: var(--ov-mute); white-space: nowrap; overflow: visible; }
+.pg931 .pg-head .pg-h { text-align: left; }
+.pg931 .pg-day { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ov-hi); }
+.pg931 .pg-day b { font-weight: 700; }
+.pg931 .pg-flag { width: 7px; height: 7px; border-radius: 50%; background: var(--sh-cs-apricot); }
+.pg931 .pg-c { height: 26px; border-radius: 6px; overflow: hidden; background: color-mix(in srgb, var(--ov-hi) 5%, transparent); box-shadow: inset 0 0 0 1px var(--ov-line); }
+.pg931 .pg-c i { display: block; height: 100%; width: calc(var(--f) * 100%); background: var(--sh-cs-sky); }
+.pg931 .pg-row.is-live .pg-c i { background: repeating-linear-gradient(135deg, var(--sh-cs-sky) 0 6px, color-mix(in srgb, var(--sh-cs-sky) 55%, transparent) 6px 12px); }
+.pg931 .pg-row.is-off .pg-day, .pg931 .pg-row.is-off .pg-tot { color: var(--ov-mute); }
+.pg931 .pg-tot { text-align: right; font-size: 13px; font-weight: 600; color: var(--ov-hi); white-space: nowrap; }
+.pg931 .pg-head .pg-tot { text-align: right; }
+.pg931 .pg-foot { margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--ov-line); }
+.pg931 .pg-foot .pg-sum { grid-column: 2 / span var(--pg-cols); font-size: 12.5px; color: var(--ov-mid); }
+.pg931 .pg-foot .pg-tot b { font-size: 14px; font-weight: 700; }
+@media (max-width: 640px) { .pg931 .pg-row { grid-template-columns: 40px repeat(var(--pg-cols), minmax(0, 1fr)) 58px; gap: 2px; } .pg931 .pg-head .pg-h { font-size: 9px; } }

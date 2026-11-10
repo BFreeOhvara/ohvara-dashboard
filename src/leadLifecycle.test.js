@@ -40,7 +40,7 @@ test('stage moves set the stage, the db fields and add a timeline row by the age
   // A no-show goes back to the team: the rebook text and the rebook call are next.
   const ns = applyMove(l, 'no_show')
   assert.equal(ns.dbStage, 'booked')
-  assert.deepEqual(ns.events.slice(-3).map(e => [e.kind, e.state]), [['no_show', 'done'], ['text_sent', 'scheduled'], ['va_call', 'scheduled']])
+  assert.deepEqual(ns.events.slice(-3).map(e => [e.kind, e.state]), [['no_show', 'done'], ['text_sent', 'scheduled'], ['ai_call', 'scheduled']]) // P931: the AI caller rebooks a no-show, not a VA
   // P878: the one-tap rebook link waits out the Undo, then sends.
   assert.equal(ns.events.at(-2).step, 'no_show_link')
   assert.equal(ns.events.at(-2).text, leadText('no_show_link', { lead: 'Ellen' }))
