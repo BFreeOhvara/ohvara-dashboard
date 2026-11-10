@@ -5,6 +5,7 @@ import assert from 'node:assert/strict'
 import {
   AI_RULES, TRANSFER_WORDS, WAIT_QUESTIONS, transferBeats, SAMPLE_AI_CALLS, beatsOf, agentPrompt, DRAFT_WORDS, agentLine,
 } from './lib/aiCaller.js'
+import { AI_CALL_WORDS } from '../supabase/functions/ai-caller/rules.js' // P940: what the AI caller says
 import { DEFAULT_LIVE_HOURS } from './lib/leadSplit.js'
 import * as core from '../supabase/functions/ai-caller/core.ts'
 import { noProvider, vapiDestination } from '../supabase/functions/ai-caller/providers.ts'
@@ -51,11 +52,16 @@ function fakes({ talks = true } = {}) {
   return { log, call, tool, ev, setCheck, toCheck, kinds: k => log.filter(x => k.includes(x[0])) }
 }
 
+const bounceOk = say => {
+  assert.ok(say.startsWith('Okay, so unfortunately all of our specialists are with clients right now, but I can put you down for '), say)
+  assert.ok(say.endsWith('Do either of those work for you?'), say)
+  assert.ok(!say.includes('{times}'), say)
+}
+
 test('beats 1-3: qualify → "let me see who is free" → the agent push, and light questions while waiting (no dead air)', async () => {
   const f = fakes()
   const r = await f.toCheck()
-  assert.equal(r.say, TRANSFER_WORDS.check)
-  assert.equal(r.say, 'Great, let me see who on our team is free to talk with you right now.')
+  assert.equal(r.say, undefined) // P940: Max says the check line himself before calling qualified
   assert.equal(r.next, 'check_status')
   assert.equal(r.keep_talking, true)
   assert.deepEqual(r.ask, WAIT_QUESTIONS)
@@ -71,7 +77,7 @@ test('beats 1-3: qualify → "let me see who is free" → the agent push, and li
 test('a provider that can\'t talk while it waits plays a short hold line instead', async () => {
   const f = fakes({ talks: false })
   const r = await f.toCheck()
-  assert.equal(r.say, `${TRANSFER_WORDS.check} ${TRANSFER_WORDS.holdOnly}`)
+  assert.equal(r.say, undefined) // P940: the check line is no longer in say; the provider just holds
   assert.equal(r.hold, true)
   assert.equal(r.keep_talking, undefined)
 })
@@ -81,12 +87,12 @@ test('beat 4, Yes → "connecting you with Dana", whisper to the agent alone, co
   await f.toCheck()
   f.setCheck({ status: 'yes', answer: 'yes' })
   const r = await f.tool('check_status')
-  assert.equal(r.say, 'Perfect, I’m connecting you with Dana now. They’ll take great care of you.')
+  assert.equal(r.say, AI_CALL_WORDS.connecting) // P940
   assert.deepEqual([r.transfer_to, r.cold, r.ring_secs, r.if_not_answered], ['+15125550100', true, AI_RULES.ringSecs, 'transfer_failed'])
   assert.equal(r.whisper, 'Deedstone live caller: Pat, 55 to 64, TX, mortgage protection.')
   const [, to, o] = f.log.find(x => x[0] === 'transfer')
   assert.equal(to, '+15125550100')
-  assert.deepEqual(o, { say: r.say, whisper: r.whisper, ringSecs: 20, bounceSay: 'Our specialists are all with clients right now, so let’s get you on Dana’s calendar.' })
+  assert.deepEqual(o, { say: r.say, whisper: r.whisper, ringSecs: 20, bounceSay: AI_CALL_WORDS.bounce })
   await f.ev('ended', { reason: 'transferred', durationSecs: 140 })
   assert.deepEqual(f.kinds(['check', 'result']), [['check', 'ringing'], ['check', 'connected'], ['result', 'transferred', false]])
   assert.ok(!f.log.some(x => x[0] === 'clear'))
@@ -97,7 +103,7 @@ test('beat 5, the agent taps No → back to the AI: "specialists are with client
   await f.toCheck()
   f.setCheck({ status: 'no', answer: 'no' })
   const r = await f.tool('check_status')
-  assert.equal(r.say, 'Our specialists are all with clients right now, so let’s get you on Dana’s calendar.')
+  bounceOk(r.say)
   assert.deepEqual([r.slots, r.next], [[SLOT], 'book'])
   assert.ok(!f.log.some(x => x[0] === 'transfer' || x[0] === 'clear')) // the agent's own No already cleared their phones
   assert.equal((await f.tool('book', { at: SLOT })).ok, true)
@@ -110,7 +116,7 @@ test('beat 5, no answer to the push in 30 s → check marked no answer, the push
   await f.toCheck()
   f.setCheck({ expires_at: new Date(WED_9AM_CT - 1).toISOString() })
   const r = await f.tool('check_status')
-  assert.match(r.say, /^Our specialists are all with clients right now/)
+  bounceOk(r.say)
   assert.deepEqual(r.slots, [SLOT])
   assert.deepEqual(f.kinds(['check', 'clear']), [['check', 'no_answer'], ['clear', 'booking', 'ag-1']])
   await f.tool('book', { at: SLOT }); await f.ev('ended', { reason: 'hangup' })
@@ -123,7 +129,7 @@ test('beat 5, Yes but the agent\'s phone isn\'t answered in about 20 s → bounc
   f.setCheck({ status: 'yes', answer: 'yes' })
   await f.tool('check_status')
   const r = await f.tool('transfer_failed')
-  assert.match(r.say, /Dana’s calendar\.$/)
+  bounceOk(r.say)
   assert.deepEqual(r.slots, [SLOT])
   assert.equal(f.call.status, 'booking')
   assert.deepEqual(f.kinds(['check', 'clear']), [['check', 'ringing'], ['check', 'bounced'], ['clear', 'booking', 'ag-1']])

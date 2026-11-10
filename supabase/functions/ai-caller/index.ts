@@ -19,7 +19,8 @@ import { noProvider, retell, vapi, ghl, type Provider } from './providers.ts'
 import { isCron } from '../_shared/cronAuth.ts'
 import { sendersFromEnv } from '../notify-push/senders.ts'
 import { checkPush, clearPush, sendAll } from '../notify-push/transfer.ts'
-import { retellVoices, retellSetup, retellNumber, retellNumbers, retellCall } from './retellAdmin.ts'
+import { retellVoices, retellSetup, retellNumber, retellNumbers, retellCall, retellChat } from './retellAdmin.ts'
+import { retellPrompt } from './retellSpec.js'
 
 const env = (k: string) => Deno.env.get(k) ?? ''
 const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'))
@@ -28,7 +29,8 @@ const senders = sendersFromEnv()
 // DRAFT words (src/lib/aiCaller.js DRAFT_WORDS) until Brayden approves them; the provider's agent prompt holds the rest.
 // The transfer beats' words (check, connecting, bounce, hold) live in rules.js TRANSFER_WORDS (P903).
 const WORDS = {
-  opening: 'Hi {first}, this is Deedstone’s virtual assistant, calling about the request you just sent us. Is now a good time for two quick questions?',
+  // P940 (Brayden, Nov 10): who it is and why it's calling, no small talk.
+  opening: 'Hey {first}, this is Max, the virtual assistant with Deedstone Insurance. I’m calling about the mortgage protection form you filled out.',
 }
 
 function provider(): Provider {
@@ -65,7 +67,8 @@ const store: Store = {
     // P926: only a sample lead can carry a test (admin test calls); a real lead never does.
     const test = l.is_sample && qa.test && typeof qa.test === 'object' ? qa.test as { check?: 'yes' | 'no' | 'none'; transferTo?: string } : null
     return { id: l.id, first: String(l.contact_name ?? '').split(' ')[0] || 'there', phone: l.phone, state: l.state, tz: (qa.tz as string) ?? null,
-      need: (l.inbound_product as string) ?? 'Mortgage protection', age: (qa.age_band as string) ?? null, test }
+      need: (l.inbound_product as string) ?? 'Mortgage protection', age: (qa.age_band as string) ?? null, test,
+      homeowner: typeof qa.homeowner === 'boolean' ? qa.homeowner : null, mortgage: (qa.mortgage_balance_band as string) ?? null }
   },
   async agent(id) {
     const [{ data: p }, { data: lp }, reach] = await Promise.all([
@@ -106,6 +109,13 @@ const store: Store = {
     const { error } = await q
     if (error) console.error('ai-caller markCheck', id, error.message)
   },
+  // P940: minutes, cost and summary for a call whose result was set mid-call (only fills what is still empty).
+  async endStats(id, p) {
+    const row = Object.fromEntries(Object.entries({ duration_secs: p.duration_secs, cost_cents: p.cost_cents, summary: typeof p.summary === 'string' ? p.summary.slice(0, 1200) : undefined,
+      transcript_ref: p.transcript_ref }).filter(([, v]) => v != null))
+    const { error } = await admin.from('ai_calls').update(row).eq('id', id).eq('status', 'done').is('duration_secs', null)
+    if (error) console.error('ai-caller endStats', id, error.message)
+  },
   // P916: the agent's Deedstone number (Retell dials from_number; Vapi needs that number's id on Vapi).
   async deedstoneFrom(agentId, callId) {
     const { data, error } = await admin.rpc('deedstone_from', { p_agent: agentId, p_kind: 'ai_call', p_ref: callId })
@@ -134,7 +144,7 @@ async function retellAction(action: string, body: any, d: { store: Store; provid
     case 'retell_setup': {
       if (!env('AI_WEBHOOK_SECRET')) throw Object.assign(new Error('AI_WEBHOOK_SECRET not set'), { status: 400 })
       const { data: s } = await admin.from('ai_caller_settings').select('max_call_secs').eq('id', true).maybeSingle()
-      return retellSetup(f, key, hook, { prompt: String(body?.prompt ?? ''), voice_id: String(body?.voice_id ?? ''), voice: body?.voice ?? {}, max_secs: s?.max_call_secs ?? 300,
+      return retellSetup(f, key, hook, { prompt: String(body?.prompt || retellPrompt()) /* P940: our prompt from retellSpec.js when none is sent */, voice_id: String(body?.voice_id ?? ''), voice: body?.voice ?? {}, max_secs: s?.max_call_secs ?? 300,
         llm_id: env('RETELL_LLM_ID') || null, agent_id: env('RETELL_AGENT_ID') || null })
     }
     case 'retell_number': {
@@ -152,7 +162,8 @@ async function retellAction(action: string, body: any, d: { store: Store; provid
       if (transferTo && !E164.test(transferTo)) throw Object.assign(new Error('transfer_to must be +1XXXXXXXXXX'), { status: 400 })
       const { data: ag } = await admin.from('profiles').select('id').eq('full_name', 'Test Agent').eq('is_test', true).maybeSingle()
       if (!ag) throw Object.assign(new Error('no Test Agent'), { status: 400 })
-      const qa = { tz: 'America/Chicago', age_band: '45-54', test: { check: SCENARIOS[scenario], transferTo, scenario } }
+      // The same answers the Deedstone form (submit-mp-lead) collects, so the AI confirms them (P940).
+      const qa = { tz: 'America/Chicago', age_band: '45-54', homeowner: true, mortgage_balance_band: '200-300k', smoker: false, test: { check: SCENARIOS[scenario], transferTo, scenario } }
       // No phone on insert, so the new-lead router never queues it for a VA; the phone goes on right after.
       const { data: lead, error: le } = await admin.from('leads').insert({ business_name: 'P926 test call', contact_name: `Brayden (test ${scenario.replace('_', ' ')})`,
         lead_type: 'mortgage_protection', is_sample: true, assigned_rep_id: ag.id, state: 'TX', qualifier_answers: qa }).select('id').single()
@@ -162,6 +173,34 @@ async function retellAction(action: string, body: any, d: { store: Store; provid
       const { data: call, error: ce } = await admin.from('ai_calls').insert({ lead_id: lead.id, agent_id: ag.id, attempt: 1, lead_in_at: new Date().toISOString(), provider: 'retell' }).select('id').single()
       if (ce) throw ce
       return { lead_id: lead.id, call_id: call.id, start: await handle('start', { call_id: call.id }, d) }
+    }
+    case 'retell_chat': {
+      // P940: Retell's own chat (no phone): the live LLM and prompt with our real functions, on a sample lead of the
+      // Test Agent. The transcript goes on that test call's row (pg_net stops reading replies after 5 s).
+      const scenario = String(body?.scenario ?? ''), turns = (Array.isArray(body?.turns) ? body.turns : []).map(String).slice(0, 16)
+      if (!(scenario in SCENARIOS)) throw Object.assign(new Error(`scenario: ${Object.keys(SCENARIOS).join(' | ')}`), { status: 400 })
+      if (!env('RETELL_LLM_ID')) throw Object.assign(new Error('RETELL_LLM_ID not set'), { status: 400 })
+      const { data: ag } = await admin.from('profiles').select('id').eq('full_name', 'Test Agent').eq('is_test', true).maybeSingle()
+      if (!ag) throw Object.assign(new Error('no Test Agent'), { status: 400 })
+      const transferTo = body?.transfer_to && E164.test(String(body.transfer_to)) ? String(body.transfer_to) : null
+      const qa = { tz: 'America/Chicago', age_band: '45-54', homeowner: true, mortgage_balance_band: '200-300k', smoker: false, test: { check: SCENARIOS[scenario], transferTo, scenario, chat: true } }
+      const { data: lead, error: le } = await admin.from('leads').insert({ business_name: 'P926 test call', contact_name: `Brayden (chat ${scenario.replace('_', ' ')})`,
+        lead_type: 'mortgage_protection', is_sample: true, assigned_rep_id: ag.id, state: 'TX', qualifier_answers: qa }).select('id').single()
+      if (le) throw le
+      await admin.from('leads').update({ phone: '+15555550100' }).eq('id', lead.id) // fictional 555 number: nothing is dialed
+      const { data: row, error: ce } = await admin.from('ai_calls').insert({ lead_id: lead.id, agent_id: ag.id, attempt: 1, lead_in_at: new Date().toISOString(), provider: 'retell' }).select('id').single()
+      if (ce) throw ce
+      let vars: Record<string, unknown> = {}
+      const fake = { ...d.provider, ready: true, start: async (a: { vars: Record<string, unknown> }) => { vars = a.vars; return { providerCallId: `chat-${row.id}` } } }
+      const st = await handle('start', { call_id: row.id }, { ...d, provider: fake as Provider })
+      // The chat runs on after we reply (pg_net hangs up at 5 s); the log is written after every turn.
+      const run = retellChat(f, key, { llmId: env('RETELL_LLM_ID'), chatAgentId: body?.chat_agent_id ? String(body.chat_agent_id) : null, vars, metadata: { call_id: row.id }, turns,
+        onChat: async (chatId: string) => { await admin.from('ai_calls').update({ provider_call_id: chatId, status: 'talking' }).eq('id', row.id) },
+        onTurn: async (log: string[]) => { await admin.from('ai_calls').update({ transcript_ref: log.join('\n').slice(0, 20000) }).eq('id', row.id) } })
+        .catch(async e => { await admin.from('ai_calls').update({ transcript_ref: `chat failed: ${String((e as Error).message).slice(0, 500)}` }).eq('id', row.id) })
+      const rt = (globalThis as unknown as { EdgeRuntime?: { waitUntil(p: Promise<unknown>): void } }).EdgeRuntime
+      if (rt) rt.waitUntil(run); else await run
+      return { call_id: row.id, start: st }
     }
     case 'test_cleanup': {
       // The test leads keep their calls (admin AI calls shows them) but lose the phone numbers.
@@ -178,7 +217,7 @@ Deno.serve(async req => {
   const url = new URL(req.url)
   try {
     const body = await req.json().catch(() => ({}))
-    const d = { store, provider: provider(), env: { now: () => Date.now(), from: env('AI_FROM_NUMBER') || null, words: WORDS } }
+    const d = { store, provider: provider(), env: { now: () => Date.now(), from: env('AI_FROM_NUMBER') || null, words: WORDS, pauseMs: 2500 } }
     if (url.searchParams.get('k')) {
       // The provider's webhook and tool calls.
       if (!env('AI_WEBHOOK_SECRET') || url.searchParams.get('k') !== env('AI_WEBHOOK_SECRET')) return new Response('forbidden', { status: 403 })

@@ -81,8 +81,8 @@ export function retell(key: string, agentId: string, fetchFn: Fetch): Provider {
       if (endCall) await ok(await fetchFn(`https://api.retellai.com/v2/end-call/${encodeURIComponent(providerCallId)}`, { method: 'POST', headers: h, body: json({ reason: words.slice(0, 200) }) }), 'retell end')
     },
     parse(body) {
-      const c = body?.call ?? {}
-      const id = s(c.call_id), callId = s(c.metadata?.call_id) || null
+      const c = body?.call ?? body?.chat ?? {} // a Retell chat (P940 phone-free tests) posts the chat object
+      const id = s(c.call_id ?? c.chat_id), callId = s(c.metadata?.call_id) || null
       if (body?.name && body?.args) return { type: 'tool', providerCallId: id, callId, toolCallId: null, name: s(body.name), args: body.args ?? {} }
       if (body?.event === 'call_started') return { type: 'answered', providerCallId: id, callId }
       if (body?.event === 'call_ended' || body?.event === 'call_analyzed') {
