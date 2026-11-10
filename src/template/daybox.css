@@ -7,9 +7,8 @@
 .fx-week .tp-tgrid-h b[role="button"]:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .fx-week .tp-tgrid-h b.is-on { background: color-mix(in srgb, var(--ov-data-a) 12%, transparent); }
 .fx-week .tp-tgrid-h b.is-on > span { color: var(--ov-data-a); }
-.fx-week.is-week .tp-tcol { cursor: pointer; transition: background-color .2s var(--fx-ease); }
-.fx-week.is-week .tp-tcol:hover:not(:has(.tp-ev:hover)) { background-color: color-mix(in srgb, var(--ov-hi) 4%, transparent); }
-.fx-week.is-week .tp-tcol.today:hover:not(:has(.tp-ev:hover)) { background-color: color-mix(in srgb, var(--ov-data-a) 9%, transparent); }
+/* P946 (every role): hovering a day doesn't light the whole day; each call box keeps its own hover. */
+.fx-week.is-week .tp-tcol { cursor: pointer; }
 .fx-week.is-day .tp-ev { min-height: 44px; }
 
 /* The week strip: chips, the open day lit. */
@@ -24,6 +23,16 @@
 .fx-daybox > .fx-tile-h { align-items: flex-start; gap: 10px; }
 .fx-daybox-x { flex: none; }
 .fx-daybox-back { display: none; }
+
+/* P946: a call open inside the day box (the VA Calendar): the same record as the drawer, drawn in the box. The back
+   arrow shows on a desktop too; the actions stay in reach at the bottom of the window while the box scrolls by. */
+.fx-daybox.is-detail .fx-daybox-back { display: inline-flex; flex: none; padding: 0 10px; min-height: 32px; font-size: 12.5px; }
+.fx-daybox.is-detail > .fx-tile-h { align-items: center; flex-wrap: wrap; }
+.fx-rec-inline { display: flex; flex-direction: column; gap: 12px; min-width: 0; outline: 0; animation: fx-up .35s var(--fx-ease) both; }
+.fx-rec-inline > .fx-rec-k { margin: 0; }
+.fx-rec-inline .fx-hero-card { background: var(--cf); }
+.fx-rec-inline-f { position: sticky; bottom: 12px; z-index: 2; margin: 2px -6px 0; padding: 10px; border: 1px solid var(--fx-edge); border-radius: 18px;
+  background: color-mix(in srgb, var(--bg-surface) 97%, transparent); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: 0 -14px 24px -18px rgba(0, 0, 0, .5); }
 .fx-weeklist { display: none; }
 
 /* 1000 to 1280: the day and its box stay side by side. */

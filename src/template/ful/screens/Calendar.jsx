@@ -1,6 +1,6 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Phone, MessageSquare, CalendarClock, CircleCheck, PhoneMissed, Forward, Users, ChevronRight } from 'lucide-react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Phone, MessageSquare, CalendarClock, CircleCheck, PhoneMissed, Forward, Users, ChevronRight, CalendarDays } from 'lucide-react'
 import { useFulCalls, useFulActions, useFulSchedule, useVaBooking, useFulClock, useFulSource, minutesOf, bookedText } from '../data'
 import { Chip, Drawer, Empty, Field, Seg, useNote } from '../../kit'
 import { DayBox, WeekList } from '../../DayBox'
@@ -49,7 +49,7 @@ const SAMPLE_NOW = '1:32 PM' // sample clock: the next call is 28 minutes after 
 const WEEK_LABEL = ['This week', 'Next week']
 
 // A cancellation call (what the Calls page's drawer was, with every part kept). Start call opens the live-call overlay.
-export function CallDrawer({ id, onClose }) {
+export function CallDrawer({ id, onClose, inline = false }) {
   const { data: calls } = useFulCalls()
   const { markCall, moveCall, showLive } = useFulActions()
   const note = useNote()
@@ -75,7 +75,7 @@ export function CallDrawer({ id, onClose }) {
   // P886/P899: the old policy goes once the new one is issued, before the old one's next draft.
   const gate = useGate(k.name)
   return (
-    <RecordDrawer label={`Call with ${k.name}`} kicker={<>Cancel the old policy · {dayName(k.day)}, {dateText(k.day)} <HelpDot lesson="carrier_call" inline /></>} tone={tone} onClose={onClose}
+    <RecordDrawer inline={inline} label={`Call with ${k.name}`} kicker={<>Cancel the old policy · {dayName(k.day)}, {dateText(k.day)} <HelpDot lesson="carrier_call" inline /></>} tone={tone} onClose={onClose}
       hero={<>
         <div className="fx-hero-top"><span className="fx-when"><CalendarClock size={13} aria-hidden="true" />{k.day === TODAY ? 'Today' : `${dayName(k.day)}, ${dateText(k.day)}`} · {k.when}</span><Chip tone={tone}>{CALL_WORD[k.status]}</Chip></div>
         <h2>{k.name}</h2>
@@ -128,9 +128,9 @@ export function CallDrawer({ id, onClose }) {
 
 // P931: one booked call on the grid: client name, time, one short why line, coloured by the client's status. Defined
 // here (not inside Calendar) so a click that opens the panel keeps every box as it is: no remount, no replayed pop-in.
-function Ev({ e, top, height, lane: [k, of], to }) {
+function Ev({ e, top, height, lane: [k, of], link }) {
   return (
-    <Link to={to} className={`tp-ev fs-ev is-${e.st.tone}${e.done ? ' is-done' : ''}${of > 1 ? ' is-lane' : ''}`} aria-label={`${e.time}, ${e.name}, ${e.why}, ${e.st.label}`}
+    <Link {...link} className={`tp-ev fs-ev is-${e.st.tone}${e.done ? ' is-done' : ''}${of > 1 ? ' is-lane' : ''}`} aria-label={`${e.time}, ${e.name}, ${e.why}, ${e.st.label}`}
       style={{ top: `${top}%`, height: `${height}%`, left: `calc(${(k / of) * 100}% + ${of > 1 ? 2 : 4}px)`, width: `calc(${100 / of}% - ${of > 1 ? 4 : 8}px)` }}>
       <b>{e.name}</b><span className="tp-num">{e.time}</span><small>{e.why}</small>
     </Link>
@@ -151,6 +151,7 @@ export default function Calendar() {
   // The red now-line: the sample clock (1:32 PM), or the real minute on the viewer's clock.
   const NOW = real ? new Date(clock.nowIso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: clock.tz }) : SAMPLE_NOW
   const [weekPick, setWeek] = useState(0)
+  const location = useLocation()
   const { day, open, close, search } = useOpenDay(ALL_DAYS, { esc: !id, isoOf: clock.isoOf })
   const { view, leaving } = useStickyDay(day)
   // P931: a VA only talks to clients whose policy is sold. Each item carries its why line and its client's status.
@@ -164,12 +165,30 @@ export default function Calendar() {
   const ofDay = d => items.filter(i => i.day === d)
   const days = WEEKS[week]
   const cols = view != null ? [view] : days
-  const pickWeek = w => { setWeek(w); if (day != null) close() }
-  const to = ref => ({ pathname: fp('calendar', ref), search })
-  const closeDrawer = () => navigate({ pathname: fp('calendar'), search })
+  // P946: a call opens inside the day slide-in, as if its name had been clicked there: the URL is the call's address
+  // with its day (?day=), the box shows the call, and back/X returns to the day's list; X again closes the day.
+  const withDay = d => { const p = new URLSearchParams(location.search); p.set('day', clock.isoOf(d)); return `?${p}` }
+  const listUrl = () => ({ pathname: fp('calendar'), search })
+  const linkOf = e => {
+    const to = { pathname: fp('calendar', e.ref), search: withDay(e.day) }
+    if (id) return { to, replace: true, state: location.state } // one call to another: swap in place
+    if (view != null) return { to, state: { fromList: true } } // from the day's list: Back returns to it
+    return { to, state: { dayBox: true } } // from the week: the day opens with the call in it
+  }
+  const pickWeek = w => { setWeek(w); if (id) navigate({ pathname: fp('calendar') }, { replace: true }); else if (day != null) close() }
+  const openDay = d => { if (id) navigate({ pathname: fp('calendar'), search: withDay(d) }, { replace: true, state: location.state?.fromList ? undefined : location.state }); else open(d) }
+  const closeDrawer = () => (location.state?.fromList ? navigate(-1) : navigate(listUrl(), { replace: true, state: location.state?.dayBox ? { dayBox: true } : undefined }))
   // A booking that was moved to another VA, or handled, still opens its drawer (it says so); the id says which kind.
-  const kind = (items.find(i => i.ref === id) || {}).kind || (id ? (id.startsWith('cl-') ? 'call' : 'task') : null)
-  const headKey = d => e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(d) } }
+  const item = items.find(i => i.ref === id)
+  const kind = (item || {}).kind || (id ? (id.startsWith('cl-') ? 'call' : 'task') : null)
+  // An old link to a call (no ?day=): open its day around it. A call not on these two weeks keeps the drawer.
+  const inBox = !!item && ALL_DAYS.includes(item.day)
+  useEffect(() => {
+    if (inBox && day == null) navigate({ pathname: location.pathname, search: withDay(item.day) }, { replace: true, state: location.state })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inBox, day, id])
+  const detail = !!id && inBox && view === item.day
+  const headKey = d => e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDay(d) } }
 
   // P931 (P929 rule): text never cuts off and boxes never overlap. A box is as tall as its call, and never shorter than
   // its words need (measured: if any box's words don't fit, every box grows to fit, and close calls sit side by side).
@@ -205,19 +224,25 @@ export default function Calendar() {
   return (
     <div className="tp-page fx-page fs-sched fs-cal">
       {/* P931: no type filters or status chips, just This week · Next week. */}
+      {/* P946: the agent Calendar's top row exactly: its week switch (Seg .cal-wk with each week's count), the clock
+          line, and its pill buttons (Today opens today's day, where the agent has Hours and Block a day). */}
       <div className="fx-tools fs-cal-tools">
-        {/* P942: the agent Calendar's week switch exactly (Seg .cal-wk, with each week's count), as on admin Fulfillment */}
         <Seg label="Week" className="cal-wk" value={week} onChange={pickWeek} options={WEEK_LABEL.map((label, key) => ({ key, label, count: items.filter(i => WEEKS[key].includes(i.day)).length }))} />
-        <HelpDot lesson="calendar" />
+        <span className="tp-grow" />
+        <p className="tp-sub">Your time ({zoneAbbr(clock.tz)}) · client times beside theirs</p>
+        <span className="cal-tools">
+          <button type="button" className="fx-pillbtn" aria-pressed={view === TODAY} onClick={() => { if (week !== 0) setWeek(0); if (view !== TODAY) openDay(TODAY) }}><CalendarDays size={14} aria-hidden="true" />Today</button>
+          <HelpDot lesson="calendar" />
+        </span>
       </div>
 
-      <WeekList days={days} today={TODAY} onOpen={open} name={dayName} num={dayNum} itemsOf={ofDay} line={e => `${e.time} ${e.name}`} />
+      <WeekList days={days} today={TODAY} onOpen={openDay} name={dayName} num={dayNum} itemsOf={ofDay} line={e => `${e.time} ${e.name}`} />
 
       {/* P931: the grid keeps a set hour height (ful.css) instead of squeezing into the window, so every box can be read. */}
       <div className="fx-grid" data-fold>
         <section className={`fx-tile ${view != null ? 'fx-s8 is-day' : 'fx-s12 is-week'} fx-week cal910`} style={{ '--i': 0, '--days': cols.length, '--rows': ROWS }} aria-label={view != null ? `${dayName(view)}, ${dateText(view)}` : WEEK_LABEL[week]}>
           <div className="tp-tgrid-h"><span />{cols.map(d => (
-            <b key={d} role="button" tabIndex={0} aria-pressed={d === view} title={d === view ? 'Back to the week' : `Open ${dayName(d)} ${dayNum(d)}`} className={`${d === TODAY ? 'today' : ''}${d === view ? ' is-on' : ''}`} onClick={() => open(d)} onKeyDown={headKey(d)}>
+            <b key={d} role="button" tabIndex={0} aria-pressed={d === view} title={d === view ? 'Back to the week' : `Open ${dayName(d)} ${dayNum(d)}`} className={`${d === TODAY ? 'today' : ''}${d === view ? ' is-on' : ''}`} onClick={() => openDay(d)} onKeyDown={headKey(d)}>
               {dayName(d)} <span>{dayNum(d)}</span>{d === TODAY && <small>Today</small>}
             </b>
           ))}</div>
@@ -227,8 +252,8 @@ export default function Calendar() {
               const dayItems = ofDay(d)
               const lanes = lanesOf(dayItems)
               return (
-                <div key={d} className={`tp-tcol${d === TODAY ? ' today' : ''}`} data-day={d} onClick={e => { if (view == null && e.target === e.currentTarget) open(d) }}>
-                  {dayItems.map(e => <Ev key={e.ref} e={e} to={to(e.ref)} lane={lanes[e.ref] || [0, 1]}
+                <div key={d} className={`tp-tcol${d === TODAY ? ' today' : ''}`} data-day={d} onClick={e => { if (view == null && e.target === e.currentTarget) openDay(d) }}>
+                  {dayItems.map(e => <Ev key={e.ref} e={e} link={linkOf(e)} lane={lanes[e.ref] || [0, 1]}
                     top={Math.max(0, Math.min(100, (startOf(e) / total) * 100))} height={(span / total) * 100} />)}
                   {d === TODAY && <i className="tp-now" style={{ top: `${((minutesOf(NOW) - START * 60) / total) * 100}%` }} aria-hidden="true" />}
                 </div>
@@ -238,28 +263,33 @@ export default function Calendar() {
         </section>
 
         {view != null && (
-          <DayBox title={`${dayName(view)}, ${dateText(view)}`} sub={list.length ? `${list.length} booked` : 'Nothing booked'} leaving={leaving} onClose={close}>
-            <b className="tp-num fx-huge2"><CountUp value={list.length} /><small> {list.length === 1 ? 'call' : 'calls'}</small></b>
-            <ul className="fx-rows">
-              {list.map(e => (
-                <li key={e.ref}><Link to={to(e.ref)} className={`fx-row is-${e.st.tone}`}><span className="fx-row-ic"><Phone size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{e.name}</b><small>{e.time} · {e.why}</small></span><ChevronRight size={16} aria-hidden="true" /></Link></li>
-              ))}
-            </ul>
-            {list.length === 0 && <Empty title="A free day" sub="Nothing is booked for this day." />}
-            {rest.length > 0 && <>
-              <h3 className="fx-h3">Rest of the week</h3>
+          <DayBox title={`${dayName(view)}, ${dateText(view)}`} sub={detail ? item.name : list.length ? `${list.length} booked` : 'Nothing booked'} leaving={leaving} onClose={close} onBack={detail ? closeDrawer : null}>
+            {detail ? (
+              kind === 'call' ? <CallDrawer key={id} id={id} onClose={closeDrawer} inline /> : <TaskDrawer key={id} id={id} onClose={closeDrawer} inline />
+            ) : <>
+              <b className="tp-num fx-huge2"><CountUp value={list.length} /><small> {list.length === 1 ? 'call' : 'calls'}</small></b>
               <ul className="fx-rows">
-                {rest.map(e => <li key={e.ref}><Link to={to(e.ref)} className={`fx-row is-${e.st.tone}`}><span className="tp-grow"><b>{e.name}</b><small>{dayName(e.day)} {e.time} · {e.why}</small></span></Link></li>)}
+                {list.map(e => (
+                  <li key={e.ref}><Link {...linkOf(e)} className={`fx-row is-${e.st.tone}`}><span className="fx-row-ic"><Phone size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{e.name}</b><small>{e.time} · {e.why}</small></span><ChevronRight size={16} aria-hidden="true" /></Link></li>
+                ))}
               </ul>
+              {list.length === 0 && <Empty title="A free day" sub="Nothing is booked for this day." />}
+              {rest.length > 0 && <>
+                <h3 className="fx-h3">Rest of the week</h3>
+                <ul className="fx-rows">
+                  {rest.map(e => <li key={e.ref}><Link {...linkOf(e)} className={`fx-row is-${e.st.tone}`}><span className="tp-grow"><b>{e.name}</b><small>{dayName(e.day)} {e.time} · {e.why}</small></span></Link></li>)}
+                </ul>
+              </>}
             </>}
           </DayBox>
         )}
       </div>
 
-      {id && kind === 'call' && <CallDrawer key={id} id={id} onClose={closeDrawer} />}
-      {id && kind && kind !== 'call' && <TaskDrawer key={id} id={id} onClose={closeDrawer} />}
+      {/* A call that isn't on these two weeks still opens as a drawer. */}
+      {id && !inBox && kind === 'call' && <CallDrawer key={id} id={id} onClose={() => navigate(listUrl())} />}
+      {id && !inBox && kind && kind !== 'call' && <TaskDrawer key={id} id={id} onClose={() => navigate(listUrl())} />}
 
-      {id && !kind && <RecordDrawer label="Not on your calendar" kicker="Calendar" onClose={closeDrawer} hero={<h2>Not on your calendar</h2>}><p className="fx-calm">That item is not here any more.</p></RecordDrawer>}
+      {id && !kind && <RecordDrawer label="Not on your calendar" kicker="Calendar" onClose={() => navigate(listUrl())} hero={<h2>Not on your calendar</h2>}><p className="fx-calm">That item is not here any more.</p></RecordDrawer>}
     </div>
   )
 }

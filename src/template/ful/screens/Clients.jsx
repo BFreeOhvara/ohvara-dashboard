@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Search, Phone, MessageSquare, CalendarClock, MapPin, TriangleAlert, LifeBuoy, PhoneCall, Archive } from 'lucide-react'
+import { Search, MessageSquare, CalendarClock, MapPin, TriangleAlert, LifeBuoy, PhoneCall, Archive } from 'lucide-react'
 import { useFulClients, useFulCalls, useFulTasks, useFulThreads, useFulActions, useFulClock } from '../data'
 import { Avatar, Chip, Money, SampleTag, Empty, Switch, useNote } from '../../kit'
 import { RecordDrawer, Block } from '../../Record'
@@ -79,7 +79,7 @@ function ClientDrawer({ id, onClose }) {
   const { data: calls } = useFulCalls()
   const { data: tasks } = useFulTasks()
   const { data: threads } = useFulThreads()
-  const { sendMessage, showLive } = useFulActions()
+  const { sendMessage } = useFulActions()
   const note = useNote()
   const [msg, setMsg] = useState('')
   const { dateText, today, isoOf } = useFulClock()
@@ -90,10 +90,6 @@ function ClientDrawer({ id, onClose }) {
   const next = nextBooked[c.id]
   const myCalls = calls.filter(k => k.client_id === c.id)
   const myTasks = tasks.filter(t => t.client_id === c.id)
-  // P876: VAs don't dial a client on their own. A call starts from what they were given: an open call or servicing step.
-  const openCall = myCalls.find(k => k.status === 'booked' || k.status === 'no_answer')
-  const openTask = myTasks.find(t => t.due !== 'done')
-  const callable = openCall ? `For the call at ${openCall.time}` : openTask ? `For the ${(KIND[openTask.kind] || 'servicing').toLowerCase()} step` : null
   const thread = threads.find(t => t.client_id === c.id)
   const send = () => { sendMessage(thread.id, msg.trim()); setMsg(''); note(`Sent to ${c.agent}`) }
   return (
@@ -105,7 +101,7 @@ function ClientDrawer({ id, onClose }) {
         <div className="fx-hero-bot"><span><Money v={c.monthly_premium} size="fx-hero-big" /><small> / month · sample</small></span><Avatar name={c.name} tone={tone} /></div>
       </>}
       actions={<>
-        {callable && <button type="button" className="tp-primary fx-accent" title={callable} onClick={() => showLive({ kind: 'client', id: c.id })}><Phone size={16} />Call</button>}
+        {/* P946: no Call button for VAs. They call only from the phone on the rail when a call is due (Start call, or a call that comes in). */}
         <span className="tp-grow" />
         <Link to={fp('messages')} className="tp-btn ov-ghost"><MessageSquare size={14} />Messages</Link>
       </>}>

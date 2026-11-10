@@ -28,6 +28,8 @@ import { fp } from './paths'
 import { HelpDot } from '../../fulshell/training/HelpDot'
 import { BeforeCall } from './BeforeCall'
 import { FrontDeskNote } from './Playbook932'
+import { outcomeTone } from './outcome946'
+import './phone946.css'
 
 // P876 — the VA phone is a call screen that slides in from the right OVER the page, like a phone's in-call screen
 // (the caller and the timer at the top, round buttons below, a red End). It never changes the page's layout. A tab on
@@ -86,7 +88,7 @@ const fromTask = t => ({
 // A Schedule item (P907's one row shape) or, on real data, a call row.
 const fromItem = i => (i.row ? (i.kind === 'task' ? fromTask(i.row) : fromCall(i.row)) : fromCall(i))
 
-export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, onLine: report, missed = [], live, onLive, startReq, onBook }) {
+export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, onLine: report, onLock, nudge = 0, missed = [], live, onLive, startReq, onBook }) {
   const { data: calls } = useFulCalls()
   const { data: day } = useFulDay()
   const { data: tasks } = useFulTasks()
@@ -232,6 +234,28 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
   // The call ended: wrap-up starts (the outcome is needed before the VA is Available again).
   const ended = !!call?.end
   useEffect(() => { if (ended) presDo({ type: 'wrap' }) }, [ended])
+  // P946: outcome first. Once a call ends, the screen can't be slid away until "How did it go?" is picked; a try
+  // shakes it and marks that part in red (the dock counts the tries: nudge).
+  const [pick, setPick] = useState(null)
+  const callKey = call?.start ?? null
+  const [pickFor, setPickFor] = useState(callKey)
+  const [shake, setShake] = useState(0) // > 0 while the screen shakes (alternate classes restart the animation)
+  const [alarm, setAlarm] = useState(false) // the outcome part stays red until one is picked
+  if (pickFor !== callKey) { setPickFor(callKey); setPick(null); setAlarm(false) }
+  const mustPick = view === 'result' && !pick
+  useEffect(() => { onLock?.(mustPick) }, [mustPick, onLock])
+  const [seenNudge, setSeenNudge] = useState(nudge)
+  if (seenNudge !== nudge) {
+    setSeenNudge(nudge)
+    if (mustPick) { setShake(n => n + 1); setAlarm(true) }
+  }
+  useEffect(() => {
+    if (!shake) return undefined
+    const t = setTimeout(() => setShake(0), 700)
+    return () => clearTimeout(t)
+  }, [shake])
+  // Leaving this screen (saved, or a new call) lets the dock slide it away again.
+  useEffect(() => () => onLock?.(false), [onLock])
 
   // Sample: whoever is added answers after a moment; the live transfer moves on its own (P852 swaps in real events).
   const ringingLegs = call?.parties.filter(p => p.state === 'ringing').map(p => p.id).join('|') || ''
@@ -401,7 +425,7 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
       </div>
     )
   } else if (call) {
-    body = <Result call={call} took={took} agent={xAgent} pres={pres} now={now}
+    body = <Result call={call} took={took} agent={xAgent} pres={pres} now={now} pick={pick} setPick={setPick} alarm={alarm && !pick}
       onMore={() => { presDo({ type: 'more' }); rl?.wrapMore().catch(() => {}) }}
       save={r => {
         const p = call.who
@@ -470,8 +494,8 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
   // Portaled to <body> like the record drawers. No scrim: the page behind stays usable and never moves.
   return createPortal(
     <div className="tp fx-layer fs-call-layer">
-      <section ref={box} className={`fs-call${open ? ' is-in' : ''}${onCall || ringing ? ' is-live' : ''}`} role="dialog" aria-label="Phone" aria-hidden={!open}>
-        <button type="button" className="fs-call-tab" aria-label={call && !call.end ? 'Slide the phone away. The call keeps going' : 'Slide the phone away'} title={call && !call.end ? 'Slide away (the call keeps going)' : 'Slide away'} onClick={slideAway}>
+      <section ref={box} className={`fs-call${open ? ' is-in' : ''}${onCall || ringing ? ' is-live' : ''}${shake ? (shake % 2 ? ' is-shake' : ' is-shake2') : ''}`} role="dialog" aria-label="Phone" aria-hidden={!open}>
+        <button type="button" className="fs-call-tab" aria-label={mustPick ? 'Pick how the call went first' : call && !call.end ? 'Slide the phone away. The call keeps going' : 'Slide the phone away'} title={mustPick ? 'Pick how it went first' : call && !call.end ? 'Slide away (the call keeps going)' : 'Slide away'} onClick={slideAway}>
           <ChevronRight size={18} aria-hidden="true" />
         </button>
         <header className="fs-ph-h">
@@ -645,7 +669,7 @@ function XferCard({ x, agent, now, onTransfer, onBook, onClear }) {
 // P882 wrap-up: the outcome is required before the VA is Available again (no Skip). 60 seconds, +60 s at a time (each
 // one counted); past 3 minutes the admins are told.
 const FREE = ['Reached them', 'No answer', 'Left a voicemail']
-function Result({ call, took, agent, pres, now, onMore, save }) {
+function Result({ call, took, agent, pres, now, onMore, save, pick, setPick, alarm = false }) {
   const p = call.who
   const transferred = call.outcome === 'transferred'
   const handed = call.outcome === 'handed_off'
@@ -653,7 +677,10 @@ function Result({ call, took, agent, pres, now, onMore, save }) {
   const opts = transferred ? [[`Transferred to ${agent?.name || 'the agent'}`, `Transferred to ${agent?.name.split(' ')[0] || 'the agent'}`]]
     : handed ? [['Handed off the hold', 'Handed off the hold']]
       : p.callId ? [['cancelled', 'Cancelled'], ['no_answer', 'No answer']] : free.map(f => [f, f])
-  const [pick, setPick] = useState(call.vm && !p.callId ? 'Left a voicemail' : opts[0][0])
+  // P946: nothing is picked for the VA, unless there is only one true answer (a transfer, a handed-off hold) or the
+  // voicemail was left from the call screen.
+  const preset = opts.length === 1 ? opts[0][0] : call.vm && !p.callId ? 'Left a voicemail' : null
+  useEffect(() => { if (preset && !pick) setPick(preset) }, [preset, pick, setPick])
   const [notes, setNotes] = useState(call.notes || '')
   const ready = !!pick // P918: no confirmation number on a cancel call; the note stays optional
   const left = wrapLeft(pres, now)
@@ -670,8 +697,10 @@ function Result({ call, took, agent, pres, now, onMore, save }) {
           <button type="button" className="fx-pillbtn" onClick={onMore} aria-label="60 more seconds"><Plus size={13} />60 s</button>
         </div>
       )}
-      <div className="tp-field"><span>How did it go?</span>
-        <PillTabs role="radiogroup" label="How did it go?" className="fx-chips" itemClass="fx-chip" value={pick} onChange={setPick} items={opts.map(([v, l]) => ({ key: v, label: <b>{l}</b> }))} />
+      <div className={`tp-field fs-howwent${alarm ? ' is-alarm' : ''}${pick ? '' : ' is-open'}`} role="group" aria-label="How did it go?">
+        <span>How did it go?{!pick && <small className="fs-hw-need">{alarm ? 'Pick one before you close the phone' : 'Pick one'}</small>}</span>
+        <PillTabs role="radiogroup" label="How did it go?" className="fx-chips fs-outcomes" itemClass="fx-chip" value={pick} onChange={setPick}
+          items={opts.map(([v, l]) => ({ key: v, label: <b>{l}</b>, className: `fs-oc is-${outcomeTone(v)}` }))} />
       </div>
       <Field label="Notes" hint={p.agent ? `${p.agent.split(' ')[0]} sees these` : undefined}><textarea className="tp-input fx-ta" rows={3} placeholder="What happened on the call" value={notes} onChange={e => setNotes(e.target.value)} /></Field>
       <div className="fs-ph-acts">

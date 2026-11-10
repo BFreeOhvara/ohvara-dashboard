@@ -17,3 +17,28 @@
 .pg931 .pg-foot .pg-sum { grid-column: 2 / span var(--pg-cols); font-size: 12.5px; color: var(--ov-mid); }
 .pg931 .pg-foot .pg-tot b { font-size: 14px; font-weight: 700; }
 @media (max-width: 640px) { .pg931 .pg-row { grid-template-columns: 40px repeat(var(--pg-cols), minmax(0, 1fr)) 58px; gap: 2px; } .pg931 .pg-head .pg-h { font-size: 9px; } }
+
+/* P946 — the right column ends level with the left: Next payout, then This pay period filling the rest. */
+@media (min-width: 1000px) {
+  .fs-pay.fx-ovl { align-items: stretch; }
+  .fs-pay .fs-pay-side { display: flex; flex-direction: column; gap: 14px; align-self: stretch; min-height: 0; }
+  .fs-pay .fs-pay-side > .pp946 { flex: 1 1 auto; }
+}
+.pp946 { gap: 12px; }
+.pp946-stats { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin: 0; }
+.pp946-stats > div { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 16px; min-width: 0;
+  background: color-mix(in srgb, var(--ov-hi) 4%, transparent); border: 1px solid var(--fx-edge); }
+.pp946-stats dt { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: var(--ov-mid); }
+.pp946-stats dd { margin: 0; font-family: var(--font-display); font-size: 22px; font-weight: 600; letter-spacing: -0.02em; color: var(--ov-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pp946-stats dd small { font-family: inherit; font-size: 12.5px; font-weight: 600; letter-spacing: 0; color: var(--ov-mid); }
+.pp946-days { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: space-evenly; gap: 6px; margin: 0; padding: 8px 0 0; list-style: none; border-top: 1px solid var(--ov-line); }
+.pp946-days li { display: grid; grid-template-columns: 40px minmax(0, 1fr) 54px 64px; align-items: center; gap: 10px; font-size: 13px; color: var(--ov-hi); }
+.pp946-days b { font-weight: 700; }
+.pp946-days .tp-num { text-align: right; font-weight: 600; white-space: nowrap; }
+.pp946-days .pp946-amt { color: var(--ov-mid); }
+.pp946-days li.is-off { color: var(--ov-mute); }
+.pp946-bar { display: block; height: 10px; border-radius: 999px; overflow: hidden; background: color-mix(in srgb, var(--ov-hi) 6%, transparent); }
+.pp946-bar i { display: block; height: 100%; width: calc(var(--f) * 100%); border-radius: inherit; background: var(--sh-cs-sky); }
+.pp946-days li.is-live .pp946-bar i { background: repeating-linear-gradient(135deg, var(--sh-cs-sky) 0 6px, color-mix(in srgb, var(--sh-cs-sky) 55%, transparent) 6px 12px); }
+.pp946-note { flex: 1 1 auto; margin: 0; }
+.pp946-foot { font-size: 12px; color: var(--ov-mid); }

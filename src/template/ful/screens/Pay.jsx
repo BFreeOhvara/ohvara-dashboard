@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Landmark, CircleCheck, ArrowUpRight, FileText, Info } from 'lucide-react'
+import { Landmark, CircleCheck, ArrowUpRight, FileText, Info, Clock3, Wallet, CalendarOff, CalendarCheck } from 'lucide-react'
 import { useFulPay, useFulSource } from '../data'
 import { FirstRun } from '../../DataState'
 import { Chip, Drawer, PillTabs, SampleTag, useNote } from '../../kit'
@@ -9,6 +9,8 @@ import { fp } from '../paths'
 import { TimesheetRows } from '../Clock879'
 import { MY_SHEET, MY_RATE, weekPay } from '../p879'
 import { hourGrid, hourLabel } from '../pay931'
+import { useTimeOff } from '../useTimeOff'
+import { dateLabel } from '../../../lib/vaShifts'
 import './pay931.css'
 
 // P845 — Pay, built with the care of the agent's Billing. P879 (Q75/Q76): VA pay is hourly only. P945: it's your set
@@ -22,6 +24,46 @@ export default function Pay() {
 // P852 — Pay on real data: payouts, the bank on file and the next payday are real (fulfillment_payouts, the payout
 // account). P945: pay comes from the rota (scheduled hours, minus days off); until real shifts are read the hours part says so instead of
 // showing sample hours. Bank details are only ever entered in the payout service's own form.
+// P946 — under Next payout, the pay period at a glance, filling the column so it ends level with the left one: hours
+// so far, earned so far, time off left, the next pay date, then the period day by day. Real: the hours part says it
+// fills in from the rota.
+function PayPeriod({ real = false, payday, i = 3 }) {
+  const off = useTimeOff()
+  const cents = usd(true)
+  const w = weekPay()
+  const g = hourGrid(MY_SHEET)
+  const top = Math.max(1, ...g.rows.map(r => r.hours))
+  const stats = [
+    [Clock3, 'Hours so far', real ? '0' : w.hours.toFixed(1), 'hours'],
+    [Wallet, 'Earned so far', cents(real ? 0 : w.pay), ''],
+    [CalendarOff, 'Time off left', String(off.left), off.left === 1 ? 'day' : 'days'],
+    [CalendarCheck, 'Next pay date', payday, ''],
+  ]
+  return (
+    <section className="fx-tile pp946" style={{ '--i': i }} aria-label="This pay period">
+      <header className="fx-tile-h"><span className="tp-grow"><h2>This pay period</h2><p>{real ? 'Mon to Sun · paid the Monday after' : `Nov 2 to 8 · ${cents(MY_RATE)} an hour`}</p></span></header>
+      <dl className="pp946-stats">
+        {stats.map(([Icon, k, v, unit]) => (
+          <div key={k}><dt><Icon size={14} aria-hidden="true" />{k}</dt><dd className={k === 'Next pay date' ? '' : 'tp-num'}>{v}{unit && <small> {unit}</small>}</dd></div>
+        ))}
+      </dl>
+      {real ? <p className="tp-sub pp946-note">Your hours fill in day by day once your rota is set.</p> : (
+        <ul className="pp946-days" aria-label="The pay period, day by day">
+          {g.rows.map(r => (
+            <li key={r.day} className={`${r.off ? 'is-off' : ''}${r.live ? ' is-live' : ''}`}>
+              <b>{r.name}</b>
+              <span className="pp946-bar" aria-hidden="true"><i style={{ '--f': r.hours / top }} /></span>
+              <span className="tp-num">{r.off ? 'Off' : `${r.hours.toFixed(1)} h`}</span>
+              <span className="tp-num pp946-amt">{r.off ? '' : cents(r.hours * MY_RATE)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <small className="pp946-foot">{off.next ? `Next day off ${dateLabel(off.next.date)}. ` : ''}Days off aren’t paid. Pay comes from your rota.</small>
+    </section>
+  )
+}
+
 function PayReal() {
   const { data: pay } = useFulPay()
   const money = usd()
@@ -52,6 +94,7 @@ function PayReal() {
           <span className="fx-next-who"><Landmark size={16} aria-hidden="true" /><span><b>{pay.account.last4 ? `${pay.account.bank} •••• ${pay.account.last4}` : pay.account.bank}</b><small>{pay.account.status}</small></span></span>
           <Link to={fp('settings')} className="fx-pillbtn fx-self">Pay details<ArrowUpRight size={14} /></Link>
         </section>
+        <PayPeriod real payday={pay.payday} />
       </div>
     </div>
   )
@@ -137,6 +180,7 @@ function PaySample() {
           <span className="fx-next-who"><Landmark size={16} aria-hidden="true" /><span><b>{pay.account.bank} •••• {pay.account.last4}</b><small>{pay.account.status}</small></span></span>
           <Link to={fp('settings')} className="fx-pillbtn fx-self">Pay details<ArrowUpRight size={14} /></Link>
         </section>
+        <PayPeriod payday={pay.payday} />
       </div>
 
       <Drawer open={how} onClose={() => setHow(false)} title="How pay works" sub="Sample amounts">

@@ -6,7 +6,38 @@ import { still } from './motion'
 // The record drawer: a lead or a client opens from the right at its own URL, the page behind dims and blurs.
 // Hero card, stage stepper, details, timeline, and the actions pinned at the bottom. Esc or ✕ closes; onClose
 // puts the URL back. On a phone it is a full-height sheet.
-export function RecordDrawer({ label, kicker, hero, stepper, children, actions, onClose, tone = 'blue' }) {
+// P946: `inline` draws the same record inside a page box (the VA Calendar's day slide-in) instead of a drawer: no
+// layer, no scrim, the page stays usable. Esc (when no pop-up is open over it) or the box's X/back calls onClose.
+export function RecordDrawer(props) {
+  return props.inline ? <RecordInline {...props} /> : <RecordModal {...props} />
+}
+
+function RecordInline({ label, kicker, hero, stepper, children, actions, onClose, tone = 'blue' }) {
+  const box = useRef(null)
+  const shut = useRef(onClose)
+  useEffect(() => { shut.current = onClose })
+  useEffect(() => {
+    box.current?.focus({ preventScroll: true })
+    const onKey = e => {
+      if (e.key !== 'Escape' || e.defaultPrevented || document.querySelector('.tp-layer:not(.is-leaving), .fx-rec-layer')) return
+      e.preventDefault()
+      shut.current?.()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+  return (
+    <section ref={box} tabIndex={-1} className={`fx-rec-inline is-${tone}`} aria-label={label}>
+      <p className="fx-rec-k">{kicker}</p>
+      <div className={`fx-hero-card is-${tone}`}>{hero}</div>
+      {stepper}
+      {children}
+      {actions && <footer className="fx-rec-f fx-rec-inline-f">{actions}</footer>}
+    </section>
+  )
+}
+
+function RecordModal({ label, kicker, hero, stepper, children, actions, onClose, tone = 'blue' }) {
   const [leaving, setLeaving] = useState(false)
   const panel = useRef(null)
   const close = useCallback(() => {

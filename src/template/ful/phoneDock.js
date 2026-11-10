@@ -10,16 +10,20 @@
 //   since   when the live call started (the rail's timer), or null
 //   ringId  the call ringing in now, or null
 //   missed  [{ id, seen }] rings nobody answered (timed out or Not now); unseen ones badge the rail icon
+//   locked  P946: the call ended and "How did it go?" isn't picked yet: the screen can't be slid away
+//   nudge   P946: counts tries to slide it away while locked (the screen shakes and marks the outcome in red)
 
 export const RING_MS = 15000 // P882: a ring gives up after 15 seconds and counts as a missed ring (routing then tries the next VA)
 
-export const initialDock = { open: false, line: null, since: null, ringId: null, missed: [] }
+export const initialDock = { open: false, line: null, since: null, ringId: null, missed: [], locked: false, nudge: 0 }
 
 export function dockReducer(s, a) {
   switch (a.type) {
     case 'open': return { ...s, open: true, missed: s.missed.map(m => ({ ...m, seen: true })) }
     // The tab on the screen's left edge, Esc, or another menu opening: slide it away. Never ends a call.
-    case 'close': return s.open ? { ...s, open: false } : s
+    // P946: not while the call's outcome is still to pick: the screen stays and nudges instead.
+    case 'close': return !s.open ? s : s.locked ? { ...s, nudge: (s.nudge || 0) + 1 } : { ...s, open: false }
+    case 'lock': return !!a.locked === !!s.locked ? s : { ...s, locked: !!a.locked }
     case 'toggle': return dockReducer(s, { type: s.open ? 'close' : 'open' })
     case 'ring': return { ...s, ringId: a.id, open: true }
     case 'answer': return { ...s, ringId: null }

@@ -1,0 +1,24 @@
+/* P946 — after a call, outcome first. Tokens only.
+   The outcome buttons wear the status colours the rest of the portal uses (--cs fill, --csi ink when picked);
+   trying to slide the phone away before one is picked shakes the screen and marks "How did it go?" in red. */
+
+.fs-call .fs-howwent { gap: 8px; padding: 10px 12px; margin: 0 -12px; border-radius: 16px; border: 1px solid transparent; transition: background-color .2s var(--fx-ease), border-color .2s var(--fx-ease); }
+.fs-call .fs-howwent > span { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.fs-call .fs-hw-need { font-size: 11.5px; font-weight: 600; color: var(--ov-mid); }
+.fs-call .fs-howwent.is-alarm { border-color: color-mix(in srgb, var(--sh-coral) 70%, transparent); background: color-mix(in srgb, var(--sh-coral) 12%, transparent); }
+.fs-call .fs-howwent.is-alarm > span { color: var(--sh-coral); }
+.fs-call .fs-howwent.is-alarm .fs-hw-need { color: var(--sh-coral); }
+
+.tp .fs-call .fs-outcomes .fx-chip.fs-oc { color: var(--ov-hi); background: color-mix(in srgb, var(--cs) 22%, transparent); border: 1px solid color-mix(in srgb, var(--cs) 55%, transparent); }
+.tp .fs-call .fs-outcomes .fx-chip.fs-oc:hover:not(:disabled) { background: color-mix(in srgb, var(--cs) 34%, transparent); }
+.tp .fs-call .fs-outcomes .fx-chip.fs-oc.is-on { --sp-fill: var(--cs); color: var(--csi); background: var(--cs); border-color: var(--cs); opacity: 1; }
+.tp .fs-call .fs-outcomes .fx-chip.fs-oc.is-on b { color: var(--csi); }
+
+/* The shake: short, side to side, once per try (two class names so a quick second try restarts it). */
+.fs-call.is-in.is-shake { animation: fs-shake .5s cubic-bezier(.36, .07, .19, .97) both; }
+.fs-call.is-in.is-shake2 { animation: fs-shake2 .5s cubic-bezier(.36, .07, .19, .97) both; }
+@keyframes fs-shake { 10%, 90% { transform: translateX(-2px); } 20%, 80% { transform: translateX(4px); } 30%, 50%, 70% { transform: translateX(-8px); } 40%, 60% { transform: translateX(8px); } 100% { transform: none; } }
+@keyframes fs-shake2 { 10%, 90% { transform: translateX(-2px); } 20%, 80% { transform: translateX(4px); } 30%, 50%, 70% { transform: translateX(-8px); } 40%, 60% { transform: translateX(8px); } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .fs-call.is-in.is-shake, .fs-call.is-in.is-shake2 { animation: none; }
+}

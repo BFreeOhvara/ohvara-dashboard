@@ -8,8 +8,8 @@
 .fx-week.cal910 .tp-tgrid-h b[role="button"]:hover { background: color-mix(in srgb, var(--ov-data-a) 12%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ov-data-a) 40%, transparent); }
 .fx-week.cal910 .tp-tgrid-h b[role="button"]:active { transform: translateY(1px) scale(.98); background: color-mix(in srgb, var(--ov-data-a) 20%, transparent); }
 .fx-week.cal910 .tp-tgrid-h b[aria-pressed="true"] { background: color-mix(in srgb, var(--ov-data-a) 18%, transparent); box-shadow: inset 0 0 0 1.5px var(--ov-data-a); }
-.fx-week.cal910.is-week .tp-tcol:hover:not(:has(.tp-ev:hover)) { background-color: color-mix(in srgb, var(--ov-data-a) 6%, transparent); }
-.fx-week.cal910.is-week .tp-tcol:active { background: color-mix(in srgb, var(--ov-data-a) 11%, transparent); }
+/* P946: no whole-day highlight on hover (every role); the call boxes keep theirs. */
+.fx-week.cal910.is-week .tp-tcol:active:not(:has(.tp-ev:active)) { background: color-mix(in srgb, var(--ov-data-a) 11%, transparent); }
 .fx-week.cal910 .tp-ev { cursor: pointer; transition: transform .12s var(--fx-ease), filter .15s; }
 .fx-week.cal910 .tp-ev:hover { filter: brightness(1.05) saturate(1.1); }
 .fx-week.cal910 .tp-ev:active { transform: scale(.98); }

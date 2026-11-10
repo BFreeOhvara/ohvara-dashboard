@@ -1,0 +1,103 @@
+/* P946 — the VA Overview, reworked. Tokens only. The hero (the next call) uses its whole box; today's calls are filled
+   cards in the status colours the agent side uses; three small tiles (hours, pay so far, time off) under the hero.
+   Nothing scrolls inside a box: the page fits, or scrolls as a whole. */
+
+.ov946.fx-ovl { align-items: stretch; height: auto; }
+.ov946 .fx-ovl-main { min-height: 0; }
+.ov946 .fs-ov-side { display: flex; flex-direction: column; align-self: stretch; min-height: 0; }
+
+/* Tile header icon: a small round chip, like the agent Overview's */
+.ov946-ic { width: 30px; height: 30px; flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;
+  color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 9%, transparent); }
+
+/* Hero: the next call */
+.ov946-hero { flex: 1 1 auto; min-height: 0; gap: 14px; }
+.ov946-next { flex: 1 1 auto; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 18px; align-items: stretch; min-height: 0; }
+.ov946-when { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 16px; border-radius: 18px;
+  background: color-mix(in srgb, var(--ov-hi) 4%, transparent); border: 1px solid var(--fx-edge); }
+.ov946-count { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; gap: 10px; }
+.ov946-when .fs-count { font-size: 68px; }
+.ov946-when .fs-count small { margin-left: 6px; font-size: 16px; color: var(--ov-mid); }
+.ov946-when .fs-cring { width: 84px; height: 84px; }
+.ov946-acts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.ov946-acts > * { justify-content: center; min-width: 0; white-space: nowrap; }
+.ov946-acts .ov946-start { grid-column: 1 / -1; min-height: 46px; font-size: 15px; }
+.ov946-acts > :only-child, .ov946-acts > .ov946-start + :last-child { grid-column: 1 / -1; }
+.ov946-why { font-size: 12px; color: var(--ov-mid); }
+
+.ov946-who { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ov946-client { align-self: stretch; padding: 8px 14px 8px 8px; border-radius: 18px; background: color-mix(in srgb, var(--ov-hi) 6%, transparent); border: 1px solid var(--fx-edge); }
+.ov946-client .tp-av { width: 40px; height: 40px; font-size: 14px; }
+.ov946-client b { display: block; font-size: 16px; font-weight: 700; color: var(--ov-hi); }
+.ov946-client small { display: block; font-size: 12.5px; color: var(--ov-mid); }
+.ov946-facts { flex: 1 1 auto; display: grid; grid-auto-rows: minmax(min-content, 1fr); gap: 8px; margin: 0; min-height: 0; }
+.ov946-facts > div { display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 10px 14px; border-radius: 16px; min-width: 0;
+  background: color-mix(in srgb, var(--ov-hi) 4%, transparent); border: 1px solid var(--fx-edge); }
+.ov946-facts dt { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: var(--ov-mid); }
+.ov946-facts dd { margin: 0; font-size: 14px; font-weight: 600; line-height: 1.35; color: var(--ov-hi); }
+.ov946-facts dd q { quotes: '“' '”'; font-weight: 500; }
+.ov946-facts .is-none dd { font-weight: 500; color: var(--ov-mid); }
+.ov946-calm { flex: 1 1 auto; }
+
+/* The day along the bottom of the hero: the ring, the count, and calls per hour across the rest */
+.ov946-pulse { flex: none; display: flex; align-items: center; gap: 14px; margin-top: auto; padding: 10px 14px; }
+.ov946-pulse-t { flex: none; }
+.ov946-pulse-t b { display: block; font-size: 13.5px; font-weight: 600; color: var(--ov-hi); }
+.ov946-pulse-t small { display: block; font-size: 11.5px; color: var(--ov-mid); }
+.ov946-spark.fs-spark { flex: 1 1 auto; width: auto; min-width: 80px; height: 40px; }
+
+/* Training: one card, until it's finished */
+.ov946-train { flex-direction: row; align-items: center; gap: 16px; padding: 16px 18px; }
+.ov946-train-ic { width: 46px; height: 46px; flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 14px;
+  color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 12%, transparent); }
+.ov946-train h2 { margin: 0; font-size: 17px; }
+.ov946-train p { margin: 2px 0 8px; font-size: 12.5px; color: var(--ov-mid); }
+.ov946-bar { display: block; height: 8px; border-radius: 999px; overflow: hidden; background: color-mix(in srgb, var(--ov-hi) 16%, transparent); }
+.ov946-bar i { display: block; height: 100%; width: calc(var(--p) * 100%); min-width: 8px; border-radius: inherit; background: var(--ov-hi); transition: width .6s var(--fx-ease); }
+.ov946-train .tp-primary { flex: none; }
+
+/* Hours · Pay so far · Time off */
+.ov946-trio { flex: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.ov946-trio .fx-tile { gap: 8px; padding: 14px 16px; }
+.ov946-trio .fx-huge { font-size: 38px; }
+.ov946-trio .fx-huge small { margin-left: 6px; font-size: 14px; font-weight: 600; letter-spacing: 0; color: var(--ov-mid); }
+.ov946-foot { margin-top: auto; font-size: 12.5px; color: var(--ov-mid); }
+
+/* Today's calls: filled cards, the status colour with its own ink (as the agent's to-do cards) */
+.ov946-today { flex: 1 1 auto; min-height: 0; }
+.ov946-cards { display: flex; flex-direction: column; gap: 5px; margin: 0; padding: 0; list-style: none; }
+.ov946-cards li { animation: fx-row .45s var(--fx-ease) both; animation-delay: calc(.12s + var(--i, 0) * 45ms); }
+.ov946-card { --ov-hi: var(--ci); --ov-mid: color-mix(in srgb, var(--ci) 80%, transparent);
+  display: flex; align-items: center; gap: 12px; padding: 6px 12px; border-radius: 14px; text-decoration: none; color: var(--ci); background: var(--cf);
+  border: 1px solid transparent; transition: transform .25s var(--fx-ease), box-shadow .25s var(--fx-ease); }
+.ov946-card:hover { transform: translateX(3px); box-shadow: 0 10px 22px -16px rgba(0, 0, 0, .55); }
+.ov946-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ov946-card .ov946-t { width: 64px; flex: none; font-size: 12.5px; font-weight: 700; color: var(--ov-hi); }
+.ov946-card .tp-grow { min-width: 0; }
+.ov946-card .tp-grow b { display: block; font-size: 13.5px; font-weight: 700; color: var(--ov-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ov946-card .tp-grow small { display: block; font-size: 11.5px; font-weight: 500; color: var(--ov-mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ov946-card.is-done { opacity: .72; }
+.ov946-card.is-next { border-color: var(--ci); box-shadow: 0 0 0 1px var(--ci); }
+.ov946-tag { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; color: var(--ci);
+  background: color-mix(in srgb, var(--ci) 12%, transparent); }
+.ov946-tag.is-next { color: var(--cf); background: var(--ci); }
+
+/* A narrower window: one column in reading order (the next call, training, today's calls, the three tiles) */
+@media (max-width: 999.98px) {
+  .ov946 .ov946-hero { order: 2; } .ov946 .ov946-train { order: 3; } .ov946 .ov946-today { order: 4; } .ov946 .ov946-trio { order: 5; }
+}
+@media (max-width: 760px) {
+  .ov946-next { grid-template-columns: minmax(0, 1fr); }
+  .ov946-when .fs-count { font-size: 52px; }
+  .ov946-trio { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .ov946-trio .ov946-off { grid-column: 1 / -1; }
+  .ov946-train { flex-wrap: wrap; }
+  .ov946-train .tp-primary { width: 100%; justify-content: center; }
+  .ov946-pulse .ov946-spark { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ov946-cards li, .ov946-bar i { animation: none; transition: none; }
+  .ov946-card { transition: none; }
+}
+
+.ov946-chart { margin-top: auto; }

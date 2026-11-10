@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CalendarClock, MapPin, Hand, Undo2, Send, CircleCheck, Check, Phone } from 'lucide-react'
+import { CalendarClock, MapPin, Hand, Undo2, Send, CircleCheck, Check } from 'lucide-react'
 import { useFulTasks, useFulActions, bookedText } from '../data'
 import { Avatar, Chip, Drawer, PillTabs, useNote } from '../../kit'
 import { MoveBooking } from '../MoveBooking'
@@ -84,7 +84,7 @@ function WhatHappened({ t }) {
   )
 }
 
-export function TaskDrawer({ id, onClose }) {
+export function TaskDrawer({ id, onClose, inline = false }) {
   const { data: tasks } = useFulTasks()
   const { startTask, putBack, finishTask, moveTask, sendToAgent, showLive } = useFulActions()
   const note = useNote()
@@ -93,7 +93,7 @@ export function TaskDrawer({ id, onClose }) {
   const [result, setResult] = useState(null)
   const [why, setWhy] = useState(SEND_REASONS[0])
   const [lost, setLost] = useState(null)
-  if (!t) return <RecordDrawer label="Step not found" kicker="Calendar" onClose={onClose} hero={<h2>Sent back</h2>}><p className="fx-calm"><Check size={16} aria-hidden="true" />This step went back to the agent.</p></RecordDrawer>
+  if (!t) return <RecordDrawer inline={inline} label="Step not found" kicker="Calendar" onClose={onClose} hero={<h2>Sent back</h2>}><p className="fx-calm"><Check size={16} aria-hidden="true" />This step went back to the agent.</p></RecordDrawer>
   const tone = kindTone(t.kind)
   const done = t.status === 'done'
   const canMove = !done && isCallKind(t.kind) && !!moveTask
@@ -102,7 +102,7 @@ export function TaskDrawer({ id, onClose }) {
   const startCall = () => { if (!t.held) startTask(t.id); showLive({ kind: 'task', id: t.id }) }
   const openClient = t.client_id ? <Link to={fp('clients', t.client_id)} className="tp-btn ov-ghost">Open client</Link> : null
   return (
-    <RecordDrawer label={`${KIND[t.kind]} for ${t.name}`} kicker={<>{booked ? 'Booked call' : 'Client step'} · {t.agent}{t.agent ? '’s client' : ''} <HelpDot lesson={t.kind} inline /></>} tone={tone} onClose={onClose}
+    <RecordDrawer inline={inline} label={`${KIND[t.kind]} for ${t.name}`} kicker={<>{booked ? 'Booked call' : 'Client step'} · {t.agent}{t.agent ? '’s client' : ''} <HelpDot lesson={t.kind} inline /></>} tone={tone} onClose={onClose}
       hero={isCallKind(t.kind) ? <>
         <div className="fx-hero-top"><span className="fx-when"><CalendarClock size={13} aria-hidden="true" />{t.due_text}</span><Chip tone={tone}>{whyShort(t)}</Chip></div>
         <h2>{t.name}</h2>
@@ -121,9 +121,8 @@ export function TaskDrawer({ id, onClose }) {
         <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('send')}><Send size={15} />Send to agent</button>
         {t.held && <button type="button" className="tp-btn ov-ghost" onClick={() => { putBack(t.id); note('Put back') }}><Undo2 size={15} />Put back</button>}
       </> : t.held ? <>
-        {/* P876: a servicing step is a task the system gave the VA; its Call button starts the call on the phone. */}
-        <button type="button" className="tp-primary fx-accent" onClick={() => showLive({ kind: 'task', id: t.id })}><Phone size={16} />Call</button>
-        <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('done')}><CircleCheck size={16} />Record the result</button>
+        {/* P946: no Call button here. A VA calls only from the phone on the rail when a call is due (Start call, or a call that comes in). */}
+        <button type="button" className="tp-primary fx-accent" onClick={() => setPanel('done')}><CircleCheck size={16} />Record the result</button>
         <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('send')}><Send size={15} />Send to agent</button>
         <span className="tp-grow" />
         <button type="button" className="tp-btn ov-ghost" onClick={() => { putBack(t.id); note('Put back') }}><Undo2 size={15} />Put back</button>

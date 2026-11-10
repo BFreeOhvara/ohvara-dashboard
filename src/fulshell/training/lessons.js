@@ -124,7 +124,7 @@ export const LESSONS = [
     minutes: 4,
     why: 'Agents see your notes on their client\'s timeline, and nobody can follow up on a call that was never logged.',
     steps: [
-      'After every call, the phone asks How did it go? Pick the result and press Save · Available before anything else. A wrap-up timer counts down, and you are free for the next call once it is saved.',
+      'After every call, the phone asks How did it go? Pick the result first: the phone can\'t be closed until you do (it shakes and marks How did it go? in red). The buttons wear the status colours: green for done, amber for no answer. Then press Save · Available. A wrap-up timer counts down, and you are free for the next call once it is saved.',
       'For a cancellation call: press Cancelled once the carrier confirms. A note is optional. No answer can carry a short note.',
       'For a lead: the call result is Reached them, No answer or Left a voicemail. Then set the lead\'s outcome on the lead (booked, live transfer, callback, not interested, close them out).',
       'Write notes an agent can act on: what they asked, what you agreed, what happens next. Facts, not opinions.',
@@ -134,7 +134,7 @@ export const LESSONS = [
     script: null,
     dos: ['Log before the next call', 'Write who, what and next step'],
     donts: ['Don\'t batch your logging at the end of the day', 'Don\'t write guesses as facts', 'Don\'t put prices or advice in notes'],
-    portal: { shot: 'phone', clicks: [{ spot: 'phone', text: 'The phone, bottom right. After a call it asks How did it go?' }, { spot: 'plus', text: 'The + menu: Log a call, for a call you have not logged yet' }] },
+    portal: { shot: 'phone', clicks: [{ spot: 'phone', text: 'The phone on the left rail. After a call it asks How did it go? and stays open until you pick' }, { spot: 'plus', text: 'The + menu: Log a call, for a call you have not logged yet' }] },
     check: [
       ok('When do you log a call?', ['At the end of the shift', 'Straight after it, before the next call', 'Only if it went well', 'Once a week'], 1, 'Log before your next call.'),
       ok('You mark a cancellation call Cancelled. What must you add?', ['The client\'s birthday', 'Nothing. A note is optional', 'The new premium', 'A photo of the policy'], 1, 'Nothing is required. Add a note if something was unusual.'),
@@ -180,7 +180,7 @@ export const LESSONS = [
     // P907: VAs don't do speed to lead any more (the AI caller does). The lesson keeps its id (its video, the "?" map)
     // and now teaches working in bookings.
     id: 'speed',
-    tryIt: { path: ['overview'], do: 'Open your next call from Next calls on your Overview and press Start.', button: 'Start' },
+    tryIt: { path: ['overview'], do: 'On your Overview, press Start call in the Next call box when it turns on.', button: 'Start call' },
     title: 'Working in bookings',
     job: 'The AI calls new leads. You work booked calls, at the time the system set.',
     minutes: 4,
@@ -191,9 +191,11 @@ export const LESSONS = [
       'Everything you do is a booked call on your Calendar: hand-off calls after a sale, cancelling the old policy, saves, change and cancel requests, callbacks, welcome calls and yearly reviews.',
       'The system books each call itself: the next open time in the client\'s window (morning, afternoon or evening, on their clock) with a VA who is free.',
       'A hand-off call or a cancel call opens with a box at the top: whether an old policy has to be cancelled and by when, and anything the agent said our team should know. Read it before you dial.',
-      'Your Overview shows the next call with a countdown, and Next calls lists the rest of today.',
+      'Your Overview shows the next call with a countdown, why we\'re calling, the agent\'s note, the carrier and Start call. Today\'s calls lists the rest of the day, each in its status colour.',
       'Call at the booked time. No answer: log it, and the system books the next try for the next business day.',
       'The client wants another time? Open the call and press Move. They get a text with the new time.',
+      'On the Calendar, click a call: its day slides in with that call open inside it. Back or X returns to the day\'s calls; X again closes the day.',
+      'You call only from the phone on the left rail: Start call when a call is due, or a call that comes in. There is no Call button on Clients.',
     ],
     script: {
       title: 'Opening a booked call',
@@ -203,7 +205,7 @@ export const LESSONS = [
         tip('Then the reason for the call: the hand-off, the old policy, the change they asked for.'),
       ],
     },
-    dos: ['Call at the booked time', 'Move a call when the client asks', 'Check Next calls on your Overview'],
+    dos: ['Call at the booked time', 'Move a call when the client asks', 'Check Today\'s calls on your Overview'],
     donts: ['Don\'t call a client outside their booking unless they ask', 'Don\'t text a client from your own phone'],
     portal: { shot: 'schedule', clicks: [{ spot: 'cal', text: 'Your booked calls: every one has its time already' }] },
     check: [

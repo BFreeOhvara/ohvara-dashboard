@@ -268,12 +268,13 @@ function useHeadStats(page) {
   const weekCancelled = day.week.filter(k => k.status === 'cancelled').length
   const att = clients.filter(c => c.stage === 'needs_attention').length
   return {
-    overview: [S(PhoneCall, day.today.length, 'booked calls today', { chip: [`${doneToday} done`, 'up'] }), S(Clock3, todayLeft, 'still to call', { chip: day.next ? [`next ${day.next.time}`, 'blue'] : null }), S(Wallet, pay.earned, 'earned this week', { fmt: money })],
+    overview: [S(PhoneCall, day.today.length, 'booked calls today', { chip: [`${doneToday} done`, 'up'] }), S(Clock3, todayLeft, 'still to call', { chip: day.next ? [`next ${day.next.time}`, 'blue'] : null }), S(Wallet, real ? 0 : weekPay().pay, 'earned this week', { fmt: money })],
     calendar: [S(PhoneCall, todayLeft, 'calls left today', { chip: day.next ? [`next ${day.next.time}`, 'blue'] : null }), S(CalendarCheck, sched.filter(i => weeks[0].includes(i.day)).length, 'booked this week', { chip: kinds > 1 ? [`${kinds} kinds today`, 'up'] : null }), S(CheckCircle2, weekCancelled, 'old policies cancelled', { chip: ['Confirmed', 'up'] })],
     clients: [S(Users, clients.length, 'clients'), S(ShieldCheck, agents.length, 'agents you serve'), S(TriangleAlert, att, 'need attention', { chip: att ? ['See who', 'warn'] : null })],
     // P918: Schedule is the VA's own hours.
     schedule: [S(CalendarCheck, shift.thisWeek || 0, 'shifts this week', { chip: shift.onToday ? ['On today', 'up'] : null }), S(Clock3, real ? 0 : weekPay().hours, 'hours this week', { fmt: n => (real ? '0' : n.toFixed(1)) }), S(CalendarOff, Math.max(0, offRoom.allowance - offRoom.used), 'days off left this month')],
-    pay: [S(Wallet, pay.earned, 'earned this week', { fmt: money, chip: [`${money(pay.lastWeek)} last week`, 'blue'] }), S(CheckCircle2, pay.verified, 'verified', { fmt: money }), S(CalendarCheck, pay.rows.length, 'cancellations this week')],
+    // P946: pay is hourly (P879/P945): what's earned so far, the hours, and days off left. No per-cancellation pay.
+    pay: [S(Wallet, real ? 0 : weekPay().pay, 'earned this week', { fmt: money, chip: [`${money(pay.lastWeek)} last week`, 'blue'] }), S(Clock3, real ? 0 : weekPay().hours, 'hours this week', { fmt: n => (real ? '0' : n.toFixed(1)) }), S(CalendarOff, Math.max(0, offRoom.allowance - offRoom.used), 'days off left this month')],
     training: [S(GraduationCap, tr.passed, `of ${tr.total} lessons passed`, { chip: tr.complete ? ['Complete', 'up'] : null }), S(Trophy, tr.avg == null ? 0 : Math.round(tr.avg * 100), 'average check score', { fmt: n => `${n}%` }), S(Clock3, tr.left, 'lessons to go', { chip: tr.left ? ['Next one open', 'blue'] : null })],
     settings: [S(CalendarCheck, shift.thisWeek, 'shifts this week'), S(Users, agents.length, 'agents you serve'), S(Bell, settings.notifications.filter(n => n.push).length, 'alerts switched on')],
   }[page] || []
@@ -328,6 +329,7 @@ export default function FulFrame() {
   const onAnswer = useCallback(() => dockDo({ type: 'answer' }), [])
   const onDecline = useCallback(() => dockDo({ type: 'miss', declined: true }), [])
   const onLine = useCallback((l, since) => dockDo({ type: 'line', line: l, since }), [])
+  const onLock = useCallback(locked => dockDo({ type: 'lock', locked }), [])
   const line = railState(dock) // the rail icon: 'ringing' | 'live' | 'after' | null
   const badge = dockBadge(dock)
   useEffect(() => { if (panel) dockDo({ type: 'close' }) }, [panel])
@@ -521,7 +523,7 @@ export default function FulFrame() {
       <DayOffDrawer open={panel === 'dayoff'} onClose={close} />
       <ActionMenu open={panel === 'create'} onClose={close} at={menuAt} items={actions} back={plusFrom} />
       <GetApp open={panel === 'app'} onClose={close} />
-      <FulPhone open={dock.open} onClose={closePhone} ringId={dock.ringId} onAnswer={onAnswer} onDecline={onDecline} onLine={onLine}
+      <FulPhone open={dock.open} onClose={closePhone} ringId={dock.ringId} onAnswer={onAnswer} onDecline={onDecline} onLine={onLine} onLock={onLock} nudge={dock.nudge}
         missed={dock.missed} live={live} onLive={startFor} startReq={startReq} onBook={onBook} />
       {/* P918: the phone slid away during a live call leaves a tab on the right edge, above any open drawer. */}
       {line === 'live' && !dock.open && createPortal(

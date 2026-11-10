@@ -43,13 +43,16 @@ export function WeekList({ days, today, onOpen, name, num = d => d, itemsOf, lin
 }
 
 // The day box: slides in from the right (a bottom sheet on a phone). children = the day's agenda.
-export function DayBox({ title, sub, leaving, onClose, children }) {
+// P946: onBack = a call is open inside the box (the VA Calendar): the back arrow and the X both go back to the day's
+// list; with the list showing, the X closes the box.
+export function DayBox({ title, sub, leaving, onClose, onBack = null, children }) {
+  const back = onBack || onClose
   return (
-    <aside className={`fx-tile fx-s4 fx-agenda fx-daybox${leaving ? ' is-leaving' : ''}`} aria-label={title}>
+    <aside className={`fx-tile fx-s4 fx-agenda fx-daybox${onBack ? ' is-detail' : ''}${leaving ? ' is-leaving' : ''}`} aria-label={title}>
       <header className="fx-tile-h">
-        <button type="button" className="tp-btn ov-ghost fx-daybox-back" onClick={onClose}><ArrowLeft size={15} aria-hidden="true" />Back to the week</button>
+        <button type="button" className="tp-btn ov-ghost fx-daybox-back" onClick={back}><ArrowLeft size={15} aria-hidden="true" />{onBack ? 'Back to the day' : 'Back to the week'}</button>
         <span className="tp-grow"><h2>{title}</h2><p>{sub}</p></span>
-        <button type="button" className="fx-x fx-daybox-x" aria-label="Close the day" onClick={onClose}><X size={17} /></button>
+        <button type="button" className="fx-x fx-daybox-x" aria-label={onBack ? 'Back to the day' : 'Close the day'} onClick={back}><X size={17} /></button>
       </header>
       {children}
     </aside>
