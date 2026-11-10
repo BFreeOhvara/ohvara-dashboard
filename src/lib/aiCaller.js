@@ -21,7 +21,7 @@ export const DRAFT_WORDS = {
 // The engines the adapter can run on (supabase/functions/ai-caller/providers.ts). Prices are list prices, Nov 2026,
 // to check on each provider's own page before signing up. Nothing is signed up for.
 export const PROVIDERS = [
-  { key: 'retell', name: 'Retell AI', recommended: true, perMin: 'about $0.07–$0.31 a minute all in (voice $0.055 + model + phone line); expect about $0.13',
+  { key: 'retell', name: 'Retell AI', recommended: true, perMin: 'about $0.155 a minute on our setup (voice engine $0.055 + ElevenLabs voice $0.04 + gpt-4.1 $0.045 + phone line $0.015; Retell price list, Nov 10 2026), billed per second, only answered calls',
     outbound: 'Yes: one API call per lead', transfer: 'Cold and warm transfer built in', transcripts: 'Kept by Retell per call (transcript + summary sent to our webhook); storage can be turned down' },
   { key: 'vapi', name: 'Vapi', perMin: '$0.05 platform + voice, model and phone line; about $0.10–$0.30 a minute',
     outbound: 'Yes: one API call per lead', transfer: 'Transfer tool (cold or warm)', transcripts: 'Kept by Vapi per call, sent to our webhook at the end' },

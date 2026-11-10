@@ -17,7 +17,10 @@ export type Call = {
   provider_call_id: string | null; control_url?: string | null; check_id: string | null; routed: string | null; summary: string | null
   booked_for: string | null
 }
-export type Lead = { id: string; first: string; phone: string; state: string | null; tz: string | null; need: string | null; age: string | null }
+export type Lead = { id: string; first: string; phone: string; state: string | null; tz: string | null; need: string | null; age: string | null
+  // P926: an admin test call (a sample lead): the switch and the lead rules are skipped, the agent's check is answered
+  // for them (check), and transfer_to stands in for the agent's phone. Never set on a real lead.
+  test?: { check?: 'yes' | 'no' | 'none'; transferTo?: string | null } | null }
 export type Agent = { id: string; first: string; phone: string | null; mode: 'appts' | 'both'; hours: Record<string, unknown>; tz: string; reachable: boolean }
 export type CheckRow = { id: string; status: string; answer: 'yes' | 'no' | null; expires_at: string | null
   summary?: { name?: string | null; age?: string | null; state?: string | null; need?: string | null } }
@@ -49,6 +52,15 @@ export type Env = { now(): number; from: string | null; words: Record<string, st
 
 const refuse = (code: string, status = 400) => Object.assign(new Error(code), { status, code })
 
+// P926: on a test call the agent takes live calls all day and their phone is the test transfer number.
+const ALL_DAY = Object.fromEntries(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => [d, { on: true, start: '12:00 AM', end: '11:59 PM' }]))
+export function testAgent(agent: Agent | null, lead: Lead | null): Agent | null {
+  if (!agent || !lead?.test) return agent
+  const t = lead.test
+  if (t.check !== 'yes' && t.check !== 'no' && t.check !== 'none') return { ...agent, mode: 'appts' } // books
+  return { ...agent, mode: 'both', hours: ALL_DAY, reachable: true, phone: t.transferTo || agent.phone }
+}
+
 // The machine's phase for a stored call.
 const phaseOf = (c: Call) => (c.status === 'queued' ? 'dialing' : c.status)
 const step = (c: Call, ev: Record<string, unknown>, ctx: Record<string, unknown> = {}) =>
@@ -58,14 +70,21 @@ const step = (c: Call, ev: Record<string, unknown>, ctx: Record<string, unknown>
 export async function start(store: Store, provider: Provider, env: Env, callId: string) {
   const c = await store.call(callId)
   if (!c || c.status !== 'queued') return { ok: false, code: 'gone' }
-  const live = await store.live()
-  if (!live.on) { await store.toVa(c.id, 'switch_off'); return { ok: false, code: 'switch_off' } }
-  if (!provider.ready) { await store.toVa(c.id, 'not_connected'); return { ok: false, code: 'not_connected' } }
-  // The rules again at the moment of the dial (an opt-out or the window may have changed since the lead came in).
-  const w = await store.takes(c.lead_id)
-  if (w.by !== 'ai') { await store.toVa(c.id, w.reason || 'rules'); return { ok: false, code: w.reason } }
   const lead = await store.lead(c.lead_id)
-  const agent = c.agent_id ? await store.agent(c.agent_id) : null
+  const live = await store.live()
+  if (lead?.test) {
+    // P926: a test call skips the switch and the lead rules (it only ever dials the number the admin gave), and is
+    // never tried twice and never reaches a VA.
+    if (c.attempt > 1) { await store.result(c.id, 'no_answer', { summary: 'Test call: no second try.' }); return { ok: false, code: 'test_no_retry' } }
+    if (!provider.ready) { await store.result(c.id, 'no_answer', { summary: 'Test call: provider not connected.' }); return { ok: false, code: 'not_connected' } }
+  } else {
+    if (!live.on) { await store.toVa(c.id, 'switch_off'); return { ok: false, code: 'switch_off' } }
+    if (!provider.ready) { await store.toVa(c.id, 'not_connected'); return { ok: false, code: 'not_connected' } }
+    // The rules again at the moment of the dial (an opt-out or the window may have changed since the lead came in).
+    const w = await store.takes(c.lead_id)
+    if (w.by !== 'ai') { await store.toVa(c.id, w.reason || 'rules'); return { ok: false, code: w.reason } }
+  }
+  const agent = c.agent_id ? testAgent(await store.agent(c.agent_id), lead) : null
   if (!lead || !agent) { await store.toVa(c.id, 'no_lead_or_agent'); return { ok: false, code: 'no_lead_or_agent' } }
   const ds = await store.deedstoneFrom?.(agent.id, c.id).catch(() => null)
   const from = ds?.phone || env.from
@@ -138,7 +157,8 @@ async function slotsReply(store: Store, env: Env, c: Call, say?: string, agentFi
 }
 
 export async function tool(store: Store, provider: Provider, env: Env, c: Call, name: string, args: Record<string, unknown>) {
-  const agent = c.agent_id ? await store.agent(c.agent_id) : null
+  const lead0 = await store.lead(c.lead_id)
+  const agent = c.agent_id ? testAgent(await store.agent(c.agent_id), lead0) : null
   const nowMs = env.now()
   switch (name) {
     case 'stop': { // "Stop calling" / "don't call me": honoured at once, everywhere.
@@ -163,10 +183,17 @@ export async function tool(store: Store, provider: Provider, env: Env, c: Call, 
         await store.status(c.id, 'booking', { routed: r.s.routed, summary: args.summary ?? null })
         return slotsReply(store, env, c, pre, agent.first)
       }
-      const lead = await store.lead(c.lead_id)
+      const lead = lead0
       const chk = await store.insertCheck({ agent_id: agent.id, lead_id: c.lead_id, ai_call_id: c.id,
         summary: { name: lead?.first ?? null, age: lead?.age ?? null, state: lead?.state ?? null, need: lead?.need ?? null, your_client: false } })
-      if (!chk || !(await store.sendCheck(chk, agent.id))) {
+      // P926: a test call's check is answered for the agent (Yes / No at once; none runs out after 30 s like a real one).
+      const t = lead?.test?.check
+      const sent = chk && (t
+        ? (await store.markCheck(chk.id, t === 'none'
+            ? { sent_at: new Date(nowMs).toISOString(), expires_at: new Date(nowMs + AI_RULES.checkSecs * 1000).toISOString(), is_test: true }
+            : { status: t, answer: t, sent_at: new Date(nowMs).toISOString(), answered_at: new Date(nowMs).toISOString(), expires_at: new Date(nowMs + AI_RULES.checkSecs * 1000).toISOString(), is_test: true }), true)
+        : await store.sendCheck(chk, agent.id))
+      if (!chk || !sent) {
         await store.status(c.id, 'booking', { routed: r.s.routed, summary: args.summary ?? null })
         return slotsReply(store, env, c, pre, agent.first) // agent being checked by a VA, or the push failed: book
       }

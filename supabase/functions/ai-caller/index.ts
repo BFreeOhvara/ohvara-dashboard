@@ -19,6 +19,7 @@ import { noProvider, retell, vapi, ghl, type Provider } from './providers.ts'
 import { isCron } from '../_shared/cronAuth.ts'
 import { sendersFromEnv } from '../notify-push/senders.ts'
 import { checkPush, clearPush, sendAll } from '../notify-push/transfer.ts'
+import { retellVoices, retellSetup, retellNumber, retellCall } from './retellAdmin.ts'
 
 const env = (k: string) => Deno.env.get(k) ?? ''
 const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'))
@@ -58,11 +59,13 @@ const store: Store = {
   async call(id) { const { data } = await admin.from('ai_calls').select(callCols).eq('id', id).maybeSingle(); return data },
   async callByProvider(pid) { if (!pid) return null; const { data } = await admin.from('ai_calls').select(callCols).eq('provider_call_id', pid).maybeSingle(); return data },
   async lead(id) {
-    const { data: l } = await admin.from('leads').select('id, contact_name, phone, state, qualifier_answers, inbound_product').eq('id', id).maybeSingle()
+    const { data: l } = await admin.from('leads').select('id, contact_name, phone, state, qualifier_answers, inbound_product, is_sample').eq('id', id).maybeSingle()
     if (!l) return null
     const qa = (l.qualifier_answers ?? {}) as Record<string, unknown>
+    // P926: only a sample lead can carry a test (admin test calls); a real lead never does.
+    const test = l.is_sample && qa.test && typeof qa.test === 'object' ? qa.test as { check?: 'yes' | 'no' | 'none'; transferTo?: string } : null
     return { id: l.id, first: String(l.contact_name ?? '').split(' ')[0] || 'there', phone: l.phone, state: l.state, tz: (qa.tz as string) ?? null,
-      need: (l.inbound_product as string) ?? 'Mortgage protection', age: (qa.age_band as string) ?? null }
+      need: (l.inbound_product as string) ?? 'Mortgage protection', age: (qa.age_band as string) ?? null, test }
   },
   async agent(id) {
     const [{ data: p }, { data: lp }, reach] = await Promise.all([
@@ -118,6 +121,57 @@ const store: Store = {
   },
 }
 
+// ── P926: Retell setup and admin test calls (cron secret only; CC runs them through fulfillment_cron_post) ──────
+const E164 = /^\+1[2-9]\d{9}$/
+const SCENARIOS: Record<string, 'yes' | 'no' | 'none' | null> = { booked: null, transfer: 'yes', agent_no: 'no', not_now: null, no_answer: null }
+async function retellAction(action: string, body: any, d: { store: Store; provider: Provider; env: any }) {
+  const f = fetch as unknown as Parameters<typeof retell>[2]
+  const key = env('RETELL_API_KEY')
+  const hook = `${env('SUPABASE_URL')}/functions/v1/ai-caller?k=${encodeURIComponent(env('AI_WEBHOOK_SECRET'))}`
+  switch (action) {
+    case 'retell_status': return { key: !!key, agent: !!env('RETELL_AGENT_ID'), llm: !!env('RETELL_LLM_ID'), webhook_secret: !!env('AI_WEBHOOK_SECRET'), provider: env('AI_PROVIDER') || 'none', from: !!env('AI_FROM_NUMBER'), ready: d.provider.ready }
+    case 'retell_voices': return { voices: await retellVoices(f, key, !!body?.all) }
+    case 'retell_setup': {
+      if (!env('AI_WEBHOOK_SECRET')) throw Object.assign(new Error('AI_WEBHOOK_SECRET not set'), { status: 400 })
+      const { data: s } = await admin.from('ai_caller_settings').select('max_call_secs').eq('id', true).maybeSingle()
+      return retellSetup(f, key, hook, { prompt: String(body?.prompt ?? ''), voice_id: String(body?.voice_id ?? ''), voice: body?.voice ?? {}, max_secs: s?.max_call_secs ?? 300,
+        llm_id: env('RETELL_LLM_ID') || null, agent_id: env('RETELL_AGENT_ID') || null })
+    }
+    case 'retell_number': {
+      if (!env('RETELL_AGENT_ID')) throw Object.assign(new Error('set up the agent first'), { status: 400 })
+      return retellNumber(f, key, env('RETELL_AGENT_ID'), Number(body?.area_code) || 512)
+    }
+    case 'retell_call': return retellCall(f, key, String(body?.provider_call_id ?? ''))
+    case 'test_call': {
+      // Dials ONLY the number given here, as a sample lead of the Test Agent. ai_caller_live is not read or changed.
+      const to = String(body?.to ?? ''), scenario = String(body?.scenario ?? '')
+      if (!E164.test(to)) throw Object.assign(new Error('to must be +1XXXXXXXXXX'), { status: 400 })
+      if (!(scenario in SCENARIOS)) throw Object.assign(new Error(`scenario: ${Object.keys(SCENARIOS).join(' | ')}`), { status: 400 })
+      const transferTo = body?.transfer_to ? String(body.transfer_to) : null
+      if (transferTo && !E164.test(transferTo)) throw Object.assign(new Error('transfer_to must be +1XXXXXXXXXX'), { status: 400 })
+      const { data: ag } = await admin.from('profiles').select('id').eq('full_name', 'Test Agent').eq('is_test', true).maybeSingle()
+      if (!ag) throw Object.assign(new Error('no Test Agent'), { status: 400 })
+      const qa = { tz: 'America/Chicago', age_band: '45-54', test: { check: SCENARIOS[scenario], transferTo, scenario } }
+      // No phone on insert, so the new-lead router never queues it for a VA; the phone goes on right after.
+      const { data: lead, error: le } = await admin.from('leads').insert({ business_name: 'P926 test call', contact_name: `Brayden (test ${scenario.replace('_', ' ')})`,
+        lead_type: 'mortgage_protection', is_sample: true, assigned_rep_id: ag.id, state: 'TX', qualifier_answers: qa }).select('id').single()
+      if (le) throw le
+      const { error: pe } = await admin.from('leads').update({ phone: to }).eq('id', lead.id)
+      if (pe) throw pe
+      const { data: call, error: ce } = await admin.from('ai_calls').insert({ lead_id: lead.id, agent_id: ag.id, attempt: 1, lead_in_at: new Date().toISOString(), provider: 'retell' }).select('id').single()
+      if (ce) throw ce
+      return { lead_id: lead.id, call_id: call.id, start: await handle('start', { call_id: call.id }, d) }
+    }
+    case 'test_cleanup': {
+      // The test leads keep their calls (admin AI calls shows them) but lose the phone numbers.
+      const { data, error } = await admin.from('leads').update({ phone: null, qualifier_answers: { cleaned: true } }).eq('business_name', 'P926 test call').eq('is_sample', true).select('id')
+      if (error) throw error
+      return { cleaned: data?.length ?? 0 }
+    }
+    default: return null
+  }
+}
+
 const cors = { 'Content-Type': 'application/json' }
 Deno.serve(async req => {
   const url = new URL(req.url)
@@ -130,6 +184,8 @@ Deno.serve(async req => {
       return new Response(JSON.stringify(await handle('event', body, d)), { headers: cors })
     }
     if (!(await isCron(req, admin))) return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: cors })
+    const setup = await retellAction(String(body?.action ?? ''), body, d)
+    if (setup) return new Response(JSON.stringify(setup), { headers: cors })
     return new Response(JSON.stringify(await handle(String(body?.action ?? ''), body, d)), { headers: cors })
   } catch (e) {
     const err = e as Error & { status?: number }

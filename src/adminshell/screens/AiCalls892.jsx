@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Bot, Clock3, PhoneOutgoing, ShieldAlert, PhoneOff, MessageSquareText, ChevronRight, Power } from 'lucide-react'
 import { Chip, Switch, SampleTag, Empty, Drawer, useNote } from '../../template/kit'
 import { Dropdown, DField } from '../kit'
-import { useAdmSettings, useAdmAgents } from '../data'
+import { useAdmSettings, useAdmAgents, useAdmSource } from '../data'
+import { supabase } from '../../lib/supabase'
 import { usd } from '../../template/motion'
 import {
   AI_RULES, PROVIDERS, providerOf, DRAFT_WORDS, SAMPLE_AI_CALLS, SAMPLE_AI_SETTINGS, SAMPLE_CENTS_PER_MIN, OUTCOME_WORD, OUTCOME_TONE,
@@ -89,23 +90,45 @@ export function AiCallerSettings() {
   )
 }
 
-// Leads › AI calls: the numbers and every call.
+// P926: a real call row (admin_ai_calls_view, migration 263) in the sample rows' shape.
+const when = iso => { try { return new Date(iso).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }) } catch { return '' } }
+const fromView = r => ({
+  id: r.id, lead_id: r.lead_id, name: r.name || 'Lead', state: r.state || '', agent: r.agent || '', at: when(r.at), attempt: r.attempt || 1,
+  secs: r.secs ?? '–', duration: r.duration || 0, outcome: r.outcome, test: !!r.test, costCents: r.cost_cents == null ? null : Number(r.cost_cents),
+  note: [r.summary, r.booked_for ? `Booked ${when(r.booked_for)}` : null, r.callback_at ? `Callback ${when(r.callback_at)}` : null].filter(Boolean).join(' · '),
+})
+function useRealAiCalls(on) {
+  const [v, setV] = useState({ loading: on, error: '', data: null })
+  useEffect(() => {
+    if (!on) return undefined
+    let live = true
+    supabase.rpc('admin_ai_calls_view', {}).then(({ data, error }) => { if (live) setV({ loading: false, error: error?.message || '', data }) })
+    return () => { live = false }
+  }, [on])
+  return v
+}
+
+// Leads › AI calls: the numbers and every call. Sample on /preview; the real last 7 days for a signed-in admin (P926).
 export function AiCallsView() {
-  const calls = SAMPLE_AI_CALLS
+  const real = useAdmSource() === 'real'
+  const r = useRealAiCalls(real)
+  const calls = real ? (r.data?.rows || []).map(fromView) : SAMPLE_AI_CALLS
   const st = aiStats(calls, SAMPLE_CENTS_PER_MIN)
+  if (real) { st.minutes = r.data?.minutes ?? 0; st.costCents = r.data?.cost_cents == null ? null : Number(r.data.cost_cents) }
   const tiles = [
     ['Calls', st.calls, `${st.leads} leads`], ['Reached', `${st.reachedPct}%`, `${st.reached} of ${st.leads}`], ['Booked', st.booked], ['Transferred', st.transferred],
-    ['Not now', st.notNow], ['Wrong number', st.wrongNumber], ['To first call', st.avgSecs == null ? '–' : `${st.avgSecs} s`, 'average'], ['Minutes', st.minutes], ['Cost', st.costCents == null ? '–' : money(st.costCents / 100), `at ${SAMPLE_CENTS_PER_MIN}¢ a minute`],
+    ['Not now', st.notNow], ['Wrong number', st.wrongNumber], ['To first call', st.avgSecs == null ? '–' : `${st.avgSecs} s`, 'average'], ['Minutes', st.minutes], ['Cost', st.costCents == null ? '–' : money(st.costCents / 100), real ? 'from Retell' : `at ${SAMPLE_CENTS_PER_MIN}¢ a minute`],
   ]
   return (
     <section className="ai-view" aria-label="AI calls">
-      <div className="tp-row tp-wrap ai-view-h"><h2 className="fx-h3"><Bot size={17} aria-hidden="true" />AI calls · today</h2><span className="tp-grow" /><AiSlot /><SampleTag>Sample</SampleTag></div>
+      <div className="tp-row tp-wrap ai-view-h"><h2 className="fx-h3"><Bot size={17} aria-hidden="true" />AI calls · {real ? 'last 7 days' : 'today'}</h2><span className="tp-grow" />{real ? null : <><AiSlot /><SampleTag>Sample</SampleTag></>}</div>
+      {real && r.error ? <p className="adm-warn" role="alert">Couldn{'’'}t load AI calls: {r.error}</p> : null}
       <div className="ai-tiles">{tiles.map(([k, v, sub]) => <div key={k}><small>{k}</small><b className="tp-num">{v}</b>{sub != null && <span>{sub}</span>}</div>)}</div>
-      {calls.length === 0 ? <Empty title="No AI calls yet" sub="They show here once the AI caller is on." /> : (
+      {real && r.loading ? <p className="tp-sub">Loading…</p> : calls.length === 0 ? <Empty title="No AI calls yet" sub="They show here once the AI caller is on." /> : (
         <ul className="tp-list ai-rows">{calls.map(c => (
           <li key={c.id} className="fx-mrow">
             <PhoneOutgoing size={15} aria-hidden="true" />
-            <span className="tp-grow"><b>{c.name}{c.attempt > 1 ? ` · try ${c.attempt}` : ''}</b><small>{c.state} · {c.agent} · {c.at} · {c.secs} s to call · {c.duration ? `${Math.floor(c.duration / 60)}:${String(c.duration % 60).padStart(2, '0')}` : 'no answer'}</small><small>{c.note}</small>
+            <span className="tp-grow"><b>{c.name}{c.attempt > 1 ? ` · try ${c.attempt}` : ''}{c.test ? <> <Chip tone="outline">Test</Chip></> : null}</b><small>{[c.state, c.agent, c.at, `${c.secs} s to call`, c.duration ? `${Math.floor(c.duration / 60)}:${String(c.duration % 60).padStart(2, '0')}` : 'no answer', c.costCents != null ? money(c.costCents / 100) : null].filter(Boolean).join(' · ')}</small><small>{c.note}</small>
               {c.transfer && <ol className="ai-beats" aria-label={`${c.name}: the transfer, beat by beat`}>{beatsOf(c).map(b => <li key={b}>{b}</li>)}</ol>}</span>
             <Chip tone={OUTCOME_TONE[c.outcome]}>{OUTCOME_WORD[c.outcome]}</Chip>
           </li>
