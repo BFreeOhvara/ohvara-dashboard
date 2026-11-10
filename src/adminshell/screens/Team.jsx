@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Hand, MessageSquare, CalendarOff, Check, X, Plus, TriangleAlert, Phone, ShieldOff, ShieldCheck, Headset } from 'lucide-react'
+import { Hand, MessageSquare, CalendarOff, Check, X, Plus, TriangleAlert, Phone, ShieldOff, ShieldCheck, Headset, ArrowLeft, Clock, ChevronRight } from 'lucide-react'
 import { useAdmVas, useAdmDesk, useAdmRota, useAdmActions, useAdmSettings, WEEK, NEXT_WEEK, TODAY, SHIFT_MIN, SHIFT_MAX, dayName } from '../data'
 import { useAdmShifts } from '../../hooks/useVaShiftsAdmin'
 import { Avatar, Chip, Drawer, Empty, PillTabs, Seg, useNote } from '../../template/kit'
-import { WeekList } from '../../template/DayBox'
+import { WeekList, DayBox } from '../../template/DayBox'
+import { FilterPills } from '../../template/FilterPills'
 import { useOpenDay, useStickyDay } from '../../template/useOpenDay'
 import { GRID_END, GRID_ROWS, GRID_START, lanes, minutesOf, rotaCell, shiftSpan, theirTime, vaHue, weekCalls } from '../calendar'
 import { RecordDrawer, Block } from '../../template/Record'
-import { usd } from '../../template/motion'
+import { usd, CountUp } from '../../template/motion'
 import { Dropdown, DField, Tile } from '../kit'
 import { ap } from '../paths'
 import { CALL_WORD, CALL_TONE, BANK_WORD } from '../words'
@@ -59,24 +60,45 @@ function CallDrawer({ id, onClose }) {
   )
 }
 
-// P867 — the week calendar, the P854 look (the VA Schedule and the agent Calendar). P913 (Brayden's walk-through): it's
-// the Calendar tab now, bigger, with only This week · Next week and the VA filters on top (no day strip, no key, no
-// side panel). Day headers and hour rows are buttons: a header (or a row) opens that day across the full width, and
-// again goes back to the week. Today stays blue. Every VA's shifts and calls, each VA in its own colour.
+// P867 — the week calendar, the P854 look (the VA Schedule and the agent Calendar). P913: the Calendar tab, This week ·
+// Next week and the VA filters on top. P934 (Brayden, Nov 10): it works like the agent's Calendar. The same week switch
+// (Seg .cal-wk with counts), the page never scrolls (data-fold-fit sizes it to the window), and clicking a day (its
+// header, an hour row, or a call) slides in the agent's day panel (DayBox) with that day's calls; a call opens its
+// details inside the panel, where it can be given to someone free. Every VA's shifts and calls, each in their colour.
 const WEEKS_ADM = [WEEK, NEXT_WEEK]
 const ALL_ADM_DAYS = [...WEEK, ...NEXT_WEEK]
 const HOURS_ADM = Array.from({ length: GRID_ROWS }, (_, i) => GRID_START + i)
 const hourLabel = h => `${((h + 11) % 12) + 1} ${h < 12 ? 'AM' : 'PM'}`
 const gridPct = m => ((Math.min(GRID_END * 60, Math.max(GRID_START * 60, m)) - GRID_START * 60) / (GRID_ROWS * 60)) * 100
 
-function TeamCalendar({ openCall }) {
+// One call's details inside the day panel: who has it, the client's time, and Give to someone while it's still ahead.
+function DayCall({ c, vas, onBack }) {
+  const { giveCall } = useAdmActions()
+  const note = useNote()
+  const [giving, setGiving] = useState(false)
+  const their = theirTime(c.time, c.state)
+  const ahead = c.status === 'booked' || c.status === 'late'
+  return (
+    <div className="adm-daycall">
+      <button type="button" className="tp-btn ov-ghost sm adm-dayback" onClick={onBack}><ArrowLeft size={14} aria-hidden="true" />All calls that day</button>
+      <div className="fx-form-row"><Avatar name={c.client} /><span className="tp-grow"><b>{c.client}</b><small className="tp-sub">{c.time} Central{their ? ` · ${their} for them` : ''}</small></span><Chip tone={CALL_TONE[c.status]}>{CALL_WORD[c.status]}</Chip></div>
+      <dl className="fx-facts">{[['With', c.va], ['Call', 'Cancellation call'], ['Closing', c.old_carrier], ['Agent', c.agent || 'Their agent'], ['Client in', c.state]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+      {c.status === 'late' && <p className="adm-warn">Past its time and not started. Give it to someone free so the client isn&apos;t left waiting.</p>}
+      {ahead && <button type="button" className="tp-primary fx-accent" aria-expanded={giving} onClick={() => setGiving(g => !g)}><Hand size={16} />Give to someone</button>}
+      {giving && <GivePicker call={c} vas={vas} onPick={v => { giveCall(c.id, v.id); note(`${c.client} given to ${v.name}`); setGiving(false) }} />}
+    </div>
+  )
+}
+
+function TeamCalendar() {
   const { data: desk } = useAdmDesk()
   const { data: vas } = useAdmVas()
   const { data: rotaData } = useAdmRota()
   const [weekPick, setWeek] = useState(0)
   const [who, setWho] = useState('all')
+  const [sel, setSel] = useState(null) // { id, day }: the call shown in the day panel
   const { day, open, close } = useOpenDay(ALL_ADM_DAYS, { esc: true })
-  const { view } = useStickyDay(day)
+  const { view, leaving } = useStickyDay(day)
   const week = view != null ? (NEXT_WEEK.includes(view) ? 1 : 0) : weekPick
   const days = WEEKS_ADM[week]
   const cols = view != null ? [view] : days
@@ -87,19 +109,25 @@ function TeamCalendar({ openCall }) {
   const shiftsOf = d => (rotaData.rota[d] || []).filter(id => (who === 'all' || id === who) && !offOn(d).includes(id)).map(id => vas.find(v => v.id === id)).filter(Boolean)
   const pickWeek = w => { setWeek(w); if (day != null) close() }
   const label = d => `${dayName(d)}, Nov ${d}`
-  const toggle = d => (d === view ? close() : open(d))
+  const toggle = d => { setSel(null); if (d === view) close(); else open(d) }
+  const showCall = c => { setSel({ id: c.id, day: c.day }); if (c.day !== day) open(c.day) }
+  const list = view != null ? callsOf(view) : []
+  const picked = sel && sel.day === view ? calls.find(c => c.id === sel.id) : null
+  const countIn = w => calls.filter(c => WEEKS_ADM[w].includes(c.day) && mine(c)).length
 
   return (
     <>
       <div className="fx-tools adm-cal-tools">
-        <Seg label="Week" value={week} onChange={pickWeek} options={[{ key: 0, label: 'This week' }, { key: 1, label: 'Next week' }]} />
+        <Seg label="Week" className="cal-wk" value={week} onChange={pickWeek} options={[{ key: 0, label: 'This week', count: countIn(0) }, { key: 1, label: 'Next week', count: countIn(1) }]} />
         <VaFilter vas={vas} who={who} setWho={setWho} />
+        <span className="tp-grow" />
+        <p className="tp-sub">Central time · client times beside theirs</p>
       </div>
 
       <WeekList days={days} today={TODAY} onOpen={open} name={dayName} itemsOf={callsOf} line={c => `${c.time} ${c.client}`} />
 
       <div className="fx-grid adm-cal adm-big-cal" data-fold data-fold-fit="320">
-        <section className={`fx-tile fx-s12 ${view != null ? 'is-day' : 'is-week'} fx-week adm-week`} style={{ '--i': 0, '--days': cols.length, '--rows': GRID_ROWS }} aria-label={view != null ? label(view) : (week ? 'Next week' : 'This week')}>
+        <section className={`fx-tile ${view != null ? 'fx-s8 is-day' : 'fx-s12 is-week'} fx-week adm-week`} style={{ '--i': 0, '--days': cols.length, '--rows': GRID_ROWS }} aria-label={view != null ? label(view) : (week ? 'Next week' : 'This week')}>
           <div className="tp-tgrid-h"><span />{cols.map(d => (
             <button key={d} type="button" aria-pressed={d === view} title={d === view ? 'Back to the week' : `Open ${dayName(d)} ${d}`} className={`adm-dayhead${d === TODAY ? ' today is-today' : ''}${d === view ? ' is-on' : ''}`} onClick={() => toggle(d)}>
               {dayName(d)} <span>{d}</span>{d === TODAY ? <small>Today</small> : <small className="adm-cal-n">{(rotaData.rota[d] || []).length} on</small>}
@@ -123,9 +151,9 @@ function TeamCalendar({ openCall }) {
                     const [k, of] = ln.get(c.id) || [0, 1]
                     const their = theirTime(c.time, c.state)
                     return (
-                      <button key={c.id} type="button" className={`tp-ev adm-ev is-${vaHue(vas, c.va_id)}${['cancelled', 'no_answer'].includes(c.status) ? ' is-done' : ''}${c.status === 'late' ? ' is-late' : ''}`}
+                      <button key={c.id} type="button" className={`tp-ev adm-ev is-${vaHue(vas, c.va_id)}${['cancelled', 'no_answer'].includes(c.status) ? ' is-done' : ''}${c.status === 'late' ? ' is-late' : ''}${picked?.id === c.id ? ' is-picked' : ''}`}
                         style={{ top: `${gridPct(minutesOf(c.time))}%`, height: `calc(${(30 / (GRID_ROWS * 60)) * 100}% - 2px)`, left: `calc(var(--lane-x) + (100% - var(--lane-x)) * ${k / of} + 2px)`, width: `calc((100% - var(--lane-x)) / ${of} - 4px)` }}
-                        aria-label={`${c.time}${their ? ` (${their} for the client)` : ''}, ${c.client}, ${c.va}, ${CALL_WORD[c.status]}`} onClick={() => openCall(c.id)}>
+                        aria-label={`${c.time}${their ? ` (${their} for the client)` : ''}, ${c.client}, ${c.va}, ${CALL_WORD[c.status]}`} onClick={() => showCall(c)}>
                         <b>{c.time}{their && <em> · {their}</em>}</b><span>{c.client}</span>
                       </button>
                     )
@@ -137,24 +165,32 @@ function TeamCalendar({ openCall }) {
           </div>
         </section>
 
+        {view != null && (
+          <DayBox title={label(view)} sub={list.length ? `${list.length} ${list.length === 1 ? 'call' : 'calls'} · ${shiftsOf(view).length} on shift` : 'Nothing booked'} leaving={leaving} onClose={() => { setSel(null); close() }}>
+            {picked ? <DayCall key={picked.id} c={picked} vas={vas} onBack={() => setSel(null)} /> : <>
+              <b className="tp-num fx-huge2"><CountUp value={list.length} /><small> {list.length === 1 ? 'call' : 'calls'}</small></b>
+              <ul className="fx-rows">
+                {list.map(c => (
+                  <li key={c.id}><button type="button" className={`fx-row adm-dayrow is-${vaHue(vas, c.va_id)}`} onClick={() => setSel({ id: c.id, day: c.day })}>
+                    <span className="fx-row-ic"><Clock size={15} aria-hidden="true" /></span>
+                    <span className="tp-grow"><b>{c.client}</b><small>{c.time} · {c.va.split(' ')[0]} · {CALL_WORD[c.status]}</small></span><ChevronRight size={16} aria-hidden="true" />
+                  </button></li>
+                ))}
+              </ul>
+              {list.length === 0 && <Empty title="No calls" sub={shiftsOf(view).length ? 'Nobody is booked yet that day.' : 'Nobody is on shift that day.'} />}
+            </>}
+          </DayBox>
+        )}
       </div>
-
     </>
   )
 }
 
 // The VA filter: Every VA, or one VA (tap again for all). Each VA's colour is their calendar colour.
+// P934: the agent side's colour-coded filter pills (FilterPills), each VA in their calendar colour.
+const HUE_TONE = { sky: 'blue', apricot: 'warn', sage: 'green', butter: 'teal', lilac: 'violet' }
 function VaFilter({ vas, who, setWho }) {
-  return (
-    <div className="adm-cal-vas" role="radiogroup" aria-label="Show a VA">
-      <button type="button" role="radio" aria-checked={who === 'all'} className={`adm-vachip${who === 'all' ? ' is-on' : ''}`} onClick={() => setWho('all')}>Every VA</button>
-      {vas.map(v => (
-        <button key={v.id} type="button" role="radio" aria-checked={who === v.id} className={`adm-vachip is-${vaHue(vas, v.id)}${who === v.id ? ' is-on' : ''}`} onClick={() => setWho(w => (w === v.id ? 'all' : v.id))}>
-          <i aria-hidden="true" />{v.name.split(' ')[0]}
-        </button>
-      ))}
-    </div>
-  )
+  return <FilterPills label="Show a VA" value={who} onChange={setWho} className="adm-cal-vas" items={[{ key: 'all', label: 'Every VA' }, ...vas.map(v => ({ key: v.id, label: v.name.split(' ')[0], tone: HUE_TONE[vaHue(vas, v.id)] }))]} />
 }
 
 // P913 — Today is a calendar of the VAs' booked calls for today: one row per hour, each call a button in its VA's
@@ -402,7 +438,7 @@ export default function Team() {
         items={TABS.map(([k, label]) => ({ key: k, label }))} />
       <div className="adm-tabpane" key={tab} role="tabpanel">
         {tab === 'today' && <TodayCalls openCall={openCall} />}
-        {tab === 'calendar' && <TeamCalendar openCall={openCall} />}
+        {tab === 'calendar' && <TeamCalendar />}
         {tab === 'rota' && <><Rota /><Holidays /></>}
         {tab === 'requests' && <><TimeOff /><SwapsAndOpen /></>}
         {tab === 'pay' && <HoursPay />}

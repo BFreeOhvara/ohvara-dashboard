@@ -38,4 +38,13 @@ html:has(.tp-app.fx) { scrollbar-width: thin; scrollbar-color: color-mix(in srgb
   .fx [data-fold-fit] > .fx-week.is-week { display: flex; flex-direction: column; }
   .fx [data-fold-fit] > .fx-week.is-week .tp-tgrid-b { flex: 1 1 auto; height: auto; min-height: 0; }
 }
-.fx [data-fold-fit]:has(.fx-week.is-day) { height: auto; }
+/* P934: a day opened on a fitted calendar keeps the window's height too (the page never scrolls); the day box
+   scrolls inside itself when its list is long. Phones keep the full-screen day sheet. */
+@media (min-width: 1000px) {
+  .fx [data-fold-fit] > .fx-week.is-day { display: flex; flex-direction: column; min-height: 0; }
+  .fx [data-fold-fit] > .fx-week.is-day .tp-tgrid-b { flex: 1 1 auto; height: auto; min-height: 0; }
+  .fx [data-fold-fit] > .fx-daybox { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+}
+@media (max-width: 999.98px) {
+  .fx [data-fold-fit]:has(.fx-week.is-day) { height: auto; }
+}

@@ -1,0 +1,19 @@
+/* P934 — admin polish (Brayden's walk of the admin side, Nov 10): the Fulfillment calendar on the agent's pieces, the
+   Clients status pills, Revenue and Overview on the agent Overview's look, Settings on one row with nothing that
+   scrolls, the new rail pages. Tokens only (DESIGN.md v17 shell palette). */
+
+/* Fulfillment → Calendar: the agent's week switch and filter pills, the day panel. */
+.adm .adm-cal-tools { margin-bottom: 10px; }
+.adm .adm-cal-vas.fx-fpills { flex: 0 1 auto; flex-wrap: nowrap; margin: 0; }
+.adm .fx-row.adm-dayrow.is-sky { --c: var(--sh-cs-sky); }
+.adm .fx-row.adm-dayrow.is-apricot { --c: var(--sh-cs-apricot); }
+.adm .fx-row.adm-dayrow.is-sage { --c: var(--sh-cs-sage); }
+.adm .fx-row.adm-dayrow.is-butter { --c: var(--sh-cs-butter); }
+.adm .fx-row.adm-dayrow.is-lilac { --c: var(--sh-cs-lilac); }
+.adm .adm-daycall { display: flex; flex-direction: column; gap: 12px; }
+.adm .adm-daycall > .tp-primary { align-self: flex-start; }
+.adm .adm-dayback { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; }
+.adm .fx-week .adm-ev.is-picked { outline: 2px solid var(--ov-hi); outline-offset: 1px; z-index: 3; }
+/* A day opened keeps the window's height (the P867 rule let it grow, so the page scrolled). */
+@media (min-width: 1000px) { .fx .adm-cal[data-fold-fit]:has(.fx-week.is-day) { height: var(--fold-h, auto); } }
+.adm .adm-daycall .fx-form-row > .tp-grow { display: flex; flex-direction: column; gap: 2px; min-width: 0; }

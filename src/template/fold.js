@@ -108,7 +108,15 @@ export function applyFold(main) {
     : blocksIn(main).filter(b => docTop(b) >= bottom - 2 && docTop(b) + b.offsetHeight > fold + 8).sort((a, b) => docTop(a) - docTop(b))[0]
   if (!next || next.offsetHeight < 60) {
     // Nothing after a fitted block: it fills the window down to the fold.
-    if (fit) el.style.setProperty('--fold-h', `${Math.max(Number(el.dataset.foldFit) || 0, Math.round(fold - top - 16))}px`)
+    if (fit) {
+      const min = Number(el.dataset.foldFit) || 0
+      const h = Math.max(min, Math.round(fold - top - 16))
+      el.style.setProperty('--fold-h', `${h}px`)
+      // P934: the page itself never scrolls. Take back whatever still runs past the window under the block (the
+      // "Sample info" line, the frame's bottom padding), down to the block's floor.
+      const over = document.documentElement.scrollHeight - window.innerHeight
+      if (over > 0) el.style.setProperty('--fold-h', `${Math.max(min, h - over)}px`)
+    }
     return
   }
   const ha = fit ? null : headAbove(next)
