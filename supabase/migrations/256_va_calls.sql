@@ -1,5 +1,5 @@
 -- Prompt 918 — VA calls only at their time; no confirmation number on cancel calls.
--- NOT APPLIED. Unnumbered on purpose: Brayden says yes, then it gets the next number and is applied.
+-- Applied Nov 9 after Brayden's yes (was p918_va_calls.sql).
 -- 1. app_settings.va_call_open_minutes: how many minutes before a booked call its Start call turns on (admin
 --    Settings → Pay rules). The portal reads a missing column as 5.
 -- 2. Cancelling the old policy no longer asks for the carrier's confirmation number (Brayden, Nov 9: "remove the
