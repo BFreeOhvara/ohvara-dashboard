@@ -15,7 +15,7 @@ test('prompt: Deedstone virtual assistant, the VA questions, never coverage or p
   const p = retellPrompt()
   assert.match(p, /the virtual assistant with Deedstone/)
   assert.match(p, /Never discuss coverage, prices, carriers/)
-  assert.match(p, /Never go silent/)
+  assert.match(p, /Thinking is not confusion/)
   assert.match(p, /call ask_agent/)
   assert.match(p, /call transfer_failed/)
   assert.doesNotMatch(p, /\bVA\b|virtual agent hand/i)

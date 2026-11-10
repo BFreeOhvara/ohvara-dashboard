@@ -61,8 +61,7 @@ const bounceOk = say => {
 test('beats 1-3: qualify → "let me see who is free" → the agent push, and light questions while waiting (no dead air)', async () => {
   const f = fakes()
   const r = await f.toCheck()
-  assert.equal(r.say, AI_CALL_WORDS.check)
-  assert.equal(r.say, AI_CALL_WORDS.check) // P940
+  assert.equal(r.say, undefined) // P940: Max says the check line himself before calling qualified
   assert.equal(r.next, 'check_status')
   assert.equal(r.keep_talking, true)
   assert.deepEqual(r.ask, WAIT_QUESTIONS)
@@ -78,7 +77,7 @@ test('beats 1-3: qualify → "let me see who is free" → the agent push, and li
 test('a provider that can\'t talk while it waits plays a short hold line instead', async () => {
   const f = fakes({ talks: false })
   const r = await f.toCheck()
-  assert.equal(r.say, `${AI_CALL_WORDS.check} ${TRANSFER_WORDS.holdOnly}`)
+  assert.equal(r.say, undefined) // P940: the check line is no longer in say; the provider just holds
   assert.equal(r.hold, true)
   assert.equal(r.keep_talking, undefined)
 })

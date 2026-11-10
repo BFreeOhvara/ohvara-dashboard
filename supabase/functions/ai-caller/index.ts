@@ -19,7 +19,7 @@ import { noProvider, retell, vapi, ghl, type Provider } from './providers.ts'
 import { isCron } from '../_shared/cronAuth.ts'
 import { sendersFromEnv } from '../notify-push/senders.ts'
 import { checkPush, clearPush, sendAll } from '../notify-push/transfer.ts'
-import { retellVoices, retellSetup, retellNumber, retellNumbers, retellCall } from './retellAdmin.ts'
+import { retellVoices, retellSetup, retellNumber, retellNumbers, retellCall, retellChat } from './retellAdmin.ts'
 import { retellPrompt } from './retellSpec.js'
 
 const env = (k: string) => Deno.env.get(k) ?? ''
@@ -30,7 +30,7 @@ const senders = sendersFromEnv()
 // The transfer beats' words (check, connecting, bounce, hold) live in rules.js TRANSFER_WORDS (P903).
 const WORDS = {
   // P940 (Brayden, Nov 10): who it is and why it's calling, no small talk.
-  opening: 'Hi {first}, this is Max, the virtual assistant with Deedstone Insurance. I’m following up on the mortgage protection request you just sent in. I’ve just got a couple quick questions so I can get you to the right specialist.',
+  opening: 'Hey {first}, this is Max, the virtual assistant with Deedstone Insurance. I’m calling about the mortgage protection form you filled out.',
 }
 
 function provider(): Provider {
@@ -173,6 +173,34 @@ async function retellAction(action: string, body: any, d: { store: Store; provid
       const { data: call, error: ce } = await admin.from('ai_calls').insert({ lead_id: lead.id, agent_id: ag.id, attempt: 1, lead_in_at: new Date().toISOString(), provider: 'retell' }).select('id').single()
       if (ce) throw ce
       return { lead_id: lead.id, call_id: call.id, start: await handle('start', { call_id: call.id }, d) }
+    }
+    case 'retell_chat': {
+      // P940: Retell's own chat (no phone): the live LLM and prompt with our real functions, on a sample lead of the
+      // Test Agent. The transcript goes on that test call's row (pg_net stops reading replies after 5 s).
+      const scenario = String(body?.scenario ?? ''), turns = (Array.isArray(body?.turns) ? body.turns : []).map(String).slice(0, 16)
+      if (!(scenario in SCENARIOS)) throw Object.assign(new Error(`scenario: ${Object.keys(SCENARIOS).join(' | ')}`), { status: 400 })
+      if (!env('RETELL_LLM_ID')) throw Object.assign(new Error('RETELL_LLM_ID not set'), { status: 400 })
+      const { data: ag } = await admin.from('profiles').select('id').eq('full_name', 'Test Agent').eq('is_test', true).maybeSingle()
+      if (!ag) throw Object.assign(new Error('no Test Agent'), { status: 400 })
+      const transferTo = body?.transfer_to && E164.test(String(body.transfer_to)) ? String(body.transfer_to) : null
+      const qa = { tz: 'America/Chicago', age_band: '45-54', homeowner: true, mortgage_balance_band: '200-300k', smoker: false, test: { check: SCENARIOS[scenario], transferTo, scenario, chat: true } }
+      const { data: lead, error: le } = await admin.from('leads').insert({ business_name: 'P926 test call', contact_name: `Brayden (chat ${scenario.replace('_', ' ')})`,
+        lead_type: 'mortgage_protection', is_sample: true, assigned_rep_id: ag.id, state: 'TX', qualifier_answers: qa }).select('id').single()
+      if (le) throw le
+      await admin.from('leads').update({ phone: '+15555550100' }).eq('id', lead.id) // fictional 555 number: nothing is dialed
+      const { data: row, error: ce } = await admin.from('ai_calls').insert({ lead_id: lead.id, agent_id: ag.id, attempt: 1, lead_in_at: new Date().toISOString(), provider: 'retell' }).select('id').single()
+      if (ce) throw ce
+      let vars: Record<string, unknown> = {}
+      const fake = { ...d.provider, ready: true, start: async (a: { vars: Record<string, unknown> }) => { vars = a.vars; return { providerCallId: `chat-${row.id}` } } }
+      const st = await handle('start', { call_id: row.id }, { ...d, provider: fake as Provider })
+      // The chat runs on after we reply (pg_net hangs up at 5 s); the log is written after every turn.
+      const run = retellChat(f, key, { llmId: env('RETELL_LLM_ID'), chatAgentId: body?.chat_agent_id ? String(body.chat_agent_id) : null, vars, metadata: { call_id: row.id }, turns,
+        onChat: async (chatId: string) => { await admin.from('ai_calls').update({ provider_call_id: chatId, status: 'talking' }).eq('id', row.id) },
+        onTurn: async (log: string[]) => { await admin.from('ai_calls').update({ transcript_ref: log.join('\n').slice(0, 20000) }).eq('id', row.id) } })
+        .catch(async e => { await admin.from('ai_calls').update({ transcript_ref: `chat failed: ${String((e as Error).message).slice(0, 500)}` }).eq('id', row.id) })
+      const rt = (globalThis as unknown as { EdgeRuntime?: { waitUntil(p: Promise<unknown>): void } }).EdgeRuntime
+      if (rt) rt.waitUntil(run); else await run
+      return { call_id: row.id, start: st }
     }
     case 'test_cleanup': {
       // The test leads keep their calls (admin AI calls shows them) but lose the phone numbers.

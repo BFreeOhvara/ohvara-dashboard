@@ -101,7 +101,7 @@ export async function start(store: Store, provider: Provider, env: Env, callId: 
       callId: c.id, to: lead.phone, from, fromId: ds?.phone ? ds.providerId : null, maxSecs: Math.min(live.maxSecs || AI_RULES.maxCallSecs, 900),
       // P940: what the form already told us, so the AI confirms it instead of asking ('' = not on the form, ask it).
       vars: { first_name: lead.first, state: lead.state ?? '', lead_tz: lead.tz ?? '', opening: env.words.opening.replace('{first}', lead.first),
-        form_state: lead.state ?? '', form_homeowner: lead.homeowner == null ? '' : lead.homeowner ? 'yes' : 'no', form_mortgage: lead.mortgage ?? '', form_age: lead.age ?? '',
+        form_state: lead.state ?? '', form_homeowner: lead.homeowner == null ? '' : lead.homeowner ? 'yes' : 'no', form_mortgage: lead.mortgage ?? '', form_age: lead.age ?? '', ...formLines(lead),
         callback_number: spokenNumber(from) }, // P940: the voicemail message gives the number that called them
     })
     await store.status(c.id, 'dialing', { provider_call_id: r.providerCallId })
@@ -160,22 +160,42 @@ function waiting(p: Provider, first: boolean) {
   return first ? { keep_talking: true, ask: WAIT_QUESTIONS, rule: WAIT_RULE } : { keep_talking: true }
 }
 
-// P940: an open time in plain words for the lead's own state: "today at 3:30 PM", "tomorrow at 10 AM", "Thursday at 9 AM".
+// P940: the form answers as ready-to-say lines (Retell's LLM skipped lines that depended on empty-or-not variables).
+const STATES: Record<string, string> = Object.fromEntries('AL Alabama|AK Alaska|AZ Arizona|AR Arkansas|CA California|CO Colorado|CT Connecticut|DE Delaware|DC Washington D.C.|FL Florida|GA Georgia|HI Hawaii|ID Idaho|IL Illinois|IN Indiana|IA Iowa|KS Kansas|KY Kentucky|LA Louisiana|ME Maine|MD Maryland|MA Massachusetts|MI Michigan|MN Minnesota|MS Mississippi|MO Missouri|MT Montana|NE Nebraska|NV Nevada|NH New Hampshire|NJ New Jersey|NM New Mexico|NY New York|NC North Carolina|ND North Dakota|OH Ohio|OK Oklahoma|OR Oregon|PA Pennsylvania|RI Rhode Island|SC South Carolina|SD South Dakota|TN Tennessee|TX Texas|UT Utah|VT Vermont|VA Virginia|WA Washington|WV West Virginia|WI Wisconsin|WY Wyoming'
+  .split('|').map(x => [x.slice(0, 2), x.slice(3)]))
+// "200-300k" → "about 250", "500k+" → "over 500", "under-100k" → "under 100".
+export function spokenBalance(band: string | null | undefined) {
+  const b = String(band ?? '').toLowerCase(), n = (b.match(/\d+/g) ?? []).map(Number)
+  if (!n.length) return ''
+  if (/under|less|</.test(b)) return `under ${n[0]}`
+  if (n.length >= 2) return `about ${Math.round((n[0] + n[1]) / 2)}`
+  return /\+|over|more/.test(b) ? `over ${n[0]}` : `about ${n[0]}`
+}
+export function formLines(lead: { state?: string | null; homeowner?: boolean | null; mortgage?: string | null; age?: string | null }) {
+  const st = STATES[String(lead.state ?? '').toUpperCase()] ?? '', bal = spokenBalance(lead.mortgage)
+  const lines = [st && `You’re in ${st}, right?`, lead.homeowner === true && 'And you own the home?', bal && `Still ${bal} left on the mortgage?`].filter(Boolean)
+  const ask = [!st && 'What state is the home in?', lead.homeowner == null && 'And do you own the home?', !bal && 'Roughly how much is left on the mortgage?',
+    !lead.age && 'And roughly what age range are you in?'].filter(Boolean)
+  return { form_lines: lines.join(' | ') || 'none', form_ask: ask.join(' | ') || 'none' }
+}
+
+// P940: an open time in plain words for the lead's own state: "3:30 this afternoon", "10 tomorrow morning",
+// "Thursday at 9 in the morning".
 export function spokenSlot(iso: string, tz: string | null, nowMs: number) {
   const zone = tz || 'America/Chicago'
   const day = (ms: number) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms))
   const at = Date.parse(iso)
-  const d = day(at) === day(nowMs) ? 'today' : day(at) === day(nowMs + 86400000) ? 'tomorrow'
-    : new Intl.DateTimeFormat('en-US', { timeZone: zone, weekday: 'long' }).format(new Date(at))
-  const t = new Intl.DateTimeFormat('en-US', { timeZone: zone, hour: 'numeric', minute: '2-digit' }).format(new Date(at)).replace(':00', '')
-  return `${d} at ${t}`
+  const h = Number(new Intl.DateTimeFormat('en-US', { timeZone: zone, hour: 'numeric', hourCycle: 'h23' }).format(new Date(at)))
+  const part = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'
+  const t = new Intl.DateTimeFormat('en-US', { timeZone: zone, hour: 'numeric', minute: '2-digit' }).format(new Date(at)).replace(/:00/, '').replace(/\s?[AP]M$/i, '')
+  if (day(at) === day(nowMs)) return `${t} this ${part}`
+  if (day(at) === day(nowMs + 86400000)) return `${t} tomorrow ${part}`
+  return `${new Intl.DateTimeFormat('en-US', { timeZone: zone, weekday: 'long' }).format(new Date(at))} at ${t} in the ${part}`
 }
-// Two times as one phrase: "later today at 3:30 PM, or 5 PM" (the day is said once when both are the same day).
+// Two times as one phrase: "3:30 this afternoon, or 5 this evening".
 export function twoTimes(spoken: string[]) {
   const [a, b] = spoken
-  if (!b) return (a ?? '').replace(/^today/, 'later today')
-  const [da, ta] = a.split(' at '), [db, tb] = b.split(' at ')
-  return da === db ? `${da === 'today' ? 'later today' : da} at ${ta}, or ${tb}` : `${da === 'today' ? 'later today' : da} at ${ta}, or ${db} at ${tb}`
+  return b ? `${a}, or ${b}` : (a ?? '')
 }
 
 async function slotsReply(store: Store, env: Env, c: Call, say?: string, _agentFirst?: string) {
@@ -218,11 +238,11 @@ export async function tool(store: Store, provider: Provider, env: Env, c: Call, 
       // P940: the AI asks "Are you free right now?" first; a No books a time without checking the agent.
       const notNow = args.free_now === false || String(args.free_now ?? '').toLowerCase() === 'no'
       if (notNow || !r.act.includes('check_agent')) {
-        await store.status(c.id, 'booking', { routed: notNow ? 'lead_not_free' : r.s.routed, summary: args.summary ?? null })
+        await store.status(c.id, 'booking', { routed: r.s.routed, /* ai_calls_routed_check allows only the agent's routing; "not free" is in the summary */ summary: args.summary ?? null })
         // P940: they said they're free but no specialist can take it (out of hours, appointments only): the check out
         // loud, a real pause (check_status waits), then "all with clients" and two times.
         if (notNow) return slotsReply(store, env, c, pre, agent.first)
-        return { say: [pre, AI_CALL_WORDS.check].filter(Boolean).join(' '), next: 'check_status', wait_secs: 2 }
+        return { say: pre, next: 'check_status', wait_secs: 0 } // check_status says "Let me check real quick..." itself
       }
       const lead = lead0
       const chk = await store.insertCheck({ agent_id: agent.id, lead_id: c.lead_id, ai_call_id: c.id,
@@ -239,7 +259,7 @@ export async function tool(store: Store, provider: Provider, env: Env, c: Call, 
         return slotsReply(store, env, c, pre, agent.first) // agent being checked by a VA, or the push failed: book
       }
       await store.status(c.id, 'checking', { routed: r.s.routed, check_id: chk.id, summary: args.summary ?? null })
-      return { say: [pre, checkSay(provider)].filter(Boolean).join(' '), next: 'check_status', wait_secs: 3, ...waiting(provider, true) }
+      return { say: pre, next: 'check_status', wait_secs: 0, ...waiting(provider, true) } // check_status says the check line (P940)
     }
     case 'check_status': {
       if (env.pauseMs) await new Promise(r => setTimeout(r, env.pauseMs)) // P940: a real 2-3 s pause while "checking"
@@ -285,7 +305,11 @@ export async function tool(store: Store, provider: Provider, env: Env, c: Call, 
       if (!Number.isFinite(Date.parse(at))) return { ok: false, code: 'bad_time' }
       const r = await store.book(c.id, at)
       if (!r.ok) return { ok: false, ...(await slotsReply(store, env, c, undefined, agent?.first)) }
-      return { ok: true, booked_for: at, end_after: true }
+      return { ok: true, booked_for: at, spoken: spokenSlot(at, (await store.lead(c.lead_id))?.tz ?? null, nowMs), end_after: true }
+    }
+    case 'hang_up_pause': { // P940: after the goodbye, 2-3 s for them to hang up first; then the AI ends the call
+      if (env.pauseMs) await new Promise(r => setTimeout(r, env.pauseMs))
+      return { next: 'end_call' }
     }
     default:
       return { ok: false, code: 'unknown_tool' }

@@ -45,3 +45,27 @@ export async function retellNumbers(f: Fetch, key: string) {
   const r = await call(f, key, 'GET', '/v2/list-phone-numbers?limit=100') // legacy /list-phone-numbers retired Jun 2026
   return ((r.items ?? []) as Record<string, unknown>[]).map(n => ({ phone_number: n.phone_number, pretty: n.phone_number_pretty ?? null, nickname: n.nickname ?? null, outbound: n.outbound_agents ?? null }))
 }
+
+// P940: a Retell chat on the live LLM (no phone call). Creates a chat agent once (reuse its id), starts a chat with the
+// call's variables and metadata, sends each turn, and returns a compact log: agent words, function calls and replies.
+export async function retellChat(f: Fetch, key: string, a: { llmId: string; chatAgentId: string | null; vars: Record<string, unknown>; metadata: Record<string, string>;
+  turns: string[]; onChat: (chatId: string) => Promise<void>; onTurn: (log: string[]) => Promise<void> }) {
+  const chatAgentId = a.chatAgentId || (await call(f, key, 'POST', '/create-chat-agent', { agent_name: 'Deedstone VA (chat tests)', response_engine: { type: 'retell-llm', llm_id: a.llmId } })).agent_id
+  const vars = Object.fromEntries(Object.entries(a.vars).map(([k, v]) => [k, v == null ? '' : String(v)]))
+  const chat = await call(f, key, 'POST', '/create-chat', { agent_id: chatAgentId, metadata: a.metadata, retell_llm_dynamic_variables: vars })
+  await a.onChat(chat.chat_id)
+  const log: string[] = [`VARS: ${JSON.stringify(vars).slice(0, 600)}`]
+  for (const t of a.turns) {
+    log.push(`LEAD: ${t}`)
+    const r = await call(f, key, 'POST', '/create-chat-completion', { chat_id: chat.chat_id, content: t })
+    for (const m of r.messages ?? []) {
+      if (m.role === 'agent') log.push(`MAX: ${m.content}`)
+      else if (m.role === 'tool_call_invocation') log.push(`  -> ${m.name}(${String(m.arguments ?? '').slice(0, 200)})`)
+      else if (m.role === 'tool_call_result') log.push(`  <- ${String(m.content ?? '').slice(0, 300)}`)
+      else if (m.role !== 'user') log.push(`  [${m.role}] ${String(m.content ?? '').slice(0, 200)}`)
+    }
+    await a.onTurn(log)
+  }
+  await f(`${API}/end-chat/${encodeURIComponent(chat.chat_id)}`, { method: 'PATCH', headers: { Authorization: `Bearer ${key}` } }).catch(() => null)
+  return { chatAgentId, chatId: chat.chat_id, log }
+}
