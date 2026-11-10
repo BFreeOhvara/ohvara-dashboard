@@ -418,12 +418,12 @@ begin
           execute 'set local role ' || v_role;
           perform set_config('request.jwt.claims', v_claims, true);
           execute 'reset role';
-          select md5(x::text) into v_me_before from public.profiles x where x.id = v_att;
+          select md5((to_jsonb(x) - 'updated_at')::text) into v_me_before from public.profiles x where x.id = v_att; -- updated_at is stamped by a trigger on every update
           execute 'set local role ' || v_role;
           execute format(t.stmt, v_att);
           get diagnostics v_m = row_count;
           execute 'reset role';
-          select md5(x::text) into v_me_after from public.profiles x where x.id = v_att;
+          select md5((to_jsonb(x) - 'updated_at')::text) into v_me_after from public.profiles x where x.id = v_att;
           raise exception using errcode = 'P0922', message = v_m::text,
             detail = case when v_me_before is distinct from v_me_after
                             or (select count(*) from public.profiles where role = 'admin') <> (select count(*) from public.profiles where role = 'admin' and id <> v_att)
