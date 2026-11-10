@@ -11,12 +11,19 @@
 import { createClient } from 'npm:@supabase/supabase-js'
 import { isCron } from '../_shared/cronAuth.ts'
 import { ghlReport } from './api.ts'
+import { readSecrets } from '../_shared/secretStore.ts'
 import { handle, type Settings } from './core.ts'
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
 Deno.serve(req => handle(req, {
   apiKey: Deno.env.get('GHL_API_KEY') || undefined,
+  // P939: the key pasted on the Connect page (secrets table) wins; the env value is the fallback.
+  secrets: async () => ({
+    apiKey: (await readSecrets(supabase as never, ['GHL_API_KEY'], {
+      encKey: Deno.env.get('SECRETS_ENCRYPTION_KEY') ?? undefined, env: n => Deno.env.get(n), log: m => console.error(m),
+    })).GHL_API_KEY,
+  }),
   isCron: r => isCron(r, supabase),
   settings: () => supabase.from('ghl_settings').select('ad_spend_enabled, location_id').eq('id', true)
     .maybeSingle() as PromiseLike<{ data: Settings | null; error: { message: string } | null }>,

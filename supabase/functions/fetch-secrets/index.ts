@@ -2,6 +2,7 @@
 //
 // GET  /fetch-secrets       → all users: capabilities object; admin: also returns secret metadata
 // POST /fetch-secrets       → admin only: set/update a secret value
+// POST {action:'test_ghl'}  → admin only (P939): one read-only call to GoHighLevel with the saved key; { ok, message }
 // DELETE /fetch-secrets     → admin only: delete a secret by key_name
 //
 // Encryption: AES-256-GCM via Web Crypto (standard in Deno).
@@ -9,6 +10,8 @@
 // If SECRETS_ENCRYPTION_KEY is not set, uses a dev-only default (logs a warning).
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { encryptValue as encryptWith, readSecrets } from '../_shared/secretStore.ts'
+import { ghlPing } from '../_shared/ghlPing.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,47 +19,11 @@ const corsHeaders = {
 }
 
 // ── Crypto helpers ────────────────────────────────────────────────────────────
-
-// P922: no built-in fallback key. Without SECRETS_ENCRYPTION_KEY nothing is
-// encrypted or decrypted (POST answers 503), so a secret is never sealed with a
-// key that sits in this repo.
+// P939: the cipher lives in ../_shared/secretStore.ts, so the functions that read a
+// saved key use exactly the same one. P922: no built-in fallback key. Without
+// SECRETS_ENCRYPTION_KEY nothing is encrypted or decrypted (POST answers 503).
 const ENC_KEY_RAW = Deno.env.get('SECRETS_ENCRYPTION_KEY') ?? ''
-
-async function getCryptoKey(): Promise<CryptoKey> {
-  if (ENC_KEY_RAW.length < 16) throw new Error('SECRETS_ENCRYPTION_KEY not set')
-  const rawBytes = new TextEncoder().encode(ENC_KEY_RAW.padEnd(32, '0').slice(0, 32))
-  const keyMaterial = await crypto.subtle.importKey('raw', rawBytes, 'PBKDF2', false, ['deriveKey'])
-  return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt: new TextEncoder().encode('ohvara-secrets-salt-v1'), iterations: 100_000, hash: 'SHA-256' },
-    keyMaterial,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['encrypt', 'decrypt']
-  )
-}
-
-async function encryptValue(value: string): Promise<string> {
-  const key = await getCryptoKey()
-  const iv = crypto.getRandomValues(new Uint8Array(12))
-  const enc = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv },
-    key,
-    new TextEncoder().encode(value)
-  )
-  const combined = new Uint8Array(12 + enc.byteLength)
-  combined.set(iv)
-  combined.set(new Uint8Array(enc), 12)
-  return btoa(String.fromCharCode(...combined))
-}
-
-async function decryptValue(encB64: string): Promise<string> {
-  const key = await getCryptoKey()
-  const combined = Uint8Array.from(atob(encB64), c => c.charCodeAt(0))
-  const iv   = combined.slice(0, 12)
-  const data = combined.slice(12)
-  const dec  = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data)
-  return new TextDecoder().decode(dec)
-}
+const encryptValue = (value: string) => encryptWith(ENC_KEY_RAW, value)
 
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 
@@ -159,7 +126,24 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { key_name, value, description } = await req.json()
+    const body = await req.json()
+
+    // P939: Test connection. One harmless read (list one contact); nothing is written or sent. The key is never returned.
+    if (body?.action === 'test_ghl') {
+      const reply = (ok: boolean, message: string) => new Response(JSON.stringify({ ok, message }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+      const { data: st } = await supabase.from('ghl_settings').select('location_id').eq('id', true).maybeSingle()
+      const { GHL_API_KEY: key } = await readSecrets(supabase as never, ['GHL_API_KEY'], {
+        encKey: ENC_KEY_RAW, env: n => Deno.env.get(n), log: m => console.error(m),
+      })
+      if (!key) return reply(false, 'GoHighLevel is not connected: paste the API key and save it first.')
+      if (!st?.location_id) return reply(false, 'GoHighLevel is not connected: add the location ID and save it first.')
+      const r = await ghlPing((url, init) => fetch(url, init), key, st.location_id)
+      return reply(r.ok, r.message)
+    }
+
+    const { key_name, value, description } = body
     if (!key_name || !value) {
       return new Response(JSON.stringify({ error: 'key_name and value required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },

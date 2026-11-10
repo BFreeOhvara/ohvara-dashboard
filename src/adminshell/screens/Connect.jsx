@@ -23,10 +23,10 @@ const WAIT = 'Saved. It will connect when the bridge is live (P850).'
 const NONE = { value: '', label: 'No workflow' }
 
 // Live (signed in as an admin): the real settings row, the key sent to the secret store, the bridge's status.
-// Test connection waits until the bridge has run once; it then re-reads the last run (nothing goes to GoHighLevel).
+// P939: Test connection makes one read-only call to GoHighLevel with the saved key and shows OK or the error in plain words.
 function GhlLiveTile({ ghl }) {
   const note = useNote()
-  const { settings: sq, keySaved: kq, save, recheck } = ghl
+  const { settings: sq, keySaved: kq, save, test: runTest } = ghl
   const row = sq.data
   const loading = sq.isLoading
   const unavailable = !loading && row === null
@@ -39,7 +39,7 @@ function GhlLiveTile({ ghl }) {
   const errors = checkForm(cur)
   const idsChanged = !sameForm(cur, base)
   const dirty = idsChanged || !!key.trim()
-  const status = loading ? { label: 'Checking…', tone: 'mute', line: '' } : unavailable ? { label: 'Not connected yet', tone: 'mute', line: 'Goes live with the GHL switch-on' } : connectStatus(row)
+  const status = loading ? { label: 'Checking…', tone: 'mute', line: '' } : unavailable ? { label: 'Not connected yet', tone: 'mute', line: 'Goes live with the GHL switch-on' } : connectStatus(row, undefined, kq.data)
   const test = testConnection(row, kq.data)
   const keySaved = kq.data === true
   const put = patch => setForm({ ...cur, ...patch })
@@ -57,11 +57,9 @@ function GhlLiveTile({ ghl }) {
   }
   const doTest = async () => {
     setBusy(true)
-    const next = await recheck()
+    const r = await runTest()
     setBusy(false)
-    if (!next) return note('Could not read the bridge status.')
-    const s = connectStatus(next)
-    note(s.key === 'connected' ? `Connected. ${s.line}.` : `${s.label}. ${s.line}`)
+    note(r.message)
   }
   return (
     <Tile className="adm-con" i={0} title="GoHighLevel" sub={loading ? 'Loading…' : status.line || 'Not set up yet'} aside={<Chip tone={status.tone}>{status.label}</Chip>}>

@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from './supabase'
-import { ghlKeys, readGhlSettings, readGhlKeySaved, saveGhlSettings, sendGhlKey, sameForm, formFromSettings } from './ghlConnect.js'
+import { ghlKeys, readGhlSettings, readGhlKeySaved, saveGhlSettings, sendGhlKey, testGhlConnection, sameForm, formFromSettings } from './ghlConnect.js'
 
 // React Query wrappers for the admin Connect page (P853); the logic and tests are in ./ghlConnect.js.
 // enabled is false on the sample preview (nobody signed in): nothing is read or written there.
@@ -21,10 +21,13 @@ export function useGhlConnect({ enabled = true } = {}) {
     return out
   }
 
-  // Test connection: re-reads the bridge's last run. Sends nothing to GoHighLevel.
-  async function recheck() {
-    return readGhlSettings(supabase).then(row => { qc.setQueryData(ghlKeys.settings, row); return row })
+  // Test connection (P939): one read-only call to GoHighLevel through the server, then re-reads the bridge row.
+  // Returns { ok, message }; the key is never in it.
+  async function test() {
+    const r = await testGhlConnection(supabase)
+    readGhlSettings(supabase).then(row => qc.setQueryData(ghlKeys.settings, row)).catch(() => {})
+    return r
   }
 
-  return { settings, keySaved, save, recheck }
+  return { settings, keySaved, save, test }
 }

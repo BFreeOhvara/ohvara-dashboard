@@ -111,3 +111,23 @@ test('api: the documented URL and headers; a 401 comes back as not ok', async ()
   const down = ghlReport(async () => { throw new Error('ECONNRESET') })
   assert.deepEqual(await down(KEY, 'l', 'd'), { ok: false, status: 0, error: 'ECONNRESET' })
 })
+
+// ── P939: the key saved on the Connect page is the one used ──
+test('P939: a saved key wins over the env value and is what GHL is asked with', async () => {
+  const t = fake({ key: 'env-key-fallback' })
+  const keys: string[] = []
+  t.d.secrets = async () => ({ apiKey: 'saved-key-from-connect' })
+  const inner = t.d.report
+  t.d.report = async (k, l, day) => { keys.push(k); return inner(k, l, day) }
+  await run(t.d)
+  assert.ok(keys.length > 0 && keys.every(k => k === 'saved-key-from-connect'))
+})
+
+test('P939: no saved key and no env key: not connected, GHL never asked', async () => {
+  const t = fake({ key: null })
+  t.d.secrets = async () => ({})
+  await run(t.d)
+  assert.equal(t.asked.length, 0)
+  assert.equal(t.saves[0].status, 'not_configured')
+  assert.match(String(t.saves[0].error), /not connected/)
+})

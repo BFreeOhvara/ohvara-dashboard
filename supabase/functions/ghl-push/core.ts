@@ -60,6 +60,9 @@ export type PostResult = { ok: boolean; status: number }
 
 export type Deps = {
   apiKey: string | undefined
+  // P939: the saved key and control URL (Connect page -> secrets table), read after the switch check; when set,
+  // these win over apiKey / controlUrl (which are the environment fallbacks).
+  secrets?(): Promise<{ apiKey?: string | undefined; controlUrl?: string | undefined }>
   controlUrl?: string | undefined                                  // P915: GHL_CONTROL_WEBHOOK_URL
   post?(url: string, body: unknown): Promise<PostResult>           // P915: one JSON POST (index.ts: fetch, 10 s timeout)
   ghl(apiKey: string): GhlClient
@@ -195,8 +198,12 @@ export async function run(deps: Deps): Promise<Response> {
     return json({ error: 'settings' }, 500)
   }
   if (!s?.enabled) return json({ skipped: 'off' })
+  if (deps.secrets) {
+    const saved = await deps.secrets()
+    deps = { ...deps, apiKey: saved.apiKey || deps.apiKey, controlUrl: saved.controlUrl || deps.controlUrl }
+  }
   if (!deps.apiKey || !s.location_id) {
-    await deps.rpc('ghl_note_sync', { p_status: 'not_configured', p_error: !deps.apiKey ? 'GHL_API_KEY not set' : 'location ID not set' })
+    await deps.rpc('ghl_note_sync', { p_status: 'not_configured', p_error: !deps.apiKey ? 'GHL is not connected: no API key saved on the Connect page' : 'location ID not set' })
     return json({ skipped: 'not_configured' })
   }
 

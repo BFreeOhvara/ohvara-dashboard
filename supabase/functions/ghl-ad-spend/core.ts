@@ -37,6 +37,7 @@ export type Report = { ok: true; rows: SpendRow[] } | { ok: false; status: numbe
 export type SyncStatus = 'ok' | 'error' | 'off' | 'not_configured'
 export type Deps = {
   apiKey: string | undefined
+  secrets?(): Promise<{ apiKey?: string | undefined }> // P939: the key saved on the Connect page; wins over apiKey (the env fallback)
   settings(): PromiseLike<{ data: Settings | null; error: DbError }>
   report(key: string, locationId: string, day: string): Promise<Report>
   save(rows: SpendRow[], status: SyncStatus, error: string | null): PromiseLike<{ data: unknown; error: DbError }>
@@ -87,8 +88,9 @@ export async function run(deps: Deps): Promise<Record<string, unknown>> {
   const { data: st, error } = await deps.settings()
   if (error) { deps.log(`[ghl-ad-spend] settings ${error.message}`); return { error: 'settings' } }
   if (!st?.ad_spend_enabled) return { skipped: 'off' }
+  if (deps.secrets) deps = { ...deps, apiKey: (await deps.secrets()).apiKey || deps.apiKey }
   if (!deps.apiKey || !st.location_id) {
-    await deps.save([], 'not_configured', !deps.apiKey ? 'GHL_API_KEY is not set' : 'No location ID on the Connect page')
+    await deps.save([], 'not_configured', !deps.apiKey ? 'GHL is not connected: no API key saved on the Connect page' : 'No location ID on the Connect page')
     return { skipped: 'not_configured' }
   }
   const rows: SpendRow[] = []

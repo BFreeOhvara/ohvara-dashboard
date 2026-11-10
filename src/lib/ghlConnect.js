@@ -87,15 +87,27 @@ export async function sendGhlKey(sb, key) {
   }
 }
 
-// The Test connection button: enabled only once the bridge is deployed (it has run), a key is saved and a location is set.
+// P939 — the Test connection button. It asks the server (fetch-secrets, admin only) to make ONE harmless read call to
+// GoHighLevel with the saved key (list one contact in the location: no write, nothing sent to anyone) and answers in
+// plain words. The key never comes back here. { ok, message }.
+export async function testGhlConnection(sb) {
+  try {
+    const { data, error } = await sb.functions.invoke('fetch-secrets', { method: 'POST', body: { action: 'test_ghl' } })
+    if (error || !data || typeof data.ok !== 'boolean' || typeof data.message !== 'string') {
+      return { ok: false, message: 'Could not run the test. The key store did not answer.' }
+    }
+    return { ok: data.ok, message: data.message }
+  } catch {
+    return { ok: false, message: 'Could not run the test. The key store did not answer.' }
+  }
+}
+
+// The Test connection button is on once a location is saved and a key is saved (it needs no bridge deploy any more).
 // keySaved null = unknown, which does not block.
 export function testConnection(settings, keySaved) {
-  if (!bridgeDeployed(settings)) {
-    return { enabled: false, note: 'Not available yet. It switches on once the bridge is deployed and has run once.' }
-  }
-  if (!settings.location_id) return { enabled: false, note: 'Add the location ID first.' }
+  if (!settings?.location_id) return { enabled: false, note: 'Add the location ID and save it first.' }
   if (keySaved === false) return { enabled: false, note: 'Save the API key first.' }
-  return { enabled: true, note: "Checks the bridge's last run. It does not send anything." }
+  return { enabled: true, note: 'Makes one read-only call to GoHighLevel. It does not send or change anything.' }
 }
 
 // "just now", "5 min ago", "3 h ago", else "Nov 5, 2:14 PM" (Central, like the rest of the portal).
@@ -111,8 +123,11 @@ export function ago(at, now = Date.now()) {
 
 // Status for the page: the P850 ladder plus the chip tone and the "last sync" words.
 const TONE = { not_connected: 'mute', waiting_for_deploy: 'blue', off: 'mute', error: 'warn', connected: 'green' }
-export function connectStatus(settings, now = Date.now()) {
-  const st = ghlStatus(settings, { deployed: bridgeDeployed(settings) })
+export function connectStatus(settings, now = Date.now(), keySaved = null) {
+  // P939: no saved key is "Not connected" whatever else is set (keySaved null = unknown, does not block).
+  const st = keySaved === false
+    ? { key: 'not_connected', label: 'Not connected', detail: 'Paste the API key and save it to connect.' }
+    : ghlStatus(settings, { deployed: bridgeDeployed(settings) })
   const when = st.at ? ago(st.at, now) : ''
   return { ...st, tone: TONE[st.key] || 'mute', when, line: st.at && st.key === 'connected' ? `Last sync ${when}` : st.detail }
 }

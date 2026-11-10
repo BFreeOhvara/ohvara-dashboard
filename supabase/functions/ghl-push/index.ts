@@ -7,12 +7,14 @@
 //   select cron.schedule('ghl-push', '* * * * *',
 //     $$select public.fulfillment_cron_post('ghl-push', '{"action":"run"}'::jsonb)$$);
 // Secret: GHL_API_KEY (Jordan's Private Integration token, sub-account scope
-// contacts.write). Logic: core.ts. GHL endpoints: api.ts.
+// contacts.write), pasted on Admin -> Connect (saved-secrets table; P939) or set in the
+// function environment as a fallback. Logic: core.ts. GHL endpoints: api.ts.
 // P915: GHL_CONTROL_WEBHOOK_URL (Jordan's Inbound Webhook trigger URL,
 // https://services.leadconnectorhq.com/hooks/…) receives campaign on/off.
 import { createClient } from 'npm:@supabase/supabase-js'
 import { isCron } from '../_shared/cronAuth.ts'
 import { ghlClient } from './api.ts'
+import { readSecrets } from '../_shared/secretStore.ts'
 import { handle, type Settings } from './core.ts'
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
@@ -22,6 +24,13 @@ Deno.serve(req => handle(req, {
   isCron: r => isCron(r, supabase),
   ghl: key => ghlClient(key, (url, init) => fetch(url, init)),
   controlUrl: Deno.env.get('GHL_CONTROL_WEBHOOK_URL') || undefined,
+  // P939: the Connect page saves the key into the secrets table; that value wins, the env value is the fallback.
+  secrets: async () => {
+    const s = await readSecrets(supabase as never, ['GHL_API_KEY', 'GHL_CONTROL_WEBHOOK_URL'], {
+      encKey: Deno.env.get('SECRETS_ENCRYPTION_KEY') ?? undefined, env: n => Deno.env.get(n), log: m => console.error(m),
+    })
+    return { apiKey: s.GHL_API_KEY, controlUrl: s.GHL_CONTROL_WEBHOOK_URL }
+  },
   post: async (url, body) => {
     const res = await fetch(url, {
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },

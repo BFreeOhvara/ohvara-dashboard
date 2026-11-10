@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   readGhlSettings, readGhlKeySaved, bridgeDeployed, formFromSettings, checkForm, patchFromForm, sameForm,
-  saveGhlSettings, sendGhlKey, testConnection, ago, connectStatus, ghlPlugged, GHL_KEY_NAME,
+  saveGhlSettings, sendGhlKey, testConnection, testGhlConnection, ago, connectStatus, ghlPlugged, GHL_KEY_NAME,
 } from './ghlConnect.js'
 
 const ROW = { enabled: true, location_id: 'l1C08ntBrFjLS0elLIYU', workflow_new_inbound: '9f1c2b3a-4d5e-4f60', workflow_appointment_reminder: null, workflow_no_show: null, workflow_opt_out: null, last_sync_at: '2026-11-05T18:00:00Z', last_sync_status: 'ok', last_sync_error: null }
@@ -75,14 +75,43 @@ test('key goes to the secret flow only, and no error echoes it', async () => {
   assert.equal((await sendGhlKey(fake().sb, '  ')).ok, false)
 })
 
-test('Test connection stays disabled until the bridge is deployed', () => {
-  assert.equal(testConnection({ ...ROW, last_sync_at: null }, true).enabled, false)
-  assert.match(testConnection({ ...ROW, last_sync_at: null }, true).note, /deployed/)
+test('Test connection is on once a location and a key are saved (no bridge deploy needed)', () => {
+  assert.equal(testConnection({ ...ROW, last_sync_at: null }, true).enabled, true)
   assert.equal(testConnection(null, null).enabled, false)
   assert.equal(testConnection({ ...ROW, location_id: null }, true).enabled, false)
+  assert.match(testConnection({ ...ROW, location_id: null }, true).note, /location ID/)
   assert.equal(testConnection(ROW, false).enabled, false)
+  assert.match(testConnection(ROW, false).note, /key/)
   assert.equal(testConnection(ROW, true).enabled, true)
   assert.equal(testConnection(ROW, null).enabled, true)
+  assert.match(testConnection(ROW, true).note, /read-only/)
+})
+
+test('P939: the test asks fetch-secrets for test_ghl and passes the plain-words answer through', async () => {
+  const f = fake({ fn: { data: { ok: true, message: 'OK. GoHighLevel accepted the key and found the location.' }, error: null } })
+  assert.deepEqual(await testGhlConnection(f.sb), { ok: true, message: 'OK. GoHighLevel accepted the key and found the location.' })
+  assert.deepEqual(f.calls.invokes, [{ name: 'fetch-secrets', opts: { method: 'POST', body: { action: 'test_ghl' } } }])
+  const bad = await testGhlConnection(fake({ fn: { data: { ok: false, message: 'GoHighLevel rejected the key.' }, error: null } }).sb)
+  assert.deepEqual(bad, { ok: false, message: 'GoHighLevel rejected the key.' })
+})
+
+test('P939: the test never sends the key (the server uses the saved one) and survives a dead server', async () => {
+  const f = fake({ fn: { data: { ok: true, message: 'OK.' }, error: null } })
+  await testGhlConnection(f.sb)
+  assert.ok(!JSON.stringify(f.calls.invokes).toLowerCase().includes('value'))
+  for (const dead of [fake({ fn: new Error('pit-SECRET-1234 offline') }), fake({ fn: { data: null, error: { message: 'boom' } } }), fake({ fn: { data: { nope: 1 }, error: null } })]) {
+    const r = await testGhlConnection(dead.sb)
+    assert.equal(r.ok, false)
+    assert.ok(!JSON.stringify(r).includes('SECRET'))
+  }
+})
+
+test('P939: no saved key reads Not connected, whatever else is set', () => {
+  const now = Date.parse('2026-11-05T18:10:00Z')
+  assert.equal(connectStatus(ROW, now, false).label, 'Not connected')
+  assert.equal(connectStatus(ROW, now, false).tone, 'mute')
+  assert.equal(connectStatus(ROW, now, true).label, 'Connected')
+  assert.equal(connectStatus(ROW, now, null).label, 'Connected')
 })
 
 test('ago', () => {

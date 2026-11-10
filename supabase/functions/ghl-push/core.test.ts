@@ -74,7 +74,7 @@ test('switch off: claims nothing and calls GHL never', async () => {
 test('on but not configured: notes it, sends nothing', async () => {
   const t = deps({ apiKey: undefined })
   assert.deepEqual(await (await run(t.d)).json(), { skipped: 'not_configured' })
-  assert.deepEqual(t.calls, [{ fn: 'ghl_note_sync', args: { p_status: 'not_configured', p_error: 'GHL_API_KEY not set' } }])
+  assert.deepEqual(t.calls, [{ fn: 'ghl_note_sync', args: { p_status: 'not_configured', p_error: 'GHL is not connected: no API key saved on the Connect page' } }])
   assert.equal(t.sent.length, 0)
   const u = deps({ settings: { ...ON, location_id: null } })
   await run(u.d)
@@ -255,4 +255,46 @@ test('control: the body carries budget in cents and dollars, the cap, the split 
   assert.equal(b.spend_cap_cents, 9000)
   assert.equal(b.split_form_pct, 70)
   assert.deepEqual(b.schedule, { tz: 'America/Chicago' })
+})
+
+// ── P939: the key saved on the Connect page (secrets table) is the one ghl-push uses ──
+test('P939: a saved key is used for every GHL call (it wins over the env value)', async () => {
+  const t = deps({ apiKey: 'env-key-0000-fallback' })
+  t.d.secrets = async () => ({ apiKey: 'saved-key-1111-from-connect-page' })
+  assert.deepEqual(await (await run(t.d)).json(), { claimed: 1, sent: 1, failed: 0 })
+  assert.ok(t.sent.length > 0)
+  for (const s of t.sent) assert.equal(s.headers.Authorization, 'Bearer saved-key-1111-from-connect-page')
+})
+
+test('P939: only a saved key and no env value still connects', async () => {
+  const t = deps({ apiKey: undefined })
+  t.d.secrets = async () => ({ apiKey: KEY })
+  assert.deepEqual(await (await run(t.d)).json(), { claimed: 1, sent: 1, failed: 0 })
+})
+
+test('P939: nothing saved, nothing in the env: GHL not connected, nothing claimed, nothing sent', async () => {
+  const t = deps({ apiKey: undefined })
+  t.d.secrets = async () => ({})
+  assert.deepEqual(await (await run(t.d)).json(), { skipped: 'not_configured' })
+  assert.deepEqual(t.calls.map(c => c.fn), ['ghl_note_sync'])
+  assert.match(String(t.calls[0].args.p_error), /not connected/)
+  assert.equal(t.sent.length, 0)
+})
+
+test('P939: with the switch off the saved key is never even read, and nothing is sent', async () => {
+  const t = deps({ settings: { ...ON, enabled: false } })
+  let read = 0
+  t.d.secrets = async () => { read++; return { apiKey: KEY } }
+  assert.deepEqual(await (await run(t.d)).json(), { skipped: 'off' })
+  assert.equal(read, 0)
+  assert.equal(t.calls.length, 0)
+  assert.equal(t.sent.length, 0)
+})
+
+test('P939: a saved control URL is used for campaign on/off', async () => {
+  const saved = 'https://services.leadconnectorhq.com/hooks/SAVEDsaved1234/webhook-trigger/abc'
+  const t = ctlDeps({ url: undefined })
+  t.d.secrets = async () => ({ controlUrl: saved })
+  await run(t.d)
+  assert.equal(t.posts[0]?.url, saved)
 })
