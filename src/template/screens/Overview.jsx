@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, Check, Clock, CalendarDays } from 'lucide-react'
-import { rangeWords } from '../spendPlan'
+import { rangeWords, deliveredRange, deliveredOf } from '../spendPlan'
 import { countByStatus } from '../agentView'
 import { useDataSource, useSampleOverview, useSampleClients, useSampleBilling, useSampleLeads, useSampleAppointments, useSampleNeeds } from '../data'
 import { Avatar, Empty } from '../kit'
@@ -19,7 +19,7 @@ import '../p893.css'
 // P840: Solvik's Overview shape. Left two thirds: one dominant tile (this week's bookings against the budget
 // range, with the weekly chart), under it Your book (the one colour-filled tile) and Next up. Right third: a
 // full-height Needs you column of stage-coloured cards, 2-up, scrolling inside itself. The page head carries
-// clients, booked this week and the weekly budget. Sample data only.
+// clients, booked this week and the weekly budget. Sample data only. P923: the hero is Delivered this week.
 const apptTo = a => (a.kind === 'client' ? paths.client(a.ref) : paths.lead(a.ref))
 // P899: the agent's client statuses (lib/clientCheck.js); Closed clients are left out of the book.
 const BOOK = [['working', 'Working'], ['needs_attention', 'Needs attention'], ['protected', 'Protected']]
@@ -60,7 +60,7 @@ function BookedChart({ chart, lo, hi }) {
   return (
     <div className={`fx-chart fx-wchart${days ? ' is-days' : ''}`}>
       <div className="fx-wchart-y" aria-hidden="true">{ticks.map(v => <span key={v} style={{ top: `${(y(v) / H) * 100}%` }}>{v}</span>)}</div>
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`Booked per ${days ? 'day' : 'week'}: ${points.filter(p => !p[2]).map(([w, v]) => `${w} ${v}`).join(', ')}.${days ? '' : ` Expected at your spend ${lo} to ${hi}.`}`}>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`Delivered per ${days ? 'day' : 'week'}: ${points.filter(p => !p[2]).map(([w, v]) => `${w} ${v}`).join(', ')}.${days ? '' : ` Expected at your spend ${lo} to ${hi}.`}`}>
         {days ? (
           <g>{points.map(([d, v, later], i) => {
             const h = Math.max(v ? (v / top) * (H - 12) : 0, 3)
@@ -131,9 +131,10 @@ function WeekStrip({ appts, today }) {
 
 // Every open lead in one bar, split by the agent's five statuses (P898: Booked, No show, Follow up, Not interested, Sold),
 // with a count per status. Leads our team is still calling aren't a status; the tile's sub line counts them.
+// P923: the board is what was delivered to the agent; leads the team is still trying aren't delivered yet.
 const mixSub = by => {
   const open = LANES.reduce((t, l) => t + by[l.key], 0)
-  return `${open} lead${open === 1 ? '' : 's'} on your board${by.team ? ` · ${by.team} with our team` : ''}`
+  return `${open} delivered lead${open === 1 ? '' : 's'} on your board${by.team ? ` · ${by.team} our team is still trying` : ''}`
 }
 function LeadMix({ leads }) {
   const by = countByStatus(leads)
@@ -162,7 +163,9 @@ export default function Overview() {
   const { data: bill } = useSampleBilling()
   const { data: leads } = useSampleLeads()
   const { data: appts } = useSampleAppointments()
-  const wk = bill.expected.appts.booked
+  // P923: Delivered this week = booked appointments + live calls that reached the agent; the range and chart too.
+  const wk = deliveredRange(bill.expected)
+  const dl = deliveredOf({ booked: bill.booked, live: bill.live || 0 })
   const next = o.nextAppt
   // P843: the person's avatar takes their current stage colour (a client's stage, or a lead's lane).
   const toneOfAppt = a => (a.kind === 'client' ? clientStatus(stOf(clients.find(c => c.id === a.ref))).tone : laneOf(leads.find(l => l.id === a.ref)).tone)
@@ -172,7 +175,7 @@ export default function Overview() {
   const prot = nBy('protected')
   const chart = o.bookedChart
   const prev = chart.prev
-  const status = bill.booked < wk.low ? ['Below range so far', 'mute'] : bill.booked > wk.high ? ['Above range', 'up'] : ['In range', 'up']
+  const status = dl.total < wk.low ? ['Below range so far', 'mute'] : dl.total > wk.high ? ['Above range', 'up'] : ['In range', 'up']
   // P910: Your to-dos (calls to mark, the monthly check), each with its action; live calls pinned above them.
   const { data: needs } = useSampleNeeds()
   const act = useNeedAction()
@@ -183,19 +186,19 @@ export default function Overview() {
     <div className="tp-page fx-page fx-ovl">
       <div className="fx-ovl-main">
         {/* P867: the hero fills the window (data-fold) so the Your book / Next up / Lead mix row peeks a third */}
-        <Tile className="fx-ovl-hero" i={0} data-fold data-fold-next=".fx-ovl-book" title="Booked this week" sub={`Your lead spend books about ${rangeWords(wk)} a week`} to={paths.calendar()} label="Open Calendar">
+        <Tile className="fx-ovl-hero" i={0} data-fold data-fold-next=".fx-ovl-book" title="Delivered this week" sub={`Your lead spend delivers about ${rangeWords(wk)} a week: booked calls and live calls`} to={paths.calendar()} label="Open Calendar">
           {/* P843: the number is the hero; the range already sits in the subtitle, so the side line only says what it is */}
           <div className="fx-chart-head fx-bk-head">
-            <b className="tp-num fx-bk-num"><CountUp value={bill.booked} /></b>
-            <span className="fx-bk-side"><b>booked</b>{prev != null && <small>{prev} last week</small>}<i className={`fx-delta is-${status[1]}`}>{status[0]}</i></span>
+            <b className="tp-num fx-bk-num" aria-label={`${dl.total} delivered: ${dl.booked} booked, ${dl.live} live calls`}><CountUp value={dl.total} /></b>
+            <span className="fx-bk-side"><b>delivered</b><small className="fx-dl-split"><span className="tp-num">{dl.booked}</span> booked · <span className="tp-num">{dl.live}</span> live call{dl.live === 1 ? '' : 's'}</small>{prev != null && <small>{prev} last week</small>}<i className={`fx-delta is-${status[1]}`}>{status[0]}</i></span>
           </div>
           <div className="fx-key">
-            <span><i className="is-line" />{chart.mode === 'days' ? 'Booked per day' : 'Booked per week'}</span>
+            <span><i className="is-line" />{chart.mode === 'days' ? 'Delivered per day' : 'Delivered per week'}</span>
             {chart.mode === 'weeks' && <span><i className="is-dash" />Expected at your spend</span>}
             <span className="fx-key-range">{chart.range}</span>
           </div>
           {chart.empty
-            ? <Empty title="Nothing booked yet" sub="Your first appointments show up here as soon as the team books them." />
+            ? <Empty title="Nothing delivered yet" sub="Your first booked calls and live calls show up here as soon as they reach you." />
             : <BookedChart chart={chart} lo={wk.low} hi={wk.high} />}
         </Tile>
 

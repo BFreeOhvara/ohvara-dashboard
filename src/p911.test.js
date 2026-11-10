@@ -23,7 +23,8 @@ test('four journeys, in the agent-facing words, each ending back at Protected', 
 test('sample data: each journey has a client at a different step (done, current, upcoming, skipped)', () => {
   // New policy at steps 2, 3 and 4.
   assert.deepEqual(states(byId('sample-client-1')), ['done', 'current', 'upcoming', 'upcoming', 'upcoming'])
-  assert.deepEqual(states(byId('sample-client-3')), ['done', 'done', 'current', 'upcoming', 'upcoming'])
+  // P923: Robert said No to "Replacing an old policy?", so "Old policy cancelled" is n/a.
+  assert.deepEqual(states(byId('sample-client-3')), ['done', 'done', 'current', 'skipped', 'upcoming'])
   assert.deepEqual(states(byId('sample-client-4')), ['done', 'done', 'done', 'current', 'upcoming'])
   // Saving a policy at step 3, with the booked call on the current step.
   const ann = stagesOf(byId('sample-client-7'))
@@ -78,7 +79,9 @@ test('one rule for Protected: nothing pending and the latest draft cleared', () 
 
 test('a client without a track gets one from its fields', () => {
   const soldLead = { id: 'sold-1', fromLead: true, stage: 'setting_up', next_step: 'Add the policy details', submitted: 'Mon, Nov 2' }
-  assert.deepEqual(states(soldLead), ['current', 'upcoming', 'upcoming', 'upcoming', 'upcoming'])
+  // P923: not a replacement until the agent says Yes on Submit, so the old-policy step is n/a.
+  assert.deepEqual(states(soldLead), ['current', 'upcoming', 'upcoming', 'skipped', 'upcoming'])
+  assert.deepEqual(states({ ...soldLead, replacing: true }), ['current', 'upcoming', 'upcoming', 'upcoming', 'upcoming'])
   assert.equal(journeyOf({ stage: 'needs_attention', attention: 'Draft failed on Nov 1' }), 'save')
   assert.equal(journeyOf({ stage: 'requests', next_step: 'Address change' }), 'change')
   assert.equal(journeyOf({ added: true, stage: 'setting_up' }), 'added')

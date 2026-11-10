@@ -78,6 +78,14 @@ export function expected(spend, mode, rules = SPLIT_RULES) {
     soldMonth: band((booked * EST.appts.show * EST.appts.close + delivered * EST.live.close) * 4.33),
   }
 }
+// P923 — "Delivered this week" (Brayden, Nov 9): what reached the agent = booked appointments + live calls that reached
+// them. Leads the team is still trying (no answer, not reached yet) never count: the agent never sees them.
+export const deliveredRange = exp => {
+  const a = exp.appts.booked, l = exp.live.delivered
+  return { low: a.low + l.low, high: a.high + l.high, mid: a.mid + l.mid }
+}
+export const deliveredOf = ({ booked = 0, live = 0 } = {}) => ({ booked, live, total: booked + live })
+export const deliveredWords = d => `${d.total} delivered · ${d.booked} booked · ${d.live} live call${d.live === 1 ? '' : 's'}`
 export const rangeWords = r => (r.high === 0 ? 'none' : r.low === r.high ? `about ${r.high}` : `${r.low} to ${r.high}`)
 
 // The appointment calendar has to have room: about 1.5 open 30-minute slots a week for each expected booking.

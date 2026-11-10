@@ -112,10 +112,10 @@ test('replacement gate opens on "issued", cancel due before the old draft', () =
 test('Submit and Add clients ask only name, phone, city, state, carrier, draft day (+ premium, notes)', () => {
   for (const k of ['email', 'dob', 'product', 'number', 'face', 'beneficiary']) assert.equal(k in EMPTY_SUBMIT, false, k)
   const base = { ...EMPTY_SUBMIT, name: 'Ruth Ellison', phone: '5125550188', city: 'Austin', state: 'TX', carrier: 'Globe Life' }
-  assert.deepEqual(missingFields(base, { policy: true }), ['draftDay']) // premium is optional now
+  assert.deepEqual(missingFields(base, { policy: true }), ['draftDay', 'replacing']) // premium is optional now; P923: Yes/No asked
   const s = buildSubmission({ ...base, draftDay: '9', replacing: true, oldCarrier: 'Americo', oldDraftDay: '9' }, 'agent', { policy: true })
   assert.deepEqual(s.policy, { premium: null, draftDay: 9 })
-  assert.deepEqual(s.replaces, { carrier: 'Americo', draftDay: 9, cancelWhen: 'after_new_issued_before_old_draft' })
+  assert.deepEqual(s.replaces, { carrier: 'Americo', premium: null, draftDay: 9, cancelWhen: 'after_new_issued_before_old_draft' })
   assert.deepEqual(missingFields({ ...base, draftDay: '9', replacing: true, oldCarrier: 'Americo' }, { policy: true }), ['oldDraftDay'])
   for (const k of ['email', 'dob', 'product']) assert.equal(k in s, false, k)
   assert.deepEqual(FIELDS.map(f => f.key), ['first_name', 'last_name', 'phone', 'city', 'state', 'carrier', 'draft_day', 'monthly_premium', 'notes'])

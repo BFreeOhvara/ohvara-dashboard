@@ -189,6 +189,7 @@ export const LESSONS = [
       'Start call turns on 5 minutes before the booked time and stays on until the call is done or moved. Before that it shows the time. Calls that come in always ring.',
       'Everything you do is a booked call on your Calendar: hand-off calls after a sale, cancelling the old policy, saves, change and cancel requests, callbacks, welcome calls and yearly reviews.',
       'The system books each call itself: the next open time in the client\'s window (morning, afternoon or evening, on their clock) with a VA who is free.',
+      'A hand-off call or a cancel call opens with a box at the top: whether an old policy has to be cancelled and by when, and anything the agent said our team should know. Read it before you dial.',
       'Your Overview shows the next call with a countdown, and Next calls lists the rest of today.',
       'Call at the booked time. No answer: log it, and the system books the next try for the next business day.',
       'The client wants another time? Open the call and press Move. They get a text with the new time.',
@@ -403,6 +404,7 @@ export const LESSONS = [
     why: 'Closing the old policy properly protects the client and the agent. And a carrier that is closed means a wasted call.',
     steps: [
       'Cancellation calls are on your Calendar. Open the call to see the client, the old carrier and the new one.',
+      'The box at the top of the call says which old policy to cancel and the draft date to beat, plus any note from the agent, like who to call first.',
       'Carriers are only called while they are open. The portal only offers times inside the carrier\'s hours.',
       'If we don\'t have a carrier\'s hours yet, the portal says so and keeps times inside usual carrier hours. If they turn out to be closed, note it and tell the team.',
       'The old policy goes once the new one is issued, and before the old one\'s next draft, so they never pay twice. Until it is issued, Start call waits. The step on the call shows the date to cancel by.',

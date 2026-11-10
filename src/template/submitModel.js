@@ -17,12 +17,15 @@ export const EMPTY_BOOKING = { day: 5, time: '', iso: null, tz: null, vaId: null
 // columns). Replacing a policy asks the old carrier and the old draft day: the old policy is cancelled once the new
 // one is issued, timed to stop the old policy's next draft (lib/clientCheck.js cancelDueBy). A second insured (a
 // spouse) is their own client in the same household (N-D-18).
+// P923: "Before our team calls" (Brayden, Nov 9): the VA must know before the first call whether an old policy has to
+// be cancelled. Replacing is a Yes / No the agent has to answer (null = not answered yet); Yes asks the old carrier,
+// the old monthly premium (optional) and the old draft date (required). "Anything our team should know?" is `notes`.
 export const EMPTY_SPOUSE = { name: '', premium: '' }
 export const EMPTY_SUBMIT = {
   name: '', phone: '', city: '', state: '', reach: 'best', best: 'Afternoon', booking: EMPTY_BOOKING, carrier: '',
-  premium: '', draftDay: '', replacing: false, oldCarrier: '', oldDraftDay: '', spouse: null, notes: '',
+  premium: '', draftDay: '', replacing: null, oldCarrier: '', oldPremium: '', oldDraftDay: '', spouse: null, notes: '',
 }
-export const NEEDED = { name: 'Client name', phone: 'Phone number', city: 'City', state: 'State', licence: 'A state you’re licensed in', booking: 'Call time', carrier: 'Carrier', draftDay: 'Draft day', oldCarrier: 'The carrier being replaced', oldDraftDay: 'The old policy’s draft day', spouse: 'Second insured’s name' }
+export const NEEDED = { name: 'Client name', phone: 'Phone number', city: 'City', state: 'State', licence: 'A state you’re licensed in', booking: 'Call time', carrier: 'Carrier', draftDay: 'Draft day', replacing: 'Replacing a policy, yes or no', oldCarrier: 'The carrier being replaced', oldDraftDay: 'The old policy’s draft date', spouse: 'Second insured’s name' }
 export const DRAFT_DAYS = Array.from({ length: 28 }, (_, i) => String(i + 1))
 const amount = v => Number(String(v || '').replace(/[^\d.]/g, ''))
 
@@ -42,6 +45,7 @@ export function missingFields(f, { policy = false, licensed = null } = {}) {
   if (!f.carrier.trim()) out.push('carrier')
   if (policy) {
     if (!f.draftDay) out.push('draftDay')
+    if (f.replacing == null) out.push('replacing')
     if (f.replacing && !f.oldCarrier.trim()) out.push('oldCarrier')
     if (f.replacing && !f.oldDraftDay) out.push('oldDraftDay')
     if (f.spouse && !f.spouse.name.trim()) out.push('spouse')
@@ -77,7 +81,7 @@ export function buildSubmission(f, by = 'agent', opts = {}) {
     // new one is issued, before the old one's next draft. A spouse is their own client in the same household.
     policy: { premium: amount(f.premium) || null, draftDay: Number(f.draftDay) || null },
     notes: (f.notes || '').trim() || null,
-    replaces: f.replacing ? { carrier: f.oldCarrier.trim(), draftDay: Number(f.oldDraftDay) || null, cancelWhen: 'after_new_issued_before_old_draft' } : null,
+    replaces: f.replacing ? { carrier: f.oldCarrier.trim(), premium: amount(f.oldPremium) || null, draftDay: Number(f.oldDraftDay) || null, cancelWhen: 'after_new_issued_before_old_draft' } : null,
     household: f.spouse ? [{ name: f.spouse.name.trim(), premium: amount(f.spouse.premium) || null, carrier: listed ? listed.name : f.carrier.trim() }] : [],
   }
 }

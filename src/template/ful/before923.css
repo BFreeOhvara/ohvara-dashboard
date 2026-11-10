@@ -1,0 +1,18 @@
+/* P923 — "Before you call": the highlighted box at the top of a hand-off call, a cancel call and the live call view.
+   Apricot (DESIGN.md v17 shell palette: needs your eye), tokens only. */
+.bc-box { display: flex; flex-direction: column; gap: 8px; margin: 0 0 12px; padding: 12px 14px; border-radius: 16px;
+  background: var(--sh-cf-apricot); color: var(--ov-hi); }
+.bc-line { display: flex; align-items: flex-start; gap: 10px; margin: 0; min-width: 0; }
+.bc-line > span:last-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bc-ic { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--sh-cs-apricot); color: var(--sh-csi-apricot); }
+.bc-line b { font-size: 14px; font-weight: 700; line-height: 1.35; color: var(--ov-hi); }
+.bc-line small { font-size: 12px; font-weight: 600; color: var(--ov-mid); }
+.bc-line q { font-size: 13.5px; line-height: 1.4; color: var(--ov-hi); quotes: '“' '”'; overflow-wrap: anywhere; }
+.bc-line.is-note .bc-ic { background: color-mix(in srgb, var(--ov-hi) 12%, transparent); color: var(--ov-hi); }
+
+/* in the phone's live call view: tighter, and left-aligned under the centred name */
+.bc-box.is-compact { margin: 10px 0 0; padding: 10px 12px; gap: 6px; border-radius: 14px; text-align: left; width: 100%; box-sizing: border-box; }
+.bc-box.is-compact .bc-ic { width: 24px; height: 24px; }
+.bc-box.is-compact .bc-line b { font-size: 13px; }
+.bc-box.is-compact .bc-line q { font-size: 12.5px; }

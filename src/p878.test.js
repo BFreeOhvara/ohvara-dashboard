@@ -104,16 +104,17 @@ test('appointments need room on the calendar; a slow week is said plainly', () =
 })
 
 const base = { ...EMPTY_SUBMIT, name: 'Ruth Ellison', phone: '5125550188', city: 'Austin', state: 'TX', carrier: 'Globe Life' }
-const policy = { ...base, premium: '86.40', draftDay: '3' }
+const policy = { ...base, premium: '86.40', draftDay: '3', replacing: false }
 
 test('Submit: the policy details, a licensed state, a replacement and a spouse', () => {
   clearUnknownCarriers()
   // The old call (no policy step) still asks only for name, phone and carrier.
   assert.deepEqual(missingFields(EMPTY_SUBMIT), ['name', 'phone', 'carrier'])
   // P899: city, state and draft day are needed; the premium is optional; no date of birth, policy number or face amount.
-  assert.deepEqual(missingFields(base, { policy: true }), ['draftDay'])
-  assert.deepEqual(missingFields({ ...base, city: '', state: '' }, { policy: true }), ['city', 'state', 'draftDay'])
-  const lean = buildSubmission({ ...base, premium: '52', draftDay: '15', notes: ' Wants a call after 5 ' }, 'agent', { policy: true })
+  // P923: "Replacing an old policy?" needs a Yes or a No.
+  assert.deepEqual(missingFields(base, { policy: true }), ['draftDay', 'replacing'])
+  assert.deepEqual(missingFields({ ...base, city: '', state: '' }, { policy: true }), ['city', 'state', 'draftDay', 'replacing'])
+  const lean = buildSubmission({ ...base, replacing: false, premium: '52', draftDay: '15', notes: ' Wants a call after 5 ' }, 'agent', { policy: true })
   assert.deepEqual(lean.policy, { premium: 52, draftDay: 15 })
   assert.equal('dob' in lean, false)
   assert.equal(lean.notes, 'Wants a call after 5')

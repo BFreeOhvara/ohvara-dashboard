@@ -14,6 +14,7 @@ import { DocsBlock } from '../Docs886'
 import { WELCOME_TEXT_ASK, ordinal } from '../../../lib/bookImport.js'
 import '../../p891.css'
 import { StartCall } from '../StartCall'
+import { BeforeCall } from '../BeforeCall'
 
 // P918 — no Servicing page any more. This file keeps the call view for every booking that isn't a cancel-the-old-policy
 // call (it opens on the Calendar at /fulfillment/calendar/<id>, and from a client's drawer): who, why, the short script,
@@ -211,6 +212,8 @@ export function TaskDrawer({ id, onClose }) {
         <span className="tp-grow" />
         <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('send')}><Send size={15} />Send to agent</button>
       </>}>
+      {/* P923: a hand-off call opens with what the agent said under "Before our team calls". */}
+      {!done && t.kind === 'handoff_call' && <BeforeCall client={t.client} agent={t.agent} />}
       {done && <section className="fx-blk fs-done"><header><h3><CircleCheck size={16} aria-hidden="true" />{outcomeLabel(t.kind, t.outcome) || 'Done'}</h3></header><p className="tp-mid">{t.agent} sees the result on the client.</p></section>}
       <Booked t={t} onMove={canMove ? () => setPanel('move') : null} />
       <WhatHappened t={t} />

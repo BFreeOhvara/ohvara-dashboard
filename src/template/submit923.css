@@ -1,0 +1,13 @@
+/* P923 — Submit for servicing: the "Before our team calls" section (replacing Yes / No, the old policy, a note for the
+   team). One bordered block like Review's (flow.css .fx-sub-rblk), tokens only. */
+.sb-before { display: flex; flex-direction: column; gap: 14px; padding: 14px 16px; border-radius: 18px;
+  border: 1px solid var(--sh-glass-edge); background: color-mix(in srgb, var(--ov-hi) 4%, transparent); }
+.sb-before > header { display: flex; flex-direction: column; gap: 2px; }
+.sb-before > header h3 { margin: 0; font-size: 15px; font-weight: 700; color: var(--ov-hi); }
+.sb-before > header small { font-size: 12px; color: var(--ov-mute); }
+.sb-before .fx-sub-field.sb-bad .tp-seg { box-shadow: 0 0 0 1.5px var(--danger); border-radius: 999px; }
+.sb-err { font-size: 12px; font-weight: 600; color: var(--danger); }
+.sb-grid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.sb-before .fx-ta { min-height: 72px; }
+@media (max-width: 999.98px) { .sb-grid3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 599.98px) { .sb-grid3 { grid-template-columns: minmax(0, 1fr); } .sb-before { padding: 12px; } }

@@ -134,13 +134,16 @@ const mkAdded = (id, p, book, o) => mkClient(id, p, {
 
 const seedClients = [
   mkClient('sample-client-1', people.gloria, { policy_number: 'SAMPLE-1001', carrier_name: 'Harborline Life', draft_day: 12, note: 'Setting up the new policy. Review call Fri, Nov 6.', next_step: 'Review call Fri, Nov 6, 4:15 PM',
+    // P923: "Before our team calls": a replacement, and a note for the team.
+    replacing: true, brief: { replaces: { carrier: 'Globe Life', premium: 54.2, draft_day: 3, cancel_by: 'Dec 3' }, note: 'Hard of hearing. Call her daughter Amy first.' },
     // P911: new policy, step 2 (the hand-off call is booked).
     track: { kind: 'new_policy', done: { sold: 'Oct 27' }, next: 'Fri, Nov 6, 4:15 PM' } }),
   mkClient('sample-client-2', people.luis, { policy_number: 'SAMPLE-1002', carrier_name: 'Pinecrest Assurance', stage: 'protected', status: 'effective', monthly_premium: 112, annual_premium: 1344, next_step: null, draft_day: 27, check_from: '2026-06-01', checked_through: '2026-09-27' }),
-  mkClient('sample-client-3', people.robert, { policy_number: 'SAMPLE-1003', stage: 'setting_up', draft_day: 5, next_step: 'Waiting on the carrier',
+  mkClient('sample-client-3', people.robert, { policy_number: 'SAMPLE-1003', stage: 'setting_up', draft_day: 5, next_step: 'Waiting on the carrier', replacing: false, brief: { replaces: null, note: null },
     // P911: new policy, step 3 (hand-off done, waiting on the carrier's approval).
     track: { kind: 'new_policy', done: { sold: 'Oct 27', handoff: 'Oct 28' }, next: null } }),
   mkClient('sample-client-4', people.denise, { policy_number: 'SAMPLE-1004', carrier_name: 'Harborline Life', stage: 'setting_up', draft_day: 20, next_step: 'Cancel call Thu, Nov 5, 10:00 AM',
+    replacing: true, brief: { replaces: { carrier: 'Colonial Penn', premium: null, draft_day: 8, cancel_by: 'Nov 8' }, note: null },
     // P911: new policy, step 4 (approved; the old policy is cancelled before its draft on the 8th).
     track: { kind: 'new_policy', done: { sold: 'Oct 26', handoff: 'Oct 27', approved: 'Oct 30' }, next: 'Thu, Nov 5, 10:00 AM · before the old draft on the 8th' } }),
   mkClient('sample-client-5', people.renee, { policy_number: 'SAMPLE-1005', carrier_name: 'Pinecrest Assurance', stage: 'requests', status: 'request_open', note: 'A change on the policy is open', next_step: 'Address change in progress', request: 'Address change in progress', draft_day: 15, check_from: '2026-04-01', checked_through: '2026-10-15',
@@ -237,10 +240,11 @@ seedAppointments.forEach(a => { const p = personOf(a.ref); a.iso = instantOf(nov
 
 // P844: sample agents of different ages, so every range of the chart shows. Pick one with ?agent=new | first | empty in
 // the address (default: an established agent, 14 weeks in). The sample clock is Monday, Nov 2. Real data swaps in here.
-const WEEKS_BEFORE = [['Aug 3', 3], ['Aug 10', 4], ['Aug 17', 3], ['Aug 24', 5], ['Aug 31', 4], ['Sep 7', 3], ['Sep 14', 5], ['Sep 21', 4], ['Sep 28', 6], ['Oct 5', 5], ['Oct 12', 4], ['Oct 19', 6], ['Oct 26', 5]]
+// P923: each past week is [label, booked, live calls]; the chart shows delivered (booked + live).
+const WEEKS_BEFORE = [['Aug 3', 5, 3], ['Aug 10', 6, 3], ['Aug 17', 5, 4], ['Aug 24', 7, 4], ['Aug 31', 6, 3], ['Sep 7', 5, 4], ['Sep 14', 8, 4], ['Sep 21', 7, 3], ['Sep 28', 8, 5], ['Oct 5', 7, 4], ['Oct 12', 6, 5], ['Oct 19', 8, 4], ['Oct 26', 8, 4]]
 const SAMPLE_AGENTS = {
   established: { days: 98, weeks: WEEKS_BEFORE },
-  new: { days: 21, weeks: [['Oct 12', 3], ['Oct 19', 4], ['Oct 26', 5]] },
+  new: { days: 21, weeks: [['Oct 12', 4, 2], ['Oct 19', 6, 3], ['Oct 26', 7, 4]] },
   first: { days: 5, weeks: [] },
   empty: { days: 0, weeks: [], none: true },
 }
@@ -298,7 +302,8 @@ const seed = {
     plan: 'paid', products: 'both',
     spend: { daily: 100 }, pending: null,
     take: { mode: param('take') === 'appts' ? 'appts' : 'both', hours: DEFAULT_LIVE_HOURS, tz: 'America/Chicago' },
-    booked: sampleAgent().none ? 0 : 4, usual: 5,
+    // P923: live = live calls that reached the agent this week (bought.week.transferred); delivered = booked + live.
+    booked: sampleAgent().none ? 0 : 4, live: sampleAgent().none ? 0 : 2, usual: 5,
     nightly: {
       // P910: one paid day ahead. Today (Mon) and tomorrow (Tue) are paid; tonight charges the day after tomorrow
       // (Wed). ?billing=failed: last night's charge for Tue was declined, so Tue runs no ads unless it's paid first.
@@ -393,17 +398,18 @@ const LEAD_NEW = ['booked', 'ringing', 'missed']
 
 // First 2 weeks: day by day this week. 2 to 8 weeks: week by week since joining. 8+ weeks: the last 8 weeks.
 // points: [label, value, upcoming]. prev: last week's total, or null when there was no last week.
+// P923: the value is Delivered (booked appointments + live calls that reached the agent), not booked alone.
 function bookedChart(thisWeek) {
   const a = sampleAgent()
-  const booked = a.none ? 0 : thisWeek
+  const delivered = a.none ? 0 : thisWeek
   if (a.days < 14) {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-    return { mode: 'days', range: 'This week, day by day', empty: booked === 0, prev: null,
-      points: days.map((d, i) => [d, i === 0 ? booked : 0, i > 0]) }
+    return { mode: 'days', range: 'This week, day by day', empty: delivered === 0, prev: null,
+      points: days.map((d, i) => [d, i === 0 ? delivered : 0, i > 0]) }
   }
-  const all = [...a.weeks, ['Nov 2', booked]]
+  const all = [...a.weeks.map(([w, b, l]) => [w, b + (l || 0)]), ['Nov 2', delivered]]
   const weeks = a.days < 56 ? all : all.slice(-8)
-  return { mode: 'weeks', range: a.days < 56 ? 'Since you joined' : 'Last 8 weeks', empty: false, prev: a.weeks.length ? a.weeks[a.weeks.length - 1][1] : null, points: weeks }
+  return { mode: 'weeks', range: a.days < 56 ? 'Since you joined' : 'Last 8 weeks', empty: false, prev: all.length > 1 ? all[all.length - 2][1] : null, points: weeks }
 }
 
 function useOverviewSample() {
@@ -424,8 +430,8 @@ function useOverviewSample() {
       { day: 'Wed', date: 'Oct 28', packet: 3, review: 1, cancel: 0, save: 1 }, { day: 'Thu', date: 'Oct 29', packet: 0, review: 2, cancel: 0, save: 0 },
       { day: 'Fri', date: 'Oct 30', packet: 2, review: 0, cancel: 1, save: 1 }, { day: 'Sat', date: 'Oct 31', packet: 0, review: 0, cancel: 0, save: 0 }, { day: 'Sun', date: 'Nov 1', packet: 0, review: 0, cancel: 0, save: 0 },
     ],
-    // P844: the "Booked this week" chart picks its range from how long the agent has been on Ohvara
-    bookedChart: bookedChart(s.billing.booked),
+    // P844: the "Delivered this week" chart (P923) picks its range from how long the agent has been on Ohvara
+    bookedChart: bookedChart(s.billing.booked + (s.billing.live || 0)),
     upNext: s.appointments.slice(0, 3),
     leadsToday: s.leads.length,
     today: NOW.label, clock: { time: NOW.time, ampm: NOW.ampm },

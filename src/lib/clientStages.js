@@ -58,6 +58,9 @@ export const JOURNEYS = {
 }
 export const JOURNEY_ORDER = ['new_policy', 'save', 'change', 'added']
 
+// P923: a replacement = the agent answered Yes (c.replacing), or the client's brief names the old policy, or the old
+// policy was already cancelled. Anything else (No, or never asked) leaves "Old policy cancelled" n/a.
+export const replacingOf = c => c?.replacing === true || !!c?.brief?.replaces || !!c?.track?.done?.old_cancel
 const day = s => (s ? String(s).replace(/^[A-Z][a-z]{2},\s*/, '') : null) // 'Tue, Oct 27' → 'Oct 27'
 const SAVE_WHY = /miss|lapse|draft|payment|declin|return|bank/i
 
@@ -82,9 +85,10 @@ export function derivedTrack(c) {
   }
   if (kind === 'change') return { kind, done: { requested: true }, next }
   if (kind === 'added') return { kind, done: { added: day(c.submitted) || true }, next }
-  // New policy. A Sold lead not submitted yet is still on step 1; a replacement unless the client says otherwise.
+  // New policy. A Sold lead not submitted yet is still on step 1. P923: "Old policy cancelled" is a real step only when
+  // the agent said Yes to "Replacing an old policy?" on Submit (else n/a).
   const done = c.fromLead ? {} : { sold: day(c.submitted) || true }
-  return { kind, done, skip: c.replacing === false ? ['old_cancel'] : [], next }
+  return { kind, done, skip: replacingOf(c) ? [] : ['old_cancel'], next }
 }
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 // 'YYYY-MM-DD' → 'Nov 3'; anything else as written (weekday dropped).
@@ -102,6 +106,7 @@ export function stagesOf(c) {
   const j = JOURNEYS[tr.kind] || JOURNEYS.new_policy
   const done = tr.done || {}
   const skip = new Set(tr.skip || [])
+  if (j.key === 'new_policy' && !replacingOf(c)) skip.add('old_cancel')
   let current = null
   const steps = j.steps.map(s => {
     if (skip.has(s.key)) return { ...s, state: 'skipped' }

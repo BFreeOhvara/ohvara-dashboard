@@ -19,6 +19,7 @@ import { CALL_WORD, CALL_TONE } from '../words'
 import { HelpDot } from '../../../fulshell/training/HelpDot'
 import { DocsBlock, GateStep } from '../Docs886'
 import { useGate } from '../../docs886/data'
+import { BeforeCall } from '../BeforeCall'
 
 // P918 — Calendar: every booked call (this was the Schedule page; Schedule is now the VA's own hours). This week ·
 // Next week with a chip per call type beside it; no day buttons, no Show panel, no colour key. A call opens its view
@@ -117,6 +118,8 @@ export function CallDrawer({ id, onClose }) {
         <span className="tp-grow" />
         <Link to={fp('messages')} className="tp-btn ov-ghost"><MessageSquare size={14} />Message {k.agent.split(' ')[0]}</Link>
       </>}>
+      {/* P923: what the agent said under "Before our team calls" (the replacement, their note), first. */}
+      {open && <BeforeCall client={k.client} agent={k.agent} oldCarrier={k.old_carrier} cancelBy={gate.old_draft} />}
       {k.status === 'cancelled' && (
         <section className="fx-blk fs-done"><header><h3><CircleCheck size={16} aria-hidden="true" />Old policy cancelled</h3></header><p className="tp-mid">{k.confirmation ? `Confirmation ${k.confirmation}.` : `Done on the call with ${first}.`}</p></section>
       )}

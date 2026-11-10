@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Check, ChevronLeft, ChevronRight, Pencil, User, ShieldCheck, ClipboardCheck, PhoneCall, Wrench, Activity as ActivityIcon, Clock3, CalendarClock, UserPlus, Trash2 } from 'lucide-react'
 import { useSampleActions, useSampleSettings, useSampleLeads, useSampleClients } from '../data'
-import { Field, Pending, Seg, Chip, Switch, useNote, initials } from '../kit'
+import { Field, Pending, Seg, Chip, useNote, initials } from '../kit'
 import { Select } from '../Select'
 import { matchPeople, fillFromMatch } from '../leadLifecycle'
 import { agentChip } from '../agentView'
@@ -19,6 +19,7 @@ import { bookAfterSale, useAfterSalePreview, bookedText } from '../ful/data'
 import { formatPhone } from '../phoneMask'
 import { EMPTY_SUBMIT, EMPTY_SPOUSE, NEEDED, TIMES, DRAFT_DAYS, missingFields, buildSubmission, reachText, livesIn } from '../submitModel'
 import { ordinal } from '../../lib/clientCheck.js'
+import '../submit923.css'
 
 // P843: Submit a policy, built out in the shell design. Three clear steps (the client, the policy, review) with a
 // live summary beside them. P868: the phone formats itself and saves as E.164, the state is a dropdown, the carrier
@@ -30,6 +31,7 @@ import { ordinal } from '../../lib/clientCheck.js'
 const EMPTY = EMPTY_SUBMIT
 const chipWords = l => agentChip(l)[1]
 const money0 = v => (v ? `$${Number(String(v).replace(/[^\d.]/g, '')).toLocaleString('en-US')}` : 'Not given')
+const YES_NO = [{ key: 'yes', label: 'Yes' }, { key: 'no', label: 'No' }]
 const WHEN = [...TIMES.map(x => ({ key: x, label: x })), { key: 'exact', label: 'Exact time', icon: CalendarClock }]
 // P907: the hand-off call the system would book for this window, shown before Submit (sample; the server books it).
 function AutoBooked({ state, city, window: win }) {
@@ -42,7 +44,7 @@ function AutoBooked({ state, city, window: win }) {
 }
 const STEPS = [
   { key: 'client', label: 'The client', sub: 'Who you sold to', Icon: User, needs: ['name', 'phone', 'city', 'state', 'licence', 'booking'] },
-  { key: 'policy', label: 'The policy', sub: 'Carrier and draft day', Icon: ShieldCheck, needs: ['carrier', 'draftDay', 'oldCarrier', 'oldDraftDay', 'spouse'] },
+  { key: 'policy', label: 'The policy', sub: 'Carrier, draft day, before we call', Icon: ShieldCheck, needs: ['carrier', 'draftDay', 'replacing', 'oldCarrier', 'oldDraftDay', 'spouse'] },
   { key: 'review', label: 'Review', sub: 'Check and submit', Icon: ClipboardCheck, needs: [] },
 ]
 const NEXT = [
@@ -70,13 +72,15 @@ function Steps({ at, done, onPick }) {
 function Review({ f, onEdit }) {
   const rows = [
     ['client', 'The client', [['Name', f.name], ['Phone', formatPhone(f.phone)], ['Lives in', livesIn(f) || 'Not given'], [f.reach === 'book' ? 'Call booked' : 'Best time', f.reach === 'book' ? reachText(f) : f.best]]],
-    ['policy', 'The policy', [['Carrier', f.carrier], ['Draft day', f.draftDay ? `The ${ordinal(Number(f.draftDay))} of each month` : 'Not given'], ['Monthly premium', money0(f.premium)], ['Notes', f.notes?.trim() || 'Not given'], ['Replaces', f.replacing ? `${f.oldCarrier || 'Not given'}${f.oldDraftDay ? `, drafts the ${ordinal(Number(f.oldDraftDay))}` : ''}` : 'Nothing'], ...(f.spouse ? [['Second insured', f.spouse.name || 'Not given']] : [])]],
+    ['policy', 'The policy', [['Carrier', f.carrier], ['Draft day', f.draftDay ? `The ${ordinal(Number(f.draftDay))} of each month` : 'Not given'], ['Monthly premium', money0(f.premium)], ...(f.spouse ? [['Second insured', f.spouse.name || 'Not given']] : [])]],
+    // P923: what the VA reads before the first call.
+    ['policy', 'Before our team calls', [['Replacing an old policy?', f.replacing == null ? 'Not answered' : f.replacing ? `Yes: ${f.oldCarrier || 'carrier not given'}${f.oldPremium ? `, ${money0(f.oldPremium)} a month` : ''}${f.oldDraftDay ? `, drafts the ${ordinal(Number(f.oldDraftDay))}` : ''}` : 'No'], ['For our team', f.notes?.trim() || 'Nothing']]],
   ]
   return (
     <div className="fx-sub-review">
-      {rows.map(([key, title, list], i) => (
-        <section key={key} className="fx-sub-rblk">
-          <header><h3>{title}</h3><button type="button" className="fx-pillbtn" onClick={() => onEdit(i)}><Pencil size={13} aria-hidden="true" />Edit</button></header>
+      {rows.map(([key, title, list]) => (
+        <section key={title} className="fx-sub-rblk">
+          <header><h3>{title}</h3><button type="button" className="fx-pillbtn" onClick={() => onEdit(STEPS.findIndex(s => s.key === key))}><Pencil size={13} aria-hidden="true" />Edit</button></header>
           <dl>{list.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
         </section>
       ))}
@@ -161,11 +165,11 @@ export default function Submit() {
     sale.linked = f.linked || null
     const got = bookAfterSale({ who: sale.name, phone: sale.phoneShown, state: sale.state || '', city: sale.city || '', carrier: sale.carrier, window: sale.bestTime,
       exact: sale.booking ? { iso: sale.booking.iso, tz: sale.booking.tz, vaId: sale.booking.vaId } : null,
-      replaces: sale.replaces ? { carrier: sale.replaces.carrier, draftDay: sale.replaces.draftDay } : null })
+      replaces: sale.replaces ? { carrier: sale.replaces.carrier, premium: sale.replaces.premium, draftDay: sale.replaces.draftDay } : null, note: sale.notes })
     if (sale.booking) sale.booking.va = got.handoff?.va?.name || null
     sale.handoff = got.handoff ? { iso: got.handoff.iso, tz: got.handoff.tz, vaId: got.handoff.va?.id || null } : null
     submitSale(sale)
-    setDone({ name: sale.name, call: got.handoff ? bookedText(got.handoff.iso, got.handoff.tz) : null, cancel: got.cancel ? bookedText(got.cancel.iso, got.cancel.tz) : null, spouse: sale.household[0]?.name || null })
+    setDone({ name: sale.name, call: got.handoff ? bookedText(got.handoff.iso, got.handoff.tz) : null, cancel: got.cancel ? bookedText(got.cancel.iso, got.cancel.tz) : null, cancelBy: got.cancel?.by || null, spouse: sale.household[0]?.name || null })
     note('Sale submitted for servicing')
   }
   const restart = () => { setDone(null); setF(EMPTY); setTried(false); setChecked([]); setStep(0); setTyped(null) }
@@ -176,7 +180,7 @@ export default function Submit() {
         <section className="fx-tile fx-sub-ok" style={{ '--i': 0 }}>
           <span className="fx-sub-okic"><Check size={26} aria-hidden="true" /></span>
           <h2>Submitted</h2>
-          <p>{done.name}{done.spouse ? ` and ${done.spouse} are` : ' is'} on your books{done.spouse ? ', each with their own policy in one household' : ''}. {done.call ? `Their hand-off call is booked for ${done.call}.` : 'Our team takes it from here.'}{done.cancel ? ` The call to cancel the old policy is booked for ${done.cancel}.` : ''} It shows on Clients as Working until it{'’'}s Protected.</p>
+          <p>{done.name}{done.spouse ? ` and ${done.spouse} are` : ' is'} on your books{done.spouse ? ', each with their own policy in one household' : ''}. {done.call ? `Their hand-off call is booked for ${done.call}.` : 'Our team takes it from here.'}{done.cancel ? ` The call to cancel the old policy is booked for ${done.cancel}${done.cancelBy ? `, before its ${done.cancelBy} draft` : ''}.` : ''} It shows on Clients as Working until it{'’'}s Protected.</p>
           <ol className="fx-sub-next">{NEXT.map(([Icon, t, s]) => <li key={t}><span className="fx-sub-nic"><Icon size={16} aria-hidden="true" /></span><span><b>{t}</b><small>{s}</small></span></li>)}</ol>
           <div className="tp-row tp-wrap fx-sub-okacts">
             <Link to={paths.clients()} className="tp-primary fx-accent">See your clients</Link>
@@ -225,13 +229,28 @@ export default function Submit() {
               <Field label="Carrier" hint="Start typing: every US life carrier is listed. Not there? Type its name."><CarrierSelect invalid={bad('carrier')} value={f.carrier} onChange={v => setF({ ...f, carrier: v })} by="agent" /></Field>
               <Field label="Draft day" hint="The day of the month the premium comes out."><Select label="Draft day" invalid={bad('draftDay')} placeholder="Pick a day" value={f.draftDay} onChange={v => setF({ ...f, draftDay: v })} options={DRAFT_DAYS} /></Field>
               <Field label="Monthly premium, optional"><input value={f.premium} onChange={set('premium')} inputMode="decimal" placeholder="$86.40" /></Field>
-              <Field label="Notes, optional"><textarea className="tp-input fx-ta" value={f.notes} onChange={set('notes')} placeholder="Anything the team should know" /></Field>
             </div>
-            <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Replacing a policy?</b><p className="tp-sub">Most clients set the new one to draft on the old one{'’'}s draft day. We cancel the old one once the new one is issued, before its next draft, so they never pay twice.</p></div><Switch on={f.replacing} label="Replacing a policy" onChange={v => setF({ ...f, replacing: v })} /></div>
-            {f.replacing && <div className="fx-form-grid">
-              <Field label="Old carrier"><CarrierSelect label="Old carrier" invalid={bad('oldCarrier')} value={f.oldCarrier} onChange={v => setF({ ...f, oldCarrier: v })} by="agent" /></Field>
-              <Field label="Old draft day" hint="When the old policy drafts. We cancel it before then."><Select label="Old draft day" invalid={bad('oldDraftDay')} placeholder="Pick a day" value={f.oldDraftDay} onChange={v => setF({ ...f, oldDraftDay: v })} options={DRAFT_DAYS} /></Field>
-            </div>}
+            {/* P923: one section the VA reads before the first call. Replacing is a Yes / No the agent must answer; Yes
+                books the cancel-the-old-policy call by itself, before the old draft, once the new policy is issued. */}
+            <section className="sb-before" aria-labelledby="sb-before-h">
+              <header><h3 id="sb-before-h">Before our team calls</h3><small>Our team reads this before the first call. The calls book themselves.</small></header>
+              <div className={`fx-sub-field${bad('replacing') ? ' sb-bad' : ''}`}>
+                <b>Replacing an old policy?</b>
+                <Seg role="radiogroup" label="Replacing an old policy?" value={f.replacing == null ? null : f.replacing ? 'yes' : 'no'} onChange={v => setF({ ...f, replacing: v === 'yes' })} options={YES_NO} />
+                {bad('replacing') && <small className="sb-err" role="alert">Pick Yes or No.</small>}
+              </div>
+              {f.replacing && <>
+                <div className="fx-form-grid sb-grid3">
+                  <Field label="Old carrier"><CarrierSelect label="Old carrier" invalid={bad('oldCarrier')} value={f.oldCarrier} onChange={v => setF({ ...f, oldCarrier: v })} by="agent" /></Field>
+                  <Field label="Old monthly premium, optional"><input value={f.oldPremium} onChange={set('oldPremium')} inputMode="decimal" placeholder="$54.20" /></Field>
+                  <Field label="Old draft date" hint="The day of the month it drafts."><Select label="Old draft date" invalid={bad('oldDraftDay')} placeholder="Pick a day" value={f.oldDraftDay} onChange={v => setF({ ...f, oldDraftDay: v })} options={DRAFT_DAYS} /></Field>
+                </div>
+                <p className="tp-sub tp-row fx-sub-auto" role="status"><Clock3 size={14} aria-hidden="true" />
+                  {f.oldDraftDay ? `The call to cancel the old policy books itself once the new policy is issued, before the old one drafts on the ${ordinal(Number(f.oldDraftDay))}.` : 'Add the old draft date and the call to cancel the old policy books itself before it.'}
+                </p>
+              </>}
+              <Field label="Anything our team should know? Optional" hint="Shown to the team at the top of the call."><textarea className="tp-input fx-ta" value={f.notes} onChange={set('notes')} placeholder="e.g. Hard of hearing, call her daughter Amy first. Wants the draft moved to the 3rd." /></Field>
+            </section>
             {f.spouse ? <div className={`fx-sub-field${bad('spouse') ? ' is-bad' : ''}`}>
               <span className="tp-row tp-between"><b>Second insured</b><button type="button" className="tp-btn ov-ghost sm" onClick={() => setF({ ...f, spouse: null })}><Trash2 size={14} />Remove</button></span>
               <small>Their own client and policy, in the same household as {f.name.trim() || 'this client'}.</small>
