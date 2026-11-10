@@ -19,7 +19,7 @@ import { noProvider, retell, vapi, ghl, type Provider } from './providers.ts'
 import { isCron } from '../_shared/cronAuth.ts'
 import { sendersFromEnv } from '../notify-push/senders.ts'
 import { checkPush, clearPush, sendAll } from '../notify-push/transfer.ts'
-import { retellVoices, retellSetup, retellNumber, retellCall } from './retellAdmin.ts'
+import { retellVoices, retellSetup, retellNumber, retellNumbers, retellCall } from './retellAdmin.ts'
 
 const env = (k: string) => Deno.env.get(k) ?? ''
 const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'))
@@ -141,6 +141,7 @@ async function retellAction(action: string, body: any, d: { store: Store; provid
       if (!env('RETELL_AGENT_ID')) throw Object.assign(new Error('set up the agent first'), { status: 400 })
       return retellNumber(f, key, env('RETELL_AGENT_ID'), Number(body?.area_code) || 512)
     }
+    case 'retell_numbers': return { numbers: await retellNumbers(f, key) }
     case 'retell_call': return retellCall(f, key, String(body?.provider_call_id ?? ''))
     case 'test_call': {
       // Dials ONLY the number given here, as a sample lead of the Test Agent. ai_caller_live is not read or changed.

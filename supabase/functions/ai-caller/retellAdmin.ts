@@ -39,3 +39,9 @@ export async function retellCall(f: Fetch, key: string, id: string) {
   return { status: c.call_status, reason: c.disconnection_reason, secs: Math.round((c.duration_ms ?? 0) / 1000), cost_cents: c.call_cost?.combined_cost ?? null,
     products: c.call_cost?.product_costs ?? null, summary: c.call_analysis?.call_summary ?? null }
 }
+
+// Read-only: the numbers on the Retell account (a purchase reply can be lost to pg_net's 5 s timeout).
+export async function retellNumbers(f: Fetch, key: string) {
+  const r = await call(f, key, 'GET', '/v2/list-phone-numbers?limit=100') // legacy /list-phone-numbers retired Jun 2026
+  return ((r.items ?? []) as Record<string, unknown>[]).map(n => ({ phone_number: n.phone_number, pretty: n.phone_number_pretty ?? null, nickname: n.nickname ?? null, outbound: n.outbound_agents ?? null }))
+}
