@@ -66,7 +66,7 @@ async function getCallerProfile(req: Request) {
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
   const { data: { user } } = await admin.auth.getUser(auth.replace('Bearer ', ''))
   if (!user) return null
-  const { data } = await admin.from('profiles').select('id,role').eq('id', user.id).single()
+  const { data } = await admin.from('profiles').select('id,role,is_active').eq('id', user.id).single()
   return data
 }
 
@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
   )
 
   const profile = await getCallerProfile(req)
-  const isAdmin = profile?.role === 'admin'
+  const isAdmin = profile?.role === 'admin' && profile?.is_active === true // P922: a turned-off admin is not an admin
 
   // P922: signed-in people only, even for the yes/no capability flags.
   if (!profile) {
