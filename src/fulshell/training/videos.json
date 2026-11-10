@@ -138,9 +138,9 @@
    "builtAt": "2026-11-10T02:35:53.142Z"
   },
   "carrier": {
-   "kind": "walkthrough",
-   "title": "Carrier calls inside carrier hours",
-   "duration": 231.4,
+   "kind": "explainer",
+   "title": "Cancelling the old policy",
+   "duration": 150,
    "src": "carrier.mp4",
    "poster": "carrier-poster.jpg",
    "captions": "carrier.captions.json",
@@ -148,98 +148,58 @@
    "chapters": [
     {
      "t": 0.4,
-     "label": "Carrier calls inside carrier hours"
+     "label": "Cancelling the old policy"
     },
     {
-     "t": 11.7,
-     "label": "Your Calendar"
+     "t": 12,
+     "label": "The whole call"
     },
     {
-     "t": 19.8,
-     "label": "Open the call"
+     "t": 21.2,
+     "label": "When it happens"
     },
     {
-     "t": 25.3,
-     "label": "Client and carriers"
-    },
-    {
-     "t": 37.8,
+     "t": 38.5,
      "label": "Carrier hours"
     },
     {
-     "t": 43.2,
-     "label": "Globe Life's hours"
+     "t": 49.1,
+     "label": "Call the client"
     },
     {
-     "t": 56.4,
-     "label": "Hours not verified"
+     "t": 60.9,
+     "label": "Call the carrier, hold"
     },
     {
-     "t": 67,
-     "label": "Use the usual window"
+     "t": 70.9,
+     "label": "Merge the client in"
     },
     {
-     "t": 78.4,
-     "label": "Back to Gloria"
+     "t": 80.2,
+     "label": "The client talks"
     },
     {
-     "t": 83.5,
-     "label": "New policy first"
+     "t": 93.8,
+     "label": "How it sounds"
     },
     {
-     "t": 110.8,
-     "label": "Start call"
+     "t": 116.8,
+     "label": "Log it"
     },
     {
-     "t": 124.7,
-     "label": "Add the carrier"
-    },
-    {
-     "t": 138.4,
-     "label": "She confirms"
-    },
-    {
-     "t": 153.8,
-     "label": "Never suggest it"
-    },
-    {
-     "t": 162.6,
-     "label": "Tell the carrier"
-    },
-    {
-     "t": 173,
-     "label": "The carrier confirms"
-    },
-    {
-     "t": 185.7,
-     "label": "End the call"
-    },
-    {
-     "t": 189.9,
-     "label": "Cancelled or No answer"
-    },
-    {
-     "t": 196.3,
-     "label": "Mark Cancelled"
-    },
-    {
-     "t": 204.2,
-     "label": "Done and checked"
-    },
-    {
-     "t": 210.2,
+     "t": 127.3,
      "label": "Recap"
     },
     {
-     "t": 224.2,
+     "t": 144.9,
      "label": "Now take the check"
     }
    ],
    "helpAt": {
-    "carrier_call": 124.7
+    "carrier_call": 70.9
    },
-   "sizeBytes": 8021763,
-   "builtAt": "2026-11-10T02:39:10.010Z"
+   "sizeBytes": 6572226,
+   "builtAt": "2026-11-10T07:29:13.621Z"
   },
   "changes": {
    "kind": "walkthrough",
@@ -343,7 +303,7 @@
   "checkins": {
    "kind": "explainer",
    "title": "Check-in texts at day 30, 60 and 90",
-   "duration": 162.7,
+   "duration": 130,
    "src": "checkins.mp4",
    "poster": "checkins-poster.jpg",
    "captions": "checkins.captions.json",
@@ -354,7 +314,7 @@
      "label": "Check-in texts at day 30, 60 and 90"
     },
     {
-     "t": 9.9,
+     "t": 10,
      "label": "Day 30, 60 and 90"
     },
     {
@@ -366,45 +326,37 @@
      "label": "When they reply"
     },
     {
-     "t": 46.6,
-     "label": "On your Calendar"
+     "t": 42,
+     "label": "An example"
     },
     {
-     "t": 58.9,
-     "label": "A lead replies to the day-60 check-in"
+     "t": 63.6,
+     "label": "Who calls them"
     },
     {
-     "t": 73.8,
-     "label": "Call at the booked time"
-    },
-    {
-     "t": 83.5,
-     "label": "Why a booked time"
-    },
-    {
-     "t": 97.8,
+     "t": 70,
      "label": "If they reply STOP"
     },
     {
-     "t": 106.8,
+     "t": 79,
      "label": "No reply after day 90"
     },
     {
-     "t": 115.4,
+     "t": 87.5,
      "label": "Do’s and don’ts"
     },
     {
-     "t": 128.4,
+     "t": 100.9,
      "label": "Recap"
     },
     {
-     "t": 153.3,
+     "t": 122.4,
      "label": "Now try it"
     }
    ],
    "helpAt": {},
-   "sizeBytes": 7280190,
-   "builtAt": "2026-11-10T02:47:16.023Z"
+   "sizeBytes": 5884088,
+   "builtAt": "2026-11-10T07:41:07.754Z"
   },
   "desk": {
    "kind": "explainer",
@@ -997,7 +949,7 @@
   "reminders": {
    "kind": "explainer",
    "title": "Reminders, no-shows and rebooks",
-   "duration": 145,
+   "duration": 141.9,
    "src": "reminders.mp4",
    "poster": "reminders-poster.jpg",
    "captions": "reminders.captions.json",
@@ -1008,49 +960,49 @@
      "label": "Reminders, no-shows and rebooks"
     },
     {
-     "t": 11.6,
+     "t": 11.4,
      "label": "Reminder texts"
     },
     {
-     "t": 24.1,
-     "label": "No-shows come to you"
+     "t": 22.4,
+     "label": "No-shows: the AI caller"
     },
     {
-     "t": 32.2,
-     "label": "Rebook within the hour"
+     "t": 37.7,
+     "label": "Why the AI caller"
     },
     {
-     "t": 43.8,
-     "label": "Rebooking a no-show"
+     "t": 53.4,
+     "label": "Unanswered calls"
     },
     {
-     "t": 70.9,
-     "label": "Keep it warm"
+     "t": 63.6,
+     "label": "What reaches you"
     },
     {
-     "t": 81.9,
-     "label": "Reached, or not"
+     "t": 79.5,
+     "label": "Moving a call"
     },
     {
-     "t": 93.5,
-     "label": "Our own missed calls"
+     "t": 89.9,
+     "label": "Moving a call: an example"
     },
     {
-     "t": 105.8,
-     "label": "Your week on the Calendar"
+     "t": 104.4,
+     "label": "Do’s and don’ts"
     },
     {
-     "t": 114.1,
+     "t": 117.9,
      "label": "Recap"
     },
     {
-     "t": 134,
+     "t": 132.3,
      "label": "Now try it"
     }
    ],
    "helpAt": {},
-   "sizeBytes": 6517729,
-   "builtAt": "2026-11-10T03:18:33.067Z"
+   "sizeBytes": 6356514,
+   "builtAt": "2026-11-10T07:35:44.569Z"
   },
   "saves": {
    "kind": "explainer",
