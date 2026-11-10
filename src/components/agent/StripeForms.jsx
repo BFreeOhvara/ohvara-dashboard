@@ -20,29 +20,30 @@ function Waiting({ label }) {
   )
 }
 
-export function CardForm({ onSaved, onCancel }) {
+// P933: setupAction/saveAction let the admin save their own card for the $1 live check (admin_setup_card / admin_set_card).
+export function CardForm({ onSaved, onCancel, setupAction = 'setup_card', saveAction = 'set_default_card' }) {
   const [theme] = useTheme()
   const [setup, setSetup] = useState(null) // { client_secret, publishable_key }
   const [error, setError] = useState('')
 
   useEffect(() => {
     let live = true
-    invokeBilling('setup_card')
+    invokeBilling(setupAction)
       .then(d => { if (live) setSetup(d) })
       .catch(e => { if (live) setError(e.message) })
     return () => { live = false }
-  }, [])
+  }, [setupAction])
 
   if (error) return <p role="alert" className="ov-mb-error">{error}</p>
   if (!setup) return <Waiting label="Opening the secure card form…" />
   return (
     <Elements stripe={getStripe(setup.publishable_key)} options={{ clientSecret: setup.client_secret, appearance: stripeAppearance(theme) }}>
-      <CardFields onSaved={onSaved} onCancel={onCancel} />
+      <CardFields onSaved={onSaved} onCancel={onCancel} saveAction={saveAction} />
     </Elements>
   )
 }
 
-function CardFields({ onSaved, onCancel }) {
+function CardFields({ onSaved, onCancel, saveAction }) {
   const stripe = useStripe()
   const elements = useElements()
   const [ready, setReady] = useState(false)
@@ -59,7 +60,7 @@ function CardFields({ onSaved, onCancel }) {
       const { error: err, setupIntent } = await stripe.confirmSetup({ elements, redirect: 'if_required' })
       if (err) throw new Error(err.message || 'That card couldn\'t be saved.')
       const pm = typeof setupIntent.payment_method === 'string' ? setupIntent.payment_method : setupIntent.payment_method?.id
-      const d = await invokeBilling('set_default_card', { payment_method: pm })
+      const d = await invokeBilling(saveAction, { payment_method: pm })
       onSaved(d)
     } catch (e2) {
       setError(e2.message)

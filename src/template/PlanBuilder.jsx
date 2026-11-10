@@ -1,4 +1,6 @@
-import { SLIDER, TIERS, PAID_MIN_DAILY, SETUP_FEE, RECOMMENDED, MAX_DAILY, feeWords, FEE_WHY, tierOf, dailyTotal, bandShare, expected, rangeWords, monthlyBill, slotsNeeded, nightlyFor } from './spendPlan'
+import { DeskInfo } from '../components/agent/DeskInfo'
+import { deskParts, monthlyEstimate } from '../lib/bookingDesk'
+import { SLIDER, TIERS, PAID_MIN_DAILY, SETUP_FEE, RECOMMENDED, MAX_DAILY, LEAD_FEE, feeWords, FEE_WHY, tierOf, dailyTotal, bandShare, expected, rangeWords, monthlyBill, slotsNeeded, nightlyFor } from './spendPlan'
 import { usd } from './motion'
 import './p878.css'
 import './p889.css'
@@ -47,12 +49,13 @@ export function SpendSliders({ spend, onSpend, plan, mode = 'both', id = 'sp', o
         <div className="pb-outs">{outs.map(([k, v]) => <div key={k}><small>{k}</small><b className="tp-num">{daily ? v : 'Off'}</b></div>)}</div>
       </div>
       <div className="sp-total">
-        <span className="tp-grow"><small>Charged each night for the next day</small><b className="tp-money">{money(night.total)}<small> = {money(daily)} + {feeWords}</small></b><small>About {rangeWords(ex.soldMonth)} sales a month · up to {money(max)} a day</small></span>
+        <span className="tp-grow"><small>Charged each night for the next day</small><b className="tp-money">{money(night.total)}<small> = {deskParts(night.net, night.fee)}</small></b><small>About {rangeWords(ex.soldMonth)} sales a month · up to {money(max)} a day</small></span>
       </div>
       {band ? <p className="bl-band-note">Your {band.tier.label} plan covers ${band.tier.from}–{band.tier.to ?? max} a day. To spend more, switch plan in Billing.</p> : <TierBands daily={daily} />}
       {low && <p className="sp-warn" role="alert">Paid plans start at {money(PAID_MIN_DAILY)} a day. Pause instead if you need a break.</p>}
       {tight && <p className="sp-warn" role="alert">Your calendar has {openSlots} open half-hours a week. This spend books up to {ex.appts.booked.high} appointments, so open about {need}.</p>}
-      <p className="pb-foot">100% of your lead spend goes to finding your leads. The {feeWords} on top {FEE_WHY}. Every lead gets a call within seconds. A range, not a promise. {RECOMMENDED}</p>
+      {daily > 0 && <p className="sc-est" data-testid="pb-estimate">{monthlyEstimate(daily, LEAD_FEE).text}</p>}
+      <p className="pb-foot">100% of your lead spend goes to finding your leads. The <DeskInfo rate={LEAD_FEE} /> on top {FEE_WHY}. Every lead gets a call within seconds. A range, not a promise. {RECOMMENDED}</p>
     </div>
   )
 }
@@ -66,14 +69,14 @@ export function SpendSummary({ spend, plan, products = 'both', children, setup =
     <div className="pb-sum">
       <div className="pb-sum-h"><h3>Your plan</h3></div>
       {products !== 'servicing' && <div className="pb-row"><span>Lead spend, about a month</span><b className="tp-money">{money(bill.leadSpend)}</b></div>}
-      {products !== 'servicing' && <div className="pb-row"><span>{feeWords} of lead spend</span><b className="tp-money">{money(bill.fee)}</b></div>}
+      {products !== 'servicing' && <div className="pb-row"><span><DeskInfo rate={LEAD_FEE} /></span><b className="tp-money">{money(bill.fee)}</b></div>}
       {products !== 'servicing' && <div className="pb-row"><span>Plan · {bill.tier.label}</span><b className="tp-money">{money(bill.tier.monthly)} / month</b></div>}
       {products === 'servicing' && <div className="pb-row"><span>Servicing only, up to 100 clients</span><b className="tp-money">{money(bill.membership)} / month</b></div>}
       {bill.extra > 0 && <div className="pb-row"><span>Extra clients ({bill.over} over)</span><b className="tp-money">{money(bill.extra)} / month</b></div>}
       <div className="pb-row sp-sum-total"><span>About a month</span><b className="tp-money">{money(bill.total)}</b></div>
       {setup && <div className="pb-row"><span>Setup, one time</span><b className="tp-money">{money(SETUP_FEE)}</b></div>}
       <p className="pb-note">Month to month. Cancel anytime: unspent lead spend credit is refunded{setup ? ', the setup fee isn’t' : ''}.</p>
-      {products !== 'servicing' && <p className="pb-note">Lead spend and its {feeWords} is charged to your card each night for the next day.</p>}
+      {products !== 'servicing' && <p className="pb-note">Lead spend and the {feeWords} are charged to your card each night for the next day.</p>}
       {children}
     </div>
   )

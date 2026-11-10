@@ -43,6 +43,19 @@ import type { SupabaseClient } from 'npm:@supabase/supabase-js'
 //     the subscription id; the subscription itself is re-fetched from Stripe,
 //     so out-of-order delivery can't write stale state.
 //
+// Prompt 933: the weekly Embedded Checkout is gone ('checkout' answers 410
+// checkout_retired). A new agent saves a card here (setup_card makes their
+// Stripe customer when they have none, set_default_card makes it the default),
+// then pays the sign-up through lead-spend (setup + first month + first days of
+// lead spend + booking desk). Admin-only actions for Admin > Settings > Billing:
+//   stripe_check    — key mode from the prefix only, the webhook endpoint in that
+//                     mode and its events (what's missing), the last webhook seen,
+//                     live charging, the catalog. Nothing secret reaches the page.
+//   stripe_catalog  — { apply }: the Stripe products/prices made from the current
+//                     final price book (v3), by fixed ids and lookup keys, so a
+//                     second run creates nothing. apply false = dry run.
+//   admin_setup_card / admin_set_card — the admin's own card, for the $1 live check.
+//
 // Deployed with verify_jwt off; users are authenticated here instead.
 //
 // Secrets: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET (the endpoint's whsec_…),
@@ -71,6 +84,8 @@ export type Env = {
   onConnectEvent?: (event: any) => Promise<Record<string, unknown>>
   fetch?: typeof fetch
   now?: () => number
+  // P933: this function's own webhook URL (…/functions/v1/agent-billing/webhook), for the Stripe check.
+  webhookUrl?: string
 }
 
 let ENV: Env = {}
@@ -244,26 +259,6 @@ async function loadSettings(admin: SupabaseClient): Promise<Settings> {
     .eq('id', 1).single()
   if (error || !data) throw new Error(`Couldn't load billing settings: ${error?.message ?? 'no row'}`)
   return data as Settings
-}
-
-const SERVICING_LOOKUP = 'ohvara_servicing_weekly'
-
-// The servicing Price, found again by lookup key. When the amount in settings
-// changes a new Price takes over the key and the old one is retired; subscribers
-// stay on whatever they signed up at until moved by hand.
-async function ensureServicingPrice(admin: SupabaseClient): Promise<string> {
-  const { agent_billing_weekly_cents: cents } = await loadSettings(admin)
-  const found = await stripe('prices', { method: 'GET', params: { lookup_keys: [SERVICING_LOOKUP], active: true, limit: 1 } })
-  const current = found.data?.[0]
-  if (current && current.unit_amount === cents && current.recurring?.interval === 'week') return current.id
-  const created = await stripe('prices', {
-    params: {
-      product: await ensureLineProduct('servicing'), currency: 'usd', unit_amount: cents, recurring: { interval: 'week' },
-      nickname: LINE_LABEL.servicing, lookup_key: SERVICING_LOOKUP, transfer_lookup_key: true, metadata: { ...TAG, line: 'servicing' },
-    },
-  })
-  if (current) await stripe(`prices/${current.id}`, { params: { active: false } })
-  return created.id
 }
 
 // Our own Customer Portal configuration (found by metadata), so the account's
@@ -455,6 +450,8 @@ async function handleWebhook(req: Request, admin: SupabaseClient) {
     || (!!ENV.connectWebhookSecret && await verifySignature(sig, raw, ENV.connectWebhookSecret))
   if (!ok) return json({ error: 'Bad signature' }, 400)
   const event = JSON.parse(raw)
+  // P933: the Admin Stripe check shows when a webhook last arrived (type and mode only).
+  try { await admin.rpc('billing_webhook_seen', { p_type: String(event.type || ''), p_live: !!event.livemode }) } catch { /* never blocks the event */ }
 
   // Prompt 753 — Fulfillment payouts (Connect). Non-2xx makes Stripe retry.
   if (CONNECT_TYPES.includes(event.type)) {
@@ -774,9 +771,24 @@ function needPublishableKey() {
   return ENV.publishableKey
 }
 
-async function setupCard(me: any) {
+// P933: the Stripe customer for a profile, made on first use (sign-up saves a card before anything is charged).
+async function ensureCustomer(admin: SupabaseClient, me: any, email?: string | null): Promise<string> {
+  if (me.stripe_customer_id) return me.stripe_customer_id
+  const customer = await stripe('customers', {
+    params: { email: me.email || email || undefined, name: me.full_name || undefined, metadata: { ...TAG, profile_id: me.id } },
+    idempotencyKey: `ohvara_customer:${me.id}`,
+  })
+  const { error } = await admin.from('profiles')
+    .update({ stripe_customer_id: customer.id, billing_updated_at: new Date(now()).toISOString() })
+    .eq('id', me.id)
+  if (error) throw new Error(`Couldn't save the Stripe customer: ${error.message}`)
+  me.stripe_customer_id = customer.id
+  return customer.id
+}
+
+async function setupCard(admin: SupabaseClient, me: any, email?: string | null) {
   const publishable_key = needPublishableKey()
-  if (!me.stripe_customer_id) throw new AppError(409, 'No subscription yet. Start Policy Servicing first.', 'no_subscription')
+  await ensureCustomer(admin, me, email)
   const si = await stripe('setup_intents', {
     params: {
       customer: me.stripe_customer_id,
@@ -791,7 +803,7 @@ async function setupCard(me: any) {
 async function setDefaultCard(admin: SupabaseClient, me: any, body: any) {
   const pmId = String(body.payment_method || '')
   if (!/^pm_[A-Za-z0-9]+$/.test(pmId)) throw new AppError(400, 'That card couldn\'t be saved. Try again.')
-  if (!me.stripe_customer_id) throw new AppError(409, 'No subscription yet. Start Policy Servicing first.', 'no_subscription')
+  if (!me.stripe_customer_id) throw new AppError(409, 'Add a card first.', 'no_customer')
 
   let pm: any
   try {
@@ -964,14 +976,117 @@ async function inboundSet(admin: SupabaseClient, me: any, body: any, flags: Flag
   return inboundState(admin, me, flags, updated)
 }
 
-// Checkout starts a subscription with the servicing item only, so spend left
-// from an ended subscription would read as bought while nothing bills for it.
-async function clearSpend(admin: SupabaseClient, agentId: string) {
-  for (const row of await loadSpend(admin, agentId)) {
-    if (!row.weekly_cents && !row.paused) continue
-    await logSpendChange(admin, agentId, row.inbound_type, row, 0, false)
-    await saveSpend(admin, agentId, row.inbound_type, 0, false)
+
+// ── P933: Admin > Settings > Billing ────────────────────────────────────────
+
+// What the billing webhook must send (the P673 subscription events, kept for the agents still on them, and P753's
+// payouts reversal). The P933 charges are PaymentIntents re-read by lead-spend, so they need no event of their own.
+export const REQUIRED_EVENTS = [
+  'checkout.session.completed', 'customer.subscription.created', 'customer.subscription.updated',
+  'customer.subscription.deleted', 'invoice.paid', 'invoice.payment_failed', 'transfer.reversed',
+]
+const prefix = (k?: string) => (k ? k.slice(0, 8) : null) // 'sk_live_' / 'sk_test_' / 'pk_live_' at most, never more
+
+async function stripeCheck(admin: SupabaseClient, flags: Flags) {
+  const { data: st } = await admin.from('billing_settings')
+    .select('live_charging, live_charging_at, last_webhook_at, last_webhook_type, last_webhook_live, catalog').eq('id', true).maybeSingle()
+  const pkMode = !ENV.publishableKey ? null : ENV.publishableKey.startsWith('pk_live_') ? 'live' : 'test'
+  let endpoint: any = null
+  let endpointError: string | null = null
+  if (flags.configured) {
+    try {
+      const list = await stripe('webhook_endpoints', { method: 'GET', params: { limit: 100 } })
+      const mine = (list.data || []).find((e: any) => ENV.webhookUrl && e.url === ENV.webhookUrl)
+      if (mine) {
+        const events: string[] = mine.enabled_events || []
+        endpoint = {
+          status: mine.status, livemode: !!mine.livemode, events,
+          missing: events.includes('*') ? [] : REQUIRED_EVENTS.filter(e => !events.includes(e)),
+        }
+      }
+    } catch (e) {
+      endpointError = e instanceof StripeError && e.status === 403
+        ? 'This key can\'t read webhook endpoints. Check them in Stripe by hand.'
+        : 'Couldn\'t read the webhook endpoints from Stripe.'
+    }
   }
+  const todo: string[] = []
+  const where = flags.mode === 'live' ? 'Stripe (live mode)' : 'Stripe (test mode)'
+  if (!flags.configured) todo.push('Add the STRIPE_SECRET_KEY secret in Supabase (Edge Functions > Secrets).')
+  if (flags.configured && !endpoint && !endpointError) {
+    todo.push(`In ${where} > Developers > Webhooks, add an endpoint: ${ENV.webhookUrl}`)
+    todo.push(`Events: ${REQUIRED_EVENTS.join(', ')}`)
+    todo.push('Copy its signing secret into the STRIPE_WEBHOOK_SECRET secret in Supabase.')
+  }
+  if (endpoint?.missing?.length) todo.push(`Add these events to the webhook endpoint in ${where}: ${endpoint.missing.join(', ')}`)
+  if (endpoint && endpoint.status !== 'enabled') todo.push(`Turn the webhook endpoint back on in ${where}.`)
+  if (flags.configured && !flags.webhook_configured) todo.push('Add the STRIPE_WEBHOOK_SECRET secret (the endpoint\'s signing secret) in Supabase.')
+  if (flags.configured && !ENV.publishableKey) todo.push('Add the STRIPE_PUBLISHABLE_KEY secret (pk_…) in Supabase, from the same mode as the secret key.')
+  if (flags.mode && pkMode && pkMode !== flags.mode) todo.push(`The publishable key is ${pkMode} but the secret key is ${flags.mode}. Use keys from the same mode.`)
+  return {
+    mode: flags.mode, key_prefix: prefix(ENV.stripeKey), publishable_mode: pkMode, webhook_secret_set: flags.webhook_configured,
+    webhook_url: ENV.webhookUrl || null, endpoint, endpoint_error: endpointError, required_events: REQUIRED_EVENTS,
+    last_webhook: st?.last_webhook_at ? { at: st.last_webhook_at, type: st.last_webhook_type, live: st.last_webhook_live } : null,
+    live_charging: !!st?.live_charging, live_charging_at: st?.live_charging_at ?? null,
+    catalog: flags.mode ? (st?.catalog?.[flags.mode] ?? null) : null, todo,
+  }
+}
+
+type CatalogItem = { product: string; name: string; cents: number | null; interval: 'month' | null; lookup: string | null; note?: string }
+
+// The Stripe catalog, from the current final price book only (no amounts in code).
+export function catalogFrom(version: number, book: any): CatalogItem[] {
+  const v = `v${version}`
+  const items: CatalogItem[] = [
+    { product: 'ohvara_signup', name: 'Ohvara setup (one time)', cents: book.setup?.fee_cents ?? null, interval: null, lookup: `ohvara_setup_${v}` },
+    ...(book.tiers || []).map((t: any) => ({
+      product: `ohvara_plan_${t.key}`, name: `Ohvara ${t.label} plan`, cents: t.monthly_cents, interval: 'month' as const, lookup: `ohvara_plan_${t.key}_${v}`,
+    })),
+    { product: 'ohvara_plan_servicing', name: 'Ohvara Servicing only', cents: book.servicing_only_cents ?? null, interval: 'month', lookup: `ohvara_plan_servicing_${v}` },
+    { product: 'ohvara_servicing_extra', name: `Extra clients (each ${book.servicing_step_clients ?? 100})`, cents: book.servicing_step_cents ?? null, interval: 'month', lookup: `ohvara_servicing_extra_${v}` },
+    { product: 'ohvara_lead_spend', name: 'Lead spend', cents: null, interval: null, lookup: null, note: 'Amount varies each night' },
+    { product: 'ohvara_booking_desk', name: 'Booking desk', cents: null, interval: null, lookup: null, note: `${Math.round((book.lead_fee_rate ?? 0) * 100)}% of lead spend` },
+    { product: 'ohvara_live_check', name: 'Ohvara live check', cents: null, interval: null, lookup: null, note: '$1, refunded' },
+  ]
+  return items.filter(i => i.lookup === null || i.cents != null)
+}
+
+async function stripeCatalog(admin: SupabaseClient, mode: 'test' | 'live', apply: boolean) {
+  const { data: pb, error } = await admin.from('billing_price_book').select('version, book, status')
+    .eq('status', 'final').order('version', { ascending: false }).limit(1).maybeSingle()
+  if (error || !pb) throw new AppError(409, 'No final price book to make the catalog from.')
+  const rows = []
+  for (const it of catalogFrom(pb.version, pb.book)) {
+    let productExists = true
+    try { await stripe(`products/${it.product}`) } catch (e) { if (!isMissing(e)) throw e; productExists = false }
+    let price: any = null
+    if (it.lookup) {
+      const found = await stripe('prices', { method: 'GET', params: { lookup_keys: [it.lookup], active: true, limit: 1 } })
+      price = found.data?.[0] ?? null
+    }
+    const priceOk = !it.lookup || (price && price.unit_amount === it.cents && (price.recurring?.interval ?? null) === it.interval)
+    const action = productExists && priceOk ? 'exists' : 'create'
+    if (apply && action === 'create') {
+      if (!productExists) {
+        try {
+          await stripe('products', { params: { id: it.product, name: it.name, metadata: { ...TAG, price_book: String(pb.version) } } })
+        } catch (e) { if (!(e instanceof StripeError && e.code === 'resource_already_exists')) throw e }
+      }
+      if (it.lookup && !priceOk) {
+        price = await stripe('prices', {
+          params: {
+            product: it.product, currency: 'usd', unit_amount: it.cents, nickname: it.name,
+            ...(it.interval ? { recurring: { interval: it.interval } } : {}),
+            lookup_key: it.lookup, transfer_lookup_key: true, metadata: { ...TAG, price_book: String(pb.version) },
+          },
+          idempotencyKey: `ohvara_catalog:${it.lookup}:${it.cents}`,
+        })
+      }
+    }
+    rows.push({ ...it, action, price_id: price?.id ?? null })
+  }
+  if (apply) await admin.rpc('billing_catalog_saved', { p_mode: mode, p_catalog: { version: pb.version, items: rows } })
+  return { mode, version: pb.version, apply, items: rows, to_create: rows.filter(r => r.action === 'create').length }
 }
 
 // ── App actions ──────────────────────────────────────────────────────────────
@@ -1052,6 +1167,16 @@ export async function handle(req: Request, admin: SupabaseClient): Promise<Respo
       return json({ ...flags, billing_status })
     }
 
+    // P933 — Admin > Settings > Billing.
+    if (['stripe_check', 'stripe_catalog', 'admin_setup_card', 'admin_set_card'].includes(action)) {
+      if (me.role !== 'admin') return json({ error: 'Admins only' }, 403)
+      if (action === 'stripe_check') return json(await stripeCheck(admin, flags))
+      if (!configured) return json({ error: 'No Stripe key yet.', code: 'not_configured' }, 503)
+      if (action === 'stripe_catalog') return json(await stripeCatalog(admin, flags.mode as 'test' | 'live', body.apply === true))
+      if (action === 'admin_setup_card') return json(await setupCard(admin, me, user.email))
+      return json(await setDefaultCard(admin, me, body))
+    }
+
     if (me.role !== 'agent') return json({ error: 'Only agents are billed' }, 403)
 
     // These three answer a comped account and an unconfigured Stripe themselves.
@@ -1067,59 +1192,16 @@ export async function handle(req: Request, admin: SupabaseClient): Promise<Respo
     const returnUrl = safeReturnUrl(body.return_url)
 
     switch (action) {
-      case 'setup_card': return json(await setupCard(me))
+      case 'setup_card': return json(await setupCard(admin, me, user.email))
       case 'set_default_card': return json(await setDefaultCard(admin, me, body))
       case 'cancel': return json(await cancelSub(admin, me))
       case 'resume': return json(await resumeSub(admin, me))
     }
 
+    // P933: the weekly checkout ($299/week servicing, weekly lead tiers) is gone. Sign-up is plan + card + one charge
+    // through lead-spend; nothing here starts a subscription any more.
     if (action === 'checkout') {
-      const publishable_key = needPublishableKey()
-
-      let customerId = me.stripe_customer_id
-      if (customerId) {
-        // Never start a second subscription. A live one means the webhook
-        // missed something: sync it and send them to Manage billing instead.
-        const list = await stripe('subscriptions', { method: 'GET', params: { customer: customerId, status: 'all', limit: 20 } })
-        const live = (list.data || []).find((s: any) => LIVE.includes(s.status))
-        if (live) {
-          await syncSubscription(admin, live, me)
-          return json({ error: 'You already have a subscription. Use Manage billing.', code: 'already_subscribed' }, 409)
-        }
-        // Dead-ends Stripe kept around (gave up retrying, or an abandoned
-        // first payment) would otherwise sit next to the new one.
-        for (const s of list.data || []) {
-          if (['unpaid', 'incomplete'].includes(s.status)) await stripe(`subscriptions/${s.id}`, { method: 'DELETE' })
-        }
-      } else {
-        const customer = await stripe('customers', {
-          params: { email: me.email || user.email, name: me.full_name || undefined, metadata: { ...TAG, profile_id: me.id } },
-        })
-        customerId = customer.id
-        const { error } = await admin.from('profiles')
-          .update({ stripe_customer_id: customerId, billing_updated_at: new Date(now()).toISOString() })
-          .eq('id', me.id)
-        if (error) throw new Error(`Couldn't save the Stripe customer: ${error.message}`)
-      }
-
-      const price = await ensureServicingPrice(admin)
-      await clearSpend(admin, me.id)
-      // Embedded Checkout: the card box renders inside /agent/billing. Stripe
-      // fills in {CHECKOUT_SESSION_ID} itself, so it must not be URL-encoded.
-      const back = new URL(returnUrl)
-      const session = await stripe('checkout/sessions', {
-        params: {
-          ui_mode: 'embedded',
-          mode: 'subscription',
-          customer: customerId,
-          client_reference_id: me.id,
-          line_items: [{ price, quantity: 1 }],
-          subscription_data: { metadata: { ...TAG, profile_id: me.id } },
-          metadata: { ...TAG, profile_id: me.id },
-          return_url: `${back.origin}${back.pathname}?session_id={CHECKOUT_SESSION_ID}`,
-        },
-      })
-      return json({ client_secret: session.client_secret, publishable_key })
+      return json({ error: 'That checkout is gone. Pick your plan on the sign-up page.', code: 'checkout_retired' }, 410)
     }
 
     if (action === 'portal') {

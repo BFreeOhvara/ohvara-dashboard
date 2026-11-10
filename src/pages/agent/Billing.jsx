@@ -4,6 +4,10 @@ import { BillingPanel } from '../../components/agent/BillingPanel'
 import { PlanV2Parts } from '../../components/agent/PlanV2Parts'
 import { isNativeApp } from '../../lib/native'
 import { NativeBillingNote } from '../../components/native/NativeBillingNote'
+import { SignupCheckout } from '../../components/agent/SignupCheckout'
+import { usePortal } from '../../hooks/usePortalAccess'
+import { isComped, shownStatus } from '../../lib/billing'
+import '../../components/agent/lockedWelcome.css'
 
 // Billing (Prompt 691) — the agent's weekly plan, next charge and Stripe
 // links, promoted from a Settings tab to its own Work nav item since agents
@@ -11,12 +15,17 @@ import { NativeBillingNote } from '../../components/native/NativeBillingNote'
 // Portal parity T6 — for every agent, v2 Plan's membership plans, How it works,
 // After a sale and payment note sit under the panel (display only), on the
 // main view only (not Manage billing or Subscribe). /agent/plan lands here.
+// P933: an agent who hasn't signed up yet (nothing paid, not comped) gets the sign-up checkout on the final prices
+// here too; the old weekly Subscribe is gone.
 export default function AgentBilling() {
   const { profile } = useAuth()
+  const portal = usePortal()
   const [params] = useSearchParams()
   if (!profile) return null
   // Prompt 775 — no payments in the phone app.
   if (isNativeApp()) return <div style={{ maxWidth: 560 }}><NativeBillingNote /></div>
+  const signedUp = isComped(profile) || ['active', 'past_due', 'canceled'].includes(shownStatus(profile))
+  if (!signedUp) return <div className="lk-cq"><div className="lk"><SignupCheckout portal={portal} /></div></div>
   const mainView = params.get('manage') !== '1' && !params.get('subscribe')
   return (
     <>

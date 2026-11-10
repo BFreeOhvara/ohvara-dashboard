@@ -1,4 +1,3 @@
-import { feeWords } from './spendPlan.js'
 
 // P917 — the card on file as a card: brand, last 4 and expiry. Real data may only carry a label ("Visa ending 4242").
 export function cardOf(card) {
@@ -14,7 +13,7 @@ export function chargesOf(b) {
   const n = b.nightNow
   const unpaid = n?.ahead?.find(d => d.status === 'failed')
   const next = n && b.card?.onFile && !b.paused && !b.cancel
-    ? [{ id: 'c-next', at: b.nightly?.at || 'Tonight', label: `Lead spend for ${n.forDay} + ${feeWords}`, kind: 'lead', amount: n.tonight.total, status: unpaid ? 'waiting' : 'scheduled' }]
+    ? [{ id: 'c-next', at: b.nightly?.at || 'Tonight', label: `Lead spend for ${n.forDay}`, kind: 'lead', amount: n.tonight.total, spend: n.tonight.net, fee: n.tonight.fee, tonight: true, status: unpaid ? 'waiting' : 'scheduled' }]
     : []
   const past = b.charges || (b.history || []).map(h => ({ ...h, kind: /plan/i.test(h.label) ? 'plan' : /setup/i.test(h.label) ? 'setup' : 'lead', status: 'paid' }))
   return [...next, ...past]

@@ -8,6 +8,8 @@ import { DRAFT_WORDS } from '../../lib/aiCaller'
 import { TEAM_CALL_ACK, WELCOME_TEXT_ASK } from '../../lib/bookImport'
 import { LICENSED_WORDS } from '../../template/licenceModel'
 import { LESSONS } from '../../fulshell/training/lessons'
+import { deskWords } from '../../lib/bookingDesk'
+import { PRICES } from '../../lib/priceBook.js'
 import './wording924.css'
 
 // P924 — Settings › Wording to approve. No screen in any role says "draft" any more; every piece of wording still
@@ -27,6 +29,8 @@ const WORDING_GROUPS = () => [
     items: Object.entries(DRAFT_WORDS).map(([k, v]) => [label(k), v]) },
   { key: 'book', title: 'Adding clients', where: 'The agent’s book import and the welcome call',
     items: [['Team may call', TEAM_CALL_ACK], ['Text updates question', WELCOME_TEXT_ASK]] },
+  { key: 'billing', title: 'Billing (P933)', where: 'The “i” next to Booking desk: plan picker, sign-up checkout and Billing',
+    items: [['Booking desk explained', deskWords(PRICES.leadFee)]] },
   { key: 'licence', title: 'Licence', where: 'What an agent confirms about their licence',
     items: [['Licensed in my states', LICENSED_WORDS]] },
   { key: 'missing', title: 'Still to write (lawyer)', where: 'Not written yet. The screens show nothing in their place until it is',

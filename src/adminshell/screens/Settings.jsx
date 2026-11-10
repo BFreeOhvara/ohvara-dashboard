@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   User, Users, ToggleRight, Wallet, History, Bug, SlidersHorizontal, LogOut, Mail, UserPlus, ArrowUpRight, Search, ShieldCheck,
-  ShieldOff, Image as ImageIcon, Check, Lock, GraduationCap, Scale, ArrowRightLeft, Bot, PhoneCall, MessageSquareText,
+  ShieldOff, Image as ImageIcon, Check, Lock, GraduationCap, Scale, ArrowRightLeft, Bot, PhoneCall, MessageSquareText, CreditCard,
 } from 'lucide-react'
 import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmAudit, useAdmBugs, useAdmDay, useAdmSource, SWITCHES, ME } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
@@ -24,13 +24,14 @@ import { LaunchSwitches } from './Launch906'
 import { SplitRules } from './Split889'
 import { AiCallerSettings } from './AiCalls892'
 import { DeedstoneNumbers } from './Numbers916'
+import { StripeBilling } from './Billing933'
 import { useCallOpenMin, saveCallOpenMin } from '../../hooks/useCallOpen'
 
 // P849 — admin Settings on the agent page's shape: the profile card and Sign out on the left, one panel whose stretch
 // tabs switch sections. Sections: Profile, People & access (everyone with a login, as Users does today), Switches,
 // Pay rules, Audit log (append-only, every admin action), Bug reports, Preferences. Sample only: the
 // real switches stay on today's /settings page until the backend step, and this page says so.
-const TABS = [['profile', 'Profile', User], ['people', 'People & access', Users], ['switches', 'Switches', ToggleRight], ['pay', 'Pay rules', Wallet], ['split', 'Lead split', ArrowRightLeft], ['ai', 'AI caller', Bot],
+const TABS = [['profile', 'Profile', User], ['people', 'People & access', Users], ['switches', 'Switches', ToggleRight], ['pay', 'Pay rules', Wallet], ['billing', 'Billing', CreditCard], ['split', 'Lead split', ArrowRightLeft], ['ai', 'AI caller', Bot],
   ['numbers', 'Deedstone numbers', PhoneCall], ['wording', 'Wording to approve', MessageSquareText], ['training', 'Training', GraduationCap], ['audit', 'Audit log', History], ['bugs', 'Bug reports', Bug], ['compliance', 'Compliance', Scale], ['prefs', 'Preferences', SlidersHorizontal]]
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
 
@@ -172,7 +173,7 @@ function PayRules() {
       <FormFoot dirty={!same(d, s.payRules)} onDiscard={() => setD(s.payRules)} onSave={() => { savePayRules(d); note('Pay rules saved (sample)') }} />
       <CallOpenSetting />
       {/* P909: lead billing. Lead spend is charged each night for the next day; a decline turns the next day's ads off. */}
-      <Head title="Lead billing" sub="Each evening agents' cards are charged the next day's lead spend plus 12%. A decline keeps the next day's ads off and retries in the morning." />
+      <Head title="Lead billing" sub="Each evening agents' cards are charged the next day's lead spend plus the booking desk (12%). A decline keeps the next day's ads off and retries in the morning." />
       <div className="fx-form-grid">
         <Field label="Max daily lead spend ($)" hint="Per agent. Raise one agent on Revenue › Agent billing"><input className="tp-money" inputMode="numeric" value={b.maxDaily} onChange={bnum('maxDaily', 50, 1000)} /></Field>
         <Field label="Nightly charge (hour, Central)" hint={`24-hour clock · ${b.chargeHour > 12 ? b.chargeHour - 12 : b.chargeHour} ${b.chargeHour >= 12 ? 'PM' : 'AM'}`}><input className="tp-num" inputMode="numeric" value={b.chargeHour} onChange={bnum('chargeHour', 12, 23)} /></Field>
@@ -297,6 +298,7 @@ export default function Settings() {
           {tab === 'people' && <People />}
           {tab === 'switches' && <Switches live={account.live} />}
           {tab === 'pay' && <PayRules />}
+          {tab === 'billing' && <StripeBilling />}
           {tab === 'split' && <SplitRules />}
           {tab === 'ai' && <AiCallerSettings />}
           {tab === 'numbers' && <DeedstoneNumbers />}

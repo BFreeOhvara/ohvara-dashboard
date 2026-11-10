@@ -14,11 +14,12 @@ const charge = (over: Partial<Charge> = {}): Charge => ({
   stripe_pi: null, week_start: '2026-11-16', note: null, customer: 'cus_a', recheck: false, ...over,
 })
 
-function world(claims: Charge[] = [charge()], over: { rpcError?: any; setResult?: any; changeResult?: any; changeError?: any } = {}) {
+function world(claims: Charge[] = [charge()], over: { rpcError?: any; setResult?: any; changeResult?: any; changeError?: any; live?: boolean; signupError?: any } = {}) {
   const rpcs: { name: string; args: any }[] = []
   const store: Store = {
     userFromJwt: async jwt => (jwt === 'good' ? AGENT : null),
     cronOk: async s => s === 'cron-secret',
+    isAdmin: async id => id === 'admin-1',
     rpc: async (name, args) => {
       rpcs.push({ name, args })
       if (over.rpcError && name === 'lead_spend_set') throw over.rpcError
@@ -28,6 +29,11 @@ function world(claims: Charge[] = [charge()], over: { rpcError?: any; setResult?
       if (name === 'billing_plan_change') { if (over.changeError) throw over.changeError; return over.changeResult ?? { direction: 'down', next_bill: '2026-12-01' } }
       if (name === 'billing_customer_of') return 'cus_a'
       if (name === 'billing_card_saved') return null
+      if (name === 'billing_live_charging') return over.live === true
+      if (name === 'billing_signup_start') { if (over.signupError) throw over.signupError; return { charge_id: 'ch1', total_cents: 202200, status: 'due' } }
+      if (name === 'billing_signup_quote') return { total_cents: 202200, fee_cents: 2400 }
+      if (name === 'billing_live_check_start') return { charge_id: 'lc1' }
+      if (name === 'billing_charge_refunded') return { refunded_cents: 100 }
       return { status: args.p_status }
     },
   }
@@ -56,14 +62,75 @@ const userReq = (body: any, jwt = 'good') => new Request('https://x.test/lead-sp
   method: 'POST', headers: { Authorization: `Bearer ${jwt}` }, body: JSON.stringify(body),
 })
 
-test('a live or missing key charges nothing and touches no Stripe', async () => {
+test('P933: a live key with Live charging off, or no key, charges nothing and touches no Stripe', async () => {
   for (const key of [undefined, 'sk_live_x', 'rk_live_x']) {
     const w = world(); const s = withCard({ id: 'pi_1', status: 'succeeded' })
     const r = await runCharges(w.store, s.stripe, key)
-    assert.equal(r.skipped, 'test mode only')
+    assert.equal(r.skipped, key ? 'live charging is off' : 'no Stripe key')
     assert.equal(s.calls.length, 0)
-    assert.equal(w.rpcs.length, 0, 'charges are not even claimed')
+    assert.equal(w.rpcs.filter(x => x.name === 'lead_spend_claim_charges').length, 0, 'charges are not even claimed')
   }
+})
+
+test('P933: a live key with Live charging on charges, and a livemode PaymentIntent counts as paid', async () => {
+  const w = world([charge()], { live: true }); const s = withCard({ id: 'pi_1', status: 'succeeded', livemode: true })
+  const r: any = await runCharges(w.store, s.stripe, 'sk_live_x')
+  assert.equal(r.charged, 1)
+  assert.equal(w.results()[0].p_status, 'paid')
+})
+
+test('P933: with Live charging off a stray livemode PaymentIntent is never accepted', () => {
+  assert.equal(outcomeOf({ status: 'succeeded', livemode: true }, false).status, 'failed')
+  assert.equal(outcomeOf({ status: 'succeeded', livemode: true }, true).status, 'paid')
+})
+
+test('P933: sign-up makes the charge and runs it straight away; the answer says paid', async () => {
+  const w = world([charge({ id: 'ch1', kind: 'signup', amount_cents: 202200, note: 'Sign-up: setup $299.00 · Growth plan', tier_to: 'growth', setup_cents: 29900, plan_cents: 149900, spend_cents: 20000, fee_cents: 2400 })])
+  const s = withCard({ id: 'pi_s', status: 'succeeded' })
+  const res = await handle(userReq({ action: 'signup', tier: 'growth', daily_cents: 10000 }), w.store, s.stripe, 'sk_test_x')
+  const b = await res.json()
+  assert.equal(res.status, 200)
+  assert.equal(b.status, 'paid')
+  assert.deepEqual(w.rpcs.find(x => x.name === 'billing_signup_start')!.args, { p_tier: 'growth', p_daily_cents: 10000, p_agent: AGENT })
+  const pi = s.calls.find(c => c.path === 'payment_intents')!.params
+  assert.equal(pi.amount, 202200)
+  assert.equal(pi.statement_descriptor_suffix, 'LEADS')
+  assert.equal(pi.metadata.product, 'ohvara_signup')
+})
+
+test('P933: sign-up refusals come back as codes (test account, no card, already paid)', async () => {
+  for (const hint of ['test_account', 'no_card', 'already_paid']) {
+    const w = world([], { signupError: { message: 'no', hint } })
+    const res = await handle(userReq({ action: 'signup', tier: 'starter', daily_cents: 5000 }), w.store, withCard({}).stripe, 'sk_test_x')
+    assert.equal(res.status, 409)
+    assert.equal((await res.json()).code, hint)
+  }
+  const bad = await handle(userReq({ action: 'signup', tier: 'gold', daily_cents: 5000 }), world([]).store, null, 'sk_test_x')
+  assert.equal(bad.status, 400)
+})
+
+test('P933: the booking desk is named on every receipt line; never a bare + 12%', () => {
+  const w = words(charge({ kind: 'nightly', for_day: '2026-11-10', spend_cents: 10000, fee_cents: 1200 }))
+  assert.equal(w, 'Lead spend for 2026-11-10: $100.00 to your ads + $12.00 booking desk')
+  assert.ok(!w.includes('12%'))
+})
+
+test('P933: the live check is admins only, charges $1 and refunds it', async () => {
+  const no = await handle(userReq({ action: 'live_check' }), world([]).store, withCard({}).stripe, 'sk_live_x')
+  assert.equal(no.status, 403)
+  const w = world([charge({ id: 'lc1', agent_id: 'admin-1', kind: 'live_check', amount_cents: 100, customer: 'cus_a' })])
+  w.store.userFromJwt = async () => 'admin-1'
+  const s = fakeStripe({
+    'GET customers/cus_a': () => ({ id: 'cus_a', invoice_settings: { default_payment_method: 'pm_1' } }),
+    'POST payment_intents': () => ({ id: 'pi_lc', status: 'succeeded', livemode: true }),
+    'POST refunds': () => ({ id: 're_1', status: 'succeeded' }),
+  })
+  const res = await handle(userReq({ action: 'live_check' }), w.store, s.stripe, 'sk_live_x')
+  const b = await res.json()
+  assert.equal(b.status, 'paid')
+  assert.equal(b.refunded, true)
+  assert.equal(b.mode, 'live')
+  assert.equal(s.calls.find(c => c.path === 'refunds')!.params.payment_intent, 'pi_lc')
 })
 
 test('a paid charge: off-session PaymentIntent on the default method, idempotent key, reported paid', async () => {
@@ -200,12 +267,12 @@ test('a nightly charge: says the day and the 12%, card only, OHVARA LEADS', asyn
   await runCharges(w.store, s.stripe, 'sk_test_x')
   const post = s.calls.find(c => c.method === 'POST')!
   assert.equal(post.params.amount, 11200)
-  assert.equal(post.params.description, 'Lead spend for 2026-11-10 + 12%')
+  assert.equal(post.params.description, 'Lead spend for 2026-11-10: $100.00 to your ads + $12.00 booking desk')
   assert.equal(post.params.statement_descriptor_suffix, 'LEADS')
   assert.equal(post.params.metadata.fee_cents, '1200')
   assert.equal(post.opts.idempotencyKey, 'lead_spend:nightly:a:2026-11-10:1')
   assert.deepEqual(w.results()[0], { p_id: 'ch1', p_status: 'paid', p_pi: 'pi_n', p_failure: null })
-  assert.equal(words(charge({ kind: 'nightly', for_day: '2026-11-10', fee_cents: 0 })), 'Lead spend for 2026-11-10')
+  assert.equal(words(charge({ kind: 'nightly', for_day: '2026-11-10', fee_cents: 0 })), 'Lead spend for 2026-11-10: $0.00 to your ads')
 })
 
 test('card_check: records the default card as words, never the number', async () => {

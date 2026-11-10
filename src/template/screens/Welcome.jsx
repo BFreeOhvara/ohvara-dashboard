@@ -13,7 +13,8 @@ import { DEFAULT_LIVE_HOURS, PITCH, takeOk } from '../../lib/leadSplit'
 import { TalkDrawer } from '../Talk'
 import { ForwardSetup } from '../PaymentIntake'
 import '../p885.css'
-import { openSlotsPerWeek, slotsNeeded, spendOk, dailyTotal, nightlyFor, feeWords, SETUP_FEE } from '../spendPlan'
+import { DeskInfo } from '../../components/agent/DeskInfo'
+import { openSlotsPerWeek, slotsNeeded, spendOk, dailyTotal, nightlyFor, feeWords, LEAD_FEE, SETUP_FEE } from '../spendPlan'
 import { usd } from '../motion'
 import { zoneAbbr, ZONE_CHOICES } from '../../lib/callSlots'
 import '../p878.css'
@@ -154,7 +155,7 @@ export default function Welcome() {
               <CalendarConnect value={s.calendar} onPick={p => stable(x => ({ ...x, calendar: { provider: p } }))} />
             </>}
             {cur.key === 'spend' && <>
-              <header className="fx-form-h"><h2>Your lead spend</h2><p>{PITCH} Your plan follows your daily spend. Each night your card is charged the next day’s spend plus {feeWords}.</p></header>
+              <header className="fx-form-h"><h2>Your lead spend</h2><p>{PITCH} Your plan follows your daily spend. Each night your card is charged the next day’s spend plus the <DeskInfo rate={LEAD_FEE} label={feeWords} />.</p></header>
               <SpendSliders spend={spend} onSpend={v => stable(x => ({ ...x, spend: v }))} plan={plan} mode={take.mode} id="wz-sp" openSlots={openSlots} />
               <SpendSummary spend={spend} plan={plan} products={s.products} setup><p className="pb-note">Leads start at 12:00 AM your time, the day after you finish setup.</p></SpendSummary>
             </>}

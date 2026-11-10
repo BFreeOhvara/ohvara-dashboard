@@ -1,0 +1,33 @@
+/* P933 — sign-up checkout on the final prices. Tokens only (DESIGN.md v16 / the .ov surface tokens lockedWelcome uses). */
+.sc-steps { margin: 14px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.sc-steps li { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: baseline; font-size: 13.5px; color: var(--ov-mid); }
+.sc-steps b { color: var(--ov-hi); font-weight: 600; }
+.sc-steps small { grid-column: 2; color: var(--ov-mute); font-size: 12.5px; line-height: 1.4; }
+.sc-n { grid-row: span 2; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12.5px; font-weight: 600; background: var(--ov-data-a-tint); color: var(--ov-data-a); }
+.sc-plans { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.sc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.sc-pl { cursor: pointer; }
+.sc-spend { padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; }
+.sc-spend-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 14px; color: var(--ov-mid); }
+.sc-spend-top b { font-size: 22px; font-weight: 600; color: var(--ov-hi); }
+.sc-spend-top small { font-size: 13px; font-weight: 400; color: var(--ov-mute); }
+.sc-spend input[type='range'] { width: 100%; accent-color: var(--accent); min-height: 32px; }
+.sc-spend-ends { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--ov-mute); font-family: 'JetBrains Mono', ui-monospace, monospace; }
+.sc-sub { margin: 8px 0 0; font-size: 13px; line-height: 1.5; color: var(--ov-mute); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.sc-found svg { color: var(--ov-up); }
+.sc-sum { display: flex; flex-direction: column; }
+.sc-sum .lk-sum { margin-top: 8px; }
+.sc-lead span:first-child { display: flex; flex-direction: column; gap: 2px; }
+.sc-total { border-color: var(--ov-data-a); background: var(--ov-data-a-tint); color: var(--ov-hi); font-weight: 600; }
+.sc-total .lk-money { font-size: 19px; }
+.sc-card { margin-top: 14px; }
+.sc-card .lk-sum { margin-top: 0; align-items: center; }
+.sc-small { min-height: 34px; padding: 0 12px; font-size: 13px; }
+.sc-pay { margin-top: 14px; width: 100%; justify-content: center; min-height: 48px; }
+.sc-pay:disabled { opacity: .55; cursor: not-allowed; }
+.sc-err { margin: 10px 0 0; display: flex; gap: 8px; align-items: flex-start; font-size: 13.5px; color: var(--ov-st-noanswer); }
+.sc-err svg { flex: none; margin-top: 2px; }
+@media (max-width: 760px) {
+  .sc-steps { grid-template-columns: 1fr; }
+  .sc-grid { grid-template-columns: 1fr; }
+}

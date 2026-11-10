@@ -31,8 +31,9 @@ export const LEAD_FEE = PRICES.leadFee
 export const MAX_DAILY = SETTINGS.maxDaily
 export const INCLUDED_ADDED = PRICES.includedAdded
 export const SLIDER = { min: 0, max: MAX_DAILY, step: 5 }
-export const feeWords = `${Math.round(LEAD_FEE * 100)}%`
-export const FEE_WHY = 'covers the AI calls and the team working every lead'
+// P933: the 12% is the Booking desk on the agent side, never a bare "+12%" (src/lib/bookingDesk.js has the words).
+export const feeWords = 'booking desk'
+export const FEE_WHY = 'pays for the AI calling every lead in seconds, the texts, booking, reminders and our team'
 export const RECOMMENDED = 'Most full-time agents spend $100 to $150 a day. Starting out or part-time: $50 to $75.'
 
 export const dailyTotal = spend => (spend?.daily != null ? Number(spend.daily) || 0 : (spend?.appts || 0) + (spend?.live || 0))

@@ -30,26 +30,45 @@
 // charge's key plus its attempt number, so a crash and a re-run never charge twice; a retry after a decline is a new
 // attempt. Statement descriptor suffix "LEADS" (shows as OHVARA LEADS).
 //
-// TEST MODE ONLY: unless the key starts with sk_test_, nothing is charged and nothing is sent to Stripe; charges stay
-// due. A livemode PaymentIntent is never accepted. Going live is Brayden's switch (the live key), a hard stop.
+// P933 LIVE CHARGING: an sk_test_ key charges as before (test mode). A live key (sk_live_ / rk_live_) charges only
+// while Admin > Settings > Billing > Live charging is on (billing_settings.live_charging, default off; turning it on is
+// Brayden's yes). Off: nothing is charged or sent to Stripe; charges stay due. A livemode PaymentIntent is accepted
+// only while live charging is on. Test accounts (profiles.is_demo) are never claimed (lead_spend_claim_charges).
+//
+// P933 actions (signed-in agent):
+//     { action: 'signup_quote', tier, daily_cents }     billing_signup_quote: setup + first month + first 2 days + booking desk.
+//     { action: 'signup', tier, daily_cents }           billing_signup_start, then the charge runs straight away:
+//                                                       { status: paid | failed | processing | due, skipped? }.
+//   Admin: { action: 'live_check' }                     $1 on the admin's own saved card, refunded straight away. Runs on a
+//                                                       test or a live key (Brayden's yes in chat); shows in Revenue.
 
 import { type Stripe, StripeError } from '../_shared/fulfillmentPayouts.ts'
 
 export type Charge = {
-  id: string; agent_id: string; key: string; kind: 'weekly' | 'change' | 'va_cost' | 'nightly' | 'plan_upgrade'; amount_cents: number
+  id: string; agent_id: string; key: string
+  kind: 'weekly' | 'change' | 'va_cost' | 'nightly' | 'plan_upgrade' | 'signup' | 'plan_month' | 'live_check'; amount_cents: number
   attempts: number; stripe_pi: string | null; week_start: string; note: string | null; customer: string | null; recheck: boolean
   for_day?: string | null; spend_cents?: number | null; fee_cents?: number | null
   note?: string | null; tier_to?: string | null
+  setup_cents?: number | null; plan_cents?: number | null; extra_cents?: number | null
 }
 
 export type Store = {
   userFromJwt(jwt: string): Promise<string | null>
   cronOk(secret: string): Promise<boolean>
+  isAdmin(id: string): Promise<boolean>
   // A service-role RPC. Throws { message, hint?, code? } like PostgREST.
   rpc(name: string, args: Record<string, unknown>): Promise<any>
 }
 
-export const isTestKey = (key: string | undefined) => !!key && key.startsWith('sk_test_')
+export const isTestKey = (key: string | undefined) => !!key && (key.startsWith('sk_test_') || key.startsWith('rk_test_'))
+export const isLiveKey = (key: string | undefined) => !!key && (key.startsWith('sk_live_') || key.startsWith('rk_live_'))
+// May this key charge right now? Test: yes. Live: only with the Admin switch on (P933).
+export async function chargingAllowed(store: Store, key: string | undefined): Promise<{ ok: boolean; live: boolean }> {
+  if (isTestKey(key)) return { ok: true, live: false }
+  if (!isLiveKey(key)) return { ok: false, live: false }
+  return { ok: (await store.rpc('billing_live_charging', {})) === true, live: true }
+}
 
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -61,8 +80,8 @@ const json = (body: unknown, status = 200) =>
 const cents = (v: unknown) => (Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 100000 ? (v as number) : null)
 
 // What one Stripe answer means for the charge.
-export function outcomeOf(pi: any): { status: 'paid' | 'processing' | 'failed'; failure?: string } {
-  if (pi?.livemode) return { status: 'failed', failure: 'Live payments are off (test mode only)' }
+export function outcomeOf(pi: any, liveOk = false): { status: 'paid' | 'processing' | 'failed'; failure?: string } {
+  if (pi?.livemode && !liveOk) return { status: 'failed', failure: 'Live payments are off (test mode only)' }
   switch (pi?.status) {
     case 'succeeded': return { status: 'paid' }
     case 'processing': return { status: 'processing' }
@@ -73,14 +92,23 @@ export function outcomeOf(pi: any): { status: 'paid' | 'processing' | 'failed'; 
 
 export const DESCRIPTOR_SUFFIX = 'LEADS'
 // P921: a plan upgrade shows as OHVARA PLAN, its line "Upgrade to Pro, 15 days".
-export const suffixOf = (c: Charge) => (c.kind === 'plan_upgrade' ? 'PLAN' : DESCRIPTOR_SUFFIX)
+// P933: the monthly plan shows as OHVARA PLAN too; the sign-up as OHVARA LEADS, the live check as OHVARA CHECK.
+export const suffixOf = (c: Charge) => (c.kind === 'plan_upgrade' || c.kind === 'plan_month' ? 'PLAN' : c.kind === 'live_check' ? 'CHECK' : DESCRIPTOR_SUFFIX)
+const usd = (cents: number | null | undefined) => `$${((cents ?? 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+// The receipt line. P933: the 12% is the "booking desk", never a bare "+ 12%".
 export const words = (c: Charge) =>
   c.kind === 'plan_upgrade' ? (c.note || `Upgrade to ${c.tier_to}`)
   : c.kind === 'va_cost' ? 'Team time (pilot)'
-    : c.kind === 'nightly' ? `Lead spend for ${c.for_day}${c.fee_cents ? ' + 12%' : ''}`
-      : c.kind === 'change' ? 'Lead spend (raised this week)' : 'Lead spend, week of ' + c.week_start
+    : c.kind === 'nightly' ? `Lead spend for ${c.for_day}: ${usd(c.spend_cents)} to your ads${c.fee_cents ? ` + ${usd(c.fee_cents)} booking desk` : ''}`
+      : c.kind === 'signup' || c.kind === 'plan_month' ? (c.note || 'Ohvara plan')
+        : c.kind === 'live_check' ? 'Ohvara live check ($1, refunded)'
+          : c.kind === 'change' ? 'Lead spend (raised this week)' : 'Lead spend, week of ' + c.week_start
+// Which catalog product a charge belongs to (P933 stripe_catalog), for Stripe's own reports.
+export const productOf = (c: Charge) =>
+  c.kind === 'signup' ? 'ohvara_signup' : c.kind === 'plan_month' || c.kind === 'plan_upgrade' ? `ohvara_plan_${c.tier_to || 'servicing'}`
+    : c.kind === 'live_check' ? 'ohvara_live_check' : 'ohvara_lead_spend'
 
-async function chargeOne(store: Store, stripe: Stripe, c: Charge) {
+async function chargeOne(store: Store, stripe: Stripe, c: Charge, liveOk = false) {
   let pi: any = null
   try {
     if (c.recheck && c.stripe_pi) {
@@ -96,7 +124,9 @@ async function chargeOne(store: Store, stripe: Stripe, c: Charge) {
         off_session: true, confirm: true, description: words(c), statement_descriptor_suffix: suffixOf(c),
         payment_method_types: ['card'],
         metadata: { ohvara: 'lead_spend', charge_id: c.id, agent_id: c.agent_id, kind: c.kind, week_start: c.week_start,
-          for_day: c.for_day ?? '', spend_cents: String(c.spend_cents ?? ''), fee_cents: String(c.fee_cents ?? ''), tier_to: c.tier_to ?? '' },
+          for_day: c.for_day ?? '', spend_cents: String(c.spend_cents ?? ''), fee_cents: String(c.fee_cents ?? ''), tier_to: c.tier_to ?? '',
+          setup_cents: String(c.setup_cents ?? ''), plan_cents: String(c.plan_cents ?? ''), extra_cents: String(c.extra_cents ?? ''),
+          product: productOf(c) },
       }, { idempotencyKey: `lead_spend:${c.key}:${c.attempts}` })
     }
   } catch (e) {
@@ -110,16 +140,36 @@ async function chargeOne(store: Store, stripe: Stripe, c: Charge) {
     // Network or Stripe outage: leave it processing; the next run retries with the same idempotency key.
     return { left: c.id, error: String((e as Error)?.message || e) }
   }
-  const o = outcomeOf(pi)
-  return store.rpc('lead_spend_charge_result', { p_id: c.id, p_status: o.status, p_pi: pi?.id ?? null, p_failure: o.failure ?? null })
+  const o = outcomeOf(pi, liveOk)
+  const r = await store.rpc('lead_spend_charge_result', { p_id: c.id, p_status: o.status, p_pi: pi?.id ?? null, p_failure: o.failure ?? null })
+  return { ...(r || {}), status: r?.status ?? o.status, pi: pi?.id ?? null, failure: o.failure ?? null }
 }
 
 export async function runCharges(store: Store, stripe: Stripe | null, key: string | undefined, agent: string | null = null) {
-  if (!isTestKey(key) || !stripe) return { skipped: 'test mode only', charged: 0 }
+  if (!stripe) return { skipped: 'Stripe not set up', charged: 0 }
+  const gate = await chargingAllowed(store, key)
+  if (!gate.ok) return { skipped: gate.live ? 'live charging is off' : 'no Stripe key', charged: 0 }
   const claimed: Charge[] = (await store.rpc('lead_spend_claim_charges', { p_limit: 25, p_agent: agent })) || []
   const results = []
-  for (const c of claimed) results.push({ id: c.id, result: await chargeOne(store, stripe, c) })
+  for (const c of claimed) results.push({ id: c.id, result: await chargeOne(store, stripe, c, gate.live) })
   return { charged: claimed.length, results }
+}
+
+// The $1 live check: charged on the admin's own saved card (any key; Brayden's yes in chat), then refunded in full.
+export async function liveCheck(store: Store, stripe: Stripe, key: string | undefined, me: string) {
+  const { charge_id } = await store.rpc('billing_live_check_start', { p_admin: me })
+  const claimed: Charge[] = (await store.rpc('lead_spend_claim_charges', { p_limit: 5, p_agent: me })) || []
+  const c = claimed.find(x => x.id === charge_id)
+  if (!c) return { status: 'due', refunded: false }
+  const r: any = await chargeOne(store, stripe, c, isLiveKey(key))
+  const status = r?.status ?? 'processing'
+  let refunded = false
+  if (status === 'paid' && r?.pi) {
+    await stripe('POST', 'refunds', { payment_intent: r.pi, metadata: { ohvara: 'live_check', charge_id: c.id } }, { idempotencyKey: `live_check_refund:${c.id}` })
+    await store.rpc('billing_charge_refunded', { p_id: c.id, p_cents: c.amount_cents })
+    refunded = true
+  }
+  return { status, refunded, mode: isLiveKey(key) ? 'live' : 'test', failure: r?.failure ?? null }
 }
 
 // The customer's default card, as words ("Visa ending 4242"), or null. Never the number.
@@ -162,7 +212,8 @@ export async function handle(req: Request, store: Store, stripe: Stripe | null, 
         return json({ ...set, charged })
       }
       case 'card_check': {
-        if (!stripe || !isTestKey(key)) return json({ card: null, skipped: 'test mode only' })
+        // Reading the card charges nothing, so it works on either key (P933).
+        if (!stripe) return json({ card: null, skipped: 'Stripe not set up' })
         const customer = await store.rpc('billing_customer_of', { p_agent: me })
         const label = await cardOf(stripe, customer)
         await store.rpc('billing_card_saved', { p_agent: me, p_label: label })
@@ -181,6 +232,24 @@ export async function handle(req: Request, store: Store, stripe: Stripe | null, 
         const result = q?.charge_id ? (charged as any)?.results?.find((r: any) => r.id === q.charge_id)?.result?.status ?? 'due' : null
         return json({ ...q, charged, result })
       }
+      case 'signup_quote': {
+        const d = body.daily_cents == null ? null : cents(body.daily_cents)
+        return json(await store.rpc('billing_signup_quote', { p_tier: String(body.tier || ''), p_daily_cents: d, p_agent: me }))
+      }
+      case 'signup': {
+        if (!['starter', 'growth', 'pro', 'servicing'].includes(body.tier)) return json({ error: 'Pick a plan' }, 400)
+        const d = body.tier === 'servicing' ? null : cents(body.daily_cents)
+        if (body.tier !== 'servicing' && d == null) return json({ error: 'Spend must be whole cents, $0 to $1,000 a day' }, 400)
+        const q = await store.rpc('billing_signup_start', { p_tier: body.tier, p_daily_cents: d, p_agent: me })
+        const charged: any = await runCharges(store, stripe, key, me)
+        const mine = charged?.results?.find((r: any) => r.id === q.charge_id)?.result
+        return json({ ...q, status: mine?.status ?? q.status ?? 'due', failure: mine?.failure ?? null, skipped: charged?.skipped ?? null })
+      }
+      case 'live_check': {
+        if (!(await store.isAdmin(me))) return json({ error: 'Admins only' }, 403)
+        if (!stripe) return json({ error: 'Stripe not set up' }, 503)
+        return json(await liveCheck(store, stripe, key, me))
+      }
       case 'pause':
         if (typeof body.paused !== 'boolean') return json({ error: 'paused must be true or false' }, 400)
         await store.rpc('lead_spend_pause', { p_paused: body.paused, p_agent: me })
@@ -189,8 +258,8 @@ export async function handle(req: Request, store: Store, stripe: Stripe | null, 
         return json({ error: 'Unknown action' }, 400)
     }
   } catch (e: any) {
-    if (e?.hint === 'min_daily' || e?.hint === 'max_daily' || e?.hint === 'over_plan' || e?.hint === 'servicing_only') return json({ error: e.message, code: e.hint }, 400)
-    if (e?.hint === 'busy') return json({ error: e.message, code: 'busy' }, 409)
+    if (['min_daily', 'max_daily', 'over_plan', 'servicing_only', 'bad_tier'].includes(e?.hint)) return json({ error: e.message, code: e.hint }, 400)
+    if (['busy', 'test_account', 'comped', 'already_paid', 'no_card'].includes(e?.hint)) return json({ error: e.message, code: e.hint }, 409)
     if (e?.code === '42501') return json({ error: e.message || 'Not allowed' }, 403)
     return json({ error: e?.message || 'Something went wrong' }, 500)
   }

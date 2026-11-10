@@ -1,0 +1,19 @@
+/* P933 — Settings › Billing (Stripe check, Live charging, catalog, $1 check) and Revenue › Charges. Tokens only. */
+.b933 { display: flex; flex-direction: column; gap: 14px; }
+.b933-h { display: flex; align-items: flex-start; gap: 12px; }
+.b933-h .tp-btn { display: inline-flex; align-items: center; gap: 6px; }
+.b933-err { margin: 0; display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--ov-st-noanswer); }
+.b933-ok { margin: 0; font-size: 13px; color: var(--ov-up); }
+.b933-todo { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--ov-line); background: var(--ov-surface-tint); font-size: 13px; color: var(--ov-hi); }
+.b933-todo ol { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; overflow-wrap: anywhere; }
+.b933-ask { padding: 10px 12px; border-radius: 12px; border: 1px solid var(--ov-line); background: var(--ov-surface-tint); }
+.b933-ask small { display: block; color: var(--ov-mid); font-size: 12.5px; }
+.b933-btns { gap: 8px; }
+.b933-btns button { display: inline-flex; align-items: center; gap: 6px; }
+.b933-charges { overflow-x: auto; }
+.b933-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.b933-tbl th { text-align: left; font-weight: 500; font-size: 12px; color: var(--ov-mute); padding: 6px 8px; border-bottom: 1px solid var(--ov-line); white-space: nowrap; }
+.b933-tbl td { padding: 8px; border-bottom: 1px solid var(--ov-line); color: var(--ov-hi); white-space: nowrap; }
+.b933-tbl .tp-money { font-family: var(--font-mono); }
+.b933-tbl small { color: var(--ov-mute); }
+.b933-foot { margin-top: 10px; }

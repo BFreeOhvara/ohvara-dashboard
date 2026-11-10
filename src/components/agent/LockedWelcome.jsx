@@ -1,10 +1,12 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
-  AlertCircle, Check, CalendarPlus, Clock, CreditCard, Info, Lock, Phone, RefreshCw, ShieldCheck, Users,
+  Check, CalendarPlus, CreditCard, Info, Phone, RefreshCw, ShieldCheck, Users,
 } from 'lucide-react'
-import { useBillingTiers, useWeeklyUsage } from '../../hooks/useBillingTiers'
-import { capState, formatWeekly } from '../../lib/billing'
+import { useBillingTiers } from '../../hooks/useBillingTiers'
+import { BOOK, pricesOf } from '../../lib/priceBook'
+import { SignupCheckout } from './SignupCheckout'
+import { formatWeekly } from '../../lib/billing'
 import { isNativeApp } from '../../lib/native'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { NativeBillingNote } from '../native/NativeBillingNote'
@@ -16,11 +18,11 @@ import './lockedWelcome.css'
 //   ConfirmPayment    back from Stripe: polls until the portal opens
 //   UnlockedMoment    "You're in", one time
 //   AddServicingCard  a Leads-only payer on Submit or Clients
-// Leads is shown but can't be bought: weekly Leads billing doesn't exist yet. In
-// the phone app there are no prices and no pay buttons (P775). The database is
-// the real lock; all of this only decides what to render.
-
-const CheckoutEmbed = lazy(() => import('./StripeForms').then(m => ({ default: m.CheckoutEmbed })))
+// P933: the weekly Servicing checkout is gone. The welcome now sells the final
+// plans (Starter / Growth / Pro by daily lead spend, or Servicing only) through
+// SignupCheckout: plan, card, one charge (setup + first month + first 2 days of
+// leads + booking desk). In the phone app there are no prices and no pay buttons
+// (P775). The database is the real lock; all of this only decides what to render.
 
 const COVERS = [
   'Packet check: we confirm your client got the policy packet',
@@ -34,13 +36,9 @@ const POLL_FOR_MS = 60000
 const CHECKOUT_KEY = 'ohvara-portal-checkout'
 const firstName = profile => (profile?.full_name || '').trim().split(/\s+/)[0] || ''
 const welcomeLine = profile => (firstName(profile) ? `Welcome, ${firstName(profile)}.` : 'Welcome.')
-const capLine = cap => (cap == null ? 'No weekly cap' : `${cap} submissions a week`)
 const capShort = cap => (cap == null ? 'no weekly cap' : `${cap} a week`)
 const Money = ({ cents }) => <span className="lk-money">{formatWeekly(cents)}</span>
 
-function rememberCheckout(value) {
-  try { sessionStorage.setItem(CHECKOUT_KEY, JSON.stringify(value)) } catch { /* private mode */ }
-}
 function recallCheckout() {
   try { return JSON.parse(sessionStorage.getItem(CHECKOUT_KEY)) || {} } catch { return {} }
 }
@@ -58,37 +56,43 @@ function Hero({ chip, title, line, children }) {
   )
 }
 
-function ProductCards({ tiers, onPlans }) {
-  const from = tiers?.length ? Math.min(...tiers.map(t => t.weekly_cents)) : null
+const PB = pricesOf(BOOK)
+const usd = n => `$${Number(n).toLocaleString('en-US')}`
+
+function ProductCards({ onPlans }) {
+  const leadFrom = Math.min(...PB.tiers.map(t => t.monthly))
   return (
     <div className="lk-prod">
-      <section className="ov-card lk-pc" aria-label="Servicing">
+      <section className="ov-card lk-pc" aria-label="Leads">
+        <div className="lk-pc-top">
+          <span className="lk-tile"><Phone size={22} strokeWidth={2} aria-hidden="true" /></span>
+          <h3>Leads + servicing</h3>
+          <span className="pv-pill pv-p-sold">Available now</span>
+        </div>
+        <p>Set a daily lead spend and we bring you people to sell to, then keep every sale on the books.</p>
+        <ul>
+          <Bullet><b>Appointments</b> booked on your calendar, and <b>live calls</b> transferred to you</Bullet>
+          <Bullet>Every lead called by our AI in seconds, texted, booked and reminded</Bullet>
+          <Bullet>Servicing for every policy you sell through us</Bullet>
+        </ul>
+        <div className="lk-pc-foot">
+          <span>From</span><span className="lk-money lk-pc-price">{usd(leadFrom)}</span><span>a month + your lead spend</span>
+          <span className="lk-gap" />
+          <button type="button" className="ov-ghost lk-btn" onClick={onPlans}>See plans</button>
+        </div>
+      </section>
+      <section className="ov-card lk-pc" aria-label="Servicing only">
         <div className="lk-pc-top">
           <span className="lk-tile"><ShieldCheck size={22} strokeWidth={2} aria-hidden="true" /></span>
-          <h3>Servicing</h3>
+          <h3>Servicing only</h3>
           <span className="pv-pill pv-p-sold">Available now</span>
         </div>
         <p>Submit each deal you close and we keep it on the books.</p>
         <ul>{COVERS.map(c => <Bullet key={c}>{c}</Bullet>)}</ul>
         <div className="lk-pc-foot">
-          {from != null && <><span>From</span><span className="lk-money lk-pc-price">{formatWeekly(from)}</span><span>a week</span></>}
+          <span className="lk-money lk-pc-price">{usd(PB.servicingOnly)}</span><span>a month, up to {PB.servicingBase} clients</span>
           <span className="lk-gap" />
           <button type="button" className="ov-ghost lk-btn" onClick={onPlans}>See plans</button>
-        </div>
-      </section>
-      <section className="ov-card lk-pc lk-soon" aria-label="Leads">
-        <div className="lk-pc-top">
-          <span className="lk-tile"><Phone size={22} strokeWidth={2} aria-hidden="true" /></span>
-          <h3>Leads</h3>
-          <span className="pv-pill pv-p-quiet">Opens soon</span>
-        </div>
-        <p>Set a weekly spend and we bring you people to sell to.</p>
-        <ul>
-          <Bullet><b>Live calls:</b> people who need policy help now, transferred to you</Bullet>
-          <Bullet><b>Appointments:</b> homeowners asking about mortgage protection, booked on your calendar</Bullet>
-        </ul>
-        <div className="lk-pc-foot">
-          <span className="lk-soonbar" aria-disabled="true"><Clock size={16} strokeWidth={2} aria-hidden="true" />Opens soon · not available to buy yet</span>
         </div>
       </section>
     </div>
@@ -97,9 +101,9 @@ function ProductCards({ tiers, onPlans }) {
 
 function HowItWorks() {
   const steps = [
-    ['Pick a plan', 'Choose how many submissions you want each week.'],
-    ['Pay on this page', 'Checkout is right here. Your portal opens as soon as the payment is confirmed.'],
-    ['Submit your first deal', 'We take it from there: packet check, review call, chargeback watch.'],
+    ['Pick your plan', 'By how much you want to spend on leads each day, or servicing only.'],
+    ['Add your card and pay', `Setup (${usd(PB.setupFee)} once), your first month and your first days of leads. Your portal opens straight away.`],
+    ['Leads start coming in', 'We call, text and book them for you. You take the calls and close.'],
   ]
   return (
     <section className="ov-card lk-steps" aria-label="How it works">
@@ -109,154 +113,6 @@ function HowItWorks() {
           <span><b>{title}</b><span>{line}</span></span>
         </div>
       ))}
-    </section>
-  )
-}
-
-const Opening = () => (
-  <div className="lk-opening" role="status"><span className="lk-spin" /><span className="pv-sub">Opening secure checkout…</span></div>
-)
-
-function PlanRow({ tier, on, onPick }) {
-  return (
-    <label className={`ov-card lk-pl${on ? ' is-on' : ''}`}>
-      <input type="radio" name="lk-plan" className="sr-only" checked={on} onChange={onPick} />
-      <span className="lk-rad" aria-hidden="true" />
-      <span className="lk-pl-main"><b>{capLine(tier.weekly_cap)}</b><small>{tier.name}</small></span>
-      <span className="lk-pl-price"><Money cents={tier.weekly_cents} /><small>a week</small></span>
-    </label>
-  )
-}
-
-function CheckoutProblem({ failure, onRetry, onRecheck }) {
-  const [busy, setBusy] = useState(false)
-  if (failure.code === 'already_subscribed') {
-    const open = async () => { setBusy(true); await onRecheck(); setBusy(false) }
-    return (
-      <div className="lk-problem">
-        <span className="lk-tile"><ShieldCheck size={22} strokeWidth={2} aria-hidden="true" /></span>
-        <h4>You already have a subscription</h4>
-        <p>You don’t need to pay again. Your portal may just need a moment to catch up.</p>
-        <div className="lk-row">
-          <button type="button" className="ov-solid lk-btn" onClick={open} disabled={busy}>{busy ? 'Checking…' : 'Open my portal'}</button>
-          <Link to="/agent/billing?manage=1" className="ov-ghost lk-btn">Manage billing</Link>
-        </div>
-      </div>
-    )
-  }
-  return (
-    <div className="lk-problem" role="alert">
-      <span className="lk-tile is-grey"><AlertCircle size={22} strokeWidth={2} aria-hidden="true" /></span>
-      <h4>Checkout couldn’t open</h4>
-      <p>Nothing was charged. This is usually quick to clear.</p>
-      <div className="lk-row">
-        <button type="button" className="ov-ghost lk-btn" onClick={onRetry}><RefreshCw size={16} strokeWidth={2} aria-hidden="true" />Try again</button>
-      </div>
-    </div>
-  )
-}
-
-function PlanSection({ tiersQuery, armed, onArm, sectionRef, onRecheck }) {
-  const { data: tiers, isPending, isError, refetch } = tiersQuery
-  const [picked, setPicked] = useState(null)
-  const [attempt, setAttempt] = useState(0)
-  const [failure, setFailure] = useState(null)
-  const [test, setTest] = useState(false)
-  const tier = tiers?.find(t => t.key === picked) || tiers?.[0] || null
-
-  function pick(key) {
-    setPicked(key)
-    setFailure(null)
-    onArm()
-  }
-
-  const head = (
-    <>
-      <h3 className="lk-big">Choose your Servicing plan</h3>
-      <p className="lk-subline">Billed weekly. Pay here and your portal opens right away.</p>
-    </>
-  )
-
-  if (isPending) {
-    return (
-      <section className="lk-sec" ref={sectionRef}>
-        {head}
-        <div className="lk-buy" aria-busy="true">
-          <div className="lk-pls">
-            {[80, 70].map(w => (
-              <div className="ov-card lk-pl" key={w}>
-                <span className="lk-rad" aria-hidden="true" />
-                <span className="lk-pl-main">
-                  <span className="pv-skel" style={{ height: 18, width: `${w}%` }} />
-                  <span className="pv-skel" style={{ height: 12, width: '40%', marginTop: 8 }} />
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-    )
-  }
-  if (isError || !tier) {
-    return (
-      <section className="lk-sec" ref={sectionRef}>
-        {head}
-        <div className="ov-card lk-co lk-sec-gap"><CheckoutProblem failure={{}} onRetry={() => refetch()} /></div>
-      </section>
-    )
-  }
-
-  return (
-    <section className="lk-sec" ref={sectionRef}>
-      {head}
-      <div className="lk-buy">
-        <div className="lk-pls" role="radiogroup" aria-label="Servicing plan">
-          {tiers.map(t => <PlanRow key={t.key} tier={t} on={t.key === tier.key} onPick={() => pick(t.key)} />)}
-          <div className="ov-card lk-note-card">
-            <Info size={18} strokeWidth={2} aria-hidden="true" />
-            <span>The plan is how many deals you can submit each week. You can change it any time in Billing.</span>
-          </div>
-        </div>
-        <section className="ov-card lk-co" aria-label="Checkout">
-          <div className="lk-co-top">
-            <h3>Pay and open your portal</h3>
-            {test && <span className="pv-pill pv-p-quiet">Test mode</span>}
-          </div>
-          <div className="lk-sum">
-            <span>Servicing · {capShort(tier.weekly_cap)}</span>
-            <span><Money cents={tier.weekly_cents} /> <small>a week</small></span>
-          </div>
-          {failure ? (
-            <div className="lk-embed">
-              <CheckoutProblem failure={failure} onRetry={() => { setFailure(null); setAttempt(a => a + 1) }} onRecheck={onRecheck} />
-            </div>
-          ) : (
-            <div className="lk-embed">
-              {armed ? (
-                <Suspense fallback={<Opening />}>
-                  {/* A new plan is a new Stripe session, so the box starts over. */}
-                  <CheckoutEmbed
-                    key={`${tier.key}-${attempt}`}
-                    tier={tier.key}
-                    returnUrl={`${window.location.origin}/agent`}
-                    waiting={<Opening />}
-                    onError={setFailure}
-                    onSession={d => {
-                      const isTest = String(d.publishable_key || '').startsWith('pk_test')
-                      setTest(isTest)
-                      rememberCheckout({ tier: tier.key, test: isTest })
-                    }}
-                  />
-                </Suspense>
-              ) : <Opening />}
-            </div>
-          )}
-          <div className="lk-fine">
-            <Lock size={14} strokeWidth={2} aria-hidden="true" />
-            <span>Secure checkout by Stripe, on this page. Billed weekly until you change it in Billing.{test ? ' Test mode: no real card is charged.' : ''}</span>
-          </div>
-        </section>
-      </div>
     </section>
   )
 }
@@ -303,26 +159,11 @@ function NativeLocked({ portal }) {
 }
 
 export function LockedWelcome({ portal }) {
-  const tiersQuery = useBillingTiers()
   const native = isNativeApp()
-  const [armed, setArmed] = useState(false)
   const sectionRef = useRef(null)
   const { hash } = useLocation()
 
-  // The checkout session opens when the plans come near the screen or a plan is
-  // tapped, not on page load.
-  useEffect(() => {
-    const el = sectionRef.current
-    if (native || armed || !el) return
-    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) setArmed(true) }, { rootMargin: '100px 0px' })
-    io.observe(el)
-    return () => io.disconnect()
-  }, [native, armed, tiersQuery.isPending])
-
-  const toPlans = () => {
-    setArmed(true)
-    sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
+  const toPlans = () => sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   useEffect(() => {
     if (hash === '#plans') sectionRef.current?.scrollIntoView({ block: 'start' })
   }, [hash])
@@ -339,18 +180,12 @@ export function LockedWelcome({ portal }) {
             <CheckAgainButton onCheck={lookAgain(portal)} />
           </div>
         )}
-        <Hero chip="Your portal is waiting" title={welcomeLine(portal.profile)} line="Pick a plan and your portal opens right away. Nothing else to set up first.">
+        <Hero chip="Your portal is waiting" title={welcomeLine(portal.profile)} line="Pick a plan, add your card and your portal opens right away.">
           <button type="button" className="ov-hero-btn" onClick={toPlans}>Choose a plan</button>
         </Hero>
-        <ProductCards tiers={tiersQuery.data} onPlans={toPlans} />
+        <ProductCards onPlans={toPlans} />
         <HowItWorks />
-        <PlanSection
-          tiersQuery={tiersQuery}
-          armed={armed}
-          onArm={() => setArmed(true)}
-          sectionRef={sectionRef}
-          onRecheck={lookAgain(portal)}
-        />
+        <SignupCheckout portal={portal} sectionRef={sectionRef} />
       </div>
     </div>
   )
@@ -437,14 +272,10 @@ export function ConfirmPayment({ portal }) {
   )
 }
 
+// P933: after the sign-up charge (plan + first days of leads), not the old weekly submissions count.
 export function UnlockedMoment({ portal }) {
-  const { data: usage } = useWeeklyUsage(portal.profile?.id)
-  const { data: tiers } = useBillingTiers()
-  const bought = tiers?.find(t => t.key === recallCheckout().tier)
-  const left = capState(usage)?.left ?? bought?.weekly_cap ?? null
-  const line = left == null
-    ? 'Your portal is open.'
-    : `Your portal is open. You have ${left} ${left === 1 ? 'submission' : 'submissions'} this week.`
+  const leads = portal.leads !== false
+  const line = leads ? 'You’re paid up. Your first leads start tomorrow, and every one gets a call in seconds.' : 'You’re paid up. Your portal is open.'
   const next = [
     ['/agent/submit', CalendarPlus, 'Submit a deal', 'A deal you just closed, or a client you already have.'],
     ['/agent/clients', Users, 'See your clients', 'Each step we take shows up on the client and in Activity.'],
@@ -453,7 +284,7 @@ export function UnlockedMoment({ portal }) {
   return (
     <div className="lk-cq">
       <div className="lk">
-        <Hero chip="Servicing is on" title={`You’re in${firstName(portal.profile) ? `, ${firstName(portal.profile)}` : ''}.`} line={line}>
+        <Hero chip={leads ? 'Leads and servicing are on' : 'Servicing is on'} title={`You’re in${firstName(portal.profile) ? `, ${firstName(portal.profile)}` : ''}.`} line={line}>
           <Link to="/agent/submit" className="ov-hero-btn">Submit your first deal</Link>
           <button type="button" className="ov-ghost" onClick={() => portal.setMoment(false)}>Look around</button>
         </Hero>

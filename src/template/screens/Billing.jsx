@@ -6,7 +6,9 @@ import { useSampleBilling, useSampleActions, useSampleAppointments } from '../da
 import { Chip, Drawer, Field, SampleTag, Seg, useNote } from '../kit'
 import { Select } from '../Select'
 import { usd } from '../motion'
-import { bought, planOf, dailyTotal, spendOk, nightlyFor, monthlyBill, feeWords, SETUP_FEE, PAID_MIN_DAILY, TIERS, bandOf, bandText, switchDaily } from '../spendPlan'
+import { DeskInfo } from '../../components/agent/DeskInfo'
+import { deskBreakdown, deskParts, monthlyEstimate } from '../../lib/bookingDesk'
+import { bought, planOf, dailyTotal, spendOk, nightlyFor, monthlyBill, feeWords, LEAD_FEE, SETUP_FEE, PAID_MIN_DAILY, TIERS, bandOf, bandText, switchDaily } from '../spendPlan'
 import { planChange, changeWords } from '../../lib/planChange'
 import { liveHoursText } from '../../lib/leadSplit'
 import { TalkDrawer } from '../Talk'
@@ -156,10 +158,11 @@ function PlanSpend({ tier, daily, onDaily, dirty, ok, onSave, onReset, forDay })
       <div className="bl-spend-scale" aria-hidden="true"><small>{money(lo)}</small><small>{money(hi)}</small></div>
       <p className="bl-band-note">The {tier.label} plan covers {bandText(tier)} a day. To spend outside that, switch plan below.</p>
       <dl className="bl-spend-live">
-        <div><dt>Charged each night</dt><dd><b className="tp-money">{money(night.total)}</b><small>{money(v)} + {feeWords}</small></dd></div>
+        <div><dt>Charged each night</dt><dd><b className="tp-money">{money(night.total)}</b><small>{deskParts(night.net, night.fee)}</small></dd></div>
         <div><dt>Your plan</dt><dd><b>{tier.label}</b><small>{money(tier.monthly)} a month</small></dd></div>
         <div><dt>About a month</dt><dd><b className="tp-money">{money(month.total)}</b><small>Plan + spend + {feeWords}</small></dd></div>
       </dl>
+      <p className="sc-est bl-est" data-testid="bl-estimate">{monthlyEstimate(v, LEAD_FEE).text} <DeskInfo rate={LEAD_FEE} label="" /></p>
       {dirty && (
         <div className="bl-spend-save">
           <small className="tp-grow">Applies from the next charge, for {forDay}. Days already paid keep their spend.</small>
@@ -247,7 +250,7 @@ function Charges({ rows }) {
         return (
           <li key={c.id} style={{ '--i': i }} data-status={c.status}>
             <span className={`bl-ch-ic is-${tone}`}><Icon size={15} aria-hidden="true" /></span>
-            <span className="bl-ch-what"><b>{c.label}</b><small>{c.at}</small></span>
+            <span className="bl-ch-what"><b>{c.label}</b><small>{c.at}</small>{c.kind === 'lead' && c.spend != null && <small className="bl-ch-desk">{deskBreakdown(c.tonight ? 'Tonight' : '', c.spend, c.fee)}</small>}</span>
             <b className="tp-money bl-ch-amt">{money2(c.amount)}</b>
             <Chip tone={tone}>{word}</Chip>
           </li>
@@ -322,7 +325,7 @@ export default function Billing() {
   const lock = b.founding ? ['Founding price lock', `Until ${b.founding.until}`, `Founding agent #${b.founding.no}: your prices don’t change until then`] : null
   const next = unpaid
     ? { big: `${unpaid.day} first`, sub: `We try ${unpaid.day} again at 8 AM. ${n.forDay} is charged once it goes through` }
-    : { big: money2(n.tonight.total), sub: `${b.nightly.at} · lead spend for ${n.forDay} + ${feeWords}${n.tonight.credit > 0 ? ` · ${money(n.tonight.credit)} credit used` : ''}` }
+    : { big: money2(n.tonight.total), sub: `${b.nightly.at} · lead spend for ${n.forDay} · ${deskParts(n.tonight.net, n.tonight.fee)}${n.tonight.credit > 0 ? ` · ${money(n.tonight.credit)} credit used` : ''}` }
   return (
     <div className="tp-page fx-page fx-grid bl910">
       {unpaid && (
@@ -400,7 +403,7 @@ export default function Billing() {
         <header className="fx-tile-h"><span className="tp-grow"><h2>Your hours</h2><p>Booked calls land and live calls ring inside these hours. Outside them, we book callers for your next open time.</p></span></header>
         <p className="bl-hours"><Clock3 size={16} aria-hidden="true" /><b>{liveHoursText(b.take.hours)}</b></p>
         <div className="tp-row tp-wrap bl-take-save">
-          <p className="pb-note tp-grow">{money(dailyTotal(b.spend))} a day plus {feeWords}, charged a day ahead. Change the spend with Change plan.</p>
+          <p className="pb-note tp-grow">{money(dailyTotal(b.spend))} a day plus the {feeWords}, charged a day ahead. Change the spend with Change plan.</p>
           <Link to={`${paths.settings()}?tab=calls`} className="tp-btn ov-ghost">Change your hours</Link>
         </div>
       </section>

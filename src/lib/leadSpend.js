@@ -48,6 +48,12 @@ export const planState = db => rpc(db, 'my_plan_state')
 export const planQuote = (db, tier) => rpc(db, 'billing_plan_quote', { p_tier: tier })
 export const changePlan = (db, { tier, daily = null }) => invoke(db, { action: 'plan_change', tier, daily_cents: daily == null ? null : toCents(daily) })
 export const pauseSpend = (db, paused) => invoke(db, { action: 'pause', paused: !!paused })
+// P933: sign-up (plan + card + one charge), the Live charging switch, the $1 live check, recent charges.
+export const signupQuote = (db, { tier, daily = null }) => invoke(db, { action: 'signup_quote', tier, daily_cents: daily == null ? null : toCents(daily) })
+export const signupPay = (db, { tier, daily = null }) => invoke(db, { action: 'signup', tier, daily_cents: daily == null ? null : toCents(daily) })
+export const liveCheck = db => invoke(db, { action: 'live_check' })
+export const setLiveCharging = (db, on) => rpc(db, 'admin_billing_live_set', { p_on: !!on })
+export const adminCharges = (db, limit = 30) => rpc(db, 'admin_billing_charges', { p_limit: limit })
 export const acceptPaid = (db, termsVersion, device = typeof navigator !== 'undefined' ? navigator.userAgent : null) =>
   rpc(db, 'billing_accept_paid', { p_terms_version: termsVersion, p_device: device })
 
@@ -114,7 +120,7 @@ export function toSampleBilling(view) {
     paused: st.status === 'paused' ? {} : null,
     graceUntil: view.grace_until || null,
     membership: view.membership || null,
-    charges: (view.charges || []).map(c => ({ ...c, amount: d(c.cents) })),
+    charges: (view.charges || []).map(c => ({ ...c, amount: d(c.cents), spend: c.spend_cents == null ? undefined : d(c.spend_cents), fee: c.fee_cents == null ? undefined : d(c.fee_cents) })),
     prices: pricesOf(view.price_book || BOOK),
   }
 }

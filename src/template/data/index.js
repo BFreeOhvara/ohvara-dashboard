@@ -325,11 +325,11 @@ const seed = {
     founding: { no: 7, until: 'Nov 8, 2027' }, setupPaid: 'Mon, Sep 28',
     // P917: past charges (Billing shows tonight's on top): nightly lead spend + 12%, the monthly plan, the setup fee.
     charges: [
-      { id: 'ch1', at: 'Sun, Nov 1, 8 PM', label: 'Lead spend for Tue, Nov 3 + 12%', kind: 'lead', amount: 112, status: param('billing') === 'failed' ? 'declined' : 'paid' },
+      { id: 'ch1', at: 'Sun, Nov 1, 8 PM', label: 'Lead spend for Tue, Nov 3', kind: 'lead', amount: 112, spend: 100, fee: 12, status: param('billing') === 'failed' ? 'declined' : 'paid' },
       { id: 'ch2', at: 'Sun, Nov 1', label: 'Plan, Growth, November', kind: 'plan', amount: GROWTH, status: 'paid' },
-      { id: 'ch3', at: 'Sat, Oct 31, 8 PM', label: 'Lead spend for Mon, Nov 2 + 12%', kind: 'lead', amount: 112, status: 'paid' },
-      { id: 'ch4', at: 'Fri, Oct 30, 8 PM', label: 'Lead spend for Sun, Nov 1 + 12%', kind: 'lead', amount: 112, status: 'paid' },
-      { id: 'ch5', at: 'Thu, Oct 29, 8 PM', label: 'Lead spend for Sat, Oct 31 + 12%', kind: 'lead', amount: 107.52, status: 'paid' },
+      { id: 'ch3', at: 'Sat, Oct 31, 8 PM', label: 'Lead spend for Mon, Nov 2', kind: 'lead', amount: 112, spend: 100, fee: 12, status: 'paid' },
+      { id: 'ch4', at: 'Fri, Oct 30, 8 PM', label: 'Lead spend for Sun, Nov 1', kind: 'lead', amount: 112, spend: 100, fee: 12, status: 'paid' },
+      { id: 'ch5', at: 'Thu, Oct 29, 8 PM', label: 'Lead spend for Sat, Oct 31', kind: 'lead', amount: 107.52, spend: 96, fee: 11.52, status: 'paid' },
       { id: 'ch6', at: 'Thu, Oct 1', label: 'Plan, Growth, October', kind: 'plan', amount: GROWTH, status: 'paid' },
       { id: 'ch7', at: 'Mon, Sep 28', label: 'Setup fee, one time', kind: 'setup', amount: SETUP_FEE, status: 'paid' },
     ],
@@ -344,7 +344,7 @@ const seed = {
     next_charge: 'Tonight, 8 PM', nextBill: 'Tue, Dec 1',
     servicing: { status: 'active', next: 'Tue, Dec 1' }, cancellations: null,
     history: param('plan') === 'paid'
-      ? [{ id: 'inv0', at: 'Sun, Nov 1, 8 PM', label: 'Lead spend for Tue, Nov 3 + 12%', amount: 112 }, { id: 'inv1', at: 'Sun, Nov 1', label: 'Plan, Growth, November', amount: GROWTH }, { id: 'inv2', at: 'Sat, Oct 31, 8 PM', label: 'Lead spend for Mon, Nov 2 + 12%', amount: 112 }, { id: 'inv3', at: 'Thu, Oct 1', label: 'Plan, Growth, October', amount: GROWTH }]
+      ? [{ id: 'inv0', at: 'Sun, Nov 1, 8 PM', label: 'Lead spend for Tue, Nov 3', amount: 112 }, { id: 'inv1', at: 'Sun, Nov 1', label: 'Plan, Growth, November', amount: GROWTH }, { id: 'inv2', at: 'Sat, Oct 31, 8 PM', label: 'Lead spend for Mon, Nov 2', amount: 112 }, { id: 'inv3', at: 'Thu, Oct 1', label: 'Plan, Growth, October', amount: GROWTH }]
       : [{ id: 'inv1', at: 'Sun, Nov 1, 8 PM', label: 'Lead spend for Tue, Nov 3', amount: 100 }, { id: 'inv2', at: 'Sat, Oct 31, 8 PM', label: 'Lead spend for Mon, Nov 2', amount: 100 }, { id: 'inv3', at: 'Fri, Oct 30, 8 PM', label: 'Lead spend for Sun, Nov 1', amount: 100 }],
   },
   submitted: 11,

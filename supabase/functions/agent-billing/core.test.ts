@@ -35,6 +35,8 @@ function fakeAdmin(profile: any, spend: any[] = []) {
     const q: any = {
       select() { return q },
       eq(k: string, v: unknown) { filters.push([k, v]); return q },
+      order() { return q },
+      limit() { return q },
       single: async () => ({ data: rows()[0] ?? null, error: rows()[0] ? null : { message: 'no row' } }),
       maybeSingle: async () => ({ data: rows()[0] ?? null, error: null }),
       then(ok: any) { return Promise.resolve({ data: rows(), error: null }).then(ok) },
@@ -513,65 +515,91 @@ test('sync (P884): a failed renewal starts 3 days of grace', async () => {
 
 // ── checkout + portal ───────────────────────────────────────────────────────
 
-function checkoutStripe(found: any[]) {
-  return fakeStripe({
-    'GET subscriptions': () => ({ data: [] }),
-    'GET prices': () => ({ data: found }),
-    'GET products/ohvara_line_servicing': () => ({ __error: { code: 'resource_missing', message: 'gone' }, __status: 404 }),
-    'POST products': () => ({ id: 'ohvara_line_servicing' }),
-    'POST prices': () => ({ id: 'price_new' }),
-    'POST prices/price_old': () => ({ id: 'price_old' }),
-    'POST checkout/sessions': () => ({ client_secret: 'cs_secret' }),
-  })
-}
-
-test('checkout: a first subscription makes the price from settings, servicing item only', async () => {
-  const a = fakeAdmin(agent())
-  const s = checkoutStripe([])
+// P933: the weekly checkout is gone; sign-up is plan + card + one charge through lead-spend.
+test('checkout (P933): retired, answers 410 and touches no Stripe', async () => {
+  const a = fakeAdmin(agent({ billing_status: 'none', stripe_subscription_id: null }))
+  const s = fakeStripe({})
   const r = await call(a, s, { action: 'checkout', tier: 'premium' })
+  assert.equal(r.status, 410)
+  assert.equal(r.body.code, 'checkout_retired')
+  assert.equal(s.calls.length, 0)
+})
+
+test('setup_card (P933): a new agent with no Stripe customer gets one, then a SetupIntent', async () => {
+  const a = fakeAdmin(agent({ billing_status: 'none', stripe_customer_id: null, stripe_subscription_id: null }))
+  const s = fakeStripe({
+    'POST customers': () => ({ id: 'cus_new' }),
+    'POST setup_intents': () => ({ client_secret: 'seti_secret' }),
+  })
+  const r = await call(a, s, { action: 'setup_card' })
   assert.equal(r.status, 200)
-  assert.equal(r.body.client_secret, 'cs_secret')
-
-  const product = s.calls.find(c => c.path === 'products' && c.method === 'POST')!
-  assert.equal(product.form.get('id'), 'ohvara_line_servicing')
-  assert.equal(product.form.get('metadata[ohvara]'), 'agent_billing')
-  assert.equal(product.form.get('metadata[line]'), 'servicing')
-
-  const price = s.calls.find(c => c.path === 'prices' && c.method === 'POST')!
-  assert.equal(price.form.get('unit_amount'), '29900')
-  assert.equal(price.form.get('recurring[interval]'), 'week')
-  assert.equal(price.form.get('metadata[line]'), 'servicing')
-
-  const session = s.calls.find(c => c.path === 'checkout/sessions')!
-  assert.equal(session.form.get('line_items[0][price]'), 'price_new')
-  assert.equal(session.form.get('line_items[1][price]'), null)
-  assert.ok(![...session.form.keys()].some(k => k.includes('tier')))
+  assert.equal(r.body.client_secret, 'seti_secret')
+  assert.equal(s.calls.find(c => c.path === 'customers')!.headers['Idempotency-Key'], `ohvara_customer:${AGENT}`)
+  assert.equal(s.calls.find(c => c.path === 'setup_intents')!.form.get('customer'), 'cus_new')
+  assert.equal(a.writes.find((w: any) => w.table === 'profiles')!.row.stripe_customer_id, 'cus_new')
 })
 
-test('checkout: the existing price is reused while the amount matches', async () => {
-  const a = fakeAdmin(agent())
-  const s = checkoutStripe([{ id: 'price_same', unit_amount: 29900, recurring: { interval: 'week' } }])
-  await call(a, s, { action: 'checkout' })
-  assert.equal(s.calls.filter(c => c.path === 'prices' && c.method === 'POST').length, 0)
-  assert.equal(s.calls.find(c => c.path === 'checkout/sessions')!.form.get('line_items[0][price]'), 'price_same')
+test('stripe_check (P933): admins only; key mode from the prefix, never the key; missing events listed', async () => {
+  const no = await call(fakeAdmin(agent()), fakeStripe({}), { action: 'stripe_check' })
+  assert.equal(no.status, 403)
+  const a = fakeAdmin(agent({ role: 'admin' }))
+  a.db.billing_settings = [{ id: true, live_charging: false, last_webhook_at: '2026-11-09T20:00:00Z', last_webhook_type: 'invoice.paid', last_webhook_live: true, catalog: null }]
+  const s = fakeStripe({
+    'GET webhook_endpoints': () => ({ data: [{ url: 'https://x.test/functions/v1/agent-billing/webhook', status: 'enabled', livemode: true,
+      enabled_events: ['invoice.paid', 'invoice.payment_failed', 'checkout.session.completed'] }] }),
+  })
+  configure({ stripeKey: 'sk_live_SECRETSECRET', publishableKey: 'pk_live_x', webhookSecret: 'whsec_x', fetch: s.fetchFn, now: () => NOW,
+    webhookUrl: 'https://x.test/functions/v1/agent-billing/webhook' })
+  const res = await handle(req({ action: 'stripe_check' }), a.client)
+  const b = await res.json()
+  assert.equal(b.mode, 'live')
+  assert.equal(b.key_prefix, 'sk_live_')
+  assert.ok(!JSON.stringify(b).includes('SECRET'), 'nothing past the prefix')
+  assert.deepEqual(b.endpoint.missing, ['customer.subscription.created', 'customer.subscription.updated', 'customer.subscription.deleted', 'transfer.reversed'])
+  assert.equal(b.last_webhook.type, 'invoice.paid')
+  assert.ok(b.todo.some((t: string) => t.includes('transfer.reversed')))
 })
 
-test('checkout: a changed amount in settings makes a new price and retires the old', async () => {
-  const a = fakeAdmin(agent())
-  const s = checkoutStripe([{ id: 'price_old', unit_amount: 35000, recurring: { interval: 'week' } }])
-  await call(a, s, { action: 'checkout' })
-  const created = s.calls.find(c => c.path === 'prices' && c.method === 'POST')!
-  assert.equal(created.form.get('unit_amount'), '29900')
-  assert.equal(created.form.get('transfer_lookup_key'), 'true')
-  assert.equal(s.calls.find(c => c.path === 'prices/price_old')!.form.get('active'), 'false')
-})
-
-test('checkout: spend left from an ended subscription is reset and logged', async () => {
-  const a = fakeAdmin(agent(), [spendRow('live_call', 10000), spendRow('booked_appointment', 0)])
-  const s = checkoutStripe([{ id: 'price_same', unit_amount: 29900, recurring: { interval: 'week' } }])
-  await call(a, s, { action: 'checkout' })
-  assert.deepEqual(logs(a).map((w: any) => [w.row.inbound_type, w.row.old_cents, w.row.new_cents]), [['live_call', 10000, 0]])
-  assert.equal(a.db.agent_inbound_spend.find(r => r.inbound_type === 'live_call').weekly_cents, 0)
+test('stripe_catalog (P933): from the final price book; dry run creates nothing, a second apply creates nothing new', async () => {
+  const a = fakeAdmin(agent({ role: 'admin' }))
+  a.db.billing_price_book = [{ version: 3, status: 'final', book: {
+    tiers: [{ key: 'starter', label: 'Starter', monthly_cents: 69900 }, { key: 'growth', label: 'Growth', monthly_cents: 149900 }, { key: 'pro', label: 'Pro', monthly_cents: 299900 }],
+    lead_fee_rate: 0.12, servicing_only_cents: 49900, servicing_step_cents: 20000, servicing_step_clients: 100, setup: { fee_cents: 29900 } } }]
+  const made: Record<string, any> = {}
+  const prices: any[] = []
+  const s = fakeStripe({})
+  const route = (c: any) => {
+    if (c.method === 'GET' && c.path.startsWith('products/')) return made[c.path.slice(9)] ?? { __error: { code: 'resource_missing' }, __status: 404 }
+    if (c.method === 'GET' && c.path === 'prices') { const k = c.form.get('lookup_keys[0]'); return { data: prices.filter(p => p.lookup_key === k) } }
+    if (c.method === 'POST' && c.path === 'products') { made[c.form.get('id')] = { id: c.form.get('id') }; return made[c.form.get('id')] }
+    if (c.method === 'POST' && c.path === 'prices') {
+      const p = { id: `price_${prices.length}`, lookup_key: c.form.get('lookup_key'), unit_amount: Number(c.form.get('unit_amount')), recurring: c.form.get('recurring[interval]') ? { interval: c.form.get('recurring[interval]') } : null }
+      prices.push(p); return p
+    }
+    throw new Error('unexpected')
+  }
+  const fetchFn = (async (url: string, init: any) => {
+    const u = new URL(url)
+    const c = { method: init.method, path: u.pathname.replace('/v1/', ''), form: new URLSearchParams(init.body?.toString() ?? u.search) }
+    s.calls.push(c as any)
+    const out = route(c)
+    return new Response(JSON.stringify(out?.__error ? { error: out.__error } : out), { status: out?.__status ?? 200 })
+  }) as unknown as typeof fetch
+  configure({ stripeKey: 'sk_test_x', publishableKey: 'pk_test_x', fetch: fetchFn, now: () => NOW })
+  const dry = await (await handle(req({ action: 'stripe_catalog' }), a.client)).json()
+  assert.equal(dry.apply, false)
+  assert.equal(dry.to_create, 9)
+  assert.equal(s.calls.filter(c => c.method === 'POST').length, 0, 'a dry run creates nothing')
+  assert.deepEqual(dry.items.filter((i: any) => i.cents).map((i: any) => [i.lookup, i.cents]), [
+    ['ohvara_setup_v3', 29900], ['ohvara_plan_starter_v3', 69900], ['ohvara_plan_growth_v3', 149900], ['ohvara_plan_pro_v3', 299900],
+    ['ohvara_plan_servicing_v3', 49900], ['ohvara_servicing_extra_v3', 20000]])
+  const first = await (await handle(req({ action: 'stripe_catalog', apply: true }), a.client)).json()
+  assert.equal(first.to_create, 9)
+  assert.equal(prices.length, 6)
+  const again = await (await handle(req({ action: 'stripe_catalog', apply: true }), a.client)).json()
+  assert.equal(again.to_create, 0, 'idempotent')
+  assert.equal(prices.length, 6)
+  assert.ok(a.rpcs.some(r => r.name === 'billing_catalog_saved' && r.args.p_mode === 'test'))
 })
 
 test('portal: the configuration offers no plan switching', async () => {
@@ -749,28 +777,7 @@ test('wording: no answer the server gives names Meta, Google, Facebook, tiers or
 
 // ── group 7: the servicing price follows app_settings, whatever the amount is ──
 
-test('servicing price: a different amount in settings is the amount sent to Stripe, not 29900', async () => {
-  const a = fakeAdmin(agent())
-  a.db.app_settings[0].agent_billing_weekly_cents = 31900
-  const s = checkoutStripe([])
-  await call(a, s, { action: 'checkout' })
-  const created = s.calls.find(c => c.path === 'prices' && c.method === 'POST')!
-  assert.equal(created.form.get('unit_amount'), '31900')
-})
-
-test('servicing price: moving settings from 299 to 319 makes a new price; the same amount is reused', async () => {
-  const a = fakeAdmin(agent())
-  a.db.app_settings[0].agent_billing_weekly_cents = 31900
-  const moved = checkoutStripe([{ id: 'price_old', unit_amount: 29900, recurring: { interval: 'week' } }])
-  await call(a, moved, { action: 'checkout' })
-  assert.equal(moved.calls.find(c => c.path === 'prices' && c.method === 'POST')!.form.get('unit_amount'), '31900')
-  assert.equal(moved.calls.find(c => c.path === 'prices/price_old')!.form.get('active'), 'false')
-
-  const same = checkoutStripe([{ id: 'price_same', unit_amount: 31900, recurring: { interval: 'week' } }])
-  await call(a, same, { action: 'checkout' })
-  assert.equal(same.calls.filter(c => c.path === 'prices' && c.method === 'POST').length, 0)
-  assert.equal(same.calls.find(c => c.path === 'checkout/sessions')!.form.get('line_items[0][price]'), 'price_same')
-})
+// P933: the two checkout-made servicing price tests went with the weekly checkout.
 
 test('servicing price: the overview fallback and the comped line show the settings amount', async () => {
   const a = fakeAdmin(comped())

@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { CircleCheck, Landmark, ArrowUpRight, CreditCard, MessageSquare, RotateCw, Wallet, Megaphone, Headset, Receipt, BadgeDollarSign, PiggyBank, Pencil, History, Bot } from 'lucide-react'
 import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, useAdmSettings, useAdmSource, useAdmAgentResults, PLANS, PERIODS, SETUP_FEE, CARD_FEE, AI_RATE } from '../data'
 import { PRICES } from '../../lib/priceBook.js'
+import { deskAdminLabel } from '../../lib/bookingDesk'
+import { RecentCharges } from './Billing933'
 import { Avatar, Chip, Drawer, PillTabs, SampleTag, Seg, Switch, useNote } from '../../template/kit'
 import { CountUp, usd } from '../../template/motion'
 import { Tile } from '../kit'
@@ -56,7 +58,7 @@ function AgentResults({ period }) {
   return (
     <div className="adm-rev-view">
       <div className="adm-res-head">
-        <span className="tp-grow"><b>Per agent, {PERIODS.find(x => x[0] === period)[1].toLowerCase()}</b><small>Paid = plan fee + {Math.round(PRICES.leadFee * 100)}% of lead spend + setup. Kept = paid − VA − AI − card fees.</small></span>
+        <span className="tp-grow"><b>Per agent, {PERIODS.find(x => x[0] === period)[1].toLowerCase()}</b><small>Paid = plan fee + {deskAdminLabel(PRICES.leadFee)} + setup. Kept = paid − VA − AI − card fees.</small></span>
         <Chip tone={ok ? 'green' : 'warn'}>{t.vaPct == null ? 'No revenue yet' : `VA ${t.vaPct}% of revenue · rule ${Math.round(OWNER_LIMIT * 100)}% or less`}</Chip>
         {src !== 'real' && <SampleTag>Sample</SampleTag>}
       </div>
@@ -84,14 +86,13 @@ function Revenue() {
   const src = useAdmSource()
   const { data: m } = useAdmMoney()
   const top = Math.max(1, ...m.weeks.map(w => w.revenue))
-  const pct = n => `${Math.round(n * 100)}%`
   return (
     <div className="adm-rev-view">
       <div className="fx-chart-head fx-bk-head">
         <b className="tp-money fx-bk-num"><CountUp value={m.total} format={money} /></b>
         <span className="fx-bk-side"><b>revenue this week so far</b><small>{money(m.lastWeek)} last week</small>{m.lastWeek > 0 && <i className={`fx-delta is-${m.total >= m.lastWeek ? 'up' : 'warn'}`}>{m.total >= m.lastWeek ? 'Up' : 'Behind'} {Math.abs(Math.round(((m.total - m.lastWeek) / m.lastWeek) * 100))}%</i>}</span>
       </div>
-      <div className="adm-rev-key"><span><i className="is-plans adm-rev-sw" />Plan fees</span><span><i className="is-fee adm-rev-sw" />{pct(PRICES.leadFee)} fee</span><span><i className="is-setup adm-rev-sw" />Setup fees</span>{src !== 'real' && <SampleTag>Sample</SampleTag>}</div>
+      <div className="adm-rev-key"><span><i className="is-plans adm-rev-sw" />Plan fees</span><span><i className="is-fee adm-rev-sw" />{deskAdminLabel(PRICES.leadFee)}</span><span><i className="is-setup adm-rev-sw" />Setup fees</span>{src !== 'real' && <SampleTag>Sample</SampleTag>}</div>
       <ol className="adm-rev-chart" style={{ '--n': m.weeks.length }} role="img" aria-label={m.weeks.map(w => `Week of ${w.wk}: ${money(w.revenue)}`).join('. ')}>
         {m.weeks.map(w => (
           <li key={w.wk} className={w.now ? 'is-now' : ''}>
@@ -152,7 +153,7 @@ function Headline({ p }) {
   const margin = p.inTotal ? Math.round((p.profit / p.inTotal) * 100) : 0
   return (
     <div className="adm-rev-head" role="group" aria-label="Revenue for the period">
-      <div className="is-main"><small>Revenue</small><b><CountUp value={p.inTotal} format={money} /></b><em>Plan fees + {Math.round(PRICES.leadFee * 100)}% fee + setup fees</em></div>
+      <div className="is-main"><small>Revenue</small><b><CountUp value={p.inTotal} format={money} /></b><em>Plan fees + {deskAdminLabel(PRICES.leadFee)} + setup fees</em></div>
       <div><small>Costs</small><b>{money(p.costTotal)}</b><em>VA pay, AI minutes, card fees</em></div>
       <div className={p.profit < 0 ? 'is-loss' : ''}><small>Profit</small><b><CountUp value={p.profit} format={money} /></b><em>{margin}% of revenue kept</em></div>
       <div className="is-out"><small>Agent lead spend (passed to Meta)</small><b>{money(p.leadSpend)}</b><em>Not Ohvara's money · in no total</em></div>
@@ -167,7 +168,7 @@ function Breakdown({ p }) {
       <Tile i={2} title="Revenue" sub="What Ohvara earned">
         <ul className="adm-sum">
           <Line icon={BadgeDollarSign} label="Plan fees" sub="Starter, Growth, Pro and servicing only, month to month" n={p.servicing} />
-          <Line icon={BadgeDollarSign} label={`${Math.round(PRICES.leadFee * 100)}% fee on lead spend`} sub="Covers the AI calls and the team working every lead" n={p.leadFee} />
+          <Line icon={BadgeDollarSign} label={deskAdminLabel(PRICES.leadFee)} sub="Of lead spend: the AI calling every lead, texts, booking, reminders and the team" n={p.leadFee} />
           <Line icon={Receipt} label="Setup fees" sub={p.setupCount ? `${p.setupCount} new ${p.setupCount === 1 ? 'agent' : 'agents'} · ${money(SETUP_FEE)} each` : 'No new agents'} n={p.setup} />
           <li className="is-total"><BadgeDollarSign size={14} aria-hidden="true" /><span className="tp-grow">Revenue</span><b className="tp-money">{money(p.inTotal)}</b></li>
         </ul>
@@ -302,7 +303,7 @@ function Payouts() {
 // P913 — one page, top to bottom: the period, the headline numbers, one stage that holds the main chart (By week) or
 // another view (Agent results, Agent billing, Payouts), then the breakdown. P914: the stage's top stays put and it grows
 // to fit the view (Grow), so nothing scrolls inside it.
-const VIEWS = [['revenue', 'By week'], ['results', 'Agent results'], ['agents', 'Agent billing'], ['payouts', 'Payouts']]
+const VIEWS = [['revenue', 'By week'], ['results', 'Agent results'], ['agents', 'Agent billing'], ['charges', 'Charges'], ['payouts', 'Payouts']]
 export default function Billing() {
   const [sp, setSp] = useSearchParams()
   const { data: m } = useAdmMoney()
@@ -329,6 +330,7 @@ export default function Billing() {
             {tab === 'revenue' && <Revenue />}
             {tab === 'results' && <AgentResults period={period} />}
             {tab === 'agents' && <AgentBills />}
+            {tab === 'charges' && <RecentCharges />}
             {tab === 'payouts' && <Payouts />}
           </div>
         </Grow>

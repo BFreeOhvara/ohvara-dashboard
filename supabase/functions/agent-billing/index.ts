@@ -58,6 +58,7 @@ configure({
   webhookSecret: Deno.env.get('STRIPE_WEBHOOK_SECRET'),
   publishableKey: Deno.env.get('STRIPE_PUBLISHABLE_KEY'),
   connectWebhookSecret: Deno.env.get('STRIPE_CONNECT_WEBHOOK_SECRET'),
+  webhookUrl: `${Deno.env.get('SUPABASE_URL')}/functions/v1/agent-billing/webhook`,
   onConnectEvent: KEY ? event => handleConnectEvent(payouts, stripeClient(KEY), event, APP_URL) : undefined,
 })
 
