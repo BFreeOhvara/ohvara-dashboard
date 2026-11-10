@@ -8,6 +8,7 @@ import { tierOf } from '../template/spendPlan.js'
 import { TIMESHEET, HOURLY, sheetTotals } from './p879.js'
 import { matchAgent } from '../lib/leadMatch.js'
 import { isTrained } from '../fulshell/training/store.js'
+import { escalateCall, stepText } from '../lib/callEscalation.js'
 
 // P849 — the one door to the Admin side's sample info, like src/template/ful/data.js for the VA side. Screens read only
 // through the hooks below; every read returns { data, isLoading: false, error: null }, the react-query shape, so the
@@ -250,7 +251,9 @@ const seedSteps = [
 ]
 
 // Today's desk: every cancellation call on the Fulfillment team's day. status: done | cancelled | no_answer | live |
-// booked (to call) | late (past its time, not started: an admin can give it to someone free).
+// booked (to call) | late (its time, not started yet) | rebook (nobody was free: the AI front desk is rebooking it).
+// P945: a call nobody starts escalates by itself (lib/callEscalation.js): + 5 min the VA is pinged, + 10 min it goes
+// to the next free VA (pod first) and the first VA is told, or the AI front desk texts the client to rebook.
 const mkCall = (id, va, time, client, status, o) => ({ id, va_id: va, time, client, status, old_carrier: 'Globe Life', agent_id: 'ag-dana', ...o })
 const seedCalls = [
   mkCall('dc-1', 'va-keisha', '8:30 AM', 'Irene Baker', 'cancelled', { old_carrier: 'Colonial Penn', agent_id: 'ag-priya' }),
@@ -266,6 +269,26 @@ const seedCalls = [
   mkCall('dc-11', 'va-omar', '4:15 PM', 'Walter Price', 'booked', { old_carrier: 'AARP / New York Life', agent_id: 'ag-james' }),
   mkCall('dc-12', 'va-omar', '6:00 PM', 'Renee Ortiz', 'booked', { agent_id: 'ag-grace' }),
 ]
+
+// P945: run the escalation on the sample's two unstarted calls as of the sample "now" (1:30 PM, on shift today:
+// Maya, Keisha, Omar). Whoever takes one calls it right away (done); a call nobody could take is the AI's to rebook.
+const SAMPLE_NOW = 13 * 60 + 30
+const minOf = t => { const m = /^(\d{1,2}):(\d{2}) (AM|PM)$/.exec(t); if (!m) return 0; let h = Number(m[1]) % 12; if (m[3] === 'PM') h += 12; return h * 60 + Number(m[2]) }
+const ON_TODAY = ['va-maya', 'va-keisha', 'va-omar']
+const OPEN = ['booked', 'late', 'live']
+export const SAMPLE_ESCALATIONS = []
+for (const c of seedCalls) {
+  if (c.status !== 'late') continue
+  const r = escalateCall({
+    call: { id: c.id, va_id: c.va_id, min: minOf(c.time) },
+    nowMin: SAMPLE_NOW,
+    vas: ON_TODAY.map(id => ({ id, onShift: true, onCall: false })),
+    calls: seedCalls.filter(x => x.id !== c.id).map(x => ({ id: x.id, va_id: x.va_id, min: x.moved ? minOf(x.time) + x.moved.after : minOf(x.time), open: !!x.moved || OPEN.includes(x.status) })),
+  })
+  SAMPLE_ESCALATIONS.push({ call: c.id, client: c.client, time: c.time, steps: r.steps })
+  if (r.to) Object.assign(c, { va_id: r.to, status: 'cancelled', moved: { from: c.va_id, after: 10 } })
+  else if (r.rebook) Object.assign(c, { status: 'rebook' })
+}
 
 // The rota: who is on shift each day (date in November -> VA ids). Two or three every day.
 const seedRota = {
@@ -284,7 +307,7 @@ const seedDayOff = [
   { id: 'do-4', va_id: 'va-keisha', date: 3, reason: 'Moving day', asked: 'Fri, Oct 30', status: 'approved' },
 ]
 
-// P890: VA pay is hourly ($8/hr) from clock in and out (p879 TIMESHEET). No per-cancel pay, so no cancel rows.
+// P890/P945: VA pay is hourly ($8/hr) on scheduled hours minus days off (p879 TIMESHEET). No per-cancel pay, so no cancel rows.
 const seedCancels = []
 const seedRuns = [
   { id: 'pr-1', week: 'Oct 26 to Nov 1', paid: 'Mon, Nov 2', amount: 486, people: 5, status: 'paid' },
@@ -303,6 +326,8 @@ export const OWNER_SPLIT = 50
 // P864 — Money: the owners who split the profit, their draws, and what each period cost besides VA pay (sample).
 // Brought in = what agents paid (lead budgets charged, servicing plans, setup fees). VA payouts count when the run is paid.
 export const OWNERS = [{ id: 'ow-brayden', name: 'Brayden' }, { id: 'ow-jordan', name: 'Jordan' }]
+// P945: which owner a signed-in admin is (by first name), so Revenue › Payouts shows each admin only their own payouts.
+export const ownerOf = name => OWNERS.find(o => String(name || '').trim().toLowerCase().split(/\s+/)[0] === o.name.toLowerCase()) || null
 export const SETUP_FEE = PRICES.setupFee // P884/P901: from the one price source
 const seedSetupFees = [
   { id: 'su-1', agent: 'Elena Torres', paid: 'Mon, Oct 12', period: 'last' },
@@ -356,7 +381,12 @@ const seedFeed = [
   { id: 'f1', who: 'Ben Carter', text: 'Monthly plan card declined', at: 'Wed', kind: 'billing' },
   { id: 'f2', who: 'Andre Lewis', text: 'Took Fri, Nov 6 off', at: 'Wed', kind: 'team' },
   { id: 'f3', who: 'Elena Torres', text: 'Nightly lead charge declined', at: '9:05 AM', kind: 'billing' },
-  { id: 'f4', who: 'Carla Jones', text: "Keisha's 12:15 call is past its time", at: '12:30 PM', kind: 'desk' },
+  // P945: the escalation's own steps (handed on or sent to the AI to rebook), not a to-do.
+  ...SAMPLE_ESCALATIONS.map((e, i) => {
+    const last = e.steps[e.steps.length - 1]
+    const first = id => (seedVas.find(v => v.id === id)?.name || 'A VA').split(' ')[0]
+    return { id: `f4-${i}`, who: e.client, text: last ? stepText(last, { client: e.client, time: e.time, nameOf: first }) : `${e.client}'s call`, at: last ? `${((Math.floor(last.at / 60) + 11) % 12) + 1}:${String(last.at % 60).padStart(2, '0')} PM` : '', kind: 'desk' }
+  }),
   { id: 'f5', who: 'Jordan Hale', text: 'Saved the GoHighLevel location', at: 'Tue', kind: 'connect' },
 ]
 
@@ -367,16 +397,17 @@ export const SWITCHES = [
   { key: 'recording_live', label: 'Record calls', sub: 'Records cancellation calls and plays the notice first.', group: 'Calling and texting' },
   { key: 'invite_sms_live', label: 'Invite by text', sub: 'Lets Add someone send the invite as a text.', group: 'Calling and texting' },
   { key: 'payouts_live', label: 'Payouts send real money', sub: 'On means the Monday run pays VAs through Stripe.', group: 'Money' },
+  { key: 'owner_payouts_live', label: 'Owner payouts', sub: "On means the Monday run also pays each owner their 50% of the profit, to the bank they connected.", group: 'Money' },
   { key: 'billing_enforced', label: 'Lock unpaid agents', sub: 'Lead spend stops when a payment fails; after 3 days past due the account is on hold.', group: 'Money' },
   { key: 'submit_live', label: 'Submit page live', sub: 'Opens the new Submit page to every agent.', group: 'Agents' },
   { key: 'carrier_lookup_live', label: 'Live carrier lookup', sub: 'Agents can look up carrier hours themselves.', group: 'Agents' },
   { key: 'signup_open', label: 'Sign-up open', sub: 'Lets new agents sign up without an invite.', group: 'Agents' },
 ]
 const seedSettings = {
-  daysOffPerMonth: 2, // P913: days off a month per VA (they book their own; no approvals)
+  daysOffPerMonth: 3, // P913/P945: days off a month per VA (they book their own; no approvals)
   profile: { name: ME.name, email: ME.email, phone: ME.phone },
   tz: 'America/Chicago',
-  switches: { sms_live: false, voice_live: false, ai_caller_live: false, recording_live: false, invite_sms_live: false, payouts_live: false, billing_enforced: false, submit_live: true, carrier_lookup_live: false, signup_open: false },
+  switches: { sms_live: false, voice_live: false, ai_caller_live: false, recording_live: false, invite_sms_live: false, payouts_live: false, owner_payouts_live: false, billing_enforced: false, submit_live: true, carrier_lookup_live: false, signup_open: false },
   payRules: { hourly: 8 },
   // P906: the gap kept free around every booked call (lib/callSlots.js AGENT_GAP_MIN; server: p894_booking_gap.sql).
   bookingGap: 30,
@@ -599,7 +630,7 @@ export function useAdmMoney() {
     return { day: d, name: (s.clock?.dayName || dayName)(d), later, isToday: d === today, plans: planD, fee, setup: setupD, revenue: planD + fee + setupD, leadSpend: dayLeads }
   })
   const failed = s.agents.filter(a => a.billing.failed).map(a => ({ ...a.billing.failed, agent: a.name, agent_id: a.id, status: a.billing.status }))
-  // P890: Monday's run pays each VA's hours from clock in and out x their hourly rate (overtime past 40 at 1.5x).
+  // P890/P945: Monday's run pays each VA's scheduled hours (days off taken out) x their hourly rate (overtime past 40 at 1.5x).
   const run = s.vas.map(v => {
     const sheet = TIMESHEET.find(t => t.va === v.id)
     const t = sheet ? sheetTotals(sheet, HOURLY[v.id] || rate) : { hours: 0, pay: 0 }

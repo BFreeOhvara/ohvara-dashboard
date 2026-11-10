@@ -54,7 +54,7 @@ export function PhoneMyPay({ period, now, hourlyCents = null, payouts = [], acco
       </div>
 
       <section className="ov-hero ph-pay-hero" aria-label="How you're paid">
-        <div className="ph-pay-k">You're paid by the hour, from clock in and out. Pay goes out every Monday.</div>
+        <div className="ph-pay-k">You're paid by the hour on your scheduled shifts, minus days off. Pay goes out every Monday.</div>
         {hourlyCents != null && <div className="ph-pay-calc" data-testid="ph-pay-amount"><span className="ph-mono">{whole(hourlyCents)}</span> an hour</div>}
         <div className="ph-pay-rule" />
         <BankLine status={status} account={account} loading={accountLoading} period={period} onConnect={onConnect} onSettings={onSettings} />

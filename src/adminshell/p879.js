@@ -72,16 +72,16 @@ export const qaDone = (reviews, vaId) => reviews.filter(r => r.va === vaId).leng
 // Another admin re-reviews a dispute: never the one who scored it.
 export const reReviewerFor = (r, admins = ['Brayden', 'Jordan']) => admins.find(a => a !== r.by) || null
 
-// ---------- Timesheets and hourly pay (N-F-23, N-G-24; Q75/Q76: clock in/out, hourly only) ----------
+// ---------- Hours and hourly pay (N-F-23, N-G-24; Q75/Q76: hourly only) ----------
+// P945 (Brayden, Nov 10): VAs are paid on their set scheduled hours minus days off; correction requests are gone.
+// Each row is the week so far from the rota (Nov 2 to 5): the shifts each VA was on, days off already taken out.
 export const HOURLY = { 'va-maya': 8, 'va-andre': 8, 'va-keisha': 8, 'va-omar': 8, 'va-lily': 8 }
 export const TIMESHEET = [
-  { va: 'va-maya', name: 'Maya Brooks', days: [{ d: 'Mon', in: '7:58 AM', out: '6:02 PM', breakM: 45 }, { d: 'Tue', in: '8:01 AM', out: '6:00 PM', breakM: 45 }, { d: 'Wed', in: '7:55 AM', out: '6:10 PM', breakM: 30 }, { d: 'Thu', in: '8:03 AM', out: '6:00 PM', breakM: 45 }] },
-  { va: 'va-keisha', name: 'Keisha Grant', days: [{ d: 'Mon', in: '8:00 AM', out: '4:00 PM', breakM: 30 }, { d: 'Tue', in: '8:22 AM', out: '4:00 PM', breakM: 30, flag: 'Late 22 min' }, { d: 'Thu', in: '8:00 AM', out: '4:05 PM', breakM: 45 }] },
-  { va: 'va-andre', name: 'Andre Lewis', days: [{ d: 'Mon', in: '10:00 AM', out: '6:00 PM', breakM: 30 }, { d: 'Wed', in: '9:58 AM', out: '5:12 PM', breakM: 30, flag: 'Auto clock-out at last activity' }] },
-  { va: 'va-omar', name: 'Omar Haddad', days: [{ d: 'Tue', in: '12:00 PM', out: '8:00 PM', breakM: 50, flag: 'Break ran 20 min over' }, { d: 'Thu', in: '12:04 PM', out: '8:00 PM', breakM: 30 }] },
-]
-export const CORRECTIONS = [
-  { id: 'cr-1', va: 'Andre Lewis', day: 'Wed', ask: 'Clock out 6:00 PM, not 5:12 PM', why: 'The app closed during a carrier hold.', status: 'pending' },
+  { va: 'va-maya', name: 'Maya Brooks', days: [{ d: 'Mon', in: '8:00 AM', out: '6:00 PM' }, { d: 'Tue', in: '8:00 AM', out: '6:00 PM' }, { d: 'Thu', in: '8:00 AM', out: '6:00 PM' }] },
+  { va: 'va-keisha', name: 'Keisha Grant', days: [{ d: 'Mon', in: '8:00 AM', out: '4:00 PM' }, { d: 'Wed', in: '8:00 AM', out: '4:00 PM' }, { d: 'Thu', in: '8:00 AM', out: '4:00 PM' }] },
+  { va: 'va-andre', name: 'Andre Lewis', days: [{ d: 'Mon', in: '10:00 AM', out: '6:00 PM' }, { d: 'Wed', in: '10:00 AM', out: '6:00 PM' }] },
+  { va: 'va-omar', name: 'Omar Haddad', days: [{ d: 'Tue', in: '12:00 PM', out: '8:00 PM' }, { d: 'Thu', in: '12:00 PM', out: '8:00 PM' }] },
+  { va: 'va-lily', name: 'Lily Chen', days: [{ d: 'Wed', in: '8:00 AM', out: '6:00 PM' }] },
 ]
 const toMin = t => { const m = /^(\d{1,2}):(\d{2}) (AM|PM)$/.exec(t); if (!m) return 0; let h = Number(m[1]) % 12; if (m[3] === 'PM') h += 12; return h * 60 + Number(m[2]) }
 export const dayHours = d => Math.max(0, (toMin(d.out) - toMin(d.in) - (d.breakM || 0)) / 60)

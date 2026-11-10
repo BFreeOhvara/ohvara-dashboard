@@ -30,14 +30,16 @@ export function breakState(kind, startedMs, nowMs) {
 }
 export const mmss = s => { const a = Math.abs(s); return `${Math.floor(a / 60)}:${String(a % 60).padStart(2, '0')}` }
 
-// ---------- Timesheet and hourly pay (N-F-23, N-G-24; Q75/Q76) ----------
+// ---------- Hours and hourly pay (N-F-23, N-G-24; Q75/Q76) ----------
+// P945 (Brayden, Nov 10): pay is the VA's set scheduled hours minus days off, so there is nothing to correct. Each
+// row is a scheduled shift (the rota's hours); today's counts up to now.
 export const MY_RATE = 8
 export const MY_SHEET = [
-  { day: 2, d: 'Mon', in: '7:58 AM', out: '6:02 PM', breakM: 45 },
-  { day: 3, d: 'Tue', in: '8:01 AM', out: '6:00 PM', breakM: 45 },
-  { day: 4, d: 'Wed', in: '7:55 AM', out: '6:10 PM', breakM: 30, flag: 'Break ran 5 min over' },
-  { day: 5, d: 'Thu', in: '8:03 AM', out: '6:00 PM', breakM: 45 },
-  { day: 6, d: 'Fri', in: '7:59 AM', out: null, breakM: 15, live: true },
+  { day: 2, d: 'Mon', in: '8:00 AM', out: '6:00 PM', breakM: 0 },
+  { day: 3, d: 'Tue', in: '8:00 AM', out: '6:00 PM', breakM: 0 },
+  { day: 4, d: 'Wed', in: '8:00 AM', out: '6:00 PM', breakM: 0 },
+  { day: 5, d: 'Thu', in: '8:00 AM', out: '6:00 PM', breakM: 0 },
+  { day: 6, d: 'Fri', in: '8:00 AM', out: null, breakM: 0, live: true },
 ]
 const toMin = t => { const m = /^(\d{1,2}):(\d{2}) (AM|PM)$/.exec(t || ''); if (!m) return null; let h = Number(m[1]) % 12; if (m[3] === 'PM') h += 12; return h * 60 + Number(m[2]) }
 export const minOf = toMin

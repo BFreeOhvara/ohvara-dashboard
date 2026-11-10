@@ -1,4 +1,4 @@
-import { MessageSquare, Phone, Bot, CalendarClock } from 'lucide-react'
+import { MessageSquare, Phone, Bot, CalendarClock, Landmark } from 'lucide-react'
 import { Switch, SampleTag, useNote } from '../../template/kit'
 import { Dropdown } from '../kit'
 import { useAdmSettings, useAdmActions, useAdmSource } from '../data'
@@ -14,6 +14,8 @@ const GO = [
   { key: 'sms_live', icon: MessageSquare, title: 'Texting', sub: 'Turns on every text the portal sends. Off until the A2P campaign is approved.' },
   { key: 'voice_live', icon: Phone, title: 'Calling in the portal', sub: 'Turns on real calls from the portal phone. Off, it opens as a preview.' },
   { key: 'ai_caller_live', icon: Bot, title: 'AI caller', sub: 'Turns on the AI calling every new form lead to book it, transfer it or mark No answer.' },
+  // P945: owners' 50% of the profit, paid in the Monday run to the bank each owner connected (Revenue › Payouts).
+  { key: 'owner_payouts_live', icon: Landmark, title: 'Owner payouts', sub: 'Pays each owner their 50% of the profit in the Monday pay run, to the bank they connected. Off until you turn it on.' },
 ]
 
 function Row({ icon: Icon, title, sub, children }) {

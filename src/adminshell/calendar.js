@@ -85,12 +85,11 @@ export function lanes(list, slot = 30) {
   return out
 }
 
-// The rota grid's cell for one VA on one day: 'on' (with hours), 'requested' (a day off asked, not answered),
-// 'off' (an approved day off) or '' (not on).
+// The rota grid's cell for one VA on one day: 'on' (with hours), 'off' (a booked day off) or '' (not on).
+// P945: no approvals, so any day off that isn't an old declined one is simply off (there is no "asked" state).
 export function rotaCell({ rota, dayOff, va, day }) {
   const req = dayOff.find(x => x.va_id === va.id && x.date === day && x.status !== 'declined')
-  if (req?.status === 'approved') return { kind: 'off' }
+  if (req) return { kind: 'off', reason: req.reason }
   const on = (rota[day] || []).includes(va.id)
-  if (req) return { kind: 'requested', on, reason: req.reason }
   return on ? { kind: 'on', hours: va.hours } : { kind: '' }
 }

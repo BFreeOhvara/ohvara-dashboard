@@ -7,7 +7,7 @@ import './areatrend942.css'
 
 // P942 — the Overview leads chart for every role, built as shadcn/ui's "Area Chart - Interactive" (Brayden picked it,
 // Nov 10): layered smooth areas with a soft gradient (the first series is the light one behind, the last the dark one
-// in front), a range dropdown top right (This week · Last 30 days · Last 3 months), a dated axis, a hover tooltip with
+// in front), a range dropdown top right (Last 7 days · Last 30 days · Last 3 months; P945), a dated axis, a hover tooltip with
 // every series, and legend chips with the range's totals. It takes all the height its box has left (flex), so the box
 // never has an empty bottom half.
 //   rows:   dailyCounts()/sampleTrend() rows (src/template/leadTrend.js), 91 days ending today
@@ -26,7 +26,7 @@ function TipBox({ active, payload, series }) {
   )
 }
 
-export default function AreaTrend({ rows, series, todayIso, head = null, label = 'Leads', initial = 'week', className = '' }) {
+export default function AreaTrend({ rows, series, todayIso, head = null, label = 'Leads', initial = '7d', className = '' }) {
   const [range, setRange] = useState(initial)
   const raw = useId()
   const uid = `at${raw.replace(/[^a-zA-Z0-9]/g, '')}`
@@ -35,7 +35,7 @@ export default function AreaTrend({ rows, series, todayIso, head = null, label =
   const data = useMemo(() => trendRows(rows, range, todayIso, keys), [rows, range, todayIso, keys])
   const totals = Object.fromEntries(keys.map(k => [k, data.reduce((t, r) => t + (r[k] || 0), 0)]))
   const top = Math.max(1, ...data.map(r => Math.max(...keys.map(k => r[k] || 0))))
-  const week = range === 'week'
+  const week = range === '7d'
   const rangeText = TREND_RANGES.find(r => r.value === range)?.label || ''
   const anim = !(typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
 
@@ -53,8 +53,8 @@ export default function AreaTrend({ rows, series, todayIso, head = null, label =
               <defs>
                 {series.map((s, i) => (
                   <linearGradient key={s.key} id={`${uid}-${s.key}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={s.color} stopOpacity={i === series.length - 1 ? 0.6 : 0.34} />
-                    <stop offset="95%" stopColor={s.color} stopOpacity={0.04} />
+                    <stop offset="5%" stopColor={s.color} stopOpacity={i === series.length - 1 ? 0.62 : i === 0 && series.length > 2 ? 0.3 : 0.42} />
+                    <stop offset="95%" stopColor={s.color} stopOpacity={i === series.length - 1 ? 0.08 : 0.04} />
                   </linearGradient>
                 ))}
               </defs>
@@ -65,7 +65,7 @@ export default function AreaTrend({ rows, series, todayIso, head = null, label =
               <Tooltip cursor={{ stroke: 'var(--ox-axis)', strokeOpacity: 0.35, strokeDasharray: '3 3' }} wrapperStyle={{ outline: 'none', zIndex: 30 }}
                 isAnimationActive={false} content={p => <TipBox {...p} series={series} />} />
               {series.map((s, i) => (
-                <Area key={s.key} type="monotone" dataKey={s.key} stroke={s.color} strokeWidth={i === series.length - 1 ? 2.4 : 1.8}
+                <Area key={s.key} type="monotone" dataKey={s.key} stroke={s.color} strokeWidth={i === 0 && series.length > 2 ? 2 : 3.25}
                   fill={`url(#${uid}-${s.key})`} connectNulls={false} dot={week ? { r: 2.5, strokeWidth: 0, fill: s.color } : false}
                   activeDot={{ r: 4.5, strokeWidth: 2, stroke: 'var(--ox-dot-ring)', fill: s.color }} isAnimationActive={anim} animationDuration={700} animationEasing="ease-out" />
               ))}

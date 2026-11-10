@@ -133,3 +133,10 @@
 
 /* the VA filter row never stretches to fill the tile (it is a row of chips) */
 .adm-today > .adm-cal-vas { flex: none; }
+
+/* P945 — the Fulfillment calendar is one screen tall (page scrolls to it): every hour row shows every call. No
+   coloured shift lines, so calls start at the column's edge. */
+.fx .adm-cal945 > .fx-week { height: calc(100dvh - 24px); min-height: 620px; display: flex; flex-direction: column; }
+.fx .adm-cal945 > .fx-week .tp-tgrid-b { flex: 1 1 auto; min-height: 0; height: auto; }
+.fx .adm-cal945 .adm-week .tp-tcol { --lane-x: 4px; }
+.fx .adm-cal945 > .fx-daybox { max-height: calc(100dvh - 24px); }

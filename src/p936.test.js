@@ -30,7 +30,9 @@ test('one chart component (Recharts, the shadcn way) in admin, agent and VA', ()
   // stacked where it means something
   assert.match(src('./adminshell/screens/Overview.jsx'), /label: 'Came in'[\s\S]*label: 'Sold'/) // P942: back to front
   assert.match(src('./adminshell/screens/Billing.jsx'), /<RevenueStock roll=/)
-  assert.match(src('./adminshell/RevenueStock.jsx'), /Plan fees[\s\S]*deskAdminLabel[\s\S]*Setup fees/)
+  // P945: the tooltip is Revenue · Costs (the gap) · Kept only
+  assert.match(src('./adminshell/RevenueStock.jsx'), /<span>Revenue<\/span>[\s\S]*<span>Costs \(the gap\)<\/span>[\s\S]*<span>Kept<\/span>/)
+  assert.doesNotMatch(src('./adminshell/RevenueStock.jsx'), /Plan fees|deskAdminLabel|Setup fees/)
 })
 
 test('a button on a coloured to-do row is neutral, with hover and pressed, in every role', () => {

@@ -1,8 +1,8 @@
 // P942 — the leads trend behind the Overview area chart (src/template/AreaTrend.jsx), the same for agent and admin.
-// Rows are one per day: { date: 'YYYY-MM-DD', name, full, later?, today?, [series]: number }. "This week" is Monday to
-// Sunday (days still to come are faint, no value); the other ranges end today.
+// Rows are one per day: { date: 'YYYY-MM-DD', name, full, later?, today?, [series]: number }. Every range ends today.
+// P945 (Brayden, Nov 10): "Last 7 days" replaces "This week", so the chart is always full width (no half-empty week).
 export const TREND_RANGES = [
-  { value: 'week', label: 'This week' },
+  { value: '7d', label: 'Last 7 days' },
   { value: '30d', label: 'Last 30 days' },
   { value: '90d', label: 'Last 3 months' },
 ]
@@ -53,20 +53,11 @@ export function sampleTrend(todayIso, { base = 14, ratio = { sold: 0.16 }, week 
 }
 
 // The rows for one range, labelled for the axis and tooltip.
-export function trendRows(rows, range, todayIso, keys) {
+export function trendRows(rows, range, todayIso) {
   const label = r => ({ ...r, name: short(r.date), full: full(r.date), today: r.date === todayIso })
-  if (range === 'week') {
-    const mon = mondayOf(todayIso)
-    return Array.from({ length: 7 }, (_, i) => {
-      const date = addDays(mon, i)
-      const r = rows.find(x => x.date === date)
-      const later = date > todayIso
-      const row = { date, later }
-      keys.forEach(k => { row[k] = later ? null : (r?.[k] ?? 0) })
-      return { ...label(row), name: DOW[at(date).getUTCDay()] }
-    })
-  }
-  const n = range === '30d' ? 30 : 90
+  const n = range === '7d' ? 7 : range === '30d' ? 30 : 90
   const from = addDays(todayIso, -(n - 1))
-  return rows.filter(r => r.date >= from && r.date <= todayIso).map(label)
+  const out = rows.filter(r => r.date >= from && r.date <= todayIso).map(label)
+  // Last 7 days names each day (Mon, Tue …) on the axis; the longer ranges show dates.
+  return n === 7 ? out.map(r => ({ ...r, name: DOW[at(r.date).getUTCDay()] })) : out
 }

@@ -184,6 +184,7 @@ export default function Agents() {
   const list = agents.filter(a => keep(a) && (!n || `${a.name} ${a.email} ${a.phone} ${a.city}`.toLowerCase().includes(n)))
     .sort((x, y) => (sort === 'name' ? x.name.localeCompare(y.name) : sort === 'spend' ? y.spend - x.spend : (y.week[sort] - x.week[sort]) || x.name.localeCompare(y.name)))
   const out = invites.filter(i => i.role === 'agent')
+  const openAgent = id => navigate(ap('agents', id))
   return (
     <div className="tp-page fx-page adm-agents-page">
       <div className="fx-tools">
@@ -202,7 +203,8 @@ export default function Agents() {
         {list.map((a, i) => {
           const [word, tone] = BILL_WORD[a.billing.status]
           return (
-            <div key={a.id} className="adm-tr" style={{ '--i': i }}>
+            // P945: the whole row opens the agent (hover highlights it); the switch and links inside still do their own job.
+            <div key={a.id} className="adm-tr is-click" style={{ '--i': i }} onClick={e => { if (!e.target.closest('a, button, input, label, [role="switch"]')) openAgent(a.id) }}>
               <Link to={ap('agents', a.id)} className="adm-who"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>{a.city}, {a.state} · {a.paused ? `leads paused${a.paused.until ? ` until ${a.paused.until}` : ''}` : a.access ? `on ${a.lastOn}` : 'access off'}</small></span></Link>
               <span className="adm-cell"><b>{a.comped ? 'Comped' : PLANS[a.plan].label}</b><small>{money(a.spend)} a day + {feeWords}{a.paused ? ' · paused' : ''}{a.planNext ? ` · ${PLANS[a.planNext.key].label} from ${a.planNext.on.replace(/^\w+, /, '')}` : ''}</small></span>
               <span className="adm-cell adm-sw"><Switch on={a.active} label={`${a.name} takes live transfers`} onChange={v => { setAgentActive(a.id, v); note(v ? `${a.name} takes live transfers` : `${a.name} is booking only`) }} /><small>{a.active ? (a.onDuty ? 'On duty' : 'Off duty') : 'Booking only'}</small></span>

@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Hand, MessageSquare, CalendarOff, Check, X, Plus, TriangleAlert, Phone, ShieldOff, ShieldCheck, Headset, ArrowLeft, Clock, ChevronRight } from 'lucide-react'
+import { Hand, MessageSquare, Check, X, Plus, TriangleAlert, Phone, ShieldOff, ShieldCheck, Headset, ArrowLeft, Clock, ChevronRight } from 'lucide-react'
 import { useAdmVas, useAdmDesk, useAdmRota, useAdmActions, useAdmSettings, WEEK, NEXT_WEEK, TODAY, SHIFT_MIN, SHIFT_MAX, dayName } from '../data'
 import { useAdmShifts } from '../../hooks/useVaShiftsAdmin'
 import { Avatar, Chip, Drawer, Empty, PillTabs, Seg, useNote } from '../../template/kit'
 import { WeekList, DayBox } from '../../template/DayBox'
 import { FilterPills } from '../../template/FilterPills'
 import { useOpenDay, useStickyDay } from '../../template/useOpenDay'
-import { GRID_END, GRID_ROWS, GRID_START, lanes, minutesOf, rotaCell, shiftSpan, theirTime, vaHue, weekCalls } from '../calendar'
+import { GRID_END, GRID_ROWS, GRID_START, lanes, minutesOf, rotaCell, theirTime, vaHue, weekCalls } from '../calendar'
 import { RecordDrawer, Block } from '../../template/Record'
 import { usd, CountUp } from '../../template/motion'
 import { Dropdown, DField, Tile } from '../kit'
@@ -17,6 +17,7 @@ import { CALL_WORD, CALL_TONE, BANK_WORD } from '../words'
 import { SwapsAndOpen, HoursPay, Holidays } from './Team879'
 import { DAYS_OFF_DEFAULT, daysUsed, daysLeft } from '../../lib/dayOff'
 import { canTakeCalls, TRAIN_FIRST } from '../../lib/trainingGate.js'
+import { NUDGE_AFTER, HANDOFF_AFTER } from '../../lib/callEscalation.js'
 
 // P849 — the Fulfillment team: today's desk (every VA's calls on one timeline, the calls past their time and Give to,
 // as admin_give_call does today), the weekly rota builder (two or three on shift every day; drag a VA onto a day, drag
@@ -44,6 +45,15 @@ function GivePicker({ call, vas, onPick }) {
   )
 }
 
+// P945: a call nobody starts moves on by itself (lib/callEscalation.js); the call says what happened or will happen.
+function EscalationNote({ c, vas }) {
+  const first = id => (vas.find(v => v.id === id)?.name || 'Their VA').split(' ')[0]
+  if (c.moved) return <p className="tp-sub adm-moved">Moved from {first(c.moved.from)} after {c.moved.after} minutes with no start ({first(c.moved.from)} was told).</p>
+  if (c.status === 'rebook') return <p className="tp-sub adm-moved">Nobody was free {HANDOFF_AFTER} minutes after its time, so the AI front desk is texting the client to rebook.</p>
+  if (c.status === 'late') return <p className="tp-sub adm-moved">Not started yet. {first(c.va_id)} was pinged at {NUDGE_AFTER} minutes; at {HANDOFF_AFTER} it goes to the next free VA by itself (their pod first), or the AI front desk rebooks it.</p>
+  return null
+}
+
 function CallDrawer({ id, onClose }) {
   const { data: desk } = useAdmDesk()
   const { data: vas } = useAdmVas()
@@ -59,7 +69,7 @@ function CallDrawer({ id, onClose }) {
     <Drawer open onClose={onClose} title={`${c.client} · ${c.time}`} sub={`Cancellation call · ${c.agent}'s client · closing ${c.old_carrier}`}
       footer={c.status === 'booked' || c.status === 'late' ? <button type="button" className="tp-primary fx-accent" onClick={() => setGiving(g => !g)}><Hand size={16} />Give to someone</button> : null}>
       <div className="fx-form-row"><Avatar name={c.va} /><span className="tp-grow"><b>{c.va}</b><small className="tp-sub">Has this call</small></span><Chip tone={tone}>{CALL_WORD[c.status]}</Chip></div>
-      {c.status === 'late' && <p className="adm-warn">Past its time and not started. Give it to someone free so the client isn't left waiting.</p>}
+      <EscalationNote c={c} vas={vas} />
       {giving && <GivePicker call={c} vas={vas} onPick={v => { giveCall(c.id, v.id); note(`${c.client} given to ${v.name}`); setGiving(false); onClose() }} />}
     </Drawer>
   )
@@ -88,7 +98,7 @@ function DayCall({ c, vas, onBack }) {
       <button type="button" className="tp-btn ov-ghost sm adm-dayback" onClick={onBack}><ArrowLeft size={14} aria-hidden="true" />All calls that day</button>
       <div className="fx-form-row"><Avatar name={c.client} /><span className="tp-grow"><b>{c.client}</b><small className="tp-sub">{c.time} Central{their ? ` · ${their} for them` : ''}</small></span><Chip tone={CALL_TONE[c.status]}>{CALL_WORD[c.status]}</Chip></div>
       <dl className="fx-facts">{[['With', c.va], ['Call', 'Cancellation call'], ['Closing', c.old_carrier], ['Agent', c.agent || 'Their agent'], ['Client in', c.state]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
-      {c.status === 'late' && <p className="adm-warn">Past its time and not started. Give it to someone free so the client isn&apos;t left waiting.</p>}
+      <EscalationNote c={c} vas={vas} />
       {ahead && <button type="button" className="tp-primary fx-accent" aria-expanded={giving} onClick={() => setGiving(g => !g)}><Hand size={16} />Give to someone</button>}
       {giving && <GivePicker call={c} vas={vas} onPick={v => { giveCall(c.id, v.id); note(`${c.client} given to ${v.name}`); setGiving(false) }} />}
     </div>
@@ -110,7 +120,7 @@ function TeamCalendar() {
   const calls = useMemo(() => weekCalls({ desk, rota: rotaData.rota, vas, today: TODAY, days: ALL_ADM_DAYS }), [desk, rotaData.rota, vas])
   const mine = c => who === 'all' || c.va_id === who
   const callsOf = d => calls.filter(c => c.day === d && mine(c))
-  const offOn = d => rotaData.dayOff.filter(x => x.date === d && x.status === 'approved').map(x => x.va_id)
+  const offOn = d => rotaData.dayOff.filter(x => x.date === d && x.status !== 'declined').map(x => x.va_id)
   const shiftsOf = d => (rotaData.rota[d] || []).filter(id => (who === 'all' || id === who) && !offOn(d).includes(id)).map(id => vas.find(v => v.id === id)).filter(Boolean)
   const pickWeek = w => { setWeek(w); if (day != null) close() }
   const label = d => `${dayName(d)}, Nov ${d}`
@@ -131,7 +141,8 @@ function TeamCalendar() {
 
       <WeekList days={days} today={TODAY} onOpen={open} name={dayName} itemsOf={callsOf} line={c => `${c.time} ${c.client}`} />
 
-      <div className="fx-grid adm-cal adm-big-cal" data-fold data-fold-fit="320">
+      {/* P945: the calendar sits below the tools and is a whole screen tall (the page scrolls to it), so every call shows. */}
+      <div className="fx-grid adm-cal adm-big-cal adm-cal945">
         <section className={`fx-tile ${view != null ? 'fx-s8 is-day' : 'fx-s12 is-week'} fx-week cal910 adm-week`} style={{ '--i': 0, '--days': cols.length, '--rows': GRID_ROWS }} aria-label={view != null ? label(view) : (week ? 'Next week' : 'This week')}>
           <div className="tp-tgrid-h"><span />{cols.map(d => (
             // P942: the agent Calendar's day header exactly (cal910: same size, colour, hover, pressed)
@@ -144,15 +155,10 @@ function TeamCalendar() {
             {cols.map(d => {
               const dayCalls = callsOf(d)
               const ln = lanes(dayCalls)
-              const shifts = shiftsOf(d)
+              // P945: no coloured shift lines; who is on shift shows in the day panel and the Rota.
               return (
-                <div key={d} className={`tp-tcol adm-tcol${d === TODAY ? ' today' : ''}`} style={{ '--shifts': shifts.length }}>
+                <div key={d} className={`tp-tcol adm-tcol${d === TODAY ? ' today' : ''}`}>
                   {HOURS_ADM.map((h, r) => <button key={h} type="button" className="adm-rowbtn adm-hourbtn" style={{ top: `${(r / GRID_ROWS) * 100}%`, height: `${100 / GRID_ROWS}%` }} aria-label={`${label(d)}, ${hourLabel(h)}${d === view ? ': back to the week' : ': open the day'}`} onClick={() => toggle(d)} />)}
-                  {shifts.map((v, k) => {
-                    const span = shiftSpan(v.hours)
-                    if (!span) return null
-                    return <i key={v.id} className={`adm-shiftbar is-${vaHue(vas, v.id)}`} style={{ '--k': k, top: `${gridPct(span[0])}%`, height: `${gridPct(span[1]) - gridPct(span[0])}%` }} title={`${v.name} · ${v.hours}`} aria-label={`${v.name} on shift ${v.hours}`} />
-                  })}
                   {dayCalls.map(c => {
                     const [k, of] = ln.get(c.id) || [0, 1]
                     const their = theirTime(c.time, c.state)
@@ -192,6 +198,7 @@ function TeamCalendar() {
   )
 }
 
+// P867 (P945: the calendar no longer draws each VA's shift as a coloured vertical line.)
 // The VA filter: Every VA, or one VA (tap again for all). Each VA's colour is their calendar colour.
 // P934: the agent side's colour-coded filter pills (FilterPills), each VA in their calendar colour.
 const HUE_TONE = { sky: 'blue', apricot: 'warn', sage: 'green', butter: 'teal', lilac: 'violet' }
@@ -242,7 +249,7 @@ function TodayCalls({ openCall }) {
 
 // P867 — the rota as a grid, like the VA side (P846/P851): VA names down the left, the days across the top, a mark
 // where that VA works (their hours on hover, and in the cell's menu on a tap). Off days are empty, a day-off request
-// shows "Asked off", an approved one "Off". Tap an empty cell to put the VA on that day; tap a mark to see the hours
+// shows "Off" (P945: booked by the VA, no asked state). Tap an empty cell to put the VA on that day; tap a mark to see the hours
 // and take them off. Each day column counts who is on (two or three a day). P851 Phase 2: real shifts once 231 is
 // applied (useAdmShifts), P849's sample rota until then; the same add/remove actions as before.
 function Rota() {
@@ -270,7 +277,7 @@ function Rota() {
   }
   const tap = (v, d, cell) => {
     if (cell.kind === 'off') { note(`${first(v)} has ${dt(d)} off`); return }
-    if (cell.kind === 'on' || (cell.kind === 'requested' && cell.on)) { setMenu(m => (m === `${v.id}|${d}` ? null : `${v.id}|${d}`)); return }
+    if (cell.kind === 'on') { setMenu(m => (m === `${v.id}|${d}` ? null : `${v.id}|${d}`)); return }
     put(v, d)
   }
   const short = days.filter(d => (data.rota[d] || []).length < SHIFT_MIN)
@@ -295,9 +302,9 @@ function Rota() {
                 {days.map(d => {
                   const cell = rotaCell({ rota: data.rota, dayOff: data.dayOff, va: v, day: d })
                   const key = `${v.id}|${d}`
-                  const isOn = cell.kind === 'on' || (cell.kind === 'requested' && cell.on)
-                  const word = cell.kind === 'off' ? 'Off' : cell.kind === 'requested' ? 'Asked off' : isOn ? 'On' : ''
-                  const title = cell.kind === 'off' ? `${v.name} · ${dt(d)} off` : cell.kind === 'requested' ? `${v.name} asked for ${dt(d)} off${cell.reason ? `: ${cell.reason}` : ''}` : isOn ? `${v.name} · ${hoursOf(v)}` : `Put ${first(v)} on ${dt(d)}`
+                  const isOn = cell.kind === 'on'
+                  const word = cell.kind === 'off' ? 'Off' : isOn ? 'On' : ''
+                  const title = cell.kind === 'off' ? `${v.name} · ${dt(d)} off${cell.reason ? `: ${cell.reason}` : ''}` : isOn ? `${v.name} · ${hoursOf(v)}` : `Put ${first(v)} on ${dt(d)}`
                   return (
                     <td key={d} className={`adm-rt-cell${d === TODAY_R ? ' is-today' : ''}${d < TODAY_R ? ' is-past' : ''}`}>
                       <button type="button" className={`adm-rt-b is-${cell.kind || 'empty'}`} title={title} aria-label={title} aria-expanded={isOn ? menu === key : undefined} onClick={() => tap(v, d, cell)}>
@@ -307,7 +314,6 @@ function Rota() {
                       {menu === key && (
                         <div className="adm-rt-menu" role="dialog" aria-label={`${v.name}, ${dt(d)}`}>
                           <b>{v.name}</b><small>{dt(d)} · {hoursOf(v)}</small>
-                          {cell.kind === 'requested' && <small className="adm-warn-t"><CalendarOff size={12} aria-hidden="true" />Asked for this day off</small>}
                           <button type="button" className="tp-btn sm ov-ghost" onClick={() => { setMenu(null); run(removeShift(d, v.id), `${first(v)} off ${dt(d)}`) }}><X size={13} />Take off this day</button>
                         </div>
                       )}
@@ -329,8 +335,7 @@ function Rota() {
       </div>
       <ul className="adm-rt-key" aria-label="What the marks mean">
         <li><span className="adm-rt-mark is-on">On</span>Works that day</li>
-        <li><span className="adm-rt-mark is-requested">Asked off</span>Day-off request, not answered yet</li>
-        <li><span className="adm-rt-mark is-off">Off</span>Approved day off</li>
+        <li><span className="adm-rt-mark is-off">Off</span>Day off (booked by the VA, no approval)</li>
       </ul>
     </section>
   )
@@ -428,7 +433,7 @@ function VaDrawer({ id, onClose }) {
 }
 
 // P913: Today (today's booked calls) · Calendar (the week) · Rota · Time off (an allowance, no approvals) · Hours & pay.
-// Live desk, Quality and Records are gone. Pay is hourly from clock in/out (Q76).
+// Live desk, Quality and Records are gone. Pay is hourly on scheduled hours minus days off (Q76, P945).
 const TABS = [['today', 'Today'], ['calendar', 'Calendar'], ['rota', 'Rota'], ['requests', 'Time off'], ['pay', 'Hours & pay']]
 export default function Team() {
   const { id } = useParams()

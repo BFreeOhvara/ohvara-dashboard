@@ -137,3 +137,39 @@ export function isoFromText(text, year) {
   const mi = MON.indexOf(m[1])
   return mi < 0 ? null : `${year}-${String(mi + 1).padStart(2, '0')}-${String(Number(m[2])).padStart(2, '0')}`
 }
+
+// P945 — the value of a series between two days, on the same smooth curve the chart draws (recharts type="monotone"
+// is d3's curveMonotoneX, Steffen's method), so a hover between days lands on the line. `ys` = one number a day,
+// `f` = a fractional day index (0 … ys.length - 1).
+const sgn = x => (x < 0 ? -1 : 1)
+function monoSlopes(ys) {
+  const n = ys.length
+  const t = new Array(n).fill(0)
+  if (n < 2) return t
+  if (n === 2) { t[0] = t[1] = ys[1] - ys[0]; return t }
+  for (let i = 1; i < n - 1; i++) {
+    const s0 = ys[i] - ys[i - 1]
+    const s1 = ys[i + 1] - ys[i]
+    const p = (s0 + s1) / 2
+    t[i] = (sgn(s0) + sgn(s1)) * Math.min(Math.abs(s0), Math.abs(s1), 0.5 * Math.abs(p)) || 0
+  }
+  t[0] = (3 * (ys[1] - ys[0]) - t[1]) / 2
+  t[n - 1] = (3 * (ys[n - 1] - ys[n - 2]) - t[n - 2]) / 2
+  return t
+}
+export function monoAt(ys, f, slopes = monoSlopes(ys)) {
+  const n = ys.length
+  if (!n) return 0
+  if (n === 1 || f <= 0) return ys[0]
+  if (f >= n - 1) return ys[n - 1]
+  const i = Math.floor(f)
+  const u = f - i
+  const p0 = ys[i]
+  const p3 = ys[i + 1]
+  if (n === 2) return p0 + (p3 - p0) * u
+  const p1 = p0 + slopes[i] / 3
+  const p2 = p3 - slopes[i + 1] / 3
+  const v = 1 - u
+  return v * v * v * p0 + 3 * v * v * u * p1 + 3 * v * u * u * p2 + u * u * u * p3
+}
+export { monoSlopes }

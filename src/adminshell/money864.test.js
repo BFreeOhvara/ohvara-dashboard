@@ -49,7 +49,7 @@ test('Money adds up for every period: brought in minus costs is profit, and the 
   assert.equal(p.split[0].amount + p.split[1].amount, p.profit)
 })
 
-test('P934: the split is fixed at 50/50 (no admin can change it), and both owners show as payees', () => {
+test('P934: the split is fixed at 50/50 (no admin can change it), and each owner sees their own payouts (P945)', () => {
   const d = src('./data.js')
   assert.match(d, /export const OWNER_SPLIT = 50/)
   assert.doesNotMatch(d, /setSplit/)
@@ -57,7 +57,8 @@ test('P934: the split is fixed at 50/50 (no admin can change it), and both owner
   const b = src('./screens/Billing.jsx')
   assert.doesNotMatch(b, /Change split|setSplit|Save split/)
   assert.match(b, /Split 50 \/ 50/)
-  assert.match(b, /function OwnerPayouts\(\)/)
+  assert.match(b, /function YourPayouts\(\)/)
+  assert.doesNotMatch(b, /function OwnerPayouts\(\)/)
   assert.match(b, /\['week', 'This week'|PERIODS/)
   assert.match(b, /Agent lead spend \(passed to Meta\)/) // P913: shown apart, in no total
 })

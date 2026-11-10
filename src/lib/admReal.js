@@ -211,14 +211,14 @@ export function toAudit(r, now = Date.now()) {
 export function switchesOf(app = {}, rc = {}) {
   return {
     sms_live: !!rc.sms_live, voice_live: !!rc.voice_live, ai_caller_live: !!app.ai_caller_live, recording_live: !!rc.recording_live,
-    invite_sms_live: !!app.invite_sms_live, payouts_live: !!rc.payouts_live, billing_enforced: !!app.agent_billing_enforced,
+    invite_sms_live: !!app.invite_sms_live, payouts_live: !!rc.payouts_live, owner_payouts_live: !!rc.owner_payouts_live, billing_enforced: !!app.agent_billing_enforced,
     submit_live: !!app.submit_live, carrier_lookup_live: !!app.carrier_lookup_live, signup_open: !!app.self_signup_open,
   }
 }
 // Where each switch is stored, for the real setSwitch.
 export const SWITCH_HOME = {
   sms_live: ['recovery_config', 'sms_live'], voice_live: ['recovery_config', 'voice_live'], recording_live: ['recovery_config', 'recording_live'],
-  payouts_live: ['recovery_config', 'payouts_live'], billing_enforced: ['app_settings', 'agent_billing_enforced'], submit_live: ['app_settings', 'submit_live'],
+  payouts_live: ['recovery_config', 'payouts_live'], owner_payouts_live: ['recovery_config', 'owner_payouts_live'], billing_enforced: ['app_settings', 'agent_billing_enforced'], submit_live: ['app_settings', 'submit_live'],
   carrier_lookup_live: ['app_settings', 'carrier_lookup_live'], signup_open: ['app_settings', 'self_signup_open'],
 }
 // Connect on real data: GoHighLevel isn't connected until the bridge is on, so every engine piece reads empty.

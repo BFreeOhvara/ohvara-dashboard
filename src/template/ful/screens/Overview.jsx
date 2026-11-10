@@ -185,11 +185,11 @@ export default function Overview() {
         </Tile>
 
         <div className="fx-ovl-pair fs-ov-pair">
-          {/* P879 (Q76): pay is hourly, from clock in and out. */}
+          {/* P879 (Q76): pay is hourly (P945: scheduled hours minus days off). */}
           {real ? (
             <Tile className="is-fill is-green fs-ov-pay" i={1} title="Hours this week" sub={`Next payday ${pay.payday}`} to={fp('schedule')} label="Open Schedule">
               <b className="fx-huge tp-money"><CountUp value={pay.lastWeek} format={cents} /></b>
-              <small className="fs-paynote">{pay.payouts.length ? 'Your last payout' : 'No payouts yet'}. Hours from clock in and out show here once time tracking goes live.</small>
+              <small className="fs-paynote">{pay.payouts.length ? 'Your last payout' : 'No payouts yet'}. Your scheduled hours show here once your rota is set.</small>
             </Tile>
           ) : (
             <Tile className="is-fill is-green fs-ov-pay" i={1} title="Hours this week" sub={`${cents(hrs.pay)} so far · ${cents(MY_RATE)} an hour · paid ${pay.payday}`} to={fp('schedule')} label="Open Schedule">

@@ -63,7 +63,8 @@ test('a VA can\'t book a 3rd day off at a 2-day allowance', () => {
   assert.equal(canBookDayOff(rows.slice(0, 1), 'me', '2026-12-04', 2).ok, true)
   const third = canBookDayOff(rows, 'me', '2026-12-04', 2)
   assert.equal(third.ok, false)
-  assert.equal(third.why, "You've used all 2 of your days off this month.")
+  assert.equal(third.why, "No days left: you've used all 2 of your days off this month.")
+  assert.equal(third.none, true)
   assert.equal(canBookDayOff(rows, 'me', '2026-12-04', 3).ok, true)
 })
 

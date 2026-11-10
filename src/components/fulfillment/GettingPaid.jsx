@@ -60,7 +60,7 @@ export function FulfillmentPayAdminPanel() {
         <Segmented size="sm" value={which} onChange={setWhich} options={PERIODS} />
       </div>
       <p style={{ margin: '0 0 12px', fontSize: 13.5, color: 'var(--ov-mute)' }}>
-        VAs are paid by the hour from clock in and out. Pay goes out by itself every Monday at 8 AM Central through Stripe; there is nothing to approve.
+        VAs are paid by the hour on their scheduled shifts, minus days off. Pay goes out by itself every Monday at 8 AM Central through Stripe; there is nothing to approve.
       </p>
 
       {settings && (

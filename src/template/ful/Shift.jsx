@@ -5,6 +5,7 @@ import { Drawer, Field, PillTabs, useNote } from '../kit'
 import { useKeep } from '../motion'
 import { useDayOffActions } from '../../hooks/useVaShiftsShell'
 import { dateLabel } from '../../lib/vaShifts'
+import { NO_DAYS_LEFT } from '../../lib/dayOff'
 
 // P846 — VAs do not switch themselves Active or Away: they work set hours in a rotation. This file holds the two
 // pieces every VA page shares: the shift line (Overview, Settings) and the "Request a day off" drawer (rail, avatar
@@ -30,15 +31,15 @@ export function DayOffDrawer({ open, onClose }) {
     const d = shift.askable.find(x => x.day === pick)
     setBusy(true)
     request(d, why.trim()).then(() => {
-      note(`The team knows you asked off ${dateLabel(d.date)}`)
+      note(`Booked: you're off ${dateLabel(d.date)}. The team covers your shift.`)
       setDay(null)
       setWhy('')
       onClose()
     }, e => note(e?.message || 'That did not send. Try again.')).finally(() => setBusy(false))
   }
   return (
-    <Drawer open={open} center onClose={onClose} title="Request a day off" sub="The team sees it right away and covers your shift."
-      footer={pick == null ? null : <><button type="button" className="tp-primary fx-accent" onClick={send} disabled={busy || !room?.ok}><CalendarOff size={16} />Tell the team</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
+    <Drawer open={open} center onClose={onClose} title="Request a day off" sub="Booked at once while you have days left. The team sees it and covers your shift."
+      footer={pick == null ? null : <><button type="button" className="tp-primary fx-accent" onClick={send} disabled={busy || !room?.ok}><CalendarOff size={16} />{room?.none ? NO_DAYS_LEFT : 'Book it'}</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
       {pick == null ? <p className="fx-calm">{shift.notSet ? 'Day-off requests open once your rota is set up.' : 'You have no more shifts to ask off in the next two weeks.'}</p> : <>
         <div className="tp-field"><span>Which day</span>
           <PillTabs role="radiogroup" label="Day off" className="fx-chips fs-wrap" itemClass="fx-chip" value={pick} onChange={setDay}
@@ -55,6 +56,9 @@ export function DayOffDrawer({ open, onClose }) {
 // "Your shift today 8:00 AM to 6:00 PM", who is on with them, and the day-off action.
 export function ShiftLine({ onAsk, className = '' }) {
   const { data: s } = useFulShift()
+  const { check } = useDayOffActions()
+  const next = s.askable?.[0]
+  const none = !!(next && check(next)?.none)
   const names = s.mates.map(m => m.name)
   const withWho = names.length === 0 ? 'You are the only VA on today' : names.length === 1 ? `${names[0]} is on with you` : `${names.slice(0, -1).join(', ')} and ${names.at(-1)} are on with you`
   return (
@@ -64,7 +68,7 @@ export function ShiftLine({ onAsk, className = '' }) {
         <b>{s.notSet ? 'Your rota isn’t set up yet' : s.onToday ? <>Your shift today <span className="tp-num">{s.shift.text}</span></> : 'You are off today'}</b>
         <small><Users size={12} aria-hidden="true" />{s.notSet ? 'Shifts are 8 AM to 6 PM Central, the carriers’ hours' : s.onToday ? `${withWho} · the carriers' hours` : 'Your next shift is on the rota'}</small>
       </span>
-      <button type="button" className="tp-btn ov-ghost fs-shift-btn" onClick={onAsk}><CalendarOff size={15} />Request a day off</button>
+      <button type="button" className="tp-btn ov-ghost fs-shift-btn" onClick={onAsk} disabled={none} title={none ? "You've used this month's days off" : undefined}><CalendarOff size={15} />{none ? NO_DAYS_LEFT : 'Request a day off'}</button>
     </section>
   )
 }

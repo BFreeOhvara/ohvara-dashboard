@@ -3,7 +3,8 @@
 .rs {
   --rs-rev: var(--sh-sky, var(--ov-data-a));
   --rs-kept: var(--sh-sage, var(--ov-up));
-  --rs-gap: var(--sh-butter, var(--sh-apricot, var(--ov-data-b)));
+  /* P945: the portal's own yellow fill (stage cards, butter tiles), not the light theme's dark butter ink (tan). */
+  --rs-gap: var(--sh-f-butter, var(--sh-butter, var(--ov-data-b)));
   display: flex; flex-direction: column; gap: 14px; min-width: 0;
 }
 .rs-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; min-width: 0; }
@@ -18,13 +19,20 @@
 .rs-pill.is-flat { color: var(--ov-mid); background: color-mix(in srgb, var(--ov-hi) 6%, transparent); font-weight: 600; }
 .rs-range { flex: 0 0 auto; }
 .rs-fig { gap: 12px; margin: 0; }
-.rs-plot { height: clamp(250px, 29vh, 340px); }
+.rs-plot { position: relative; height: clamp(250px, 29vh, 340px); }
+/* P945 — the gliding hover: an overlay over the plot with the guide line, a dot on each line, and the tooltip. */
+.rs-glide { position: absolute; inset: 0; z-index: 2; cursor: crosshair; touch-action: pan-y; }
+.rs-glide-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.rs-guide { stroke: var(--ox-axis, var(--ov-mid)); stroke-opacity: 0.55; stroke-width: 1; }
+.rs-dot { stroke: var(--ox-dot-ring, var(--sh-surface)); stroke-width: 2; }
+.rs-dot.is-rev { fill: var(--rs-rev); }
+.rs-dot.is-kept { fill: var(--rs-kept); }
+.rs-glide .rs-tip { position: absolute; left: 0; top: 0; pointer-events: none; transform: translate(calc(var(--x) + 14px), var(--y)); will-change: transform; }
+.rs-glide .rs-tip.is-left { transform: translate(calc(var(--x) - 100% - 14px), var(--y)); }
 .rs-empty { display: grid; place-items: center; height: 100%; margin: 0; font-size: 13px; color: var(--ov-mid); }
 .rs .ox-key li i.is-rev, .rs-tip li i.is-rev { background: var(--rs-rev); border-radius: 50%; }
 .rs .ox-key li i.is-kept { width: 12px; height: 0; border-radius: 0; border-top: 2px dashed var(--rs-kept); background: none; }
 .rs-tip li i.is-kept { background: var(--rs-kept); border-radius: 50%; }
 .rs .ox-key li i.is-gap, .rs-tip li i.is-gap { background: var(--rs-gap); }
 .rs-tip { min-width: 196px; }
-.rs-tip-sub { margin-top: 7px !important; padding-top: 7px !important; border-top: 1px solid color-mix(in srgb, var(--ov-hi) 10%, transparent); }
-.rs-tip-sub li { grid-template-columns: 1fr auto !important; font-size: 11.5px; }
 @media (max-width: 720px) { .rs-head { flex-direction: column; } .rs-big { font-size: 34px; } }
