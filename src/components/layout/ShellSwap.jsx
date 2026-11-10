@@ -1,11 +1,11 @@
-import { lazy, Suspense, useEffect, useMemo } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { lazy, Suspense, useMemo } from 'react'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { usePortal } from '../../hooks/usePortalAccess'
 import { isNativeApp } from '../../lib/native'
 import { showShell } from '../../template/paths'
 import { showFulShell } from '../../fulshell/paths'
-import { showAdminShell, isAdminPreviewPath, classicFrom } from '../../adminshell/paths'
+import { showAdminShell, isAdminPreviewPath, adminOldTarget } from '../../adminshell/paths'
 import { AdminBoundary } from '../../adminshell/AdminBoundary'
 import { ProtectedRoute } from './ProtectedRoute'
 import { DeleteAccountDialog } from '../shared/DeleteAccount'
@@ -22,27 +22,35 @@ const Spinner = () => (
 
 // The agent portal swap: an agent at one of the shell URLs (paths.js SHELL_ROUTES) gets the template's screens.
 // P837: a Fulfillment rep at a Fulfillment URL (fulshell/paths.js) gets the same design, on real data.
-// P849: an admin at an admin URL gets the admin shell. Everyone else (logged out, the phone app, an admin who chose
-// the old pages) gets `children`, today's routes, untouched.
-// P849: an admin at an admin URL gets the admin shell (src/adminshell) on sample info; ?classic=1 keeps today's admin
-// pages for the rest of the tab (?classic=0 goes back). /preview/admin is the same shell with nobody signed in.
+// P849: an admin at an admin URL gets the admin shell. Everyone else (logged out, an agent or rep in the phone app)
+// gets `children`, today's routes, untouched. /preview/admin is the admin shell with nobody signed in.
+// P919: the old admin pages are gone. No ?classic=1 and no switch back; an admin is never sent to an old page, on the
+// web or in the phone app: old addresses land on their new page (adminOldTarget). The flag the old switch remembered
+// is cleared on load, so a tab that chose the old pages lands on the new ones.
 const CLASSIC_KEY = 'ohvara-admin-classic'
-const readStored = () => { try { return window.sessionStorage.getItem(CLASSIC_KEY) } catch { return null } }
+try { window.sessionStorage.removeItem(CLASSIC_KEY); window.localStorage.removeItem(CLASSIC_KEY) } catch { /* private window */ }
+
+// The query string an old link carried, minus the retired ?classic= flag.
+const stripClassic = search => {
+  const q = new URLSearchParams(search || '')
+  q.delete('classic')
+  const t = q.toString()
+  return t ? `?${t}` : ''
+}
 
 export function ShellSwap({ children }) {
   const { profile, loading } = useAuth()
   const { pathname, search } = useLocation()
   const native = isNativeApp()
-  const classic = classicFrom(search, readStored())
-  useEffect(() => {
-    if (!/[?&]classic=/.test(search)) return
-    try { window.sessionStorage.setItem(CLASSIC_KEY, classic ? '1' : '0') } catch { /* private window: this page only */ }
-  }, [search, classic])
   if (isAdminPreviewPath(pathname) && !native) return <Suspense fallback={<Spinner />}><AdminShell preview /></Suspense>
   // Until we know the role, hold a shell URL: today's catch-all would send /agent/request-service (shell-only) home,
   // and /fulfillment/servicing (shell-only) the same way, and /admin/agents (P849, shell-only).
-  if (loading && (showShell({ role: 'agent', pathname, native }) || showFulShell({ role: 'fulfillment', pathname, native }) || showAdminShell({ role: 'admin', pathname, native, classic }))) return <Spinner />
-  if (showAdminShell({ role: profile?.role, pathname, native, classic })) {
+  if (loading && (showShell({ role: 'agent', pathname, native }) || showFulShell({ role: 'fulfillment', pathname, native }) || showAdminShell({ role: 'admin', pathname }))) return <Spinner />
+  if (profile?.role === 'admin') {
+    const to = adminOldTarget(pathname)
+    if (to) return <Navigate to={to.includes('#') ? to : `${to}${stripClassic(search)}`} replace />
+  }
+  if (showAdminShell({ role: profile?.role, pathname })) {
     return <ProtectedRoute allowedRoles={['admin']}><AdminOnly /></ProtectedRoute>
   }
   if (showFulShell({ role: profile?.role, pathname, native })) {

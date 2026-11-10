@@ -13,8 +13,8 @@ import { useDataMode } from '../hooks/useDataMode'
 
 // P849 — the Admin portal: the rebuilt admin pages (src/adminshell) on sample info, the same as the agent and VA
 // shells until the backend step. Two mounts: the real admin URLs (ShellSwap passes the real name, the real sign-out
-// and the delete-account dialog) and /preview/admin (nobody signed in, nothing leaves the browser). Today's admin
-// pages stay in the code and stay reachable with ?classic=1, so the real switches, payouts and people keep working.
+// and the delete-account dialog) and /preview/admin (nobody signed in, nothing leaves the browser). P919: the old admin
+// pages are gone; this is the only admin portal, on the web and in the phone app.
 const SAMPLE = { live: false, name: ME.name, signOut: null, DeleteDialog: null }
 
 // P858: on real data, a page waits for the first load, says so if it failed (with Retry), and names any part that
@@ -81,7 +81,7 @@ export default function AdminShell({ account, preview = false }) {
         <NoteProvider>
           <Data key={real ? 'real' : 'sample'}>
             <Routes>
-              <Route element={<AdminFrame preview={preview} />}>{admRouteEls({ preview, wrap: el => <Page preview={preview}>{el}</Page> })}</Route>
+              <Route element={<AdminFrame />}>{admRouteEls({ preview, wrap: el => <Page preview={preview}>{el}</Page> })}</Route>
               <Route path="*" element={<Navigate to={ap('overview', null, preview)} replace />} />
             </Routes>
           </Data>

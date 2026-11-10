@@ -10,7 +10,7 @@ import { zonedDateStr } from '../lib/timezones'
 // Admin Users' numbers (Prompt 762), shared with the admin phone's People
 // (Prompt 774): every agent and Fulfillment person with this week's calls
 // day by day (`a`), cancelled (`b`), totals (`main`, `cx`), clients (agents)
-// and whether they're on a call. See pages/admin/Users.jsx for the rules.
+// and whether they're on a call. (P919: the old admin People page that read this is gone.)
 
 const DAYS = 7
 

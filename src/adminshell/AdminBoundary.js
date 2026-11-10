@@ -2,18 +2,18 @@ import { Component, createElement as h } from 'react'
 import { isChunkError, reloadOnceFor, reloadFresh } from '../lib/chunkReload.js'
 
 // P855 — a page of the admin shell that throws while rendering shows this panel, never a white screen. Two ways out:
-// Reload, and "Open the classic admin" (today's admin pages, ?classic=1). Plain createElement (no JSX) so a node test
+// Reload, and Go to Overview (P919: the classic admin pages are gone). Plain createElement (no JSX) so a node test
 // can render the panel. The classes are the global crash-card ones in index.css (the same look as the other portals').
-export const CLASSIC_HREF = '/admin?classic=1'
+export const OVERVIEW_HREF = '/admin'
 
 export function AdminCrash() {
   return h('div', { className: 'ov-crash', role: 'alert' },
     h('div', { className: 'ov-card ov-crash-card' },
       h('h2', { className: 'ov-crash-title' }, 'This page ran into a problem.'),
-      h('p', { className: 'ov-crash-text' }, 'Reload to try again, or open the classic admin pages.'),
+      h('p', { className: 'ov-crash-text' }, 'Reload to try again, or go back to Overview.'),
       h('div', { className: 'ov-crash-actions' },
         h('button', { type: 'button', className: 'ov-primary', onClick: reloadFresh }, 'Reload'),
-        h('a', { className: 'ov-ghost', href: CLASSIC_HREF }, 'Open the classic admin'))))
+        h('a', { className: 'ov-ghost', href: OVERVIEW_HREF }, 'Go to Overview'))))
 }
 
 // resetKey: a new address clears a stuck error, so the tabs keep working after one page crashed.

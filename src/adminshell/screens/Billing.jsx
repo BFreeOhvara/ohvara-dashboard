@@ -1,15 +1,21 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { CircleCheck, Landmark, ArrowUpRight, CreditCard, MessageSquare, RotateCw, Wallet, Megaphone, Headset, Receipt, BadgeDollarSign, PiggyBank, Pencil, History, Bot } from 'lucide-react'
 import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, useAdmSettings, useAdmSource, useAdmAgentResults, PLANS, PERIODS, SETUP_FEE, CARD_FEE, AI_RATE } from '../data'
 import { PRICES } from '../../lib/priceBook.js'
-import { Avatar, Chip, PillTabs, SampleTag, Seg, Switch, useNote } from '../../template/kit'
+import { Avatar, Chip, Drawer, PillTabs, SampleTag, Seg, Switch, useNote } from '../../template/kit'
 import { CountUp, usd } from '../../template/motion'
 import { Tile } from '../kit'
 import { ap } from '../paths'
 import { BILL_WORD, BANK_WORD } from '../words'
 import { OWNER_LIMIT } from '../p879'
 import '../p879.css'
+import { useAuth } from '../../hooks/useAuth'
+import { invokeConnect, usePayoutAccounts, useRefreshPayouts } from '../../hooks/useFulfillmentPayouts'
+import { bankText } from '../../lib/adminPayouts'
+
+// P919: Stripe's own bank form (the old Payouts page's), loaded only when an admin opens it.
+const ConnectEmbed = lazy(() => import('../../components/fulfillment/ConnectEmbeds'))
 
 // P866 — the tab and page read Revenue (Brayden didn't like Money). P864 — Money (it was Billing & revenue): at the top, for This week / This month / Last month, what came in (what agents
 // paid), what it cost (ad spend, VA payouts, card fees, tools), the profit, and the owners' split (Brayden and Jordan,
@@ -235,7 +241,28 @@ function OwnerPayouts() {
   )
 }
 
+// P919: the admin's own payout bank on real data (Stripe Connect, the same form and refresh the old Payouts page used).
+// With the old admin pages gone, this is where an owner connects or changes the bank their payouts go to.
+function RealBank() {
+  const { profile } = useAuth()
+  const accounts = usePayoutAccounts(null)
+  const refresh = useRefreshPayouts()
+  const [open, setOpen] = useState(false)
+  const mine = (accounts.data || []).find(a => a.rep_id === profile?.id) || null
+  const bank = bankText(mine)
+  const close = () => { setOpen(false); invokeConnect('overview').catch(() => {}).finally(refresh) }
+  return (
+    <li><Landmark size={14} aria-hidden="true" /><span className="tp-grow">Your bank<small>{accounts.isLoading ? 'Loading…' : accounts.error ? "Couldn't load" : bank || 'Not connected yet'}</small></span>
+      <button type="button" className="fx-pillbtn" onClick={() => setOpen(true)}>{bank ? 'Change' : 'Connect'}</button>
+      <Drawer open={open} onClose={close} center title={bank ? 'Change your bank' : 'Connect your bank'} sub="Stripe's own secure form. Bank numbers go straight to Stripe, never through Ohvara.">
+        {open && <Suspense fallback={<p className="tp-sub">Loading…</p>}><ConnectEmbed kind={mine?.details_submitted ? 'bank' : 'onboarding'} onDone={close} /></Suspense>}
+      </Drawer>
+    </li>
+  )
+}
+
 function Payouts() {
+  const src = useAdmSource()
   const { data: m } = useAdmMoney()
   const { setPaused } = useAdmActions()
   const note = useNote()
@@ -263,7 +290,7 @@ function Payouts() {
         <Tile i={1} title="Stripe" sub="Where pay comes from">
           <ul className="adm-sum">
             <li><Wallet size={14} aria-hidden="true" /><span className="tp-grow">Balance<small>{m.stripeBalance >= m.runTotal ? "Covers Monday's run" : "Short for Monday's run"}</small></span><b className="tp-money">{money(m.stripeBalance)}</b></li>
-            <li><Landmark size={14} aria-hidden="true" /><span className="tp-grow">Your bank<small>Chase •••• 7781</small></span><button type="button" className="fx-pillbtn" onClick={() => note("Opens Stripe's form once you sign in for real")}>Change</button></li>
+            {src === 'real' ? <RealBank /> : <li><Landmark size={14} aria-hidden="true" /><span className="tp-grow">Your bank<small>Chase •••• 7781</small></span><button type="button" className="fx-pillbtn" onClick={() => note("Opens Stripe's form once you sign in for real")}>Change</button></li>}
             <li><CircleCheck size={14} aria-hidden="true" /><span className="tp-grow">Hourly rate<small>Overtime past 40 hours at 1.5×</small></span><Link to={`${ap('settings')}?tab=pay`} className="fx-pillbtn">{money(m.rate)}<ArrowUpRight size={13} /></Link></li>
           </ul>
         </Tile>

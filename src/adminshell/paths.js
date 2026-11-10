@@ -58,18 +58,30 @@ export function admPageOf(pathname) {
 // Every address the shell owns. Anything else under /admin keeps today's routes.
 export const isAdminShellPath = pathname => admPageOf(strip(pathname)) !== null && String(pathname || '').startsWith('/admin')
 
-// An admin on the web gets the shell, unless they asked for the old pages this session (?classic=1, cleared by
-// ?classic=0). The phone app keeps today's pages, the same rule as the agent and Fulfillment shells.
-export function showAdminShell({ role, pathname, native, classic = false }) {
-  return role === 'admin' && !native && !classic && isAdminShellPath(pathname)
+// P919: an admin always gets the shell, on the web and in the phone app. The old admin pages are gone (no ?classic=1,
+// no switch back); old admin addresses land on their new page through the shell's own routes (users, payouts, more).
+export function showAdminShell({ role, pathname }) {
+  return role === 'admin' && isAdminShellPath(pathname)
 }
 
-// The classic flag from the address and what this tab remembered: ?classic=1 turns it on, ?classic=0 off.
-export function classicFrom(search, stored) {
-  const v = new URLSearchParams(String(search || '')).get('classic')
-  if (v === '1') return true
-  if (v === '0') return false
-  return stored === '1'
+// P919: where an admin lands from an address of the old portal that the admin shell doesn't own (old bookmarks, links
+// inside the agent and Fulfillment pages, notification links). null = not an old portal page: the page shows as is.
+// /settings and /messages are the shared pages (real switches, App Review logins, carrier hours, the real inbox) the
+// shell still links to, so they stay. Unknown old /admin, /agent and /fulfillment paths land on Overview.
+const OLD_TO_NEW = [
+  [/^\/agent\/(leads|inbounds)(\/|$)/, ADM.leads],
+  [/^\/fulfillment\/leads(\/|$)/, ADM.leads],
+  [/^\/agent\/(clients|submit|book|policies|submissions)(\/|$)/, ADM.clients],
+  [/^\/fulfillment\/pipeline(\/|$)/, ADM.clients],
+  [/^\/fulfillment\/(desk|schedule|calendar|servicing|pay|getting-paid|training)(\/|$)/, ADM.team],
+  [/^\/admin\/carriers$/, '/settings#carriers'],
+  [/^\/(admin|agent|fulfillment)(\/|$)/, ADM.overview],
+]
+export function adminOldTarget(pathname) {
+  const p = noSlash(String(pathname || ''))
+  if (isAdminPreviewPath(p) || isAdminShellPath(p)) return null
+  for (const [re, to] of OLD_TO_NEW) if (re.test(p)) return to
+  return null
 }
 
 // Routes inside the router: [page key, path]. `preview` puts them under /preview.

@@ -44,12 +44,6 @@ import FulfillmentOverview from './pages/fulfillment/Overview'
 import FulfillmentPipeline from './pages/fulfillment/Pipeline'
 import MyPay, { GettingPaidRedirect } from './pages/fulfillment/MyPay'
 import FulfillmentMore from './pages/fulfillment/More'
-import Users from './pages/admin/Users'
-import AdminOverview from './pages/admin/Overview'
-import AdminPipeline from './pages/admin/Pipeline'
-import AdminFulfillment from './pages/admin/Fulfillment'
-import AdminPayouts from './pages/admin/Payouts'
-import AdminMore from './pages/admin/More'
 
 const qc = new QueryClient({
   // refetchOnWindowFocus off: tabbing back must be silent — fresh data
@@ -241,40 +235,9 @@ export default function App() {
             <Route path="/agent/performance" element={<Navigate to="/" replace />} />
             <Route path="/agent/submissions" element={<Navigate to="/agent/submit" replace />} />
             <Route path="/agent/policies" element={<Navigate to="/agent/clients" replace />} />
-            {/* Prompt 758 — the Admin side: Overview, Pipeline, Fulfillment,
-                Payouts, Users (P759-P762 replace the stand-in pages). Settings
-                and Messages are shared. */}
-            <Route path="/admin" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><AdminOverview /></DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/pipeline" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><AdminPipeline /></DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/fulfillment" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><AdminFulfillment /></DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/payouts" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><AdminPayouts /></DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/users" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><Users /></DashboardLayout>
-              </ProtectedRoute>
-            } />
-            {/* Prompt 774 — More, the admin phone layout's fifth tab (desktop → /admin). */}
-            <Route path="/admin/more" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout><AdminMore /></DashboardLayout>
-              </ProtectedRoute>
-            } />
+            {/* P919 — the old admin pages are gone. Every /admin address is the admin shell (ShellSwap, src/adminshell),
+                on the web and in the phone app; old admin, agent and Fulfillment addresses an admin opens land on
+                their new page (adminshell/paths.js adminOldTarget). Nothing here renders for an admin. */}
             {/* Prompt 758 — Carrier hours moved into Settings (admin section). */}
             <Route path="/admin/carriers" element={<Navigate to="/settings#carriers" replace />} />
 

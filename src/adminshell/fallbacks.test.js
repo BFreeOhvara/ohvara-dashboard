@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { AdminBoundary, AdminCrash, CLASSIC_HREF } from './AdminBoundary.js'
+import { AdminBoundary, AdminCrash, OVERVIEW_HREF } from './AdminBoundary.js'
 import { askAgainUnlessMissing } from '../hooks/useVaShiftsPolicy.js'
 import { readShiftWeek, readShiftsToday, readDayOffRequests } from '../lib/vaShifts.js'
 import { readGhlSettings } from '../lib/ghlConnect.js'
@@ -17,12 +17,13 @@ const failing = error => {
 const MISSING_RPC = { code: 'PGRST202', message: 'Could not find the function public.va_shift_week' }
 const MISSING_TABLE = { code: 'PGRST205', message: "Could not find the table 'public.ghl_settings'" }
 
-test('a thrown render shows the crash panel with Reload and the classic admin, not a white screen', () => {
-  assert.equal(CLASSIC_HREF, '/admin?classic=1')
+test('a thrown render shows the crash panel with Reload and Go to Overview, not a white screen (P919: no classic admin)', () => {
+  assert.equal(OVERVIEW_HREF, '/admin')
   const html = renderToStaticMarkup(createElement(AdminCrash))
   assert.match(html, /role="alert"/)
   assert.match(html, />Reload</)
-  assert.match(html, /href="\/admin\?classic=1"[^>]*>Open the classic admin</)
+  assert.match(html, /href="\/admin"[^>]*>Go to Overview</)
+  assert.doesNotMatch(html, /classic/)
   const b = new AdminBoundary({ children: 'page' })
   assert.equal(b.render(), 'page')
   b.state = AdminBoundary.getDerivedStateFromError(new Error('boom'))

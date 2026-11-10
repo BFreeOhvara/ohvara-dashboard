@@ -3,7 +3,7 @@ import { Link, NavLink, useLocation, useNavigate, useOutlet } from 'react-router
 import {
   Home, Users, Headset, PhoneIncoming, BookUser, Landmark, Plug, Settings, Search, Bell, Sun, Moon, MessageSquare, ChevronRight, LogOut,
   Ellipsis, CircleHelp, Mail, Keyboard, UserPlus, Shuffle, Hand, Bug, History, TriangleAlert, Wallet, CalendarDays, CalendarOff,
-  ShieldCheck, PhoneForwarded, CircleDollarSign, CheckCircle2, Radio, Link2, Copy, Plus, Undo2, Rocket, BadgeCheck, Hourglass,
+  ShieldCheck, PhoneForwarded, CircleDollarSign, CheckCircle2, Radio, Link2, Copy, Plus, Rocket, BadgeCheck, Hourglass,
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
 import { Drawer, Avatar, Field, Seg, PillTabs, useAccount, useNote, initials } from '../template/kit'
@@ -142,8 +142,8 @@ function Help({ open, onClose, onBug }) {
   )
 }
 
-// The avatar menu: theme, account pages, the old pages, sign out.
-function AccountMenu({ open, onClose, theme, setTheme, preview }) {
+// The avatar menu: theme, account pages, sign out (P919: no way back to the old admin pages).
+function AccountMenu({ open, onClose, theme, setTheme }) {
   const account = useAccount()
   const note = useNote()
   useEffect(() => {
@@ -165,9 +165,6 @@ function AccountMenu({ open, onClose, theme, setTheme, preview }) {
         <ViewToggle />
         <i className="fx-mline" />
         {links.map(([k, label, Icon]) => <Link key={k} to={ap(k)} className="fx-mrow" onClick={onClose}><Icon size={17} aria-hidden="true" /><b className="tp-grow">{label}</b><ChevronRight size={15} aria-hidden="true" /></Link>)}
-        {!preview && (
-          <a href="/admin?classic=1" className="fx-mrow"><Undo2 size={17} aria-hidden="true" /><span className="tp-grow"><b>Open the old admin pages</b><small>The classic pages, kept as a fallback</small></span><ChevronRight size={15} aria-hidden="true" /></a>
-        )}
         <i className="fx-mline" />
         <button type="button" className="fx-mrow is-danger" onClick={() => (account.live ? account.signOut() : note('Sign out works once you sign in for real'))}><LogOut size={17} aria-hidden="true" /><b className="tp-grow">Sign out</b></button>
       </section>
@@ -204,7 +201,7 @@ function useHeadStats(page) {
   }[page] || []
 }
 
-export default function AdminFrame({ preview = false }) {
+export default function AdminFrame() {
   const { pathname } = useLocation()
   const outlet = useOutlet()
   const source = useAdmSource()
@@ -351,7 +348,7 @@ export default function AdminFrame({ preview = false }) {
       <GiveCall open={panel === 'give'} onClose={close} />
       <Help open={panel === 'help'} onClose={close} onBug={() => setPanel('bug')} />
       <ReportBug open={panel === 'bug'} onClose={close} role="Admin" />
-      <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} preview={preview} />
+      <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} />
       <MoreBelow page={layout} />
     </div>
   )
