@@ -21,7 +21,8 @@ test('a test account always sees sample info, with no sample line or tag', () =>
 })
 
 test('the migration: is_test is locked, puts the account on the demo side, and keeps it out of routing and pods', () => {
-  const m = src('../supabase/migrations/p929_test_accounts.sql')
+  const m = src('../supabase/migrations/260_test_accounts.sql')
+  assert.match(src('../supabase/migrations/261_test_policies_side.sql'), /disable trigger a1_policies_demo[\s\S]*enable trigger a1_policies_demo/)
   for (const re of [/add column if not exists is_test/, /is_demo := true/, /route_can_take\(p, now\(\), t\)/, /'test_account'/, /Test accounts can''t be on a number/]) assert.match(m, re)
 })
 

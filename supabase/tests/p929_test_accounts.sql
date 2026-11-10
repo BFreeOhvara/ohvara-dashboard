@@ -1,4 +1,4 @@
--- p929_test_accounts — pgTAP checks for supabase/migrations/p929_test_accounts.sql (Prompt 929): the test accounts are a
+-- p929_test_accounts — pgTAP checks for supabase/migrations/260_test_accounts.sql + 261 (Prompt 929): the test accounts are a
 -- sandbox. A test agent's work only reaches test VAs, real work never reaches a test VA, the AI caller and GoHighLevel
 -- never see a test agent's leads, test VAs can't be on a Deedstone number, and nobody signed in can change is_test.
 --

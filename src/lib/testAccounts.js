@@ -4,7 +4,7 @@
 // hierarchy position can't count toward real leaderboard, team, or
 // admin-aggregate numbers once the real team (Nate, Jordan, Rego) is live.
 //
-// P929: the test accounts are a sandbox. profiles.is_test (migration p929_test_accounts) is the source of truth;
+// P929: the test accounts are a sandbox. profiles.is_test (migrations 260_test_accounts + 261_test_policies_side) is the source of truth;
 // these ids are the fallback until that column is there. Test agent (nate44), test VA (tesfulfill11) and the
 // App Review demo agent and VA.
 export const TEST_ACCOUNT_IDS = new Set([
