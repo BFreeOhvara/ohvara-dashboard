@@ -102,6 +102,21 @@ const route: RouteStore = {
     inboundTook: async callSid => { await rpc('deedstone_inbound_took', { p_call_sid: callSid }) },
     inboundDone: async callSid => !!(await rpc('deedstone_inbound_done', { p_call_sid: callSid })),
   },
+  // P932: the hold line and the AI front desk (migration 262).
+  frontDesk: {
+    start: async callSid => (await rpc('front_desk_start', { p_call_sid: callSid })) ?? null,
+    state: async callSid => (await rpc('front_desk_state', { p_call_sid: callSid })) ?? null,
+    async save(callSid, patch) {
+      const { error } = await admin.rpc('front_desk_save', { p_call_sid: callSid, p: patch })
+      if (error) console.error('front_desk_save', callSid, error.message)
+    },
+    callback: async (callSid, reason) => (await rpc('front_desk_callback', { p_call_sid: callSid, p_reason: reason })) ?? { ok: false },
+    path: async (carrier, need) => (carrier ? await rpc('servicing_path', { p_carrier: carrier, p_kind: need }) : null),
+    async settings() {
+      const { data } = await admin.from('hold_line_settings').select('*').eq('id', 1).maybeSingle()
+      return data
+    },
+  },
 }
 
 // P916: an agent's Call through Deedstone (fulfillment-call agent_call rang their phone; this answers it).
@@ -123,4 +138,5 @@ Deno.serve(req => handle(req, store, SID && TOKEN ? twilioClient(SID, TOKEN) : n
   authToken: TOKEN,
   publicUrl: `${SUPABASE_URL}/functions/v1/help-voice`,
   trackingNumber: Deno.env.get('HELP_TRACKING_NUMBER') ?? null,
+  holdBase: Deno.env.get('HOLD_MUSIC_BASE') ?? null,   // P932: default https://ohvara-dashboard.vercel.app/hold
 }, route, bridge))

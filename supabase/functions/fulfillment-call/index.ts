@@ -181,6 +181,7 @@ const twilio: Twilio = async (method, path, params) => {
 Deno.serve(req => handle(req, store, twilio, {
   from: FROM,
   voiceUrl: `${SUPABASE_URL}/functions/v1/fulfillment-voice`,
+  holdUrl: `${SUPABASE_URL}/functions/v1/help-voice?event=music`,   // P932: our hold music on a merge-call hold
   configured: !!(SID && TOKEN),
 }, {
   store: lineStore,

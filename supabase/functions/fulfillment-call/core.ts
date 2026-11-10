@@ -57,7 +57,7 @@ export interface Store {
 type Params = Record<string, string | string[]>
 export type Twilio = (method: 'GET' | 'POST' | 'DELETE', path: string, params?: Params) => Promise<{ status: number; data: any }>
 
-export type Env = { from: string | null; voiceUrl: string; configured: boolean }
+export type Env = { from: string | null; voiceUrl: string; configured: boolean; holdUrl?: string | null }
 
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -108,9 +108,11 @@ function legEvents(env: Env, policyId: string, who: 'client' | 'carrier') {
   }
 }
 
-async function setHold(twilio: Twilio, store: Store, conf: string, leg: Leg, hold: boolean) {
+async function setHold(twilio: Twilio, store: Store, env: Env, conf: string, leg: Leg, hold: boolean) {
   if (leg.on_hold === hold) return
-  await twilioOk(twilio, 'POST', `/Conferences/${conf}/Participants/${leg.call_sid}.json`, { Hold: String(hold) })
+  // P932: the client hears our hold music (help-voice ?event=music: the track admin picked), never dead air.
+  const music: Record<string, string> = hold && env.holdUrl ? { HoldUrl: env.holdUrl, HoldMethod: 'POST' } : {}
+  await twilioOk(twilio, 'POST', `/Conferences/${conf}/Participants/${leg.call_sid}.json`, { Hold: String(hold), ...music })
   await store.saveLeg({ call_sid: leg.call_sid, on_hold: hold })
   leg.on_hold = hold
 }
@@ -163,7 +165,7 @@ export async function act(store: Store, twilio: Twilio, env: Env, userId: string
     // one rings (the client while the rep works the carrier; the carrier while
     // the rep brings the client back).
     const talking = legOf(who === 'client' ? 'carrier' : 'client')
-    if (talking?.status === 'live') await setHold(twilio, store, conf!, talking, true)
+    if (talking?.status === 'live') await setHold(twilio, store, env, conf!, talking, true)
     const data = await twilioOk(twilio, 'POST', `/Conferences/${conf}/Participants.json`, {
       From: callerId!, To: to!, Label: who, Beep: 'false', EarlyMedia: 'true',
       EndConferenceOnExit: 'false', Timeout: '30', ...legEvents(env, p!.id, who),
@@ -175,7 +177,7 @@ export async function act(store: Store, twilio: Twilio, env: Env, userId: string
   if (action === 'hold' || action === 'resume') {
     const leg = legOf(party(body.party))
     if (!leg || leg.status !== 'live') refuse('That line isn\'t connected.', 409, 'no_leg')
-    await setHold(twilio, store, conf!, leg!, action === 'hold')
+    await setHold(twilio, store, env, conf!, leg!, action === 'hold')
     return { ok: true }
   }
 
@@ -183,14 +185,14 @@ export async function act(store: Store, twilio: Twilio, env: Env, userId: string
     const talking = live.filter(l => !l.on_hold)
     const held = live.filter(l => l.on_hold)
     if (talking.length !== 1 || held.length !== 1) refuse('Swap needs one line talking and one on hold.', 409, 'no_swap')
-    await setHold(twilio, store, conf!, talking[0], true)
-    await setHold(twilio, store, conf!, held[0], false)
+    await setHold(twilio, store, env, conf!, talking[0], true)
+    await setHold(twilio, store, env, conf!, held[0], false)
     return { ok: true }
   }
 
   if (action === 'merge') {
     if (live.length < 2) refuse('Merge needs both lines connected.', 409, 'no_merge')
-    for (const l of live) await setHold(twilio, store, conf!, l, false)
+    for (const l of live) await setHold(twilio, store, env, conf!, l, false)
     return { ok: true }
   }
 
@@ -212,7 +214,7 @@ export async function act(store: Store, twilio: Twilio, env: Env, userId: string
   await twilioOk(twilio, 'POST', `/Calls/${leg!.call_sid}.json`, { Status: leg!.status === 'ringing' ? 'canceled' : 'completed' })
   await store.saveLeg({ call_sid: leg!.call_sid, status: 'ended', on_hold: false })
   const other = legs.find(l => l !== leg && l.status === 'live' && l.on_hold)
-  if (other) await setHold(twilio, store, conf!, other, false)
+  if (other) await setHold(twilio, store, env, conf!, other, false)
   return { ok: true }
 }
 

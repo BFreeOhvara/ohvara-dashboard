@@ -15,6 +15,8 @@ import '../../p891.css'
 import { StartCall } from '../StartCall'
 import { CallBody } from '../CallPanel'
 import { whyShort } from '../callSteps'
+import { CarrierWay } from '../Playbook932'
+import { actionOf } from '../../../lib/servicing/playbook.js'
 
 // P918 — no Servicing page any more. This file keeps the call view for every booking that isn't a cancel-the-old-policy
 // call (it opens on the Calendar at /fulfillment/calendar/<id>, and from a client's drawer): who, why, the short script,
@@ -136,6 +138,8 @@ export function TaskDrawer({ id, onClose }) {
       {isCallKind(t.kind) ? <CallBody item={t} done={done} now={!!t.held} bookedWhen={bookedText(t.iso, t.tz)} welcome={t.kind === 'welcome_call' ? <WelcomeAsk t={t} /> : null}
         gate={t.mine === false ? <p className="cp-gate">{t.vaName} has this call.</p> : null} /> : <>
         <WhatHappened t={t} />
+        {/* P932: the carrier's way for this change, ready before the call (method, line, hours, have-ready, form). */}
+        {actionOf(t.kind) && t.carrier && <CarrierWay carrier={t.carrier} kind={t.kind} itemId={t.id} first={(t.name || '').split(' ')[0] || 'They'} done={done} />}
         <TaskSteps t={t} />
       </>}
 

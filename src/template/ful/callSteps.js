@@ -81,7 +81,7 @@ function scriptOf(t, type) {
 
 // At most 3 steps for this call: [{ key, title, say?, sub?, part? }]. part names a piece the panel adds under the step
 // ('facts' = the details to read back, 'texts' = the text-updates question, 'papers' = the carrier form).
-export function stepsOf(x) {
+export function stepsOf(x, path = null) {
   const t = x || {}
   const type = typeOf(t)
   const first = firstOf(t.client, t.name)
@@ -90,9 +90,15 @@ export function stepsOf(x) {
   let steps
   if (type === 'cancel_old') {
     const old = t.old_carrier || 'the old carrier'
+    // P932: the old carrier takes a signed form → e-sign it, no call to the carrier.
+    if (path === 'esign') return [
+      { key: 'client', title: `Call ${first}`, say: `We’ll cancel your old ${old} policy with a form you sign on your phone. I’m texting it to you now.` },
+      { key: 'carrier', title: `Send it to ${old}`, sub: 'Once it’s signed, send it. A follow-up checks they processed it.', part: 'way' },
+      { key: 'done', title: 'Done text', sub: `${first} gets a text when ${old} confirms. Then press Cancelled.` },
+    ]
     steps = [
       { key: 'client', title: `Call ${first}`, say: `We’re cancelling your old ${old} policy today. Stay near your phone. You can hold, or hang up and I’ll ring you back when I reach ${old}.` },
-      { key: 'carrier', title: `Call ${old}, then merge ${first} in`, sub: 'Hold as long as it takes. When they answer, say:', say: 'I’m helping my friend, who’s on the other line, cancel their policy.' },
+      { key: 'carrier', title: `Call ${old}, then merge ${first} in`, sub: 'Hold as long as it takes. When they answer, say:', say: 'I’m helping my friend, who’s on the other line, cancel their policy.', ...(path ? { part: 'way' } : {}) },
       { key: 'done', title: `${first} does the talking`, sub: 'Stay on to help. When it’s cancelled, press Cancelled. No confirmation number needed.', part: 'papers' },
     ]
   } else if (type === 'handoff') {
@@ -116,7 +122,10 @@ export function stepsOf(x) {
   } else if (type === 'change') {
     steps = [
       { key: 'say', title: 'Say why you’re calling', say: scriptOf(t, type) },
-      { key: 'carrier', title: `Make the change with ${t.carrier || 'the carrier'}`, sub: 'Call them together, or send their form if they need one signed.', part: 'papers' },
+      path === 'esign'
+        ? { key: 'carrier', title: `Text ${first} the e-sign form`, sub: `${t.carrier || 'The carrier'} takes a signed form, so nobody calls them. A follow-up checks it was processed.`, part: 'way' }
+        : path ? { key: 'carrier', title: `Make the change with ${t.carrier || 'the carrier'}`, sub: 'Call them together with the owner on the line.', part: 'way', papers: true }
+        : { key: 'carrier', title: `Make the change with ${t.carrier || 'the carrier'}`, sub: 'Call them together, or send their form if they need one signed.', part: 'papers' },
       { key: 'log', title: 'Log it', sub: 'Done, or Couldn’t finish with a short note.' },
     ]
   } else if (type === 'cancel_request') {

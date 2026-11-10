@@ -2,7 +2,10 @@ import { useState } from 'react'
 import { ChevronDown, MessageSquareText, Check } from 'lucide-react'
 import { BeforeCall } from './BeforeCall'
 import { DocsBlock } from './Docs886'
-import { whyLine, stepsOf, factsOf, textsOf } from './callSteps'
+import { whyLine, stepsOf, factsOf, textsOf, typeOf } from './callSteps'
+import { CarrierWay, FrontDeskNote } from './Playbook932'
+import { pathFor } from '../../lib/servicing/playbook.js'
+import { usePlaybookState } from './playbook932Store'
 import './callpanel931.css'
 
 // P931 — the call panel's body, the same for every booked call (cancel the old policy, a hand-off, a save, a change,
@@ -10,13 +13,19 @@ import './callpanel931.css'
 // client: name, phone, carrier, draft date, agent. Then at most 3 steps for this call. Texts sit closed under
 // "Texts". Start call and the result buttons are the drawer's footer. No "check it's them" on a call we booked.
 export function CallBody({ item, oldCarrier = null, cancelBy = null, done = false, now = false, bookedWhen = '', welcome = null, gate = null }) {
-  const steps = stepsOf(item)
+  // P932: the carrier's way for this change (cancel the old policy, or a change) — ready before the call.
+  const pb = usePlaybookState()
+  const type = typeOf(item)
+  const way = type === 'cancel_old' ? { carrier: oldCarrier || item.old_carrier, kind: 'cancel' } : type === 'change' ? { carrier: item.carrier, kind: item.kind } : null
+  const path = way?.carrier ? pathFor(way.carrier, way.kind, pb.edits).path : null
+  const steps = stepsOf(item, path)
   const texts = textsOf(item, done ? '' : bookedWhen)
   const c = item.client || {}
   return (
     <div className="cp931">
       <p className="cp-why">{whyLine(item)}</p>
       {gate}
+      <FrontDeskNote summary={item.front_desk?.summary} />
       <BeforeCall client={c} agent={item.agent} oldCarrier={oldCarrier} cancelBy={cancelBy} note={item.note || null} noteBy="Note" />
       <dl className="cp-facts" aria-label="Client">{factsOf(item).map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       <ol className="cp-steps" aria-label="On this call">
@@ -27,9 +36,10 @@ export function CallBody({ item, oldCarrier = null, cancelBy = null, done = fals
               <b>{s.title}</b>
               {s.sub && <span>{s.sub}</span>}
               {s.say && <q className="cp-say">{s.say}</q>}
+              {s.part === 'way' && <CarrierWay carrier={way.carrier} kind={way.kind} itemId={item.id} first={c.first_name || (item.name || '').split(' ')[0] || 'They'} done={done} />}
               {s.part === 'facts' && <Facts c={c} item={item} />}
               {s.part === 'texts' && welcome}
-              {s.part === 'papers' && !done && <DocsBlock bare who={item.name} carrier={oldCarrier || item.carrier} task={item.old_carrier ? undefined : item.id} kinds={item.old_carrier ? ['cancellation_request'] : undefined} />}
+              {(s.part === 'papers' || s.papers) && !done && <DocsBlock bare who={item.name} carrier={oldCarrier || item.carrier} task={item.old_carrier ? undefined : item.id} kinds={item.old_carrier ? ['cancellation_request'] : undefined} />}
             </div>
           </li>
         ))}

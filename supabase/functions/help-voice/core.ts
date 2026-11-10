@@ -33,6 +33,8 @@
 
 import { readTwilioRequest, xmlEsc, type Twilio } from '../_shared/twilio.ts'
 import { bridgeEvent, screen, take, type BridgeStore, type DeedstoneInbound } from './deedstone.ts'
+import { intro, frontDesk, frontDeskStep, frontDeskChoice, hold, key, joinWords, trackUrl, type FrontDeskStore } from './frontdesk.ts'
+import { callbackLine } from '../_shared/frontDesk.js'
 export { twilioSignature } from '../_shared/twilio.ts'
 
 export type HelpStatus = 'ringing' | 'live' | 'transferring' | 'transferred' | 'no_answer' | 'ended'
@@ -51,6 +53,7 @@ export type HelpCall = {
   agent_call_sid: string | null
   outcome: 'transferred' | 'booked' | 'dropped' | null
   lead_id: string | null
+  hold_line?: boolean   // P932: the caller waits on the hold line, outside the conference
   answered_at: string | null
   transfer_started_at: string | null
   transferred_at: string | null
@@ -89,6 +92,8 @@ export interface RouteStore {
   isCron(secret: string): Promise<boolean>
   // P916: a call to a Deedstone number tries the caller's own agent first (deedstone.ts).
   deedstone?: DeedstoneInbound
+  // P932: the hold line and the AI front desk (frontdesk.ts). Without it callers wait in the conference as before.
+  frontDesk?: FrontDeskStore & { settings(): Promise<Parameters<typeof trackUrl>[0]> }
 }
 
 // The plain default after-hours greeting. Client-facing wording: Brayden sets recovery_config.after_hours_text
@@ -96,7 +101,7 @@ export interface RouteStore {
 export const AFTER_HOURS = 'Thanks for calling. Our team is away for the night. We will call you back after 8 AM Central.'
 
 // trackingNumber: HELP_TRACKING_NUMBER (read-only config), the VA legs' From.
-export type Env = { authToken: string | null; publicUrl: string; trackingNumber?: string | null }
+export type Env = { authToken: string | null; publicUrl: string; trackingNumber?: string | null; holdBase?: string | null }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const SID = /^CA[0-9a-zA-Z]{1,64}$/
@@ -149,6 +154,14 @@ async function inboundRouted(store: Store, route: RouteStore, env: Env, form: Re
   const caller = toE164(form.From || '')
   const base = { call_sid: callSid, caller_number: caller || null, tracking_number: form.To || null }
   if (!(await route.deskOpen())) {
+    // P932: with the AI front desk on, it takes the details and books the callback (texts the confirmation).
+    if (route.frontDesk && await store.insertHelpCall({ ...base, status: 'ringing', ringing_va_call_sids: [] })) {
+      const st = await route.frontDesk.start(callSid)
+      if (st?.ai_live && st.settings?.front_desk_on !== false) return twiml((await frontDesk(route.frontDesk, env, callSid)) || '<Hangup/>')
+      await store.updateHelpCall(callSid, { status: 'ended', end_reason: 'after_hours', ended_at: now() }, ['ringing'])
+      await route.afterHoursCall(callSid, caller)
+      return twiml(`<Say>${xmlEsc((await route.afterHoursText()) || AFTER_HOURS)}</Say><Hangup/>`)
+    }
     if (await store.insertHelpCall({ ...base, status: 'ended', end_reason: 'after_hours', ended_at: now() })) {
       await route.afterHoursCall(callSid, caller)
     }
@@ -164,6 +177,11 @@ async function inboundRouted(store: Store, route: RouteStore, env: Env, form: Re
   if (!q.queue_id) {
     await store.updateHelpCall(callSid, { status: 'ended', end_reason: 'not_queued', ended_at: now() }, ['ringing'])
     return twiml(sorry())
+  }
+  // P932: wait on the hold line (music, the AI front desk after ~20 s, press 1 for a callback) until a VA takes it.
+  if (route.frontDesk) {
+    const st = await route.frontDesk.start(callSid)
+    if (st) return twiml(intro(st, env, callSid))
   }
   return twiml(helpConference(env.publicUrl, callSid, { startOnEnter: false, endOnExit: true }))
 }
@@ -395,19 +413,35 @@ async function participantLeave(store: Store, twilio: Twilio | null, callSid: st
 }
 
 // P882: the VA (back, or the next one) joined a caller's line: the caller comes off hold.
-async function participantJoin(store: Store, twilio: Twilio | null, callSid: string, form: Record<string, string>) {
+// P932: a caller on the hold line isn't in the conference yet: move them in (fd_join). Gone already: end the line.
+async function participantJoin(store: Store, twilio: Twilio | null, env: Env, callSid: string, form: Record<string, string>, route?: RouteStore) {
   if (!twilio || !form.ConferenceSid || !form.CallSid || form.CallSid === callSid) return
   const row = await store.helpCall(callSid)
   if (!row || row.status !== 'live' || row.va_call_sid !== form.CallSid) return
+  if (row.hold_line && route?.frontDesk) {
+    const st = await route.frontDesk.state(callSid)
+    if (st?.desk?.status !== 'with_va') {
+      await route.frontDesk.save(callSid, { status: 'with_va', va_id: row.va_id })
+      const res = await twilio('POST', `/Calls/${row.call_sid}.json`, {
+        Url: `${env.publicUrl}?${new URLSearchParams({ event: 'fd_join', call: callSid })}`, Method: 'POST',
+      }).catch(() => null)
+      if (!res || res.status >= 400) {
+        await store.updateHelpCall(callSid, { status: 'ended', ended_at: now(), end_reason: 'caller_hung_up', outcome: 'dropped' }, OPEN)
+        await route.frontDesk.save(callSid, { status: 'gone' })
+        await twilio('POST', `/Conferences/${form.ConferenceSid}.json`, { Status: 'completed' }).catch(() => null)
+      }
+      return
+    }
+  }
   await twilio('POST', `/Conferences/${form.ConferenceSid}/Participants/${row.call_sid}.json`, { Hold: 'false' }).catch(() => null)
 }
 
-async function conf(store: Store, twilio: Twilio | null, callSid: string, form: Record<string, string>, route?: RouteStore) {
+async function conf(store: Store, twilio: Twilio | null, env: Env, callSid: string, form: Record<string, string>, route?: RouteStore) {
   const e = form.StatusCallbackEvent
   if (e === 'conference-start') {
     if (form.ConferenceSid) await store.updateHelpCall(callSid, { conference_sid: form.ConferenceSid })
   } else if (e === 'participant-join') {
-    if (route) await participantJoin(store, twilio, callSid, form)
+    if (route) await participantJoin(store, twilio, env, callSid, form, route)
   } else if (e === 'participant-leave') {
     await participantLeave(store, twilio, callSid, form, route)
   } else if (e === 'conference-end') {
@@ -431,7 +465,8 @@ async function cronTimeout(store: Store, twilio: Twilio | null, callSid: string)
   if (!SID.test(callSid)) return Response.json({ error: 'call required' }, { status: 400 })
   const ended = await store.updateHelpCall(callSid, { status: 'ended', end_reason: 'no_va_in_time', ended_at: now() }, ['ringing'])
   if (ended && twilio) {
-    const res = await twilio('POST', `/Calls/${callSid}.json`, { Twiml: `<Response>${sorry()}</Response>` }).catch(() => null)
+    const words = ended.hold_line ? `<Say>${xmlEsc(callbackLine({ deskOpen: true }))}</Say><Hangup/>` : sorry()
+    const res = await twilio('POST', `/Calls/${callSid}.json`, { Twiml: `<Response>${words}</Response>` }).catch(() => null)
     if (!res || res.status >= 400) console.error('timeout end caller failed:', res?.status, res?.data?.message)
   }
   return Response.json({ ok: true, ended: !!ended })
@@ -459,8 +494,30 @@ export async function handle(req: Request, store: Store, twilio: Twilio | null, 
     return bridge ? bridgeEvent(event, q, form, bridge, env.publicUrl) : twiml('<Hangup/>')
   }
 
+  // P932: the hold music, for a VA's hold on a merge call (fulfillment-call HoldUrl) and any other participant hold.
+  if (event === 'music') {
+    const s = route?.frontDesk ? await route.frontDesk.settings() : null
+    return twiml(`<Play loop="0">${xmlEsc(trackUrl(s, { publicUrl: env.publicUrl, holdBase: env.holdBase }))}</Play>`)
+  }
+
   const callSid = q.get('call') || ''
   if (!SID.test(callSid)) return twiml(event === 'va_join' ? '<Hangup/>' : '')
+
+  // P932: the hold line and the AI front desk. null = a VA has taken the call: join the conference.
+  if (event === 'hold' || event.startsWith('fd')) {
+    if (!route?.frontDesk || FINAL.includes(form.CallStatus || '')) return twiml('<Hangup/>')
+    const fd = route.frontDesk
+    const denv = { publicUrl: env.publicUrl, holdBase: env.holdBase }
+    const conference = () => helpConference(env.publicUrl, callSid, { startOnEnter: false, endOnExit: true })
+    if (event === 'fd_join') return twiml(`${joinWords()}${conference()}`)
+    const out = event === 'fd' ? await frontDesk(fd, denv, callSid)
+      : event === 'hold' ? await hold(fd, denv, callSid)
+      : event === 'fd_key' ? await key(fd, denv, callSid, form.Digits || '', q.get('allow') || '')
+      : event === 'fd_choice' ? await frontDeskChoice(fd, denv, callSid)
+      : ['fd_name', 'fd_dob', 'fd_need', 'fd_detail'].includes(event) ? await frontDeskStep(fd, denv, event, callSid, form)
+      : '<Hangup/>'
+    return twiml(out ?? `${joinWords()}${conference()}`)
+  }
 
   // P916: a call in rang the caller's agent first.
   if (event === 'ds_screen') return route?.deedstone ? screen(route.deedstone, env.publicUrl, callSid) : twiml('<Hangup/>')
@@ -475,6 +532,6 @@ export async function handle(req: Request, store: Store, twilio: Twilio | null, 
   if (event === 'va_join') return vaJoin(store, twilio, env, callSid, q.get('va') || '', form.CallSid || '')
   if (event === 'va_leg') return vaLeg(store, twilio, callSid, form)
   if (event === 'agent_leg') return agentLeg(store, twilio, callSid, form, q.get('amd') === '1')
-  if (event === 'conf') return conf(store, twilio, callSid, form, route)
+  if (event === 'conf') return conf(store, twilio, env, callSid, form, route)
   return twiml()
 }

@@ -27,6 +27,7 @@ import { CALL_WORD, KIND } from './words'
 import { fp } from './paths'
 import { HelpDot } from '../../fulshell/training/HelpDot'
 import { BeforeCall } from './BeforeCall'
+import { FrontDeskNote } from './Playbook932'
 
 // P876 — the VA phone is a call screen that slides in from the right OVER the page, like a phone's in-call screen
 // (the caller and the timer at the top, round buttons below, a red End). It never changes the page's layout. A tab on
@@ -155,7 +156,7 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
   const ring = ringCall || ringTask
   const ringWho = ringCall ? { ...fromCall(ringCall), ringKind: 'call_in' } : ringTask ? { ...fromTask(ringTask), ringKind: 'call_in' } : null
 
-  const offerWho = !call && offer ? { key: `o-${offer.id}`, kind: offer.leadId ? 'lead' : 'call', id: offer.leadId || offer.policyId, role: offer.leadId ? 'lead' : 'client', name: offer.name, number: offer.last4 ? `…${offer.last4}` : '', state: offer.state, reason: RING_KIND[offer.kind] || 'Call', ringKind: offer.kind, callSid: offer.callSid, leadId: offer.leadId, notes: offer.detail?.notes || '' } : null
+  const offerWho = !call && offer ? { key: `o-${offer.id}`, kind: offer.leadId ? 'lead' : 'call', id: offer.leadId || offer.policyId, role: offer.leadId ? 'lead' : 'client', name: offer.name, number: offer.last4 ? `…${offer.last4}` : '', state: offer.state, reason: RING_KIND[offer.kind] || 'Call', ringKind: offer.kind, callSid: offer.callSid, leadId: offer.leadId, notes: offer.detail?.notes || offer.detail?.front_desk || '' } : null
   const ringing = ringWho || offerWho
   const ringKey = offer ? `o-${offer.id}` : ringId || null
   const offerAt = offer?.at ?? null
@@ -303,6 +304,8 @@ export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, o
           <small>{r.reason}</small>
           {theirTime && <small className="fs-ph-tz">{theirTime}</small>}
           {ring && <button type="button" className="fs-cs-rec" onClick={() => openRec(ringWho)}>{ring.agent}'s client · open the call<ArrowUpRight size={13} aria-hidden="true" /></button>}
+          {/* P932: a caller the AI front desk already spoke to: the summary, so they never repeat it. */}
+          {offer?.detail?.front_desk && <FrontDeskNote summary={offer.detail.front_desk} compact />}
           {offer?.pullHold && <small className="fs-cs-why">Your carrier hold goes to the next free VA when you answer.</small>}
           {/* P931: no identity checks on calls we booked; only an unknown number calling in gets one light check. */}
           {offer && !offer.leadId && !offer.policyId && <small className="fs-cs-why">A number we don't know. Before any policy detail, one light check: their name and date of birth.</small>}

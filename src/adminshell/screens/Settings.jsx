@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   User, Users, ToggleRight, Wallet, History, Bug, SlidersHorizontal, LogOut, Mail, UserPlus, ArrowUpRight, Search, ShieldCheck,
-  ShieldOff, Image as ImageIcon, Check, Lock, GraduationCap, Scale, ArrowRightLeft, Bot, PhoneCall, MessageSquareText, CreditCard,
+  ShieldOff, Image as ImageIcon, Check, Lock, GraduationCap, Scale, ArrowRightLeft, Bot, PhoneCall, MessageSquareText, CreditCard, BookOpen, Music,
 } from 'lucide-react'
 import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmAudit, useAdmBugs, useAdmDay, useAdmSource, SWITCHES, ME } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
@@ -23,6 +23,7 @@ import { Compliance } from './Compliance879'
 import { LaunchSwitches } from './Launch906'
 import { SplitRules } from './Split889'
 import { AiCallerSettings } from './AiCalls892'
+import { CarrierPlaybookAdmin, HoldLineSettings } from './Playbook932'
 import { DeedstoneNumbers } from './Numbers916'
 import { StripeBilling } from './Billing933'
 import { useCallOpenMin, saveCallOpenMin } from '../../hooks/useCallOpen'
@@ -32,7 +33,7 @@ import { useCallOpenMin, saveCallOpenMin } from '../../hooks/useCallOpen'
 // Pay rules, Audit log (append-only, every admin action), Bug reports, Preferences. Sample only: the
 // real switches stay on today's /settings page until the backend step, and this page says so.
 const TABS = [['profile', 'Profile', User], ['people', 'People & access', Users], ['switches', 'Switches', ToggleRight], ['pay', 'Pay rules', Wallet], ['billing', 'Billing', CreditCard], ['split', 'Lead split', ArrowRightLeft], ['ai', 'AI caller', Bot],
-  ['numbers', 'Deedstone numbers', PhoneCall], ['wording', 'Wording to approve', MessageSquareText], ['training', 'Training', GraduationCap], ['audit', 'Audit log', History], ['bugs', 'Bug reports', Bug], ['compliance', 'Compliance', Scale], ['prefs', 'Preferences', SlidersHorizontal]]
+  ['numbers', 'Deedstone numbers', PhoneCall], ['hold', 'Hold line', Music], ['playbook', 'Carrier playbook', BookOpen], ['wording', 'Wording to approve', MessageSquareText], ['training', 'Training', GraduationCap], ['audit', 'Audit log', History], ['bugs', 'Bug reports', Bug], ['compliance', 'Compliance', Scale], ['prefs', 'Preferences', SlidersHorizontal]]
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
 
 function FormFoot({ dirty, onDiscard, onSave, label = 'Save changes' }) {
@@ -302,6 +303,8 @@ export default function Settings() {
           {tab === 'split' && <SplitRules />}
           {tab === 'ai' && <AiCallerSettings />}
           {tab === 'numbers' && <DeedstoneNumbers />}
+          {tab === 'hold' && <HoldLineSettings />}
+          {tab === 'playbook' && <CarrierPlaybookAdmin />}
           {tab === 'wording' && <WordingToApprove />}
           {tab === 'training' && <TrainingAdmin />}
           {tab === 'audit' && <Audit />}

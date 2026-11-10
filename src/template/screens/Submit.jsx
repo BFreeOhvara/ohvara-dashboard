@@ -14,6 +14,7 @@ import { PhoneInput } from '../PhoneInput'
 import { asPick } from '../licenceModel'
 import { StateSelect } from '../StateSelect'
 import { CarrierSelect } from '../CarrierSelect'
+import { CancelWayHint } from '../ful/Playbook932'
 import { BookTime } from '../CallTime'
 import { bookAfterSale, useAfterSalePreview, bookedText } from '../ful/data'
 import { formatPhone } from '../phoneMask'
@@ -252,6 +253,7 @@ export default function Submit() {
                   <Field label="Old monthly premium, optional"><input value={f.oldPremium} onChange={set('oldPremium')} inputMode="decimal" placeholder="$54.20" /></Field>
                   <Field label="Old draft date" hint="The day of the month it drafts."><Select label="Old draft date" invalid={bad('oldDraftDay')} placeholder="Pick a day" value={f.oldDraftDay} onChange={v => setF({ ...f, oldDraftDay: v })} options={DRAFT_DAYS} /></Field>
                 </div>
+                <CancelWayHint carrier={f.oldCarrier} />
                 <p className="tp-sub tp-row fx-sub-auto" role="status"><Clock3 size={14} aria-hidden="true" />
                   {f.oldDraftDay ? `The call to cancel the old policy books itself once the new policy is issued, before the old one drafts on the ${ordinal(Number(f.oldDraftDay))}.` : 'Add the old draft date and the call to cancel the old policy books itself before it.'}
                 </p>

@@ -10,7 +10,7 @@
 //
 // Bump TRAINING_VERSION when a lesson's check changes, so a VA's old pass is shown as "updated, take the check again".
 
-export const TRAINING_VERSION = '2026-11-10.2' // P931: you only talk to sold clients; no-show rebooks are the AI caller's; the cancel call merges the client in; no identity checks on booked calls. Before: P924: saves end with the agent or Closed; clients call our team. P907: speed is now Working in bookings; callbacks, check-ins, fromai, reminders follow the bookings
+export const TRAINING_VERSION = '2026-11-10.3' // P932: the carrier's way on every change (e-sign their form, or a merge call), do it now or book their next open time, the AI front desk's summary. Before: P931: you only talk to sold clients; no-show rebooks are the AI caller's; the cancel call merges the client in; no identity checks on booked calls. Before: P924: saves end with the agent or Closed; clients call our team. P907: speed is now Working in bookings; callbacks, check-ins, fromai, reminders follow the bookings
 export const PASS_MARK = 0.8 // 4 of 5, 4 of 4, 3 of 3: a check passes at 80% or better
 
 const say = (text, o = {}) => ({ who: 'You', text, ...o })
@@ -399,7 +399,9 @@ export const LESSONS = [
     steps: [
       'Cancel calls are on your Calendar. The box at the top says which old policy and the draft date to beat, plus the agent\'s note.',
       'Until the new policy is issued, Start call waits. Carriers are only called while they are open.',
-      'Call the client first: "We\'re cancelling your old policy today. Stay near your phone. You can hold, or hang up and I\'ll ring you back when I reach the carrier."',
+      'The call shows how that carrier cancels. E-sign: text the client the form, send it once signed, and a follow-up checks the carrier processed it. No call to the carrier.',
+      'New carrier: we learn it on this call. Afterwards press Save what you learned.',
+      'Merge call: call the client first: "We\'re cancelling your old policy today. Stay near your phone. You can hold, or hang up and I\'ll ring you back when I reach the carrier."',
       'Call the old carrier and hold as long as it takes.',
       'When they answer: "I\'m helping my friend, who\'s on the other line, cancel their policy." Then merge the client in.',
       'The client does the talking. You stay on to help.',
@@ -419,6 +421,7 @@ export const LESSONS = [
     portal: { shot: 'call', clicks: [{ spot: 'start', text: 'Start call: ring the client first' }, { spot: 'cancelled', text: 'Cancelled, once it\'s done (no confirmation number)' }] },
     check: [
       ok('Who do you call first?', ['The old carrier', 'The client', 'The agent', 'The new carrier'], 1, 'The client first, so they\'re ready when the carrier answers.'),
+      ok('The call says the old carrier takes an e-signed form. You:', ['Call the carrier anyway', 'Text the client the e-sign link, then send it once signed', 'Mail a letter', 'Ask the agent'], 1, 'E-sign: no call to the carrier. A follow-up checks it was processed.'),
       ok('The carrier answers. You say:', ['"I\'m cancelling a policy for a client."', '"I\'m helping my friend, who\'s on the other line, cancel their policy."', '"Please cancel policy 123."', '"Can I speak to a manager?"'], 1, 'Then merge the client in.'),
       ok('Who does the talking with the carrier?', ['You', 'The client', 'The agent', 'Nobody'], 1, 'The client. You stay on to help.'),
       ok('What do you need to press Cancelled?', ['A confirmation number', 'Nothing. A note is optional', 'The agent\'s OK', 'A photo of the policy'], 1, 'No confirmation number needed.'),
@@ -525,8 +528,10 @@ export const LESSONS = [
     why: 'Small changes done right stop big problems later, like a claim paid to the wrong person.',
     steps: [
       'The agent or client asks for a change. It shows as a booked call on your Calendar.',
-      'The call is booked inside carrier hours. Start call turns on 5 minutes before its time.',
-      'Press Start call, then call the carrier with them on the line to make the change.',
+      'The call shows that carrier\'s way for this change: e-sign their form, or the owner on a merge call. Plus their line, hours, the form and what the client needs ready.',
+      'E-sign: text the client the link (it\'s prefilled) and send it to the carrier once signed. A follow-up checks it was processed, then the client gets a "done" text.',
+      'Merge call: if the carrier is open and the client says yes, do it now. Closing soon, closed or the weekend: book one of the next open times shown.',
+      'Not sure how a carrier does it? Edit the card after the call. Every edit is logged.',
       'Record the result: Done, or Couldn\'t finish with a note saying why.',
       'Anything that changes cover, or any advice ("who should my beneficiary be?"), goes to the agent: Send to agent.',
     ],
@@ -536,13 +541,14 @@ export const LESSONS = [
         say('Hi [first name], it\'s [your first name] with Deedstone. [Agent] asked me to help you update your [beneficiary / address / draft date] with [carrier]. Is now a good time?', { approve: true }),
       ],
     },
-    dos: ['Make the change with the carrier on the line', 'Record the exact result'],
+    dos: ['Use the carrier\'s easiest way shown on the call', 'Record the exact result'],
     donts: ['Don\'t advise who to name as beneficiary', 'Don\'t change cover amounts'],
     portal: { shot: 'task', clicks: [{ spot: 'move', text: 'Move the call to a time inside carrier hours' }, { spot: 'sendagent', text: 'Send to agent: anything about cover or advice' }] },
     check: [
       ok('A client asks who they should name as beneficiary. You:', ['Suggest their spouse', 'Send to agent', 'Pick their children', 'Skip it'], 1, 'That is advice. It goes to the agent.'),
       ok('A change call is a call we booked. Do you check who they are?', ['Yes, date of birth first', 'No. Only an unknown caller gets one light check', 'Ask for their SSN', 'Ask the agent'], 1, 'No checks on calls we booked.'),
-      ok('Where is the change made?', ['In your notes only', 'With the carrier, with the client on the line', 'By text', 'By the agent later'], 1, 'With the carrier, on the call.'),
+      ok('Where is the change made?', ['In your notes only', 'With the carrier: their e-sign form, or a call with the client on the line', 'By text only', 'By the agent later'], 1, 'The card says which way that carrier takes it.'),
+      ok('A bank change, and the carrier closes in 15 minutes. You:', ['Rush it now', 'Book one of the next open times shown', 'Skip it', 'Text the carrier'], 1, 'Closing soon: book their next open time.'),
     ],
   },
   {
