@@ -3,7 +3,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { AI_QUESTIONS, TRANSFER_WORDS, AI_RULES } from './lib/aiCaller.js'
+import { AI_RULES } from './lib/aiCaller.js'
+import { AI_CALL_WORDS } from '../supabase/functions/ai-caller/rules.js'
 import { retellPrompt, retellTools, retellLlm, retellAgent, pickVoices, RETELL_VOICE_DEFAULTS } from '../supabase/functions/ai-caller/retellSpec.js'
 import * as core from '../supabase/functions/ai-caller/core.ts'
 import { noProvider } from '../supabase/functions/ai-caller/providers.ts'
@@ -12,12 +13,11 @@ const HOOK = 'https://x.supabase.co/functions/v1/ai-caller?k=secret'
 const NOW = Date.parse('2026-11-10T21:00:00Z') // Tue 3 PM CT
 
 test('prompt: Deedstone virtual assistant, the VA questions, never coverage or price, wait questions, bounce words', () => {
-  const p = retellPrompt(AI_QUESTIONS)
+  const p = retellPrompt()
   assert.match(p, /Deedstone’s virtual assistant/)
-  for (const q of AI_QUESTIONS) assert.ok(p.includes(q), q)
   assert.match(p, /Never discuss coverage, prices, carriers/)
   assert.match(p, /never leave silence/)
-  assert.ok(p.includes(TRANSFER_WORDS.agentWill))
+  assert.match(p, /call ask_agent/)
   assert.match(p, /call transfer_failed/)
   assert.doesNotMatch(p, /\bVA\b|virtual agent hand/i)
 })
@@ -39,7 +39,8 @@ test('llm + agent bodies: opening from {{opening}}, gpt-4.1, voice knobs, hang u
   const l = retellLlm({ prompt: 'p', url: HOOK })
   assert.equal(l.begin_message, '{{opening}}')
   assert.equal(l.start_speaker, 'agent')
-  assert.equal(l.model_config.primary.model, 'gpt-4.1')
+  assert.equal(l.model_config.primary.model, 'claude-5.5-sonnet') // P940
+  assert.equal(l.model_config.backup.model, 'gpt-4.1')
   const a = retellAgent({ llmId: 'llm_1', voiceId: 'v1', webhookUrl: HOOK, maxSecs: 300, voice: { voice_speed: 1.05 } })
   assert.deepEqual(a.response_engine, { type: 'retell-llm', llm_id: 'llm_1' })
   assert.equal(a.voice_speed, 1.05)
@@ -116,7 +117,7 @@ test('test "agent_no": check answered No → bounce words and times to book', as
   const t = fakes({ test: { check: 'no' } })
   await t.start(); await t.answered(); await t.tool('qualified', {})
   const s = await t.tool('check_status')
-  assert.ok(s.say.startsWith(TRANSFER_WORDS.bounce.replace('{agent}', 'Test')))
+  assert.ok(s.say.startsWith(AI_CALL_WORDS.bounce)) // P940: never "Test Agent"
   assert.deepEqual(s.slots, ['2026-11-11T16:00:00Z'])
 })
 

@@ -7,7 +7,7 @@
 // P902: no hand-off to a VA (the bridge, hand-off timeout and twiml actions are gone). Asks for a person, or about
 // coverage or price → "Your agent will go over that with you" → Check agent → transfer, or book. A call that fails
 // counts as no answer. Every call ends in one first-call outcome (../_shared/leadFlows.js), which decides the texts.
-import { aiStep, AI_RULES, ASK_AGENT_REASONS, SAID_OUTCOMES, WAIT_QUESTIONS, WAIT_RULE, transferSay } from './rules.js'
+import { aiStep, AI_RULES, ASK_AGENT_REASONS, SAID_OUTCOMES, WAIT_QUESTIONS, WAIT_RULE, transferSay, AI_CALL_WORDS } from './rules.js'
 import type { Ev, Provider } from './providers.ts'
 import { whisperWords } from '../help-transfer/core.ts'
 
@@ -46,6 +46,7 @@ export interface Store {
   clearCheck(check: CheckRow, agentId: string, why: 'booking' | 'gone'): Promise<void>
   // P916: the agent's Deedstone number (logs one call on it), so the AI's first call shows the number the lead will
   // see from their agent ever after. null = AI_FROM_NUMBER.
+  endStats?(callId: string, patch: Record<string, unknown>): Promise<void>
   deedstoneFrom?(agentId: string, callId: string): Promise<{ phone: string; providerId: string | null } | null>
 }
 export type Env = { now(): number; from: string | null; words: Record<string, string> }
@@ -97,7 +98,7 @@ export async function start(store: Store, provider: Provider, env: Env, callId: 
   try {
     const r = await provider.start({
       callId: c.id, to: lead.phone, from, fromId: ds?.phone ? ds.providerId : null, maxSecs: Math.min(live.maxSecs || AI_RULES.maxCallSecs, 900),
-      vars: { first_name: lead.first, agent_first_name: agent.first, state: lead.state ?? '', lead_tz: lead.tz ?? '', opening: env.words.opening.replace('{first}', lead.first),
+      vars: { first_name: lead.first, state: lead.state ?? '', lead_tz: lead.tz ?? '', opening: env.words.opening.replace('{first}', lead.first),
         callback_number: spokenNumber(from) }, // P940: the voicemail message gives the number that called them
     })
     await store.status(c.id, 'dialing', { provider_call_id: r.providerCallId })
@@ -115,7 +116,11 @@ const END_TO_EVENT: Record<string, string> = { no_answer: 'no_answer', voicemail
 export async function onEvent(store: Store, provider: Provider, env: Env, ev: Ev) {
   const c = (ev.callId && (await store.call(ev.callId))) || (await store.callByProvider(ev.providerCallId))
   if (!c) return { ok: false, code: 'unknown_call' }
-  if (c.status === 'done' || c.status === 'to_va') return ev.type === 'tool' ? provider.toolReply(ev.toolCallId, { end: true }) : { ok: true, already: true }
+  if (c.status === 'done' || c.status === 'to_va') {
+    // P940: a call that got its result mid-call (not now, opt-out, no times) still gets its minutes and cost at the end.
+    if (ev.type === 'ended' && c.status === 'done') await store.endStats?.(c.id, { duration_secs: ev.durationSecs ?? 0, cost_cents: ev.costCents, summary: ev.summary, transcript_ref: ev.transcriptRef })
+    return ev.type === 'tool' ? provider.toolReply(ev.toolCallId, { end: true }) : { ok: true, already: true }
+  }
 
   if (ev.type === 'answered') {
     await store.status(c.id, 'talking', { control_url: ev.controlUrl ?? null })
@@ -151,13 +156,13 @@ function waiting(p: Provider, first: boolean) {
   return first ? { keep_talking: true, ask: WAIT_QUESTIONS, rule: WAIT_RULE } : { keep_talking: true }
 }
 
-async function slotsReply(store: Store, env: Env, c: Call, say?: string, agentFirst?: string) {
+async function slotsReply(store: Store, env: Env, c: Call, say?: string, _agentFirst?: string) {
   const slots = await store.slots(c.id)
   if (!slots.length) {
     // No time open in the next 3 days: "{agent} will call you to find a time" → not now, no time (the agent's Follow
     // up, no texts). Never a VA.
     await store.result(c.id, 'not_now', { summary: 'No open time in the agent’s calendar in the next 3 days.' })
-    return { say: [say, transferSay('noTimes', agentFirst)].filter(Boolean).join(' '), end: true }
+    return { say: [say, AI_CALL_WORDS.noTimes].filter(Boolean).join(' '), end: true } // P940: never the agent's name
   }
   return { say, slots, next: 'book' }
 }
@@ -185,8 +190,10 @@ export async function tool(store: Store, provider: Provider, env: Env, c: Call, 
       if (c.status !== 'talking') return c.status === 'booking' ? slotsReply(store, env, c, pre, agent?.first) : { ok: false, code: 'not_talking' }
       if (!agent) return slotsReply(store, env, c, pre)
       const r = step(c, { type: 'qualified' }, { agent, nowMs })
-      if (!r.act.includes('check_agent')) {
-        await store.status(c.id, 'booking', { routed: r.s.routed, summary: args.summary ?? null })
+      // P940: the AI asks "Are you free right now?" first; a No books a time without checking the agent.
+      const notNow = args.free_now === false || String(args.free_now ?? '').toLowerCase() === 'no'
+      if (notNow || !r.act.includes('check_agent')) {
+        await store.status(c.id, 'booking', { routed: notNow ? 'lead_not_free' : r.s.routed, summary: args.summary ?? null })
         return slotsReply(store, env, c, pre, agent.first)
       }
       const lead = lead0
@@ -216,9 +223,9 @@ export async function tool(store: Store, provider: Provider, env: Env, c: Call, 
       if (r.act.includes('transfer_agent') && agent?.phone) {
         // Beat 4: "connecting you with {Agent}", the agent's phone rings, they hear the whisper alone, the caller is
         // connected and the AI leaves (cold). Not answered in about 20 s → transfer_failed below.
-        const say = transferSay('connecting', agent.first)
+        const say = AI_CALL_WORDS.connecting
         const whisper = whisperWords({ ...(chk?.summary ?? {}) }, false, 'ai')
-        const bounceSay = transferSay('bounce', agent.first)
+        const bounceSay = AI_CALL_WORDS.bounce
         await store.status(c.id, 'transferring')
         if (chk) await store.markCheck(chk.id, { status: 'ringing', ring_started_at: new Date(nowMs).toISOString() }, ['yes', 'seen', 'sent'])
         await provider.transfer(c.provider_call_id ?? '', agent.phone, c.control_url, { say, whisper, ringSecs: AI_RULES.ringSecs, bounceSay })
@@ -230,7 +237,7 @@ export async function tool(store: Store, provider: Provider, env: Env, c: Call, 
         await store.clearCheck(chk, agent?.id ?? '', 'booking')
       }
       await store.status(c.id, 'booking')
-      return slotsReply(store, env, c, transferSay('bounce', agent?.first), agent?.first)
+      return slotsReply(store, env, c, AI_CALL_WORDS.bounce, agent?.first)
     }
     case 'transfer_failed': { // the agent's phone wasn't answered in about 20 s: the caller is back with the AI, who books
       if (c.status !== 'transferring') return c.status === 'booking' ? slotsReply(store, env, c, undefined, agent?.first) : { ok: false, code: 'not_transferring' }
@@ -241,7 +248,7 @@ export async function tool(store: Store, provider: Provider, env: Env, c: Call, 
         const chk = await store.check(c.check_id)
         if (chk) await store.clearCheck(chk, agent?.id ?? '', 'booking')
       }
-      return slotsReply(store, env, c, transferSay('bounce', agent?.first), agent?.first)
+      return slotsReply(store, env, c, AI_CALL_WORDS.bounce, agent?.first)
     }
     case 'slots': return slotsReply(store, env, c, undefined, agent?.first)
     case 'book': {

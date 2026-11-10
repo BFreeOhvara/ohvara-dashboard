@@ -28,7 +28,7 @@ const senders = sendersFromEnv()
 // DRAFT words (src/lib/aiCaller.js DRAFT_WORDS) until Brayden approves them; the provider's agent prompt holds the rest.
 // The transfer beats' words (check, connecting, bounce, hold) live in rules.js TRANSFER_WORDS (P903).
 const WORDS = {
-  opening: 'Hi {first}, this is Deedstone’s virtual assistant, calling about the request you just sent us. Is now a good time for two quick questions?',
+  opening: 'Hey {first}! This is Max with Deedstone Insurance. How’s your day going?', // P940 (Brayden, Nov 10)
 }
 
 function provider(): Provider {
@@ -105,6 +105,13 @@ const store: Store = {
     if (whenStatus?.length) q = q.in('status', whenStatus)
     const { error } = await q
     if (error) console.error('ai-caller markCheck', id, error.message)
+  },
+  // P940: minutes, cost and summary for a call whose result was set mid-call (only fills what is still empty).
+  async endStats(id, p) {
+    const row = Object.fromEntries(Object.entries({ duration_secs: p.duration_secs, cost_cents: p.cost_cents, summary: typeof p.summary === 'string' ? p.summary.slice(0, 1200) : undefined,
+      transcript_ref: p.transcript_ref }).filter(([, v]) => v != null))
+    const { error } = await admin.from('ai_calls').update(row).eq('id', id).eq('status', 'done').is('duration_secs', null)
+    if (error) console.error('ai-caller endStats', id, error.message)
   },
   // P916: the agent's Deedstone number (Retell dials from_number; Vapi needs that number's id on Vapi).
   async deedstoneFrom(agentId, callId) {

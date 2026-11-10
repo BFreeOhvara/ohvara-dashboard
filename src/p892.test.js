@@ -216,7 +216,7 @@ test('core: out of hours and Appointments only go straight to times; no times â†
   await core.start(n.store, n.provider, n.env, n.call().id); await ev(n, 'answered')
   const r = await tool(n, 'qualified')
   assert.equal(r.end, true)
-  assert.match(r.say, /Dana will call you to find a time that works/)
+  assert.match(r.say, /A licensed specialist will reach out to find a time/) // P940: never the agent's name
   assert.deepEqual(n.log.at(-1), ['result', 'not_now', false])
 })
 

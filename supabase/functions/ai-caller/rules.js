@@ -31,6 +31,12 @@ export const TRANSFER_WORDS = {
   // P902: no open time in the agent's calendar in the next 3 days. The lead goes to the agent's Follow up.
   noTimes: '{agent} will call you to find a time that works. Thanks so much for your time today.',
 }
+// P940 — what the AI caller says (Brayden, Nov 10): never the agent's name, always "a licensed specialist".
+export const AI_CALL_WORDS = {
+  connecting: 'Perfect, I’m bringing a licensed specialist on the line now. Just one moment.',
+  bounce: 'Looks like our specialists are all with clients right now. No problem, let’s get you a time instead.',
+  noTimes: 'A licensed specialist will reach out to find a time that works for you. Thanks so much for your time today.',
+}
 // While the agent decides (up to 30 s): light, useful questions, one at a time. Never coverage or price.
 export const WAIT_QUESTIONS = [
   'Just to confirm, what city are you in?',
