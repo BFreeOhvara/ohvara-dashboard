@@ -42,8 +42,8 @@ export function adminTodos({ unassigned = [], pipeline = [], failed = [], cover 
   // P952: an old-lead list that paused itself (too many people asked us to stop calling).
   for (const l of react) {
     // P957: lots of AI calls and nothing paid yet.
-    if (l.watch) { rows.push({ id: `react-${l.id}`, kind: 'reactivation', tone: 'warn', title: 'Reactivation: many calls, nothing paid', sub: `${l.agent || 'An agent'} · ${l.calls} calls · ${money(Math.round((l.cost_cents || 0) / 100))} AI cost`, action: 'Open', to: `${ap('leads')}?view=reactivation` }); continue }
-    rows.push({ id: `react-${l.id}`, kind: 'reactivation', tone: 'warn', title: 'Reactivation list paused', sub: `${l.agent || 'An agent'} · ${l.name}${l.pause_reason ? ` · ${l.pause_reason}` : ''}`, action: 'Open list', to: `${ap('leads')}?view=reactivation` })
+    if (l.watch) { rows.push({ id: `react-${l.id}`, kind: 'reactivation', tone: 'warn', title: 'Your own leads: many calls, nothing paid', sub: `${l.agent || 'An agent'} · ${l.calls} calls · ${money(Math.round((l.cost_cents || 0) / 100))} AI cost`, action: 'Open', to: `${ap('leads')}?view=reactivation` }); continue }
+    rows.push({ id: `react-${l.id}`, kind: 'reactivation', tone: 'warn', title: 'Imported list paused', sub: `${l.agent || 'An agent'} · ${l.name}${l.pause_reason ? ` · ${l.pause_reason}` : ''}`, action: 'Open list', to: `${ap('leads')}?view=reactivation` })
   }
   for (const x of ads) {
     rows.push({ id: `ad-${x.agent}`, kind: 'ad', tone: 'warn', title: x.kind === 'rejected' ? 'Ad rejected' : 'Ad in review over 24 h', sub: `${agentName(x.agent)} · ${x.text}`, action: 'Open agent', to: ap('agents', x.agent) })

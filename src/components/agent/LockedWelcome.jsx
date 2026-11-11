@@ -61,8 +61,8 @@ const usd = n => `$${Number(n).toLocaleString('en-US')}`
 
 function HowItWorks() {
   const steps = [
-    ['Pick what you need', 'Leads, Servicing, Reactivation, or any mix. The portal comes with all of them.'],
-    ['Add your card', `Leads or Servicing: setup (${usd(PB.setupFee)} once) and your first month, plus your first days of leads. Reactivation only: nothing today.`],
+    ['Pick what you need', 'Leads, Servicing, Your own leads, or any mix. The portal comes with all of them.'],
+    ['Add your card', `Leads or Servicing: setup (${usd(PB.setupFee)} once) and your first month, plus your first days of leads. Your own leads only: nothing today.`],
     ['Your portal opens', 'Straight away. Add or remove a product any time in Billing.'],
   ]
   return (

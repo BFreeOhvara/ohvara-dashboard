@@ -2,14 +2,14 @@
 // one small suggestion. Sample or real, through the same data door.
 import { useMemo } from 'react'
 import { useSampleBilling, useSampleClients } from './data'
-import { has, navFor, suggestion } from '../lib/products.js'
+import { has, navFor, suggestion, canServe } from '../lib/products.js'
 import { pickedOf } from './productsView.js'
 
 export function useProducts() {
   const { data: b } = useSampleBilling()
   const picked = pickedOf(b)
   const key = picked.join(',')
-  return useMemo(() => ({ b, picked, has: k => has(picked, k), suggest: suggestion(picked) }), [b, key]) // eslint-disable-line react-hooks/exhaustive-deps
+  return useMemo(() => ({ b, picked, has: k => has(picked, k), suggest: suggestion(picked), serve: canServe(picked) }), [b, key]) // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 export function useNavKeys() {

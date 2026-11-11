@@ -15,7 +15,7 @@ test('norm keeps one order, no repeats, only known products', () => {
   assert.deepEqual(norm(null), [])
   assert.deepEqual(ORDER, ['leads', 'servicing', 'reactivation'])
   assert.ok(has(['servicing'], 'servicing') && !has(['servicing'], 'leads'))
-  assert.equal(label(['reactivation', 'leads']), 'Leads + Reactivation')
+  assert.equal(label(['reactivation', 'leads']), 'Leads + Your own leads')
   assert.equal(label([]), 'Nothing yet')
 })
 
@@ -95,9 +95,9 @@ test('removeWords: next bill date for monthly products, at once for Reactivation
   const b = { picked: ['leads'], planMonth: { today: '2026-11-02', start: '2026-11-01', next: '2026-12-01' } }
   const w = removeWords(b, 'leads')
   assert.equal(w.lines[0], `Ends on ${dayWords('2026-12-01')}. You keep it until then.`)
-  assert.match(w.lines.join(' '), /keep your portal and Reactivation/)
+  assert.match(w.lines.join(' '), /keep your portal and Your own leads/)
   const two = removeWords({ ...b, picked: ['leads', 'servicing'] }, 'servicing')
-  assert.doesNotMatch(two.lines.join(' '), /portal and Reactivation/)
+  assert.doesNotMatch(two.lines.join(' '), /portal and Your own leads/)
   assert.deepEqual(removeWords(b, 'reactivation').lines[0], 'Lists already started keep calling, and each appointment or live call is still charged.')
 })
 

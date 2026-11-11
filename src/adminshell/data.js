@@ -49,7 +49,7 @@ export const LEAD_PRICE = { appointment: 45, live: 65 }
 const mkBill = o => ({
   status: 'current', next: 'Tonight, 8:00 PM', method: 'Visa •••• 4242', failed: null, card: 'Visa •••• 4242',
   last: { when: 'Wed, Nov 4, 8:00 PM', result: 'approved' }, paidAhead: 1, credit: 0,
-  setup: { paid: 'Sep 14', amount: PRICES.setupFee }, founding: { until: 'Sep 14, 2027' }, ...o,
+  setup: { paid: 'Sep 14', amount: PRICES.setupFee }, ...o,
 })
 // P913: the Meta campaign ID saved on the agent when GoHighLevel creates their campaign (one campaign per agent).
 const metaId = id => `12021${String([...id].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 1e10, 7)).padStart(10, '0')}`
@@ -62,31 +62,31 @@ const mkAgent = (id, name, o) => ({
 const seedAgents = [
   mkAgent('ag-dana', 'Dana Walker', { city: 'Austin', state: 'TX', phone: '(512) 555-0143', spend: 120, onDuty: true, states: ['TX', 'OK'], joined: 'Aug 30', picked: ['leads', 'reactivation'],
     planNext: { key: 'starter', on: 'Tue, Dec 1' },
-    billing: { credit: 14, setup: { paid: 'Aug 30', amount: PRICES.setupFee }, founding: { until: 'Aug 30, 2027' } } }),
+    billing: { credit: 14, setup: { paid: 'Aug 30', amount: PRICES.setupFee } } }),
   mkAgent('ag-marcus', 'Marcus Reed', { city: 'Phoenix', state: 'AZ', phone: '(602) 555-0118', spend: 60, active: false, states: ['AZ', 'NV'], lastOn: 'Wed',
     billing: { method: 'Visa •••• 1881', card: 'Visa •••• 1881' } }),
   mkAgent('ag-priya', 'Priya Shah', { city: 'Tampa', state: 'FL', phone: '(813) 555-0170', spend: 600, onDuty: false, paused: { since: 'Wed, Nov 4', until: 'Mon, Nov 16' }, states: ['FL', 'GA'], joined: 'Aug 30',
-    billing: { next: 'Paused to Mon, Nov 16', method: 'Amex •••• 3005', card: 'Amex •••• 3005', paidAhead: 0, last: { when: 'Tue, Nov 3, 8:00 PM', result: 'approved' }, setup: { paid: 'Aug 30', amount: PRICES.setupFee }, founding: { until: 'Aug 30, 2027' } } }),
+    billing: { next: 'Paused to Mon, Nov 16', method: 'Amex •••• 3005', card: 'Amex •••• 3005', paidAhead: 0, last: { when: 'Tue, Nov 3, 8:00 PM', result: 'approved' }, setup: { paid: 'Aug 30', amount: PRICES.setupFee } } }),
   mkAgent('ag-elena', 'Elena Torres', { city: 'San Antonio', state: 'TX', phone: '(210) 555-0191', spend: 50, servicing: false, states: ['TX'], joined: 'Oct 12',
     billing: { next: 'Retry Fri, 8:00 AM', method: 'Visa •••• 7310', card: 'Visa •••• 7310', paidAhead: 0, last: { when: 'Thu, Nov 5, 8:00 PM', result: 'declined', why: 'Card declined' },
-      failed: { what: 'Nightly lead charge', when: 'Thu, Nov 5', why: 'Card declined', amount: 56 }, setup: { paid: 'Oct 12', amount: PRICES.setupFee }, founding: { until: 'Oct 12, 2027' } } }),
+      failed: { what: 'Nightly lead charge', when: 'Thu, Nov 5', why: 'Card declined', amount: 56 }, setup: { paid: 'Oct 12', amount: PRICES.setupFee } } }),
   mkAgent('ag-james', 'James Okafor', { city: 'Atlanta', state: 'GA', phone: '(404) 555-0126', spend: 85, onDuty: true, states: ['GA', 'SC'], joined: 'Sep 28', picked: ['leads', 'reactivation'],
     lastUpgrade: { from: 'starter', to: 'growth', on: 'Mon, Nov 2', amount: 773.33, days: 29 },
-    billing: { method: 'Mastercard •••• 6022', card: 'Mastercard •••• 6022', setup: { paid: 'Sep 28', amount: PRICES.setupFee }, founding: { until: 'Sep 28, 2027' } } }),
+    billing: { method: 'Mastercard •••• 6022', card: 'Mastercard •••• 6022', setup: { paid: 'Sep 28', amount: PRICES.setupFee } } }),
   mkAgent('ag-grace', 'Grace Kim', { city: 'Denver', state: 'CO', phone: '(303) 555-0164', spend: 65, active: false, comped: true, states: ['CO'], lastOn: 'Tue',
-    billing: { status: 'comped', next: 'Comped to Dec 1', method: 'None needed', card: null, last: null, paidAhead: 0, setup: null, founding: null } }),
+    billing: { status: 'comped', next: 'Comped to Dec 1', method: 'None needed', card: null, last: null, paidAhead: 0, setup: null } }),
   mkAgent('ag-ben', 'Ben Carter', { city: 'Charlotte', state: 'NC', phone: '(704) 555-0137', spend: 50, active: false, states: ['NC'], joined: 'Oct 19', lastOn: 'Mon',
     billing: { status: 'past_due', next: 'Locks Fri, Nov 6, 9:00 AM', method: 'Visa •••• 0094', card: 'Visa •••• 0094', paidAhead: 0, last: { when: 'Wed, Nov 4, 8:00 PM', result: 'declined', why: 'Card declined' },
-      failed: { what: 'Monthly plan', when: 'Wed, Nov 4', why: 'Card declined', amount: 699 }, setup: { paid: 'Oct 19', amount: PRICES.setupFee }, founding: { until: 'Oct 19, 2027' } } }),
+      failed: { what: 'Monthly plan', when: 'Wed, Nov 4', why: 'Card declined', amount: 699 }, setup: { paid: 'Oct 19', amount: PRICES.setupFee } } }),
   // P955: agents without Leads. No lead spend, no band plan, no transfers, never a Setup ticket. Tasha's Servicing ends
   // at her next bill date (a removal waiting); Marcus Webb only buys Reactivation lists (no monthly plan, no setup fee).
   mkAgent('ag-sofia', 'Sofia Alvarez', { city: 'Houston', state: 'TX', phone: '(713) 555-0149', spend: 0, plan: 'servicing', picked: ['servicing'], active: false, states: ['TX'], joined: 'Oct 5',
-    billing: { next: 'Renews Dec 5', method: 'Visa •••• 2218', card: 'Visa •••• 2218', paidAhead: 0, last: { when: 'Mon, Oct 5', result: 'approved' }, setup: { paid: 'Oct 5', amount: PRICES.setupFee }, founding: null } }),
+    billing: { next: 'Renews Dec 5', method: 'Visa •••• 2218', card: 'Visa •••• 2218', paidAhead: 0, last: { when: 'Mon, Oct 5', result: 'approved' }, setup: { paid: 'Oct 5', amount: PRICES.setupFee } } }),
   mkAgent('ag-tasha', 'Tasha Greene', { city: 'Mobile', state: 'AL', phone: '(251) 555-0176', spend: 0, plan: 'servicing', picked: ['servicing', 'reactivation'], pickedNext: ['reactivation'], pickedNextFrom: '2026-12-09',
     active: false, states: ['AL'], joined: 'Sep 9', lastOn: 'Wed',
-    billing: { next: 'Renews Dec 9', method: 'Mastercard •••• 4410', card: 'Mastercard •••• 4410', paidAhead: 0, last: { when: 'Mon, Nov 9', result: 'approved' }, setup: { paid: 'Sep 9', amount: PRICES.setupFee }, founding: null } }),
+    billing: { next: 'Renews Dec 9', method: 'Mastercard •••• 4410', card: 'Mastercard •••• 4410', paidAhead: 0, last: { when: 'Mon, Nov 9', result: 'approved' }, setup: { paid: 'Sep 9', amount: PRICES.setupFee } } }),
   mkAgent('ag-webb', 'Marcus Webb', { city: 'Little Rock', state: 'AR', phone: '(501) 555-0133', spend: 0, plan: null, picked: ['reactivation'], active: false, states: ['AR'], joined: 'Oct 26', lastOn: 'Mon',
-    billing: { next: 'Pays per list', method: 'Visa •••• 9035', card: 'Visa •••• 9035', paidAhead: 0, last: { when: 'Wed, Oct 28', result: 'approved' }, setup: null, founding: null } }),
+    billing: { next: 'Pays per list', method: 'Visa •••• 9035', card: 'Visa •••• 9035', paidAhead: 0, last: { when: 'Wed, Oct 28', result: 'approved' }, setup: null } }),
 ]
 // Tonight's charge for an agent: tomorrow's spend minus credit, plus 12% (nothing while paused or comped).
 export const chargeFor = a => (a.comped || a.paused || !hasLeads(a) ? null : nightlyCharge({ daily: a.spend, credit: a.billing?.credit || 0 }))
@@ -965,7 +965,7 @@ const SAMPLE_ACTIONS = {
     // Settings (P950: no live-switch setter. Live flags are changed only by Ohvara's server role, with Brayden's yes)
     savePayRules: payRules => set(s => ({ settings: { ...s.settings, payRules }, ...audit(s, 'Changed pay rules', `$${payRules.hourly} an hour`) })),
     saveBilling: billing => set(s => ({ settings: { ...s.settings, billing: { ...s.settings.billing, ...billing } },
-      ...audit(s, 'Changed lead billing', `Max $${billing.maxDaily} a day · charge ${billing.chargeHour}:00 · founding ${billing.foundingCount} for ${billing.foundingMonths} months`) })),
+      ...audit(s, 'Changed lead billing', `Max $${billing.maxDaily} a day · charge ${billing.chargeHour}:00`) })),
     setMaxDaily: (id, dollars) => set(s => {
       const o = { ...s.settings.billing.maxOverride }
       if (dollars == null) delete o[id]; else o[id] = dollars

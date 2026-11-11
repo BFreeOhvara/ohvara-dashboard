@@ -98,7 +98,7 @@ export default function Leads() {
   // P952: + Reactivation (every agent's old-lead list with its contact, booked and stop rates).
   const view = ['ai', 'reactivation'].includes(sp.get('view')) ? sp.get('view') : 'board'
   const setView = v => setSp(v === 'board' ? {} : { view: v }, { replace: true })
-  const viewSeg = <Seg label="View" value={view} onChange={setView} options={[{ key: 'board', label: 'Board' }, { key: 'ai', label: 'AI calls' }, { key: 'reactivation', label: 'Reactivation' }]} />
+  const viewSeg = <Seg label="View" value={view} onChange={setView} options={[{ key: 'board', label: 'Board' }, { key: 'ai', label: 'AI calls' }, { key: 'reactivation', label: 'Your own leads' }]} />
   if (view === 'reactivation') {
     return (
       <div className="tp-page fx-page fx-leads adm-leads">

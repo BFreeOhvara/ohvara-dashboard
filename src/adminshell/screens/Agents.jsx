@@ -92,7 +92,7 @@ function PlanBudget({ a }) {
   }
   const last = b.last
   return (
-    <Block title="Plan and budget" sub={a.real ? undefined : 'Sample'} aside={b.founding ? <Chip tone="teal">Founding to {b.founding.until}</Chip> : null}>
+    <Block title="Plan and budget" sub={a.real ? undefined : 'Sample'}>
       <div className="adm-plan-top">
         <b className="fx-hero-big">{a.comped ? 'Comped' : plan.label}</b>
         <span className="tp-sub">{a.comped ? 'No plan charge' : `${money(plan.price)} a month · ${plan.sub}`}</span>
@@ -112,7 +112,6 @@ function PlanBudget({ a }) {
         ['Last charge', last ? <span className={last.result === 'declined' ? 'adm-declined' : undefined}>{last.result === 'declined' ? `Declined${last.why ? `: ${last.why.toLowerCase()}` : ''}` : 'Approved'} · {last.when}</span> : '–'],
         ['Next charge', b.next],
         ['Setup fee', b.setup ? `${money(b.setup.amount)} paid ${b.setup.paid}` : a.comped ? 'Comped' : 'Not paid'],
-        ['Founding lock', b.founding ? `Prices locked to ${b.founding.until}` : 'Not founding'],
         ['Plan change', a.planNext ? <span data-pending="down">Moves down to {PLANS[a.planNext.key].label} on {a.planNext.on}</span>
           : a.lastUpgrade ? `Moved up to ${PLANS[a.lastUpgrade.to].label} ${a.lastUpgrade.on}, ${cents(a.lastUpgrade.amount)} for ${a.lastUpgrade.days} days` : 'None scheduled'],
       ].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>

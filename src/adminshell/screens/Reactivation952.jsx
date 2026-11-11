@@ -18,7 +18,7 @@ export function ReactivationView() {
   const [edit, setEdit] = useState(null)
   const [busy, setBusy] = useState(false)
   const s = v.settings
-  if (v.missing) return <Empty title="Reactivation isn’t set up yet" sub="It needs migration 267. Nothing is called until then." />
+  if (v.missing) return <Empty title="Importing leads isn’t set up yet" sub="It needs migration 267. Nothing is called until then." />
   if (!s) return null
   const run = async (fn, ok) => { setBusy(true); try { await fn(); note(ok + (src === 'real' ? '' : ' (sample)')) } catch (e) { note(e.message) } finally { setBusy(false) } }
   const open = () => setEdit({ price: String(s.delivered_cents / 100), secs: String(s.transfer_min_secs), untilPaid: String(s.new_until_paid),
@@ -30,11 +30,11 @@ export function ReactivationView() {
       new_daily_calls: n('newDaily'), max_callable: n('max'), daily_calls: n('daily'), watch_calls: n('watch'),
       max_attempts: n('tries'), pause_stop_rate: n('rate') / 100, pause_min_reached: n('reached') })
     setEdit(null)
-  }, 'Reactivation settings saved')
+  }, 'Your own leads settings saved')
   const ok = edit && n('price') >= 1 && n('price') <= 500 && n('secs') >= 5 && n('secs') <= 600 && n('untilPaid') >= 0 && n('newMax') >= 1 && n('newDaily') >= 1
     && n('max') >= n('newMax') && n('daily') >= 1 && n('watch') >= 1 && n('tries') >= 1 && n('tries') <= 10 && n('rate') > 0 && n('rate') <= 100 && n('reached') >= 1
   return (
-    <section className="rx-adm" aria-label="Reactivation lists">
+    <section className="rx-adm" aria-label="Imported lists">
       <div className="rx-adm-top">
         <span className="rx-adm-facts">
           <Chip tone={s.live ? 'green' : 'mute'}>{s.live ? 'Calling is on' : 'Calling is off'}</Chip>
@@ -94,7 +94,7 @@ export function ReactivationView() {
           )
         })}
       </ul>
-      <Drawer open={!!edit} onClose={() => setEdit(null)} title="Reactivation settings" sub="The price applies to appointments and live calls from now on; limits, tries and the pause limit to every list."
+      <Drawer open={!!edit} onClose={() => setEdit(null)} title="Your own leads settings" sub="The price applies to appointments and live calls from now on; limits, tries and the pause limit to every list."
         footer={<button type="button" className="tp-primary fx-accent" disabled={!ok || busy} onClick={save}>Save settings</button>}>
         {edit && <>
           <Field label="Price per appointment or live call ($)" hint="Upload is free. A no-show rebook is free."><input inputMode="decimal" value={edit.price} onChange={e => setEdit({ ...edit, price: e.target.value })} /></Field>

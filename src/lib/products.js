@@ -30,8 +30,8 @@ export const PRODUCTS = {
     sub: `up to ${PRICES.servicingBase} clients · ${money(PRICES.setupFee)} setup`,
   },
   reactivation: {
-    key: 'reactivation', label: 'Reactivation',
-    line: 'Upload your old leads; we clean the list and call them back for you.',
+    key: 'reactivation', label: 'Your own leads',
+    line: 'Got your own leads? Import them and we\'ll call every one.',
     price: `${money(REACT_DEFAULTS.deliveredCents / 100)} per appointment or live call`,
     sub: 'free to upload · no monthly plan, no setup fee',
   },
@@ -45,7 +45,7 @@ export const monthly = picked => has(picked, 'leads') || has(picked, 'servicing'
 export const label = picked => norm(picked).map(k => PRODUCTS[k].label).join(' + ') || 'Nothing yet'
 
 // Which agent tabs show for what they bought. Overview, Calendar, Activity and Billing always. Leads: with Leads or
-// Reactivation (their reactivated leads land there). Clients: with Leads or Servicing, or once they have a client.
+// Your own leads (the imported leads land there). Clients: with Leads or Servicing, or once they have a client.
 export function navFor(picked, { clients = 0 } = {}) {
   const p = norm(picked)
   const out = new Set(['overview', 'calendar', 'activity', 'billing'])
@@ -53,6 +53,10 @@ export function navFor(picked, { clients = 0 } = {}) {
   if (p.includes('leads') || p.includes('servicing') || clients > 0) out.add('clients')
   return out
 }
+
+// P959: sold leads can go to Servicing only with Leads (it includes servicing of what's sold) or Servicing. Without
+// either (Your own leads only) a sold lead stays on the Leads board, Sold. Unknown picks (old accounts) = can serve.
+export const canServe = picked => !Array.isArray(picked) || picked.length === 0 || has(picked, 'leads') || has(picked, 'servicing')
 
 // The small "Add …" suggestion for an account (none when they have everything worth adding). Not pushy: one card.
 export function suggestion(picked) {

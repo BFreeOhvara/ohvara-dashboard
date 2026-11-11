@@ -213,9 +213,9 @@ export function listFit(callable, limits = null) {
 export const usd0 = c => `$${(Math.round(c) / 100).toLocaleString('en-US', { minimumFractionDigits: (c % 100) ? 2 : 0, maximumFractionDigits: 2 })}`
 // Billing lines. A delivery: "Reactivation · appointment booked · $20" / "· live call · $20" (+ "· paid back" when a
 // live call turned out under 30 s). Old P952 per-list charges keep their own line.
-export const deliveryLine = d => `Reactivation · ${d.kind === 'transferred' ? 'live call' : 'appointment booked'} · ${usd0(d.amount_cents ?? REACT_DEFAULTS.deliveredCents)}${d.refunded_cents ? ' · paid back' : ''}`
+export const deliveryLine = d => `Your own leads · ${d.kind === 'transferred' ? 'live call' : 'appointment booked'} · ${usd0(d.amount_cents ?? REACT_DEFAULTS.deliveredCents)}${d.refunded_cents ? ' · paid back' : ''}`
 export const billingLine = l => (l.kind === 'booked' || l.kind === 'transferred' ? deliveryLine(l)
-  : `Reactivation · ${l.callable ?? l.n} leads · ${usd0(l.amount_cents ?? l.cents)}${l.refunded_cents ? ` · ${usd0(l.refunded_cents)} back` : ''}`)
+  : `Your own leads · ${l.callable ?? l.n} leads · ${usd0(l.amount_cents ?? l.cents)}${l.refunded_cents ? ` · ${usd0(l.refunded_cents)} back` : ''}`)
 // The limits in words for a new account.
 export const limitsLine = (lim = {}) => (lim.is_new
   ? `New accounts: up to ${lim.max_callable ?? REACT_DEFAULTS.newMaxCallable} people and ${lim.daily_calls ?? REACT_DEFAULTS.newDailyCalls} calls a day until ${lim.until_paid ?? REACT_DEFAULTS.newUntilPaid} appointments are paid.`
@@ -229,7 +229,7 @@ export const CARD_WORDS = {
   needs_action: 'Your bank wants you to confirm the card.',
   card_owed: 'A charge on your card failed. Update your card in Billing and your lists start again.',
   over_limit: 'You’ve reached your limit for now. It goes up once 3 appointments are paid.',
-  reactivation_off: 'Reactivation opens soon. Nothing was charged.',
+  reactivation_off: 'Importing opens soon. Nothing was charged.',
 }
 
 // ── Calling ─────────────────────────────────────────────────────────────────────────────────────────────────────

@@ -20,12 +20,12 @@ test('the sample agents cover every mix: Leads, Leads + Reactivation, Servicing,
 })
 
 test('the products chip text: one order, known products only, a waiting removal says when it ends', () => {
-  assert.equal(chipsText({ picked: ['reactivation', 'leads'] }), 'Leads · Reactivation')
+  assert.equal(chipsText({ picked: ['reactivation', 'leads'] }), 'Leads · Your own leads')
   assert.equal(chipsText({ picked: ['servicing', 'nope', 'servicing'] }), 'Servicing')
   assert.equal(chipsText({ plan: 'servicing' }), 'Servicing') // not migrated yet: servicing-only stays servicing
   assert.equal(chipsText({ plan: 'growth' }), 'Leads') // everyone else has Leads
   const tasha = { picked: ['servicing', 'reactivation'], pickedNext: ['reactivation'], pickedNextFrom: '2026-12-09' }
-  assert.deepEqual(productChips(tasha).map(c => [c.label, c.tone, c.ends]), [['Servicing', 'teal', 'Dec 9'], ['Reactivation', 'violet', null]])
+  assert.deepEqual(productChips(tasha).map(c => [c.label, c.tone, c.ends]), [['Servicing', 'teal', 'Dec 9'], ['Your own leads', 'violet', null]])
   assert.deepEqual(endingLines(tasha), ['Servicing ends Dec 9'])
   assert.deepEqual(endingLines({ picked: ['leads'] }), [])
   assert.equal(shortDay('2026-01-31'), 'Jan 31')
@@ -74,7 +74,7 @@ test('real rows: agent_billing_plans merged onto agents and tickets', () => {
     { agent_id: 'a2', picked: ['servicing', 'reactivation'], picked_next: ['reactivation'], picked_next_from: '2026-12-09', setup_paid_at: '2026-10-01T10:00:00Z' },
     { agent_id: 'a3', picked: ['servicing', 'leads'], setup_paid_at: '2026-10-01T10:00:00Z', leads_setup_at: null },
   ])
-  assert.equal(chipsText(out.agents[1]), 'Servicing · Reactivation')
+  assert.equal(chipsText(out.agents[1]), 'Servicing · Your own leads')
   assert.deepEqual(endingLines(out.agents[1]), ['Servicing ends Dec 9'])
   assert.deepEqual(pipelineOf({ ...out, setupLog: {} }).map(c => c.id), ['a1']) // a2 no Leads; a3 Leads added, not paid yet
   const paidLater = withProducts(state, [{ agent_id: 'a3', picked: ['leads', 'servicing'], setup_paid_at: '2026-10-01T10:00:00Z', leads_setup_at: '2026-11-04T15:00:00Z' }])
@@ -96,7 +96,7 @@ test('the revenue split sums: sample Leads + Servicing + Setup = the period reve
     const p = moneyFor(s, period)
     const sp = productSplitFor(s, period)
     const { rows, total } = splitRows(sp)
-    assert.deepEqual(rows.map(r => r.label), ['Leads', 'Servicing', 'Reactivation', 'Setup fees'])
+    assert.deepEqual(rows.map(r => r.label), ['Leads', 'Servicing', 'Your own leads', 'Setup fees'])
     assert.equal(sp.amounts.leads + sp.amounts.servicing + sp.amounts.setup, p.inTotal, period)
     assert.equal(sp.amounts.reactivation, reactivationFor(period), period)
     assert.equal(total, p.inTotal + reactivationFor(period), period)
@@ -124,8 +124,8 @@ test('real split: admin_billing_revenue by_product (cents) and counts', () => {
 test('Revenue › Charges: a product added in Billing reads "Added Servicing"', () => {
   assert.equal(chargeWhat({ kind: 'product_add', products: ['servicing'], note: 'Added Servicing · first month $499.00' }), 'Added Servicing')
   assert.equal(chargeWhat({ kind: 'product_add', note: 'Added Growth plan · setup $299.00' }), 'Added Leads') // old rows: from the note
-  assert.equal(chargeWhat({ kind: 'product_add', note: 'Added Reactivation' }), 'Added Reactivation')
+  assert.equal(chargeWhat({ kind: 'product_add', note: 'Added Reactivation' }), 'Added Your own leads')
   assert.equal(chargeWhat({ kind: 'nightly' }), 'Lead spend')
-  assert.equal(chargeWhat({ kind: 'reactivation' }), 'Reactivation list')
+  assert.equal(chargeWhat({ kind: 'reactivation' }), 'Your own leads list')
   assert.match(src('./screens/Billing933.jsx'), /\{chargeWhat\(c\)\}/)
 })

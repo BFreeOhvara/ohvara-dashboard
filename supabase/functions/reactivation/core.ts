@@ -93,6 +93,9 @@ const NO_LINK: Record<string, [string, string]> = {
   bk_1h: [' Need a different time? {link}', ' Need a different time? Just reply.'],
 }
 export function reactivationTextBody(j: Pick<TextJob, 'step' | 'first' | 'agent' | 'appt_at' | 'tz'>): string | null {
+  // P959: a booked person who said yes to texts and then no-showed gets the normal no-show rebook text (the words of
+  // lead-workflow-sms templates.ts no_show_rebook). It is about their own appointment; nobody else is ever texted.
+  if (j.step === 'bk_noshow') return `Hi ${j.first || 'there'}, sorry we missed you. We'll call shortly to find a new time, or reply here with one that works for you. Reply STOP to opt out.`
   const step = (FLOW_STEPS as any).booked.find((x: any) => x.key === j.step)
   const fix = NO_LINK[j.step]
   if (!step || !fix) return null

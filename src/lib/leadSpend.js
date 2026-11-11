@@ -92,10 +92,9 @@ export const setupSet = (db, agentId, { mode, fee = null, months = null }) =>
   rpc(db, 'admin_billing_setup_set', { p_agent: agentId, p_mode: mode, p_fee_cents: fee == null ? null : toCents(fee), p_min_months: months })
 export const adjustBalance = (db, agentId, dollars, reason) => rpc(db, 'admin_lead_spend_adjust', { p_agent: agentId, p_cents: toCents(dollars), p_reason: reason })
 export const savePriceBook = (db, book, effective, note) => rpc(db, 'admin_price_book_save', { p_book: book, p_effective: effective, p_note: note })
-// P909 admin: billing settings (max daily, charge hours, founding lock), one agent's max, revenue with the 12% apart.
+// P909 admin: billing settings (max daily, charge hours), one agent's max, revenue with the 12% apart.
 export const saveBillingSettings = (db, st) => rpc(db, 'admin_billing_settings_save', {
-  p_settings: { max_daily_cents: st.maxDaily == null ? null : toCents(st.maxDaily), charge_hour: st.chargeHour, retry_hour: st.retryHour,
-    founding_count: st.foundingCount, founding_months: st.foundingMonths },
+  p_settings: { max_daily_cents: st.maxDaily == null ? null : toCents(st.maxDaily), charge_hour: st.chargeHour, retry_hour: st.retryHour },
 })
 export const setMaxDaily = (db, agentId, dollars) => rpc(db, 'admin_billing_max_daily_set', { p_agent: agentId, p_cents: dollars == null ? null : toCents(dollars) })
 export const adminRevenue = (db, from, to) => rpc(db, 'admin_billing_revenue', { p_from: from, p_to: to })
@@ -129,7 +128,6 @@ export function toSampleBilling(view) {
     } : null,
     card: view.card ? { label: view.card.label, onFile: !!view.card.on_file } : null,
     credit: d(view.credit_cents) || 0, refund: d(view.refund_cents) || 0,
-    founding: view.founding?.active ? { no: view.founding.no, until: view.founding.until } : null,
     maxDaily: d(view.settings?.max_daily_cents) ?? null,
     clients: view.membership?.clients ? { total: view.membership.clients.total, sold: view.membership.clients.sold, added: view.membership.clients.added } : null,
     status: st.status, leadSpend: st.lead_spend, runs: st,

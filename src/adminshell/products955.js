@@ -52,9 +52,9 @@ export function planLineOf(a, plans) {
   const p = pickedOf(a)
   if (p.includes('leads')) return { label: plans[a.plan]?.label || 'Lead plan', sub: null, leads: true }
   if (p.includes('servicing')) return { label: 'Servicing', sub: `$${PRICES.servicingOnly} a month · up to ${PRICES.servicingBase} clients`, leads: false }
-  return { label: 'No monthly plan', sub: 'Reactivation lists only', leads: false }
+  return { label: 'No monthly plan', sub: 'Your own leads only', leads: false }
 }
-export const NO_PLAN = { label: 'No monthly plan', price: 0, sub: 'Reactivation only' }
+export const NO_PLAN = { label: 'No monthly plan', price: 0, sub: 'Your own leads only' }
 
 // ── Setup tickets: only for Leads ────────────────────────────────────────────
 // A ticket needs Leads in what they bought, and the Leads part paid: the sign-up with Leads, or (Leads added later in
@@ -84,7 +84,7 @@ export function withProducts(state, rows) {
 
 // ── Revenue by product ───────────────────────────────────────────────────────
 export const SPLIT_KEYS = ['leads', 'servicing', 'reactivation', 'setup']
-export const SPLIT_LABEL = { leads: 'Leads', servicing: 'Servicing', reactivation: 'Reactivation', setup: 'Setup fees' }
+export const SPLIT_LABEL = { leads: 'Leads', servicing: 'Servicing', reactivation: 'Your own leads', setup: 'Setup fees' }
 
 // How many agents have each product (sample or real store's agents, comped included: they still have it).
 export function productCounts(agents = []) {
@@ -144,14 +144,14 @@ export function periodRange(period, clock) {
 }
 
 // ── Revenue › Charges: what a charge was ─────────────────────────────────────
-export const CHARGE_KIND = { nightly: 'Lead spend', signup: 'Sign-up', plan_month: 'Plan', plan_upgrade: 'Plan upgrade', live_check: '$1 live check', reactivation: 'Reactivation list', product_add: 'Added a product' }
+export const CHARGE_KIND = { nightly: 'Lead spend', signup: 'Sign-up', plan_month: 'Plan', plan_upgrade: 'Plan upgrade', live_check: '$1 live check', reactivation: 'Your own leads list', product_add: 'Added a product' }
 // product_add: the server's note starts "Added Servicing …", "Added Reactivation …" or "Added <tier> plan …" (Leads).
 export function chargeWhat(c) {
   if (c?.kind !== 'product_add') return CHARGE_KIND[c?.kind] || c?.kind || ''
   const ps = norm(c.products)
   const named = ps.length === 1 ? ps[0] : null
   const note = String(c.note || '')
-  const key = named || (/^Added Servicing/i.test(note) ? 'servicing' : /^Added Reactivation/i.test(note) ? 'reactivation' : /^Added /i.test(note) ? 'leads' : null)
+  const key = named || (/^Added Servicing/i.test(note) ? 'servicing' : /^Added (Reactivation|Your own leads)/i.test(note) ? 'reactivation' : /^Added /i.test(note) ? 'leads' : null)
   return key ? `Added ${PRODUCTS[key].label}` : CHARGE_KIND.product_add
 }
 

@@ -21,7 +21,7 @@ import './products955.css'
 // Leads and Servicing end on the next bill date, Reactivation at once (lists already paid keep calling). Adding
 // Servicing or Leads opens a drawer with the server's quote (productsView.js quoteLines) and Pay; Leads also asks the
 // sign-up details (states, hours, live transfers) and saves them first. Reactivation is free to add and takes them to
-// Leads → Reactivate old leads. Sample: nothing is charged (?pay=declined previews a declined card).
+// Leads → Import leads. Sample: nothing is charged (?pay=declined previews a declined card).
 
 const ICON = { leads: PhoneIncoming, servicing: ShieldCheck, reactivation: RotateCcw }
 const sampleWords = src => (src === 'sample' ? ' Sample only, nothing was charged.' : '')
@@ -177,7 +177,7 @@ export function LeadsDrawer({ open, onClose }) {
   )
 }
 
-// Start a reactivation list: adds Reactivation (no charge) when it isn't on, then Leads → Reactivate old leads.
+// Import leads: adds Your own leads (no charge) when it isn't on, then opens Leads → Import leads.
 function useStartList() {
   const { addProduct } = useSampleActions()
   const { has } = useProducts()
@@ -190,10 +190,10 @@ function useStartList() {
     setBusy(true)
     try {
       const r = await addProduct({ product: 'reactivation' })
-      const w = addResultWords(r, 'Reactivation')
+      const w = addResultWords(r, 'Your own leads')
       setBusy(false)
       if (!w.ok) return note(w.text)
-      note('Reactivation added. Free to upload: you pay per appointment or live call we deliver')
+      note('Your own leads added. Free to upload: you pay per appointment or live call we deliver')
       go()
     } catch (e) { setBusy(false); note(failWords(e)) }
   }
@@ -216,7 +216,7 @@ function ProductRow({ p, b, onAdd, i }) {
     try {
       const r = await removeProduct(p.key)
       setAsk(false)
-      if (p.key === 'reactivation') note(`Reactivation removed. Lists already started keep calling.${sampleWords(src)}`)
+      if (p.key === 'reactivation') note(`Your own leads removed. Lists already started keep calling.${sampleWords(src)}`)
       else note(`${p.label} ends on ${dayWords(r?.ends)}. You keep it until then.${src === 'sample' ? ' Sample only' : ''}`)
     } catch (e) { note(failWords(e).replace(' Nothing was charged.', '')) }
     setBusy(false)
@@ -239,14 +239,14 @@ function ProductRow({ p, b, onAdd, i }) {
           <Chip tone="green">On</Chip>
           <b className="tp-money pr-cost">{cost.big}</b><small>{cost.sub}</small>
           <span className="pr-acts">
-            {p.key === 'reactivation' && <button type="button" className="tp-btn ov-ghost" disabled={listBusy} onClick={startList}>Start a list</button>}
+            {p.key === 'reactivation' && <button type="button" className="tp-btn ov-ghost" disabled={listBusy} onClick={startList}>Import leads</button>}
             {canRemove(b, p.key) && !ask && <button type="button" className="pr-quiet" onClick={() => setAsk(true)}>Remove</button>}
           </span>
         </>}
         {s.kind === 'off' && <>
           <Chip tone="mute">Not added</Chip>
           {p.key === 'reactivation'
-            ? <button type="button" className="tp-primary fx-accent" disabled={listBusy} onClick={startList}>{listBusy ? <Loader2 size={15} className="animate-spin" aria-hidden="true" /> : <RotateCcw size={15} aria-hidden="true" />}Start a reactivation list</button>
+            ? <button type="button" className="tp-primary fx-accent" disabled={listBusy} onClick={startList}>{listBusy ? <Loader2 size={15} className="animate-spin" aria-hidden="true" /> : <RotateCcw size={15} aria-hidden="true" />}Import leads</button>
             : <button type="button" className="tp-primary fx-accent" onClick={() => onAdd(p.key)} data-add={p.key}><Plus size={15} aria-hidden="true" />Add</button>}
         </>}
         {s.kind === 'ending' && <>
@@ -286,7 +286,7 @@ export function ProductsCard({ i = 0 }) {
   return (
     <section className="fx-tile fx-s12 pr955" style={{ '--i': i }} aria-label="Your products" id="products">
       <header className="fx-tile-h"><span className="tp-grow"><h2>Your products</h2><p>Pick what you need, in any mix. Your portal is always included.</p></span><SampleTag /></header>
-      {ending && onlyRx && <p className="pr-after" data-row="after">From {dayWords(b.nextFrom)} nothing is charged monthly. You keep your portal and Reactivation: free to upload, you pay per appointment or live call we deliver.</p>}
+      {ending && onlyRx && <p className="pr-after" data-row="after">From {dayWords(b.nextFrom)} nothing is charged monthly. You keep your portal and Your own leads: free to upload, you pay per appointment or live call we deliver.</p>}
       <ul className="pr-list">{rows.map((p, k) => <ProductRow key={p.key} p={p} b={b} i={k} onAdd={setPanel} />)}</ul>
       <LeadsDrawer open={panel === 'leads'} onClose={close} />
       <ServicingDrawer open={panel === 'servicing'} onClose={close} />
@@ -295,6 +295,13 @@ export function ProductsCard({ i = 0 }) {
 }
 
 // The one small "Add Leads" card (not pushy): Overview for accounts without Leads. compact = the line on Leads.
+// P959: Your own leads only: sold leads stay on Leads → Sold. One quiet line, only once something is sold; no Submit, no Clients.
+export function AddServicingCard({ leads = [], className = '' }) {
+  const { serve } = useProducts()
+  if (serve || !leads.some(l => l.stage === 'sold')) return null
+  return <p className={`pr-suggest-line ${className}`.trim()} data-suggest="servicing">Want us to keep these on the books? <Link to={`${paths.billing()}?add=servicing`} className="tp-link">Add Servicing<ArrowRight size={14} aria-hidden="true" /></Link></p>
+}
+
 export function AddLeadsCard({ compact = false, className = '' }) {
   const { suggest } = useProducts()
   if (suggest !== 'leads') return null

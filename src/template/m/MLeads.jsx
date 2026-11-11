@@ -19,7 +19,7 @@ import { targetOf } from '../../lib/deedstoneCall'
 import { DeedstoneCallButton } from '../DeedstoneCall'
 import { isNativeApp } from '../../lib/native'
 import { ReactivateDrawer } from '../Reactivate'
-import { AddLeadsCard } from '../Products955'
+import { AddLeadsCard, AddServicingCard } from '../Products955'
 import { useProducts } from '../useProducts'
 
 // P908 — Leads on a phone: one status at a time. Swipe sideways (or tap a status) to move between Booked, No show,
@@ -28,11 +28,11 @@ import { useProducts } from '../useProducts'
 const LANE_ALL = LANES
 const RESULT_TONE = Object.fromEntries(Object.entries(RESULT_STATUS).map(([k, st]) => [k, agentStatus(st).tone])) // P929: the board's colours
 const whenOf = l => (l.stage === 'ringing' ? 'Ringing now' : isLiveCall(l) ? 'Live call' : l.stage === 'follow_up' && l.follow ? `Call back ${l.follow}` : l.appt || `Came in ${l.assigned_at}`)
-const tagOf = l => {
+const tagOf = (l, serve = true) => {
   if (l.stage === 'ringing') return 'Ringing'
   if (needsResult(l, clockNow())) return 'Mark result'
   if (agentCallTask(l)) return 'Call them back'
-  if (l.stage === 'sold' && !l.submitted) return 'Finish details'
+  if (serve && l.stage === 'sold' && !l.submitted) return 'Finish details'
   if (confirmedByText(l)) return 'Confirmed'
   return null
 }
@@ -62,7 +62,8 @@ export function LiveStrip({ leads, compact = false }) {
 
 function LeadCard({ l }) {
   const tone = laneOf(l).tone
-  const tag = tagOf(l)
+  const { serve } = useProducts()
+  const tag = tagOf(l, serve)
   const result = l.stage !== 'ringing' && needsResult(l, clockNow())
   const closed = agentStatusOf(l) === 'closed'
   return (
@@ -102,6 +103,7 @@ export function StatusPicker({ lead, open, onClose }) {
 const ASK_WHY = ['I can’t reach them', 'They want a different time', 'Check their details', 'Something else']
 function LeadSheet({ id, onClose }) {
   const { data: lead } = useSampleLead(id)
+  const { serve } = useProducts()
   const { addLeadNote, askTeamToCall, sendBookingLink, callBack, rebookLead } = useSampleActions()
   const source = useDataSource()
   const [fb, setFb] = useState(false)
@@ -113,7 +115,7 @@ function LeadSheet({ id, onClose }) {
   useEffect(() => { if (params.get('outcome')) setParams({}, { replace: true }) }, [params, setParams])
   const name = nameOf(lead)
   const lane = laneOf(lead)
-  const chip = stageChip(lead.stage, lead)
+  const chip = stageChip(lead.stage, lead, { noServicing: !serve })
   const closed = lane.key === 'closed'
   const task = agentCallTask(lead)
   const canPick = resultsFor(lead).length > 0
@@ -132,7 +134,7 @@ function LeadSheet({ id, onClose }) {
       </div>
       <NoShowUndo lead={lead} />
       {task && <DeedstoneCallButton target={targetOf('lead', lead)} className="mx-nudge is-warn" onCall={() => callBack(lead.id)}><PhoneForwarded size={18} aria-hidden="true" /><span className="tp-grow"><b>{lead.first_name} asked you to call</b><small>“{lead.reply.text}”</small></span><ChevronRight size={18} aria-hidden="true" /></DeedstoneCallButton>}
-      {lead.stage === 'sold' && !lead.submitted && <Link to={paths.submit(lead.id)} className="mx-nudge is-green"><span className="tp-grow"><b>Finish the servicing details</b><small>The team takes it from there</small></span><ChevronRight size={18} aria-hidden="true" /></Link>}
+      {serve && lead.stage === 'sold' && !lead.submitted && <Link to={paths.submit(lead.id)} className="mx-nudge is-green"><span className="tp-grow"><b>Finish the servicing details</b><small>The team takes it from there</small></span><ChevronRight size={18} aria-hidden="true" /></Link>}
       {closed && <p className="mx-note"><b>{closedReason(lead)}.</b> No more calls or texts. A reply from them brings them back as a new lead.</p>}
       {agentStatusOf(lead) === 'team' && <p className="mx-note">Our team is calling {lead.first_name}. Nothing for you to do yet: they land on Booked.</p>}
       {agentStatusOf(lead) === 'no_show' && !lead.undo && (
@@ -227,6 +229,7 @@ export default function MLeads() {
 
       <LiveStrip leads={shown} compact />
       <AddLeadsCard compact className="mx-suggest" />
+      <AddServicingCard leads={leads} className="mx-suggest" />
 
       <div className="mx-stabs" role="tablist" aria-label="Status" ref={tabs}>
         {LANE_ALL.map(l => (

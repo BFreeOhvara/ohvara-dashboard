@@ -121,8 +121,7 @@ function Summary({ quote, rate, picked }) {
       )}
       <div className="lk-sum sc-total"><span>Charged today</span><span className="lk-money" data-testid="sc-total">{cents(quote.total_cents)}</span></div>
       {days > 0 && <p className="sc-sub"><DeskInfo rate={rate} /></p>}
-      {picked.includes('reactivation') && <p className="sc-sub">Reactivation: nothing today. {REACT_PRICE_LINE}</p>}
-      {quote.founding_left > 0 && <p className="sc-sub sc-found"><Check size={14} strokeWidth={2.6} aria-hidden="true" />Founding price: the first agents keep these prices for 12 months. {quote.founding_left} {quote.founding_left === 1 ? 'place' : 'places'} left.</p>}
+      {picked.includes('reactivation') && <p className="sc-sub">Your own leads: nothing today. {REACT_PRICE_LINE}</p>}
     </div>
   )
 }
@@ -223,7 +222,7 @@ export function SignupCheckout({ portal, sectionRef }) {
             <SignupDetails value={details} onChange={setDetails} notTaking={notTaking} missing={missing} />
           </>}
           {needs.clientsAfter && <p className="ov-card sc-next"><Users size={16} aria-hidden="true" /><span><b>Servicing:</b> you’ll add your clients right after you pay (import a list or add them one by one). The first {P.servicingBase} are included.</span></p>}
-          {picked.includes('reactivation') && <p className="ov-card sc-next"><RotateCcw size={16} aria-hidden="true" /><span><b>Reactivation:</b> upload your first list any time from Leads. {REACT_PRICE_LINE} We check your card first, and you confirm you’re allowed to have them called.</span></p>}
+          {picked.includes('reactivation') && <p className="ov-card sc-next"><RotateCcw size={16} aria-hidden="true" /><span><b>Your own leads:</b> import your first list any time from Leads. {REACT_PRICE_LINE} We check your card first, and you confirm you’re allowed to have them called.</span></p>}
         </div>
         <section className="ov-card lk-co sc-co" aria-label="Checkout">
           <div className="lk-co-top"><h3>{needs.charge ? 'Pay and open your portal' : 'Open your portal'}</h3></div>

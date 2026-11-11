@@ -54,10 +54,10 @@ export const canRemove = (b, key) => stateOf(b, key).kind === 'on' && !(key === 
 
 // The remove confirm, in plain words. ends = the next bill date (iso), for Leads or Servicing.
 export function removeWords(b, key, ends = b?.planMonth?.next || b?.nextFrom) {
-  if (key === 'reactivation') return { title: 'Remove Reactivation?', lines: ['Lists already started keep calling, and each appointment or live call is still charged.', 'You can add it again any time.'], button: 'Remove now' }
+  if (key === 'reactivation') return { title: 'Remove Your own leads?', lines: ['Lists already started keep calling, and each appointment or live call is still charged.', 'You can add it again any time.'], button: 'Remove now' }
   const left = afterRemove(Array.isArray(b?.next) ? b.next : pickedOf(b), key)
   const lines = [`Ends on ${dayWords(ends)}. You keep it until then.`]
-  if (!monthly(left)) lines.push('After that nothing is charged monthly. You keep your portal and Reactivation: free to upload, you pay per appointment or live call we deliver.')
+  if (!monthly(left)) lines.push('After that nothing is charged monthly. You keep your portal and Your own leads: free to upload, you pay per appointment or live call we deliver.')
   if (key === 'leads') lines.push(`New leads stop then. The ${money(PRICES.setupFee)} setup fee isn’t refunded.`)
   return { title: `Remove ${PRODUCTS[key].label}?`, lines, button: `Remove on ${dayWords(ends)}` }
 }
@@ -80,7 +80,7 @@ export function quoteLines(q) {
 // The sample's quote, in the server's shape. A running bill month (Leads or Servicing on) = the days left of it,
 // otherwise a full month from today. Setup: Leads unless Leads was set up before; Servicing only if no setup was paid.
 export function sampleQuote(b, { product, tier = null, daily = null }) {
-  if (product === 'reactivation') return { product, label: 'Reactivation', setup_cents: 0, plan_cents: 0, monthly_cents: 0, days: [], spend_cents: 0, fee_cents: 0, total_cents: 0, prorated: false }
+  if (product === 'reactivation') return { product, label: 'Your own leads', setup_cents: 0, plan_cents: 0, monthly_cents: 0, days: [], spend_cents: 0, fee_cents: 0, total_cents: 0, prorated: false }
   const running = monthly(pickedOf(b))
   const m = b?.planMonth || { today: '2026-11-02', start: '2026-11-01', next: '2026-12-01' }
   const daysIn = daysBetween(m.start, m.next)

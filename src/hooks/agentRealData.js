@@ -11,6 +11,7 @@ import { invokeBilling } from '../lib/billing'
 import { loadProducts, planState, productQuote, productAdd, productRemove, productKeep } from '../lib/leadSpend'
 import { loadSignupDetails, saveSignupDetails } from '../lib/signupDetails'
 import { productsWord } from '../template/productsView'
+import { canServe } from '../lib/products.js'
 import { zoneOf } from '../lib/callSlots'
 import { checkLists } from '../lib/clientCheck'
 import { nightly as nightlyOf, expected } from '../template/spendPlan'
@@ -331,7 +332,7 @@ export function useNeedsReal() {
   const billing = useBillingReal()
   const now = useWallNow()
   const data = useMemo(() => ({
-    now: needsYouNow({ leads: leads.data, checks: checkLists(clients.data, now.slice(0, 10)), toSubmit: unsubmittedSales(leads.data, clients.data) }, now),
+    now: needsYouNow({ leads: leads.data, checks: checkLists(clients.data, now.slice(0, 10)), toSubmit: canServe(billing.data?.picked) ? unsubmittedSales(leads.data, clients.data) : [] }, now),
     fyi: forYourInfo({ leads: leads.data }),
     notices: billingNeedsOf(billing.data),
   }), [leads.data, clients.data, billing.data, now])

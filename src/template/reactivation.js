@@ -37,7 +37,7 @@ const TERMS = { model: 'per_delivered', delivered_cents: 2000, transfer_min_secs
 // ?card=prepaid|declined|shared previews the card check refusing (sample only).
 const cardPreview = () => { try { return new URLSearchParams(window.location.search).get('card') } catch { return null } }
 const CARD_FAIL = {
-  prepaid: ['Prepaid and gift cards can’t be used for reactivation. Add a credit or debit card. (Visa ending 4242)', 'prepaid'],
+  prepaid: ['Prepaid and gift cards can’t be used for importing leads. Add a credit or debit card. (Visa ending 4242)', 'prepaid'],
   declined: ['Your card was declined. Try another card.', 'declined'],
   shared: ['This card is already on another Ohvara account. Use a different card, or contact us.', 'shared_card'],
 }

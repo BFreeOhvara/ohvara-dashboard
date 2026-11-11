@@ -73,8 +73,8 @@ test('P957: a list is free, no minimum; only the new-account room caps it', () =
   assert.deepEqual(listFit(99), { n: 99, fits: 99, over: 0, empty: false })
   assert.deepEqual(listFit(480, { room: 300 }), { n: 480, fits: 300, over: 180, empty: false })
   assert.equal(listFit(0).empty, true)
-  assert.equal(billingLine({ callable: 480, amount_cents: 96000 }), 'Reactivation · 480 leads · $960')
-  assert.equal(billingLine({ callable: 468, amount_cents: 96000, refunded_cents: 2400 }), 'Reactivation · 468 leads · $960 · $24 back')
+  assert.equal(billingLine({ callable: 480, amount_cents: 96000 }), 'Your own leads · 480 leads · $960')
+  assert.equal(billingLine({ callable: 468, amount_cents: 96000, refunded_cents: 2400 }), 'Your own leads · 468 leads · $960 · $24 back')
 })
 
 test('cadence: day 1, 2, 4, 7, 14 then stop', () => {

@@ -31,8 +31,6 @@ test('the client price book is the migration\'s version 3, number for number, an
   assert.match(SQL, new RegExp(`max_daily_cents\\s+int not null default ${BILLING_SETTINGS.max_daily_cents}`))
   assert.match(SQL, new RegExp(`charge_hour\\s+int not null default ${BILLING_SETTINGS.charge_hour}`))
   assert.match(SQL, new RegExp(`retry_hour\\s+int not null default ${BILLING_SETTINGS.retry_hour}`))
-  assert.match(SQL, new RegExp(`founding_count\\s+int not null default ${BILLING_SETTINGS.founding_count}`))
-  assert.match(SQL, new RegExp(`founding_months\\s+int not null default ${BILLING_SETTINGS.founding_months}`))
   assert.match(SQL, new RegExp(`charge_mode\\s+text not null default '${BILLING_SETTINGS.charge_mode}'`))
 })
 
@@ -91,12 +89,11 @@ test('lead plans include every policy sold plus 50 added clients; Add clients sh
   assert.match(readFileSync('src/template/AddClients891.jsx', 'utf8'), /<AddedCost billing=\{billing\} adding=\{ready\} \/>/)
 })
 
-test('the founding lock: the first 20 paying agents keep these prices for 12 months, and it ends', () => {
-  assert.deepEqual([SETTINGS.foundingCount, SETTINGS.foundingMonths], [20, 12])
-  assert.match(SQL, /create or replace function public\.billing_book_for\(/)
-  assert.match(SQL, /founding_until > d/)
+test('P959: no founding price on the portal: no lock row on Billing, no founding setting', () => {
+  assert.equal(SETTINGS.foundingCount, undefined)
+  assert.equal(SETTINGS.foundingMonths, undefined)
   const billing = readFileSync('src/template/screens/Billing.jsx', 'utf8')
-  assert.match(billing, /\['Founding price lock', `Until \$\{b\.founding\.until\}`/) // P910 Billing rebuild
+  assert.doesNotMatch(billing, /Founding price lock|b.founding/)
 })
 
 test('admin revenue and Agent results keep the plan fee and the 12% apart', () => {

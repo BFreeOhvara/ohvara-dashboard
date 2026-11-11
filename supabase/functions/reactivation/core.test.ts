@@ -77,3 +77,10 @@ test('P957: no Twilio = nothing claimed', async () => {
   assert.equal(r.skipped, 'no_twilio')
   assert.equal(calls.length, 0)
 })
+
+test('P959: a no-show after a yes to texts gets the normal rebook text, no link', () => {
+  const b = reactivationTextBody(job({ step: 'bk_noshow' }))!
+  assert.match(b, /^Hi Dana, sorry we missed you\. We'll call shortly to find a new time/)
+  assert.match(b, /Reply STOP to opt out\.$/)
+  assert.doesNotMatch(b, /\{|http/)
+})

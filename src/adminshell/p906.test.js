@@ -42,7 +42,7 @@ test('the plan panel: plan from the spend band, tonight = spend + 12%, every sam
   assert.equal(chargeFor(agents.find(a => a.paused)), null)
   assert.equal(chargeFor(agents.find(a => a.comped)), null)
   const panel = src('./screens/Agents.jsx')
-  for (const w of ['Paid ahead', 'Card on file', 'Last charge', 'Next charge', 'Setup fee', 'Founding lock', 'Pause']) assert.ok(panel.includes(w), w)
+  for (const w of ['Paid ahead', 'Card on file', 'Last charge', 'Next charge', 'Setup fee', 'Pause']) assert.ok(panel.includes(w), w)
 })
 
 test('client statuses are P899: Working · Needs attention · Protected, Closed behind a switch', () => {

@@ -16,7 +16,7 @@ import { answerCheck, markLapsed } from '../../lib/clientCheck.js'
 import { SUPPORT_THREAD } from '../support911.js'
 import { SAMPLE_DEEDSTONE } from '../deedstone.js'
 import { SAMPLE_REACTIVATION } from '../reactivation.js'
-import { norm, afterRemove, PRODUCTS } from '../../lib/products.js'
+import { norm, afterRemove, PRODUCTS, canServe } from '../../lib/products.js'
 import { pickedOf, productsWord, sampleQuote } from '../productsView.js'
 
 // The one door to sample info for the clickable template. Screens read only through the named functions below.
@@ -94,7 +94,7 @@ const seedLeads = [
   // P902: the first call's other outcomes. Gloria said not now with a time (booked as a callback: the booking texts);
   // Lena said not now with no time (Follow up, no texts); Ray said no; Brian was a wrong number (Closed, admin's Lead
   // quality list). Only no answer and booked send texts.
-  // P952: Gloria came from one of the agent's old-lead lists (Reactivate old leads): the AI reached her and booked her.
+  // P952: Gloria came from one of the agent's old-lead lists (Import leads): the AI reached her and booked her.
   mkLead('sample-lead-17', people.gloriap, { stage: 'booked', reactivated: true, firstCall: 'not_now', came: '2026-11-02T11:20', apptAt: '2026-11-03T17:30' }),
   mkLead('sample-lead-18', people.lena, { stage: 'follow_up', status: 'contacted', outcome: 'follow_up', firstCall: 'not_now', came: '2026-11-02T09:05', follow: 'Wed, Nov 4', followAt: '2026-11-04T16:00' }),
   mkLead('sample-lead-19', people.ray, { stage: 'not_interested', status: 'bad', outcome: 'not_interested', firstCall: 'hard_no', reason: 'Not interested on the first call', came: '2026-11-02T09:47' }),
@@ -266,7 +266,7 @@ const SAMPLE_PICKED = (() => { const v = param('products'); const p = v ? norm(v
 const SAMPLE_LEADS = SAMPLE_PICKED.includes('leads')
 const SAMPLE_MONTHLY = SAMPLE_LEADS || SAMPLE_PICKED.includes('servicing')
 // The sample's past charges for what it bought: no lead spend or Growth plan without Leads, Servicing's plan with it.
-const chargesFor = rows => rows.filter(c => (SAMPLE_LEADS || !['lead', 'plan'].includes(c.kind)) && (SAMPLE_MONTHLY || c.kind !== 'setup') && (SAMPLE_PICKED.includes('reactivation') || c.kind !== 'reactivation'))
+const chargesFor = rows => rows.filter(c => (SAMPLE_LEADS || !['lead', 'plan'].includes(c.kind)) && (SAMPLE_MONTHLY || c.kind !== 'setup') && (SAMPLE_PICKED.includes('reactivation') || !String(c.kind).startsWith('reactivation')))
   .concat(!SAMPLE_LEADS && SAMPLE_PICKED.includes('servicing') ? [{ id: 'ch-sv', at: 'Sun, Nov 1', label: 'Servicing, November', kind: 'plan', amount: 499, status: 'paid' }] : [])
 const seed = {
   // P955: no clients without Leads or Servicing (the reactivation-only sample), so its nav shows what it would.
@@ -338,7 +338,7 @@ const seed = {
       ],
     },
     card: { label: 'Visa ending 4242', brand: 'Visa', last4: '4242', exp: '08/28', onFile: param('card') !== 'none' },
-    founding: { no: 7, until: 'Nov 8, 2027' }, setupPaid: SAMPLE_MONTHLY ? 'Mon, Sep 28' : null,
+    setupPaid: SAMPLE_MONTHLY ? 'Mon, Sep 28' : null,
     // P917: past charges (Billing shows tonight's on top): nightly lead spend + 12%, the monthly plan, the setup fee.
     charges: chargesFor([
       { id: 'ch1', at: 'Sun, Nov 1, 8 PM', label: 'Lead spend for Tue, Nov 3', kind: 'lead', amount: 112, spend: 100, fee: 12, status: param('billing') === 'failed' ? 'declined' : 'paid' },
@@ -346,8 +346,9 @@ const seed = {
       { id: 'ch3', at: 'Sat, Oct 31, 8 PM', label: 'Lead spend for Mon, Nov 2', kind: 'lead', amount: 112, spend: 100, fee: 12, status: 'paid' },
       { id: 'ch4', at: 'Fri, Oct 30, 8 PM', label: 'Lead spend for Sun, Nov 1', kind: 'lead', amount: 112, spend: 100, fee: 12, status: 'paid' },
       { id: 'ch5', at: 'Thu, Oct 29, 8 PM', label: 'Lead spend for Sat, Oct 31', kind: 'lead', amount: 107.52, spend: 96, fee: 11.52, status: 'paid' },
-      // P952: an old-lead list (Reactivate old leads), charged when it was sent.
-      { id: 'ch-rx', at: 'Wed, Oct 28', label: 'Reactivation · 480 leads · $960', kind: 'reactivation', amount: 960, status: 'paid' },
+      // P952: an old-lead list (Import leads), charged when it was sent.
+      { id: 'ch-rx', at: 'Wed, Oct 28', label: 'Your own leads · appointment booked · $20', kind: 'reactivation_delivery', amount: 20, status: 'paid' },
+      { id: 'ch-rx2', at: 'Fri, Oct 30', label: 'Your own leads · live call · $20', kind: 'reactivation_delivery', amount: 20, status: 'paid' },
       { id: 'ch6', at: 'Thu, Oct 1', label: 'Plan, Growth, October', kind: 'plan', amount: GROWTH, status: 'paid' },
       { id: 'ch7', at: 'Mon, Sep 28', label: 'Setup fee, one time', kind: 'setup', amount: SETUP_FEE, status: 'paid' },
     ]),
@@ -423,7 +424,7 @@ const SAMPLE_LAUNCH = {
 function useLaunchSample() { return ok(SAMPLE_LAUNCH) }
 function useSettingsSample() { const s = useStore(); return ok(s.settings) }
 // P910: Your to-dos (calls to mark, the monthly check) and, apart, billing notices (a declined card: Fix card).
-function useNeedsSample() { const s = useStore(); return ok(useMemo(() => ({ now: needsYouNow({ leads: s.leads, checks: checkLists(clientsOf(s), SAMPLE_NOW.slice(0, 10), CHECK_DEFAULTS), toSubmit: unsubmittedSales(s.leads, s.clients) }, SAMPLE_NOW), fyi: forYourInfo(s), notices: billingNeeds(s.billing) }), [s])) }
+function useNeedsSample() { const s = useStore(); return ok(useMemo(() => ({ now: needsYouNow({ leads: s.leads, checks: checkLists(clientsOf(s), SAMPLE_NOW.slice(0, 10), CHECK_DEFAULTS), toSubmit: canServe(pickedOf(s.billing)) ? unsubmittedSales(s.leads, s.clients) : [] }, SAMPLE_NOW), fyi: forYourInfo(s), notices: billingNeeds(s.billing) }), [s])) }
 function useSignupSample() {
   return useMemo(() => ok({
     covers: ['Booked appointments and live calls, at a daily spend you set', 'A team that calls every lead right away and books them on your calendar', 'Servicing that keeps your policies on the books', 'Your own portal and phone app'],

@@ -124,7 +124,7 @@ export function ReactivateDrawer({ open, onClose }) {
     </> : null
 
   return (
-    <Drawer open={open} onClose={close} title="Reactivate old leads" sub={`Old leads you bought or collected. Our AI calls each one, books them on your calendar or rings you live. ${reactPriceLine(each)}`} footer={footer}>
+    <Drawer open={open} onClose={close} title="Import leads" sub={`Got your own leads? Import them and we’ll call every one. Each one is booked on your calendar, put through to you live, or taken off your list. ${reactPriceLine(each)}`} footer={footer}>
       {done ? (
         <div className="rx-done" role="status">
           <CircleCheck size={28} aria-hidden="true" />
@@ -132,7 +132,7 @@ export function ReactivateDrawer({ open, onClose }) {
           <p>We check every number against the national Do Not Call and litigator lists first. Calls start after that, from 8 AM to 8 PM in each person’s time zone. Each appointment or live call is <span className="tp-money">{usd0(each)}</span>; you see the person’s name and number once it’s paid.</p>
         </div>
       ) : <>
-        {closed && <p className="bi-err" role="status"><TriangleAlert size={15} aria-hidden="true" />Reactivation opens soon. You can’t send a list yet.</p>}
+        {closed && <p className="bi-err" role="status"><TriangleAlert size={15} aria-hidden="true" />Importing opens soon. You can’t send a list yet.</p>}
         {owed && <p className="bi-err" role="alert"><TriangleAlert size={15} aria-hidden="true" />{CARD_WORDS.card_owed}</p>}
         {limitsLine(terms.limits) && <p className="rx-note">{limitsLine(terms.limits)}</p>}
         <Field label="List name"><input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. 2024 mortgage leads" maxLength={120} /></Field>
@@ -201,7 +201,7 @@ export function ReactivationCards() {
   const shown = lists.filter(l => l.status !== 'cancelled')
   if (!shown.length) return null
   return (
-    <div className="rx-cards" role="region" aria-label="Your old-lead lists">
+    <div className="rx-cards" role="region" aria-label="Your imported lists">
       {shown.map(l => <ListCard key={l.id} l={l} rx={rx} />)}
     </div>
   )

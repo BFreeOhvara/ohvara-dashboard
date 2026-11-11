@@ -17,5 +17,5 @@ export function chargesOf(b) {
     : []
   const past = b.charges || (b.history || []).map(h => ({ ...h, kind: /plan/i.test(h.label) ? 'plan' : /setup/i.test(h.label) ? 'setup' : 'lead', status: 'paid' }))
   // P952/P957: a reactivation list's (or delivered appointment's) charge reads its own line ("Reactivation · 480 leads · $960", the charge's note).
-  return [...next, ...past.map(c => ((c.kind === 'reactivation' || c.kind === 'reactivation_delivery') && !c.label ? { ...c, label: c.note || 'Reactivation' } : c))]
+  return [...next, ...past.map(c => ((c.kind === 'reactivation' || c.kind === 'reactivation_delivery') && !c.label ? { ...c, label: String(c.note || 'Your own leads').replace(/^Reactivation/i, 'Your own leads') } : c))]
 }

@@ -114,7 +114,7 @@ export function agentChip(l, opts) {
   if (key === 'booked' && needsResult(l, opts?.now || clockNow())) return [s.tone, 'Booked · mark result']
   if (key === 'booked' && confirmedByText(l)) return [s.tone, 'Booked · confirmed']
   if (key === 'not_interested') return [s.tone, notInterestedLine(l)]
-  if (key === 'sold' && !l.submitted) return [s.tone, 'Sold · add the policy details']
+  if (key === 'sold' && !l.submitted && !opts?.noServicing) return [s.tone, 'Sold · add the policy details']
   return [s.tone, s.label]
 }
 

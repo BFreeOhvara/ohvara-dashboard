@@ -21,6 +21,12 @@ import { useAgentStates, statesText } from '../useStates'
 import { dayWords } from '../adStates'
 import { ProductsCard } from '../Products955'
 import { useProducts } from '../useProducts'
+import { PRICES } from '../../lib/priceBook.js'
+
+// P959: every agent sees the full Billing layout. What they don't use shows $0 with one quiet line, not nothing.
+function NotOn({ add = 'leads' }) {
+  return <small className="bl-noton">Not on your plan · <Link to={`${paths.billing()}?add=${add}`} className="tp-link">Add</Link></small>
+}
 
 // P878 — Billing, from the hole check (N-G-02, N-G-09, N-H-28, N-A-23, N-A-30, N-I-03, N-I-05). Sample only: nothing is
 // charged. P909: the prices are final (price book version 3). P889: one daily spend and How you take leads (Appointments only, or Appointments +
@@ -304,6 +310,9 @@ export default function Billing() {
   // desk, results or hours here: Servicing pays its month, Reactivation pays per delivered appointment (P957).
   const { has } = useProducts()
   const leads = has('leads')
+  // P959: what "Your own leads" has charged ($20 per delivered appointment or live call, once paid)
+  const ownRows = chargesOf(b).filter(c => c.kind === 'reactivation' || c.kind === 'reactivation_delivery')
+  const ownTotal = ownRows.reduce((t, c) => t + (Number(c.amount) || 0), 0)
   const n = b.nightNow
   const noCard = leads && b.card && !b.card.onFile && b.products !== 'servicing'
   const tierNow = planOf(b)
@@ -332,7 +341,6 @@ export default function Billing() {
     else note(`You stay on ${tierNow.label}. Sample only`)
   }
   const undo = () => { undoPlanChange(); note(`You stay on ${tierNow.label}. The change on ${b.planNext.on} is cancelled. Sample only`) }
-  const lock = b.founding ? ['Founding price lock', `Until ${b.founding.until}`, `Founding agent #${b.founding.no}: your prices don’t change until then`] : null
   const next = unpaid
     ? { big: `${unpaid.day} first`, sub: `We try ${unpaid.day} again at 8 AM. ${n.forDay} is charged once it goes through` }
     : { big: money2(n.tonight.total), sub: `${b.nightly.at} · lead spend for ${n.forDay} · ${deskParts(n.tonight.net, n.tonight.fee)}${n.tonight.credit > 0 ? ` · ${money(n.tonight.credit)} credit used` : ''}` }
@@ -371,7 +379,6 @@ export default function Billing() {
         <dl className="bl-rows">
           <div><dt>Next plan bill</dt><dd><b>{b.nextBill || 'With your first charge'}</b><small>Covers the team, servicing, portal and app</small></dd></div>
           {pendingTo && <div data-row="plan-next"><dt>Plan change</dt><dd><b>Changes to {pendingTo.label} on {b.planNext.on}</b><small>{money(pendingTo.monthly)} a month from then. You keep {tierNow.label} until then</small><button type="button" className="tp-btn ov-ghost bl-undo" onClick={undo}>Undo</button></dd></div>}
-          {lock && <div data-row="lock"><dt>{lock[0]}</dt><dd><b>{lock[1]}</b><small>{lock[2]}</small></dd></div>}
           {/* P949: the one campaign setting agents change themselves */}
           <div data-row="states"><dt>Your states</dt><dd><b>{statesText(st.states)}</b><small>{st.waiting ? `Changing ${dayWords(st.waiting.starts)}` : 'Your leads only come from these states'}</small></dd></div>
         </dl>
@@ -380,6 +387,18 @@ export default function Billing() {
           <button type="button" className="tp-btn ov-ghost" data-open="states" onClick={() => setPanel('states')}><MapPin size={15} />Your states</button>
           {b.pending && <small className="bl-pending">{b.pending.starts}</small>}
         </div>
+      </section>}
+
+      {!leads && <section className="fx-tile is-fill is-blue fx-s7 bl-plan" style={{ '--i': 0 }} aria-label="Your plan">
+        <header className="fx-tile-h"><span className="tp-grow"><h2>Your plan</h2><p>Month to month. Cancel anytime</p></span><SampleTag /></header>
+        <div className="bl-plan-hero">
+          <span><small>Current plan</small><b className="bl-plan-name">{has('servicing') ? 'Servicing' : 'No monthly plan'}</b></span>
+          <span><small>Plan price</small><b className="tp-money">{money(has('servicing') ? PRICES.servicingOnly : 0)}<small> / month</small></b></span>
+          <span><small>Daily lead spend</small><b className="tp-money">$0<small> / day</small></b><NotOn /></span>
+        </div>
+        {has('reactivation') && <dl className="bl-rows">
+          <div data-row="own"><dt>Your own leads</dt><dd><b className="tp-money">{money2(ownTotal)}</b><small>{ownRows.length ? `${ownRows.length} charged so far` : 'Nothing charged yet'} · $20 per appointment or live call we deliver. Free to upload</small></dd></div>
+        </dl>}
       </section>}
 
       {/* Payment method and the next charge */}
@@ -397,9 +416,31 @@ export default function Billing() {
       </section>
 
       <section className="fx-tile fx-s7 bl-ch" style={{ '--i': 2 }} aria-label="Charges">
-        <header className="fx-tile-h"><span className="tp-grow"><h2>Charges</h2><p>{leads ? `Lead spend each night, your plan each month (and the difference when you move up), the ${money(SETUP_FEE)} setup fee once.` : has('servicing') ? `Servicing each month, the ${money(SETUP_FEE)} setup fee once, and any list you send.` : 'Each list you send. Nothing monthly.'} Sample amounts.</p></span></header>
-        <Charges rows={chargesOf(b)} />
+        <header className="fx-tile-h"><span className="tp-grow"><h2>Charges</h2><p>{leads ? `Lead spend each night, your plan each month (and the difference when you move up), the ${money(SETUP_FEE)} setup fee once.` : has('servicing') ? `Servicing each month, the ${money(SETUP_FEE)} setup fee once, and each appointment or live call we deliver for your own leads.` : '$20 for each appointment or live call we deliver. Nothing monthly.'} Sample amounts.</p></span></header>
+        <Charges rows={leads ? chargesOf(b) : chargesOf(b).filter(c => c.kind !== 'lead' && !c.tonight)} />
       </section>
+
+      {!leads && <>
+      <div className="fx-s5 bl-side">
+      <section className="fx-tile bl-paid" style={{ '--i': 3 }} aria-label="Paid ahead">
+        <header className="fx-tile-h"><span className="tp-grow"><h2>Paid ahead</h2><p>Lead spend paid a day in hand</p></span></header>
+        <p className="bl-zero"><b className="tp-money">$0</b></p>
+        <NotOn />
+      </section>
+      <section className="fx-tile bl-desk" style={{ '--i': 4 }} aria-label="Booking desk">
+        <header className="fx-tile-h"><span className="tp-grow"><h2>Booking desk</h2><p>On top of your lead spend</p></span></header>
+        <dl className="bl-desk-nums">
+          <div><dt>Each night</dt><dd><b className="tp-money">$0</b></dd></div>
+          <div><dt>About a month</dt><dd><b className="tp-money">$0</b></dd></div>
+        </dl>
+        <NotOn />
+      </section>
+      </div>
+      <section className="fx-tile fx-s12 bl-results" id="results" style={{ '--i': 4 }} aria-label="Results">
+        <header className="fx-tile-h"><span className="tp-grow"><h2>Results</h2><p>What your lead spend bought</p></span><NotOn /></header>
+        <ResultTiles rows={[]} />
+      </section>
+      </>}
 
       {leads && <>
       <div className="fx-s5 bl-side">
