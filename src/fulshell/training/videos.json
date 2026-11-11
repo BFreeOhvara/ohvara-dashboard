@@ -362,10 +362,10 @@
    "kind": "explainer",
    "title": "Start of your shift",
    "duration": 139.2,
-   "src": "v948/desk.mp4",
-   "poster": "v948/desk-poster.jpg",
-   "captions": "v948/desk.captions.json",
-   "vtt": "v948/desk.vtt",
+   "src": "v960/desk.mp4",
+   "poster": "v960/desk-poster.jpg",
+   "captions": "v960/desk.captions.json",
+   "vtt": "v960/desk.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -409,17 +409,17 @@
     }
    ],
    "helpAt": {},
-   "sizeBytes": 6213249,
-   "builtAt": "2026-11-11T01:16:26.150Z"
+   "sizeBytes": 6179774,
+   "builtAt": "2026-11-11T19:11:06.048Z"
   },
   "escalate": {
    "kind": "explainer",
    "title": "When to escalate, and to whom",
    "duration": 155.9,
-   "src": "v948/escalate.mp4",
-   "poster": "v948/escalate-poster.jpg",
-   "captions": "v948/escalate.captions.json",
-   "vtt": "v948/escalate.vtt",
+   "src": "v960/escalate.mp4",
+   "poster": "v960/escalate-poster.jpg",
+   "captions": "v960/escalate.captions.json",
+   "vtt": "v960/escalate.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -478,8 +478,8 @@
     "conversion": 17,
     "claim_help": 11
    },
-   "sizeBytes": 7045666,
-   "builtAt": "2026-11-11T01:45:49.594Z"
+   "sizeBytes": 7017565,
+   "builtAt": "2026-11-11T19:19:59.318Z"
   },
   "inbound": {
    "kind": "walkthrough",
@@ -634,10 +634,10 @@
    "kind": "explainer",
    "title": "What to steer clear of",
    "duration": 163.5,
-   "src": "v948/never.mp4",
-   "poster": "v948/never-poster.jpg",
-   "captions": "v948/never.captions.json",
-   "vtt": "v948/never.vtt",
+   "src": "v960/never.mp4",
+   "poster": "v960/never-poster.jpg",
+   "captions": "v960/never.captions.json",
+   "vtt": "v960/never.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -701,17 +701,17 @@
     }
    ],
    "helpAt": {},
-   "sizeBytes": 7560788,
-   "builtAt": "2026-11-11T01:23:59.627Z"
+   "sizeBytes": 7506046,
+   "builtAt": "2026-11-11T19:27:34.111Z"
   },
   "optout": {
    "kind": "explainer",
    "title": "Opt-outs and do-not-call",
    "duration": 154.2,
-   "src": "v948/optout.mp4",
-   "poster": "v948/optout-poster.jpg",
-   "captions": "v948/optout.captions.json",
-   "vtt": "v948/optout.vtt",
+   "src": "v960/optout.mp4",
+   "poster": "v960/optout-poster.jpg",
+   "captions": "v960/optout.captions.json",
+   "vtt": "v960/optout.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -763,8 +763,8 @@
     }
    ],
    "helpAt": {},
-   "sizeBytes": 6886106,
-   "builtAt": "2026-11-11T01:59:33.471Z"
+   "sizeBytes": 6868816,
+   "builtAt": "2026-11-11T19:31:48.179Z"
   },
   "packets": {
    "kind": "walkthrough",
@@ -940,10 +940,10 @@
    "kind": "explainer",
    "title": "Reminders, no-shows and rebooks",
    "duration": 141.9,
-   "src": "v948/reminders.mp4",
-   "poster": "v948/reminders-poster.jpg",
-   "captions": "v948/reminders.captions.json",
-   "vtt": "v948/reminders.vtt",
+   "src": "v960/reminders.mp4",
+   "poster": "v960/reminders-poster.jpg",
+   "captions": "v960/reminders.captions.json",
+   "vtt": "v960/reminders.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -991,17 +991,17 @@
     }
    ],
    "helpAt": {},
-   "sizeBytes": 6368596,
-   "builtAt": "2026-11-11T01:16:37.219Z"
+   "sizeBytes": 6351618,
+   "builtAt": "2026-11-11T19:11:06.517Z"
   },
   "saves": {
    "kind": "explainer",
    "title": "Cancellation saves",
    "duration": 151.2,
-   "src": "v948/saves.mp4",
-   "poster": "v948/saves-poster.jpg",
-   "captions": "v948/saves.captions.json",
-   "vtt": "v948/saves.vtt",
+   "src": "v960/saves.mp4",
+   "poster": "v960/saves-poster.jpg",
+   "captions": "v960/saves.captions.json",
+   "vtt": "v960/saves.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -1051,8 +1051,8 @@
    "helpAt": {
     "lapse_save": 12.8
    },
-   "sizeBytes": 6637675,
-   "builtAt": "2026-11-11T01:31:52.690Z"
+   "sizeBytes": 6563647,
+   "builtAt": "2026-11-11T19:19:42.741Z"
   },
   "speed": {
    "kind": "walkthrough",
@@ -1328,10 +1328,10 @@
    "kind": "explainer",
    "title": "Time off and pay",
    "duration": 122.7,
-   "src": "v948/timeoff.mp4",
-   "poster": "v948/timeoff-poster.jpg",
-   "captions": "v948/timeoff.captions.json",
-   "vtt": "v948/timeoff.vtt",
+   "src": "v960/timeoff.mp4",
+   "poster": "v960/timeoff-poster.jpg",
+   "captions": "v960/timeoff.captions.json",
+   "vtt": "v960/timeoff.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -1377,8 +1377,8 @@
    "helpAt": {
     "dayoff": 21.2
    },
-   "sizeBytes": 5437675,
-   "builtAt": "2026-11-11T01:07:37.148Z"
+   "sizeBytes": 5522929,
+   "builtAt": "2026-11-11T19:38:23.517Z"
   }
  }
 }

@@ -56,3 +56,16 @@ export function cueAt(cues, t) {
   for (let i = 0; i < c.words.length; i++) if (c.words[i].t <= t) w = i
   return { i: hit, words: c.words.map(x => x.w), now: w }
 }
+
+// P960 — one caption source: the lesson video's own text track (drawn by the browser, so it looks and behaves the same
+// in the page, in fullscreen and on phones). Each line becomes WebVTT cue text with a timestamp before every word after
+// the first, so the words already said can be styled apart (video::cue(:past)).
+const pad = (n, w) => String(n).padStart(w, '0')
+export function vttTime(t) {
+  const ms = Math.round(Math.max(0, t) * 1000)
+  return `${pad(Math.floor(ms / 3600000), 2)}:${pad(Math.floor(ms / 60000) % 60, 2)}:${pad(Math.floor(ms / 1000) % 60, 2)}.${pad(ms % 1000, 3)}`
+}
+const escVtt = w => String(w).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+export function cueMarkup(c) {
+  return c.words.map((x, i) => (i === 0 ? escVtt(x.w) : `<${vttTime(x.t)}>${escVtt(x.w)}`)).join(' ')
+}
