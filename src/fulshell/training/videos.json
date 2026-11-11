@@ -5,10 +5,10 @@
    "kind": "walkthrough",
    "title": "Booking an appointment",
    "duration": 147,
-   "src": "booking.mp4",
-   "poster": "booking-poster.jpg",
-   "captions": "booking.captions.json",
-   "vtt": "booking.vtt",
+   "src": "v948/booking.mp4",
+   "poster": "v948/booking-poster.jpg",
+   "captions": "v948/booking.captions.json",
+   "vtt": "v948/booking.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -74,17 +74,17 @@
    "helpAt": {
     "booking": 41.8
    },
-   "sizeBytes": 5524881,
-   "builtAt": "2026-11-10T02:36:38.830Z"
+   "sizeBytes": 5483646,
+   "builtAt": "2026-11-11T01:32:22.089Z"
   },
   "callbacks": {
    "kind": "walkthrough",
    "title": "Callbacks",
    "duration": 140.9,
-   "src": "callbacks.mp4",
-   "poster": "callbacks-poster.jpg",
-   "captions": "callbacks.captions.json",
-   "vtt": "callbacks.vtt",
+   "src": "v948/callbacks.mp4",
+   "poster": "v948/callbacks-poster.jpg",
+   "captions": "v948/callbacks.captions.json",
+   "vtt": "v948/callbacks.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -134,17 +134,17 @@
    "helpAt": {
     "callback": 23.7
    },
-   "sizeBytes": 5385720,
-   "builtAt": "2026-11-10T02:35:53.142Z"
+   "sizeBytes": 5397680,
+   "builtAt": "2026-11-11T02:05:56.025Z"
   },
   "carrier": {
    "kind": "explainer",
    "title": "Cancelling the old policy",
    "duration": 150,
-   "src": "carrier.mp4",
-   "poster": "carrier-poster.jpg",
-   "captions": "carrier.captions.json",
-   "vtt": "carrier.vtt",
+   "src": "v948/carrier.mp4",
+   "poster": "v948/carrier-poster.jpg",
+   "captions": "v948/carrier.captions.json",
+   "vtt": "v948/carrier.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -198,17 +198,17 @@
    "helpAt": {
     "carrier_call": 70.9
    },
-   "sizeBytes": 6572226,
-   "builtAt": "2026-11-10T07:29:13.621Z"
+   "sizeBytes": 6582173,
+   "builtAt": "2026-11-11T01:58:30.815Z"
   },
   "changes": {
    "kind": "walkthrough",
    "title": "Policy changes",
    "duration": 190.5,
-   "src": "changes.mp4",
-   "poster": "changes-poster.jpg",
-   "captions": "changes.captions.json",
-   "vtt": "changes.vtt",
+   "src": "v948/changes.mp4",
+   "poster": "v948/changes-poster.jpg",
+   "captions": "v948/changes.captions.json",
+   "vtt": "v948/changes.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -297,17 +297,17 @@
     "beneficiary_change": 139.3,
     "annual_review": 158
    },
-   "sizeBytes": 7559189,
-   "builtAt": "2026-11-10T02:46:32.465Z"
+   "sizeBytes": 7507595,
+   "builtAt": "2026-11-11T02:02:54.529Z"
   },
   "checkins": {
    "kind": "explainer",
    "title": "Check-in texts at day 30, 60 and 90",
-   "duration": 130,
-   "src": "checkins.mp4",
-   "poster": "checkins-poster.jpg",
-   "captions": "checkins.captions.json",
-   "vtt": "checkins.vtt",
+   "duration": 130.4,
+   "src": "v948/checkins.mp4",
+   "poster": "v948/checkins-poster.jpg",
+   "captions": "v948/checkins.captions.json",
+   "vtt": "v948/checkins.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -338,98 +338,88 @@
      "label": "If they reply STOP"
     },
     {
-     "t": 79,
+     "t": 79.4,
      "label": "No reply after day 90"
     },
     {
-     "t": 87.5,
+     "t": 87.9,
      "label": "Do’s and don’ts"
     },
     {
-     "t": 100.9,
+     "t": 101.4,
      "label": "Recap"
     },
     {
-     "t": 122.4,
+     "t": 122.8,
      "label": "Now try it"
     }
    ],
    "helpAt": {},
-   "sizeBytes": 5884088,
-   "builtAt": "2026-11-10T07:41:07.754Z"
+   "sizeBytes": 5916229,
+   "builtAt": "2026-11-11T01:39:13.247Z"
   },
   "desk": {
    "kind": "explainer",
-   "title": "The desk and your shifts",
-   "duration": 162,
-   "src": "desk.mp4",
-   "poster": "desk-poster.jpg",
-   "captions": "desk.captions.json",
-   "vtt": "desk.vtt",
+   "title": "Start of your shift",
+   "duration": 139.2,
+   "src": "v948/desk.mp4",
+   "poster": "v948/desk-poster.jpg",
+   "captions": "v948/desk.captions.json",
+   "vtt": "v948/desk.vtt",
    "chapters": [
     {
      "t": 0.4,
-     "label": "The desk and your shifts"
+     "label": "Start of your shift"
     },
     {
-     "t": 14.6,
+     "t": 16.2,
      "label": "When you work"
     },
     {
-     "t": 25.9,
+     "t": 27.4,
      "label": "Who else is on"
     },
     {
-     "t": 36.8,
+     "t": 38.3,
      "label": "Check the Schedule"
     },
     {
-     "t": 46.7,
+     "t": 48.2,
      "label": "Clock in"
     },
     {
-     "t": 66.1,
-     "label": "Request a day off"
+     "t": 67.6,
+     "label": "Away and clock out"
     },
     {
-     "t": 82.3,
-     "label": "Day-off limits"
-    },
-    {
-     "t": 94.6,
-     "label": "Example: you can’t work Friday"
-    },
-    {
-     "t": 107.2,
+     "t": 81.2,
      "label": "Stepping away"
     },
     {
-     "t": 116,
+     "t": 90,
      "label": "Three good habits"
     },
     {
-     "t": 127.7,
+     "t": 103,
      "label": "Recap"
     },
     {
-     "t": 153.4,
+     "t": 128.1,
      "label": "Now try it"
     }
    ],
-   "helpAt": {
-    "dayoff": 66.1
-   },
-   "sizeBytes": 7313673,
-   "builtAt": "2026-11-10T02:50:15.633Z"
+   "helpAt": {},
+   "sizeBytes": 6213249,
+   "builtAt": "2026-11-11T01:16:26.150Z"
   },
   "escalate": {
    "kind": "explainer",
    "title": "When to escalate, and to whom",
    "duration": 155.9,
-   "src": "escalate.mp4",
-   "poster": "escalate-poster.jpg",
-   "captions": "escalate.captions.json",
-   "vtt": "escalate.vtt",
+   "src": "v948/escalate.mp4",
+   "poster": "v948/escalate-poster.jpg",
+   "captions": "v948/escalate.captions.json",
+   "vtt": "v948/escalate.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -488,17 +478,17 @@
     "conversion": 17,
     "claim_help": 11
    },
-   "sizeBytes": 7045808,
-   "builtAt": "2026-11-10T02:55:39.407Z"
+   "sizeBytes": 7045666,
+   "builtAt": "2026-11-11T01:45:49.594Z"
   },
   "inbound": {
    "kind": "walkthrough",
    "title": "Answering a call that comes in",
    "duration": 157,
-   "src": "inbound.mp4",
-   "poster": "inbound-poster.jpg",
-   "captions": "inbound.captions.json",
-   "vtt": "inbound.vtt",
+   "src": "v948/inbound.mp4",
+   "poster": "v948/inbound-poster.jpg",
+   "captions": "v948/inbound.captions.json",
+   "vtt": "v948/inbound.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -564,17 +554,17 @@
    "helpAt": {
     "answer": 30.7
    },
-   "sizeBytes": 6719258,
-   "builtAt": "2026-11-10T02:57:54.986Z"
+   "sizeBytes": 6728864,
+   "builtAt": "2026-11-11T01:22:04.388Z"
   },
   "logging": {
    "kind": "walkthrough",
    "title": "Logging every call",
    "duration": 152.3,
-   "src": "logging.mp4",
-   "poster": "logging-poster.jpg",
-   "captions": "logging.captions.json",
-   "vtt": "logging.vtt",
+   "src": "v948/logging.mp4",
+   "poster": "v948/logging-poster.jpg",
+   "captions": "v948/logging.captions.json",
+   "vtt": "v948/logging.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -637,91 +627,91 @@
     "dialer": 12.3,
     "logging": 42.2
    },
-   "sizeBytes": 6198580,
-   "builtAt": "2026-11-10T03:01:52.141Z"
+   "sizeBytes": 6191282,
+   "builtAt": "2026-11-11T01:51:12.104Z"
   },
   "never": {
    "kind": "explainer",
-   "title": "What never to say",
-   "duration": 163.2,
-   "src": "never.mp4",
-   "poster": "never-poster.jpg",
-   "captions": "never.captions.json",
-   "vtt": "never.vtt",
+   "title": "What to steer clear of",
+   "duration": 163.5,
+   "src": "v948/never.mp4",
+   "poster": "v948/never-poster.jpg",
+   "captions": "v948/never.captions.json",
+   "vtt": "v948/never.vtt",
    "chapters": [
     {
      "t": 0.4,
-     "label": "What never to say"
+     "label": "What to steer clear of"
     },
     {
-     "t": 13.8,
+     "t": 14.1,
      "label": "Why: you are not the agent"
     },
     {
-     "t": 24.8,
+     "t": 25.1,
      "label": "Rule 1: Never quote a price"
     },
     {
-     "t": 36.9,
+     "t": 37.2,
      "label": "Rule 2: Never promise anything"
     },
     {
-     "t": 47.3,
+     "t": 47.6,
      "label": "Rule 3: Never give advice"
     },
     {
-     "t": 57.2,
+     "t": 57.6,
      "label": "Rule 4: Never tell anyone to drop a policy"
     },
     {
-     "t": 64.8,
+     "t": 65.2,
      "label": "Leads and clients hear one name"
     },
     {
-     "t": 73.7,
+     "t": 74,
      "label": "Agents never hear"
     },
     {
-     "t": 87.2,
+     "t": 87.5,
      "label": "When it’s the agent’s question"
     },
     {
-     "t": 95.4,
+     "t": 95.8,
      "label": "A lead asks about price"
     },
     {
-     "t": 109.9,
+     "t": 110.2,
      "label": "A client asks for advice"
     },
     {
-     "t": 121.4,
+     "t": 121.7,
      "label": "Send to agent"
     },
     {
-     "t": 130.2,
+     "t": 130.5,
      "label": "The one phrase to remember"
     },
     {
-     "t": 139.2,
+     "t": 139.5,
      "label": "Recap"
     },
     {
-     "t": 157,
+     "t": 157.4,
      "label": "Now take the check"
     }
    ],
    "helpAt": {},
-   "sizeBytes": 7484318,
-   "builtAt": "2026-11-10T03:07:29.822Z"
+   "sizeBytes": 7560788,
+   "builtAt": "2026-11-11T01:23:59.627Z"
   },
   "optout": {
    "kind": "explainer",
    "title": "Opt-outs and do-not-call",
    "duration": 154.2,
-   "src": "optout.mp4",
-   "poster": "optout-poster.jpg",
-   "captions": "optout.captions.json",
-   "vtt": "optout.vtt",
+   "src": "v948/optout.mp4",
+   "poster": "v948/optout-poster.jpg",
+   "captions": "v948/optout.captions.json",
+   "vtt": "v948/optout.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -773,17 +763,17 @@
     }
    ],
    "helpAt": {},
-   "sizeBytes": 6899194,
-   "builtAt": "2026-11-10T03:08:40.979Z"
+   "sizeBytes": 6886106,
+   "builtAt": "2026-11-11T01:59:33.471Z"
   },
   "packets": {
    "kind": "walkthrough",
    "title": "Sending packets",
    "duration": 167.2,
-   "src": "packets.mp4",
-   "poster": "packets-poster.jpg",
-   "captions": "packets.captions.json",
-   "vtt": "packets.vtt",
+   "src": "v948/packets.mp4",
+   "poster": "v948/packets-poster.jpg",
+   "captions": "v948/packets.captions.json",
+   "vtt": "v948/packets.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -858,17 +848,17 @@
     "packet_check": 31,
     "review_call": 133.5
    },
-   "sizeBytes": 7675540,
-   "builtAt": "2026-11-10T03:11:18.677Z"
+   "sizeBytes": 7700099,
+   "builtAt": "2026-11-11T01:04:59.954Z"
   },
   "payments": {
    "kind": "walkthrough",
    "title": "Failed payments",
    "duration": 160.7,
-   "src": "payments.mp4",
-   "poster": "payments-poster.jpg",
-   "captions": "payments.captions.json",
-   "vtt": "payments.vtt",
+   "src": "v948/payments.mp4",
+   "poster": "v948/payments-poster.jpg",
+   "captions": "v948/payments.captions.json",
+   "vtt": "v948/payments.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -943,17 +933,17 @@
     "payment_change": 10,
     "chargeback_watch": 124.3
    },
-   "sizeBytes": 7195182,
-   "builtAt": "2026-11-10T03:17:02.016Z"
+   "sizeBytes": 7181594,
+   "builtAt": "2026-11-11T01:09:23.201Z"
   },
   "reminders": {
    "kind": "explainer",
    "title": "Reminders, no-shows and rebooks",
    "duration": 141.9,
-   "src": "reminders.mp4",
-   "poster": "reminders-poster.jpg",
-   "captions": "reminders.captions.json",
-   "vtt": "reminders.vtt",
+   "src": "v948/reminders.mp4",
+   "poster": "v948/reminders-poster.jpg",
+   "captions": "v948/reminders.captions.json",
+   "vtt": "v948/reminders.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -1001,17 +991,17 @@
     }
    ],
    "helpAt": {},
-   "sizeBytes": 6356514,
-   "builtAt": "2026-11-10T07:35:44.569Z"
+   "sizeBytes": 6368596,
+   "builtAt": "2026-11-11T01:16:37.219Z"
   },
   "saves": {
    "kind": "explainer",
    "title": "Cancellation saves",
-   "duration": 150.8,
-   "src": "saves.mp4",
-   "poster": "saves-poster.jpg",
-   "captions": "saves.captions.json",
-   "vtt": "saves.vtt",
+   "duration": 151.2,
+   "src": "v948/saves.mp4",
+   "poster": "v948/saves-poster.jpg",
+   "captions": "v948/saves.captions.json",
+   "vtt": "v948/saves.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -1034,44 +1024,44 @@
      "label": "Fix it, or book the agent"
     },
     {
-     "t": 63.4,
+     "t": 63.8,
      "label": "A payment problem"
     },
     {
-     "t": 74.8,
+     "t": 75.2,
      "label": "A client says it’s too expensive"
     },
     {
-     "t": 88.6,
+     "t": 89,
      "label": "Never pressure"
     },
     {
-     "t": 98.4,
+     "t": 98.8,
      "label": "It can't be saved"
     },
     {
-     "t": 118,
+     "t": 118.4,
      "label": "Recap"
     },
     {
-     "t": 142,
+     "t": 142.3,
      "label": "Now try it"
     }
    ],
    "helpAt": {
     "lapse_save": 12.8
    },
-   "sizeBytes": 6583882,
-   "builtAt": "2026-11-10T03:22:50.295Z"
+   "sizeBytes": 6637675,
+   "builtAt": "2026-11-11T01:31:52.690Z"
   },
   "speed": {
    "kind": "walkthrough",
    "title": "Working in bookings",
    "duration": 146.9,
-   "src": "speed.mp4",
-   "poster": "speed-poster.jpg",
-   "captions": "speed.captions.json",
-   "vtt": "speed.vtt",
+   "src": "v948/speed.mp4",
+   "poster": "v948/speed-poster.jpg",
+   "captions": "v948/speed.captions.json",
+   "vtt": "v948/speed.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -1127,17 +1117,17 @@
     "calendar": 52.6,
     "handoff_call": 68.2
    },
-   "sizeBytes": 5869154,
-   "builtAt": "2026-11-10T03:24:25.518Z"
+   "sizeBytes": 5855468,
+   "builtAt": "2026-11-11T01:44:54.105Z"
   },
   "transfer": {
    "kind": "walkthrough",
    "title": "Live transfers to the agent",
    "duration": 154.5,
-   "src": "transfer.mp4",
-   "poster": "transfer-poster.jpg",
-   "captions": "transfer.captions.json",
-   "vtt": "transfer.vtt",
+   "src": "v948/transfer.mp4",
+   "poster": "v948/transfer-poster.jpg",
+   "captions": "v948/transfer.captions.json",
+   "vtt": "v948/transfer.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -1195,17 +1185,17 @@
    "helpAt": {
     "transfer": 61.2
    },
-   "sizeBytes": 5769728,
-   "builtAt": "2026-11-10T03:25:42.430Z"
+   "sizeBytes": 5762879,
+   "builtAt": "2026-11-11T01:27:12.835Z"
   },
   "fromai": {
    "kind": "walkthrough",
    "title": "The AI caller and you",
    "duration": 131.6,
-   "src": "fromai.mp4",
-   "poster": "fromai-poster.jpg",
-   "captions": "fromai.captions.json",
-   "vtt": "fromai.vtt",
+   "src": "v948/fromai.mp4",
+   "poster": "v948/fromai-poster.jpg",
+   "captions": "v948/fromai.captions.json",
+   "vtt": "v948/fromai.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -1251,17 +1241,17 @@
    "helpAt": {
     "ai_handoff": 40.8
    },
-   "sizeBytes": 5112847,
-   "builtAt": "2026-11-10T02:53:31.968Z"
+   "sizeBytes": 5099884,
+   "builtAt": "2026-11-11T01:37:56.057Z"
   },
   "welcome": {
    "kind": "walkthrough",
    "title": "Welcome calls for clients an agent added",
    "duration": 154.4,
-   "src": "welcome.mp4",
-   "poster": "welcome-poster.jpg",
-   "captions": "welcome.captions.json",
-   "vtt": "welcome.vtt",
+   "src": "v948/welcome.mp4",
+   "poster": "v948/welcome-poster.jpg",
+   "captions": "v948/welcome.captions.json",
+   "vtt": "v948/welcome.vtt",
    "chapters": [
     {
      "t": 0.4,
@@ -1331,8 +1321,64 @@
    "helpAt": {
     "welcome_call": 63.7
    },
-   "sizeBytes": 6956229,
-   "builtAt": "2026-11-10T03:28:01.945Z"
+   "sizeBytes": 6916415,
+   "builtAt": "2026-11-11T01:50:04.996Z"
+  },
+  "timeoff": {
+   "kind": "explainer",
+   "title": "Time off and pay",
+   "duration": 122.7,
+   "src": "v948/timeoff.mp4",
+   "poster": "v948/timeoff-poster.jpg",
+   "captions": "v948/timeoff.captions.json",
+   "vtt": "v948/timeoff.vtt",
+   "chapters": [
+    {
+     "t": 0.4,
+     "label": "Time off and pay"
+    },
+    {
+     "t": 13.4,
+     "label": "Three days a month"
+    },
+    {
+     "t": 21.2,
+     "label": "Request a day off"
+    },
+    {
+     "t": 39.2,
+     "label": "Day-off limits"
+    },
+    {
+     "t": 51.4,
+     "label": "Example: you can’t work Friday"
+    },
+    {
+     "t": 64,
+     "label": "Swaps"
+    },
+    {
+     "t": 73.7,
+     "label": "Your pay"
+    },
+    {
+     "t": 83.1,
+     "label": "Payday"
+    },
+    {
+     "t": 91.9,
+     "label": "Recap"
+    },
+    {
+     "t": 111.5,
+     "label": "Now try it"
+    }
+   ],
+   "helpAt": {
+    "dayoff": 21.2
+   },
+   "sizeBytes": 5437675,
+   "builtAt": "2026-11-11T01:07:37.148Z"
   }
  }
 }

@@ -215,3 +215,12 @@
 .tr-tile-mid small { display: block; margin-top: 2px; font-size: 12.5px; color: var(--ov-mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tr-tile-mid .tp-grow { min-width: 0; }
 .tr-tile-go { align-self: flex-start; margin-top: auto; }
+
+/* P948 — Show me how: the note when they come back from the practice copy, and the lesson's practice box */
+.tr-practised { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 10px 12px; border-radius: 14px; color: var(--ov-hi);
+  background: color-mix(in srgb, var(--accent) 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
+.tr-practised.is-done svg:first-child { color: var(--ov-up, var(--accent)); }
+.tr-practised-x { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 0; border-radius: 50%; color: var(--ov-mid); background: transparent; cursor: pointer; }
+.tr-practised-x:hover { color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 8%, transparent); }
+.tr-practice-why { font-size: 13px; }
+.tr-cta .tp-btn.ov-ghost + .tp-btn, .tr-cta .tp-primary + .tp-btn { margin-top: -2px; }

@@ -4,6 +4,8 @@
 // No React, no network (node tests). The sample mode keeps the admin's number in this browser (shared by the admin
 // and VA previews), the real mode reads app_settings.
 
+import { practiceOn } from './practice.js'
+
 export const OPEN_MIN_DEFAULT = 5
 const KEY = 'ohvara-va-call-open-min'
 
@@ -18,6 +20,8 @@ export function openMinutes(v) {
 // A call with no booked time (not a booking) is always open; a done one never is.
 export function callGate({ iso, done = false, nowMs, lead = OPEN_MIN_DEFAULT }) {
   if (done) return { open: false, done: true, at: null, left: 0 }
+  // P948: in the practice copy every call can be started (nothing dials), so a walkthrough works at any time of day.
+  if (practiceOn()) return { open: true, done: false, at: null, left: 0 }
   const t = iso ? Date.parse(iso) : NaN
   if (!Number.isFinite(t)) return { open: true, done: false, at: null, left: 0 }
   const at = t - openMinutes(lead) * 60e3

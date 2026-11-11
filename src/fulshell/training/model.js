@@ -16,10 +16,23 @@ export function scoreCheck(lesson, answers) {
   return { correct, total, pct, pass: pct >= PASS_MARK - 1e-9, wrong }
 }
 
+// P948: the old first lesson ('desk') also taught days off; that part is its own lesson now ('timeoff'). A VA who passed
+// the old one keeps it passed, so finishing training stays finished (the P936 gate) after the split.
+export const CARRY = { timeoff: 'desk' }
+export function carried(p = emptyProgress) {
+  let out = p
+  for (const [id, from] of Object.entries(CARRY)) {
+    const r = p.results?.[from]
+    if (!p.results?.[id] && r?.pass && r.version && r.version < '2026-11-11') out = { ...out, results: { ...out.results, [id]: { tried: true, pass: true, at: r.at, version: r.version, tries: 0, carried: true } } }
+  }
+  return out
+}
+
 const passed = (p, id) => !!p.results[id]?.pass && !p.assigned.includes(id)
 
 // Every lesson's state, in order: 'passed' | 'next' (the one to do now) | 'open' (unlocked, e.g. assigned) | 'locked'.
 export function lessonStates(p = emptyProgress, lessons = LESSONS) {
+  p = carried(p)
   let gateOpen = true
   let nextSet = false
   return lessons.map(l => {
@@ -40,6 +53,7 @@ export function lessonStates(p = emptyProgress, lessons = LESSONS) {
 export const canOpen = (p, id) => lessonStates(p).find(s => s.id === id)?.state !== 'locked'
 
 export function summary(p = emptyProgress, lessons = LESSONS) {
+  p = carried(p)
   const states = lessonStates(p, lessons)
   const done = states.filter(s => s.state === 'passed')
   const scored = Object.values(p.results).filter(r => r.total)
