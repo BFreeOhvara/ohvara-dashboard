@@ -39,6 +39,12 @@
 //     { action: 'signup_quote', tier, daily_cents }     billing_signup_quote: setup + first month + first 2 days + booking desk.
 //     { action: 'signup', tier, daily_cents }           billing_signup_start, then the charge runs straight away:
 //                                                       { status: paid | failed | processing | due, skipped? }.
+//   P952 (signed-in agent): { action: 'reactivation_pay', list_id }  reactivation_charge_start (the agent's own unpaid
+//                                                       list: $2 x callable leads, one charge, OHVARA LEADS), then the
+//                                                       charge runs straight away: { status: paid | failed | processing | due }.
+//                                                       On a live key it needs recovery_config.reactivation_live too.
+//   Cron 'run' also pays back what the reactivation scrub took off a paid list (reactivation_refunds_due), on the
+//   same PaymentIntent, idempotent per list and amount.
 //   Admin: { action: 'live_check' }                     $1 on the admin's own saved card, refunded straight away. Runs on a
 //                                                       test or a live key (Brayden's yes in chat); shows in Revenue.
 
@@ -46,7 +52,7 @@ import { type Stripe, StripeError } from '../_shared/fulfillmentPayouts.ts'
 
 export type Charge = {
   id: string; agent_id: string; key: string
-  kind: 'weekly' | 'change' | 'va_cost' | 'nightly' | 'plan_upgrade' | 'signup' | 'plan_month' | 'live_check'; amount_cents: number
+  kind: 'weekly' | 'change' | 'va_cost' | 'nightly' | 'plan_upgrade' | 'signup' | 'plan_month' | 'live_check' | 'reactivation'; amount_cents: number
   attempts: number; stripe_pi: string | null; week_start: string; note: string | null; customer: string | null; recheck: boolean
   for_day?: string | null; spend_cents?: number | null; fee_cents?: number | null
   note?: string | null; tier_to?: string | null
@@ -102,11 +108,12 @@ export const words = (c: Charge) =>
     : c.kind === 'nightly' ? `Lead spend for ${c.for_day}: ${usd(c.spend_cents)} to your ads${c.fee_cents ? ` + ${usd(c.fee_cents)} booking desk` : ''}`
       : c.kind === 'signup' || c.kind === 'plan_month' ? (c.note || 'Ohvara plan')
         : c.kind === 'live_check' ? 'Ohvara live check ($1, refunded)'
+          : c.kind === 'reactivation' ? (c.note || 'Reactivation leads')
           : c.kind === 'change' ? 'Lead spend (raised this week)' : 'Lead spend, week of ' + c.week_start
 // Which catalog product a charge belongs to (P933 stripe_catalog), for Stripe's own reports.
 export const productOf = (c: Charge) =>
   c.kind === 'signup' ? 'ohvara_signup' : c.kind === 'plan_month' || c.kind === 'plan_upgrade' ? `ohvara_plan_${c.tier_to || 'servicing'}`
-    : c.kind === 'live_check' ? 'ohvara_live_check' : 'ohvara_lead_spend'
+    : c.kind === 'live_check' ? 'ohvara_live_check' : c.kind === 'reactivation' ? 'ohvara_reactivation' : 'ohvara_lead_spend'
 
 async function chargeOne(store: Store, stripe: Stripe, c: Charge, liveOk = false) {
   let pi: any = null
@@ -155,6 +162,26 @@ export async function runCharges(store: Store, stripe: Stripe | null, key: strin
   return { charged: claimed.length, results }
 }
 
+// P952: what the reactivation scrub took off a paid list goes back on the same PaymentIntent (removed numbers are free).
+export async function reactivationRefunds(store: Store, stripe: Stripe | null, key: string | undefined) {
+  if (!stripe) return { skipped: 'Stripe not set up', refunded: 0 }
+  const gate = await chargingAllowed(store, key)
+  if (!gate.ok) return { skipped: gate.live ? 'live charging is off' : 'no Stripe key', refunded: 0 }
+  const got = await store.rpc('reactivation_refunds_due', {})
+  const due: { list_id: string; charge_id: string; pi: string; cents: number; key: string }[] = Array.isArray(got) ? got : []
+  let refunded = 0
+  for (const r of due) {
+    if (!(r.cents > 0) || !r.pi) continue
+    try {
+      await stripe('POST', 'refunds', { payment_intent: r.pi, amount: r.cents, metadata: { ohvara: 'reactivation_scrub', list_id: r.list_id, charge_id: r.charge_id } },
+        { idempotencyKey: r.key })
+      await store.rpc('reactivation_refunded', { p_list: r.list_id, p_cents: r.cents })
+      refunded++
+    } catch { /* left due; the next run tries again with the same key */ }
+  }
+  return { refunded }
+}
+
 // The $1 live check: charged on the admin's own saved card (any key; Brayden's yes in chat), then refunded in full.
 export async function liveCheck(store: Store, stripe: Stripe, key: string | undefined, me: string) {
   const { charge_id } = await store.rpc('billing_live_check_start', { p_admin: me })
@@ -195,7 +222,8 @@ export async function handle(req: Request, store: Store, stripe: Stripe | null, 
   if (cron) {
     if (!(await store.cronOk(cron))) return json({ error: 'Not allowed' }, 401)
     if (body.action !== 'run') return json({ error: 'Unknown action' }, 400)
-    return json(await runCharges(store, stripe, key))
+    const ran = await runCharges(store, stripe, key)
+    return json({ ...ran, refunds: await reactivationRefunds(store, stripe, key) })
   }
 
   const jwt = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '')
@@ -253,6 +281,17 @@ export async function handle(req: Request, store: Store, stripe: Stripe | null, 
         const mine = charged?.results?.find((r: any) => r.id === q.charge_id)?.result
         return json({ ...q, status: mine?.status ?? q.status ?? 'due', failure: mine?.failure ?? null, skipped: charged?.skipped ?? null })
       }
+      case 'reactivation_pay': {
+        if (typeof body.list_id !== 'string' || !/^[0-9a-f-]{36}$/.test(body.list_id)) return json({ error: 'Pick a list' }, 400)
+        // A live key charges only once reactivation is turned on (with Brayden's yes); a test key always may (test mode).
+        if (isLiveKey(key) && (await store.rpc('reactivation_is_live', {})) !== true) {
+          return json({ error: 'Reactivation opens soon. Nothing was charged.', code: 'reactivation_off' }, 409)
+        }
+        const q = await store.rpc('reactivation_charge_start', { p_list: body.list_id, p_agent: me })
+        const charged: any = await runCharges(store, stripe, key, me)
+        const mine = charged?.results?.find((r: any) => r.id === q.charge_id)?.result
+        return json({ ...q, status: mine?.status ?? 'due', failure: mine?.failure ?? null, skipped: charged?.skipped ?? null })
+      }
       case 'live_check': {
         if (!(await store.isAdmin(me))) return json({ error: 'Admins only' }, 403)
         if (!stripe) return json({ error: 'Stripe not set up' }, 503)
@@ -267,7 +306,7 @@ export async function handle(req: Request, store: Store, stripe: Stripe | null, 
     }
   } catch (e: any) {
     if (['min_daily', 'max_daily', 'over_plan', 'servicing_only', 'bad_tier'].includes(e?.hint)) return json({ error: e.message, code: e.hint }, 400)
-    if (['busy', 'test_account', 'comped', 'already_paid', 'no_card'].includes(e?.hint)) return json({ error: e.message, code: e.hint }, 409)
+    if (['busy', 'test_account', 'comped', 'already_paid', 'no_card', 'empty'].includes(e?.hint)) return json({ error: e.message, code: e.hint }, 409)
     if (e?.code === '42501') return json({ error: e.message || 'Not allowed' }, 403)
     return json({ error: e?.message || 'Something went wrong' }, 500)
   }

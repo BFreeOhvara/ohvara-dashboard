@@ -10,6 +10,7 @@
 import { aiStep, AI_RULES, ASK_AGENT_REASONS, SAID_OUTCOMES, WAIT_QUESTIONS, WAIT_RULE, transferSay, AI_CALL_WORDS } from './rules.js'
 import type { Ev, Provider } from './providers.ts'
 import { whisperWords } from '../help-transfer/core.ts'
+import { reactOpener } from './reactivation.js'
 
 export type Phase = 'queued' | 'dialing' | 'talking' | 'checking' | 'transferring' | 'booking' | 'done' | 'to_va'
 export type Call = {
@@ -19,6 +20,8 @@ export type Call = {
 }
 export type Lead = { id: string; first: string; phone: string; state: string | null; tz: string | null; need: string | null; age: string | null
   homeowner?: boolean | null; mortgage?: string | null // P940: the form's answers
+  // P952: a person on an agent's reactivation list (an aged lead): its own opener, voicemail only once.
+  reactivation?: { voicemailLeft: boolean } | null
   // P926: an admin test call (a sample lead): the switch and the lead rules are skipped, the agent's check is answered
   // for them (check), and transfer_to stands in for the agent's phone. Never set on a real lead.
   test?: { check?: 'yes' | 'no' | 'none'; transferTo?: string | null } | null }
@@ -48,7 +51,7 @@ export interface Store {
   // P916: the agent's Deedstone number (logs one call on it), so the AI's first call shows the number the lead will
   // see from their agent ever after. null = AI_FROM_NUMBER.
   endStats?(callId: string, patch: Record<string, unknown>): Promise<void>
-  deedstoneFrom?(agentId: string, callId: string): Promise<{ phone: string; providerId: string | null } | null>
+  deedstoneFrom?(agentId: string, callId: string): Promise<{ phone: string; providerId: string | null; pool?: string } | null>
 }
 export type Env = { now(): number; from: string | null; words: Record<string, string> ; pauseMs?: number }
 
@@ -85,7 +88,8 @@ export async function start(store: Store, provider: Provider, env: Env, callId: 
     if (c.attempt > 1) { await store.result(c.id, 'no_answer', { summary: 'Test call: no second try.' }); return { ok: false, code: 'test_no_retry' } }
     if (!provider.ready) { await store.result(c.id, 'no_answer', { summary: 'Test call: provider not connected.' }); return { ok: false, code: 'not_connected' } }
   } else {
-    if (!live.on) { await store.toVa(c.id, 'switch_off'); return { ok: false, code: 'switch_off' } }
+    // P952: a reactivation call runs on its own switch (reactivation_live, checked in takes()), not the fresh-lead one.
+    if (!live.on && !lead?.reactivation) { await store.toVa(c.id, 'switch_off'); return { ok: false, code: 'switch_off' } }
     if (!provider.ready) { await store.toVa(c.id, 'not_connected'); return { ok: false, code: 'not_connected' } }
     // The rules again at the moment of the dial (an opt-out or the window may have changed since the lead came in).
     const w = await store.takes(c.lead_id)
@@ -94,13 +98,15 @@ export async function start(store: Store, provider: Provider, env: Env, callId: 
   const agent = c.agent_id ? testAgent(await store.agent(c.agent_id), lead) : null
   if (!lead || !agent) { await store.toVa(c.id, 'no_lead_or_agent'); return { ok: false, code: 'no_lead_or_agent' } }
   const ds = await store.deedstoneFrom?.(agent.id, c.id).catch(() => null)
-  const from = ds?.phone || env.from
+  // P952: a reactivation call only ever shows a reactivation number (never the fresh-lead fallback).
+  const from = ds?.phone || (lead.reactivation ? null : env.from)
   if (!from) { await store.toVa(c.id, 'not_connected'); return { ok: false, code: 'not_connected' } }
   try {
     const r = await provider.start({
       callId: c.id, to: lead.phone, from, fromId: ds?.phone ? ds.providerId : null, maxSecs: Math.min(live.maxSecs || AI_RULES.maxCallSecs, 900),
       // P940: what the form already told us, so the AI confirms it instead of asking ('' = not on the form, ask it).
-      vars: { first_name: lead.first, state: lead.state ?? '', lead_tz: lead.tz ?? '', opening: env.words.opening.replace('{first}', lead.first),
+      vars: { first_name: lead.first, state: lead.state ?? '', lead_tz: lead.tz ?? '', opening: lead.reactivation ? reactOpener(lead.first) : env.words.opening.replace('{first}', lead.first),
+        reactivation: lead.reactivation ? 'yes' : '', leave_voicemail: lead.reactivation?.voicemailLeft ? 'no' : 'yes',
         form_state: lead.state ?? '', form_homeowner: lead.homeowner == null ? '' : lead.homeowner ? 'yes' : 'no', form_mortgage: lead.mortgage ?? '', form_age: lead.age ?? '', ...formLines(lead),
         callback_number: spokenNumber(from) }, // P940: the voicemail message gives the number that called them
     })

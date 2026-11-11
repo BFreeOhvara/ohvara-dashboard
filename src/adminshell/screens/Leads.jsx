@@ -9,6 +9,7 @@ import { ap } from '../paths'
 import { LEAD_LANES, STAGE_WORD, KIND_WORD, FOLLOW_OWNER, MATCH_WORD, stageTone, followOwner, isUnassigned, awaitsResult } from '../words'
 import { ConsentProof, UnassignedBlock } from './Compliance879'
 import { AiCallsView } from './AiCalls892'
+import { ReactivationView } from './Reactivation952'
 
 // P849 — Leads (the inbounds page, on screen as Leads): every lead across every agent this week. P906: the board is
 // the admin statuses. P913: Booked · No show · Follow up · Sold · Not interested (No answer is gone: those are Follow ups
@@ -94,9 +95,18 @@ export default function Leads() {
   const agent = sp.get('agent') || 'all'
   const setAgent = v => setSp(v === 'all' ? {} : { agent: v }, { replace: true })
   // P892: Board (every lead by status) or AI calls (the AI caller's numbers and calls), kept in the address.
-  const view = sp.get('view') === 'ai' ? 'ai' : 'board'
-  const setView = v => setSp(v === 'ai' ? { view: 'ai' } : {}, { replace: true })
-  const viewSeg = <Seg label="View" value={view} onChange={setView} options={[{ key: 'board', label: 'Board' }, { key: 'ai', label: 'AI calls' }]} />
+  // P952: + Reactivation (every agent's old-lead list with its contact, booked and stop rates).
+  const view = ['ai', 'reactivation'].includes(sp.get('view')) ? sp.get('view') : 'board'
+  const setView = v => setSp(v === 'board' ? {} : { view: v }, { replace: true })
+  const viewSeg = <Seg label="View" value={view} onChange={setView} options={[{ key: 'board', label: 'Board' }, { key: 'ai', label: 'AI calls' }, { key: 'reactivation', label: 'Reactivation' }]} />
+  if (view === 'reactivation') {
+    return (
+      <div className="tp-page fx-page fx-leads adm-leads">
+        <div className="fx-tools"><span className="tp-grow" />{viewSeg}</div>
+        <ReactivationView />
+      </div>
+    )
+  }
   if (view === 'ai') {
     return (
       <div className="tp-page fx-page fx-leads adm-leads">

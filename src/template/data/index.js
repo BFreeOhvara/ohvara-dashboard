@@ -15,6 +15,7 @@ import { formatPhone } from '../phoneMask.js'
 import { answerCheck, markLapsed } from '../../lib/clientCheck.js'
 import { SUPPORT_THREAD } from '../support911.js'
 import { SAMPLE_DEEDSTONE } from '../deedstone.js'
+import { SAMPLE_REACTIVATION } from '../reactivation.js'
 
 // The one door to sample info for the clickable template. Screens read only through the named functions below.
 // Every read returns { data, isLoading: false, error: null }, the shape react-query hooks give, and record fields
@@ -91,7 +92,8 @@ const seedLeads = [
   // P902: the first call's other outcomes. Gloria said not now with a time (booked as a callback: the booking texts);
   // Lena said not now with no time (Follow up, no texts); Ray said no; Brian was a wrong number (Closed, admin's Lead
   // quality list). Only no answer and booked send texts.
-  mkLead('sample-lead-17', people.gloriap, { stage: 'booked', firstCall: 'not_now', came: '2026-11-02T11:20', apptAt: '2026-11-03T17:30' }),
+  // P952: Gloria came from one of the agent's old-lead lists (Reactivate old leads): the AI reached her and booked her.
+  mkLead('sample-lead-17', people.gloriap, { stage: 'booked', reactivated: true, firstCall: 'not_now', came: '2026-11-02T11:20', apptAt: '2026-11-03T17:30' }),
   mkLead('sample-lead-18', people.lena, { stage: 'follow_up', status: 'contacted', outcome: 'follow_up', firstCall: 'not_now', came: '2026-11-02T09:05', follow: 'Wed, Nov 4', followAt: '2026-11-04T16:00' }),
   mkLead('sample-lead-19', people.ray, { stage: 'not_interested', status: 'bad', outcome: 'not_interested', firstCall: 'hard_no', reason: 'Not interested on the first call', came: '2026-11-02T09:47' }),
   // P910: live calls the AI collected and the agent took. Wes: this afternoon, still to mark (pinned on Leads and the
@@ -329,6 +331,8 @@ const seed = {
       { id: 'ch3', at: 'Sat, Oct 31, 8 PM', label: 'Lead spend for Mon, Nov 2', kind: 'lead', amount: 112, spend: 100, fee: 12, status: 'paid' },
       { id: 'ch4', at: 'Fri, Oct 30, 8 PM', label: 'Lead spend for Sun, Nov 1', kind: 'lead', amount: 112, spend: 100, fee: 12, status: 'paid' },
       { id: 'ch5', at: 'Thu, Oct 29, 8 PM', label: 'Lead spend for Sat, Oct 31', kind: 'lead', amount: 107.52, spend: 96, fee: 11.52, status: 'paid' },
+      // P952: an old-lead list (Reactivate old leads), charged when it was sent.
+      { id: 'ch-rx', at: 'Wed, Oct 28', label: 'Reactivation · 480 leads · $960', kind: 'reactivation', amount: 960, status: 'paid' },
       { id: 'ch6', at: 'Thu, Oct 1', label: 'Plan, Growth, October', kind: 'plan', amount: GROWTH, status: 'paid' },
       { id: 'ch7', at: 'Mon, Sep 28', label: 'Setup fee, one time', kind: 'setup', amount: SETUP_FEE, status: 'paid' },
     ],
@@ -707,6 +711,8 @@ const SAMPLE = {
   useActions: useActionsSample,
   // P916: Call through Deedstone and Connect your phone (template/deedstone.js; real: hooks/deedstoneReal.js).
   deedstone: SAMPLE_DEEDSTONE,
+  // P952: Reactivate old leads (template/reactivation.js; real: hooks/reactivationReal.js).
+  reactivation: SAMPLE_REACTIVATION,
 }
 const ImplCtx = createContext(SAMPLE)
 // Loading and error for the page as a whole: never for sample data.
@@ -743,6 +749,8 @@ export function useSampleOverview(...a) { return useImpl().useOverview(...a) }
 export function useSampleActions(...a) { return useImpl().useActions(...a) }
 // P916: the Deedstone calling side for this mode (sample or real).
 export const useDeedstone = () => useImpl().deedstone || SAMPLE_DEEDSTONE
+// P952: the reactivation side for this mode (sample or real).
+export const useReactivation = () => useImpl().reactivation || SAMPLE_REACTIVATION
 
 // P911: the sample clients, for the stage-checklist tests (each journey has one at a different step).
 export { seedClients as SAMPLE_CLIENTS }

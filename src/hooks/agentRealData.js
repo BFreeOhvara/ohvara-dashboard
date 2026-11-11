@@ -14,6 +14,7 @@ import { nightly as nightlyOf, expected } from '../template/spendPlan'
 import { DEFAULT_LIVE_HOURS } from '../lib/leadSplit'
 import { useNote } from '../template/kit'
 import { REAL_DEEDSTONE } from './deedstoneReal'
+import { REAL_REACTIVATION } from './reactivationReal'
 import { launchOf } from '../lib/admReal'
 import { isNotReadyError } from '../lib/clientPageLog'
 
@@ -555,4 +556,5 @@ export const REAL = {
   useBlocks: useBlocksReal, useSetup: useSetupReal, useLaunch: useLaunchReal, useSettings: useSettingsReal, useNeeds: useNeedsReal, useSignup: useSignupReal,
   useOverview: useOverviewReal, useActions: useActionsReal,
   deedstone: REAL_DEEDSTONE,
+  reactivation: REAL_REACTIVATION,
 }

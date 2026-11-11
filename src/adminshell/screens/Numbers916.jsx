@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Plus, AlertTriangle, Smartphone, Link2, ListChecks, Users, SlidersHorizontal } from 'lucide-react'
-import { Avatar, Chip, Drawer, Switch, SampleTag, Empty, Field, useNote } from '../../template/kit'
+import { Avatar, Chip, Drawer, Switch, SampleTag, Empty, Field, Seg, useNote } from '../../template/kit'
 import Chart from '../../template/Chart'
 import { HoldLineSettings } from './Playbook932'
 import { PhoneInput } from '../../template/PhoneInput'
@@ -23,7 +23,7 @@ export function DeedstoneNumbers() {
   const [pool, setPool] = useState(src === 'real' ? null : sample)
   const [limit, setLimit] = useState(String(pool?.limit ?? DEFAULT_LIMIT))
   const [estimate, setEstimate] = useState(String(pool?.estimate ?? DEFAULT_ESTIMATE))
-  const [add, setAdd] = useState({ phone: '', label: '', provider: '' })
+  const [add, setAdd] = useState({ phone: '', label: '', provider: '', pool: 'main' })
   const [busy, setBusy] = useState(false)
   const vas = useAdmVas().data || []
   const [pods, setPods] = useState({})
@@ -60,15 +60,15 @@ export function DeedstoneNumbers() {
     if (src !== 'real') {
       const phone = `+1${add.phone}`
       if (sample.numbers.some(n => n.phone === phone)) throw new Error('That number is already in the pool.')
-      sample = { ...sample, numbers: [...sample.numbers, { id: `n${Date.now()}`, phone, label: add.label || null, caller_name: CALLER_NAME, active: true, provider_number_id: add.provider || null, agents: 0, load: 0, today: 0, days: sample.numbers[0]?.days.map(d => ({ ...d, calls: 0 })) ?? [] }] }
+      sample = { ...sample, numbers: [...sample.numbers, { id: `n${Date.now()}`, phone, label: add.label || null, caller_name: CALLER_NAME, active: true, pool: add.pool, provider_number_id: add.provider || null, agents: 0, load: 0, today: 0, days: sample.numbers[0]?.days.map(d => ({ ...d, calls: 0 })) ?? [] }] }
     } else {
-      await saveNumber({ phone: add.phone, label: add.label || null, provider_number_id: add.provider || null })
+      await saveNumber({ phone: add.phone, label: add.label || null, provider_number_id: add.provider || null, pool: add.pool })
     }
-    setAdd({ phone: '', label: '', provider: '' })
+    setAdd({ phone: '', label: '', provider: '', pool: 'main' })
   }, src === 'real' ? 'Number added' : 'Number added (sample)')
   const setActive = (n, active) => run(async () => {
     if (src !== 'real') sample = { ...sample, numbers: sample.numbers.map(x => (x.id === n.id ? { ...x, active } : x)) }
-    else await saveNumber({ id: n.id, phone: n.phone, label: n.label, caller_name: n.caller_name, provider_number_id: n.provider_number_id, active })
+    else await saveNumber({ id: n.id, phone: n.phone, label: n.label, caller_name: n.caller_name, provider_number_id: n.provider_number_id, active, pool: n.pool || 'main' })
   }, `${shownPhone(n.phone)} ${active ? 'on' : 'off'}${src === 'real' ? '' : ' (sample)'}`)
   // P924: 2 or 3 VAs answer the clients who call or text each number.
   const savePodPick = n => run(async () => {
@@ -127,7 +127,7 @@ export function DeedstoneNumbers() {
           return (
             <li key={n.id} className={`dn-card${n.active ? '' : ' is-off'}${hot ? ' is-hot' : ''}`} style={{ '--i': i }}>
               <button type="button" className="dn-card-open" aria-label={`${shownPhone(n.phone)}: details`} onClick={() => { setEditing(null); setOpenId(n.id) }} />
-              <b className="tp-num dn-num">{shownPhone(n.phone)}</b>
+              <span className="dn-numrow"><b className="tp-num dn-num">{shownPhone(n.phone)}</b>{n.pool === 'reactivation' && <small className="dn-pooltag">Reactivation</small>}</span>
               <span className="dn-avs">
                 {pod.length ? pod.map(id => <Avatar key={id} name={vaName(id)} />) : <span className="dn-av-none" aria-hidden="true"><Users size={15} /></span>}
                 <small>{pod.length ? pod.map(id => vaName(id).split(' ')[0]).join(', ') : 'No VAs picked'}</small>
@@ -171,6 +171,8 @@ export function DeedstoneNumbers() {
           <div className="dn-add">
             <Field label="Twilio number"><PhoneInput value={add.phone} onChange={d => setAdd({ ...add, phone: d })} /></Field>
             <Field label="Label"><input value={add.label} placeholder="Dallas 3" maxLength={60} onChange={e => setAdd({ ...add, label: e.target.value })} /></Field>
+            {/* P952: reactivation numbers call only old-lead lists, so a complaint there never touches the agents' numbers */}
+            <div className="tp-field"><span>Used for</span><Seg label="Used for" value={add.pool} onChange={v => setAdd({ ...add, pool: v })} options={[{ key: 'main', label: 'Agents and new leads' }, { key: 'reactivation', label: 'Reactivation calls' }]} /></div>
             <Field label="AI caller number id" hint="Only if the AI caller runs on Vapi"><input value={add.provider} maxLength={120} onChange={e => setAdd({ ...add, provider: e.target.value })} /></Field>
             <button type="button" className="tp-primary fx-accent" disabled={add.phone.length !== 10 || busy} onClick={addNumber}><Plus size={16} aria-hidden="true" />Add number</button>
           </div>

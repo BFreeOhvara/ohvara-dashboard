@@ -16,5 +16,6 @@ export function chargesOf(b) {
     ? [{ id: 'c-next', at: b.nightly?.at || 'Tonight', label: `Lead spend for ${n.forDay}`, kind: 'lead', amount: n.tonight.total, spend: n.tonight.net, fee: n.tonight.fee, tonight: true, status: unpaid ? 'waiting' : 'scheduled' }]
     : []
   const past = b.charges || (b.history || []).map(h => ({ ...h, kind: /plan/i.test(h.label) ? 'plan' : /setup/i.test(h.label) ? 'setup' : 'lead', status: 'paid' }))
-  return [...next, ...past]
+  // P952: a reactivation list's charge reads its own line ("Reactivation · 480 leads · $960", the charge's note).
+  return [...next, ...past.map(c => (c.kind === 'reactivation' && !c.label ? { ...c, label: c.note || 'Reactivation leads' } : c))]
 }

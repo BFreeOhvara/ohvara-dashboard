@@ -84,3 +84,7 @@
 .dn-pod-acts { gap: 8px; justify-content: flex-end; }
 @keyframes dn-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .dn-card { animation: none; transition: none; } }
+
+/* P952: a reactivation number says so next to its number. */
+.dn-numrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.dn-pooltag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; color: var(--ov-mid); background: var(--fx-fill); }

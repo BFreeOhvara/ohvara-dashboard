@@ -110,6 +110,8 @@ export function toLead(r, events = [], tz = DEFAULT_TZ) {
     created: came ? whenLabel(came).replace(/, \d+:\d+ [AP]M$/, '') : '', assigned_at: came ? whenLabel(came) : '',
     // P910: what the AI collected, for the live-call card: what they want (the qualifier answer) and its call summary.
     wants: qa.wants || qa.goal || qa.looking_for || '', note: [...notes, ...rows.filter(e => e.summary).slice(-1).map(e => e.summary)].join('\n'), reply: lastReply ? { text: lastReply.detail?.text || lastReply.label, at: wallOf(lastReply.at, tz), seen: true } : null,
+    // P952: a person from one of the agent's reactivation lists (booked or transferred by the AI).
+    reactivated: qa.reactivation === true || qa.reactivation === 'true',
     tries, submitted: !!r.client_policy_id, clientId: r.client_policy_id || null, fresh: false, events: rows, real: true,
   }
 }

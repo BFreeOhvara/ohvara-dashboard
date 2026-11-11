@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { PhoneIncoming, CalendarDays, Search, Wallet, Clock, MapPin, Check, X, ClipboardCheck, Users, Link2, MessageSquareWarning, PhoneForwarded, Inbox } from 'lucide-react'
+import { PhoneIncoming, CalendarDays, Search, Wallet, RotateCcw, Clock, MapPin, Check, X, ClipboardCheck, Users, Link2, MessageSquareWarning, PhoneForwarded, Inbox } from 'lucide-react'
 import { useDataSource, useSampleLeads, useSampleLead, useSampleBilling, useSampleActions, useSampleSettings } from '../data'
 import { Avatar, Chip, Seg, Drawer, Empty, useNote } from '../kit'
 import { stageChip, OutcomeDrawer, OutcomePrompt, NoShowUndo } from '../LeadOutcome'
@@ -19,6 +19,7 @@ import { FirstRun } from '../DataState'
 import '../leads873.css'
 import '../p878.css'
 import { FilterPills } from '../FilterPills'
+import { ReactivateDrawer, ReactivationCards } from '../Reactivate'
 
 // P898: Leads as a board of the agent's five statuses (agentView.js), left to right: Booked, No show, Follow up, Not
 // interested, Sold. P924: no Closed: a lead that never reached the agent (couldn't reach, opted out, wrong number)
@@ -44,6 +45,8 @@ const tagOf = l => {
   if (needsResult(l, clockNow())) return ['violet', 'Mark result']
   if (agentCallTask(l)) return ['warn', 'Call them back']
   if (l.stage === 'sold' && !l.submitted) return ['warn', 'Finish details']
+  // P952: booked or transferred from one of the agent's old-lead lists.
+  if (l.reactivated) return ['green', 'Reactivated']
   if (confirmedByText(l)) return ['blue', 'Confirmed']
   return null
 }
@@ -196,6 +199,7 @@ export default function Leads() {
   const { data: billing } = useSampleBilling()
   const [q, setQ] = useState('')
   const [spend, setSpend] = useState(false)
+  const [react, setReact] = useState(false)
   const [params, setParams] = useSearchParams()
   // P924: no Closed on Leads. A lead that never reached the agent is never on their side (useSampleLeads).
   const ALL = LANES
@@ -215,8 +219,12 @@ export default function Leads() {
       <div className="fx-tools">
         <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a lead" placeholder="Find by name, city or phone" value={q} onChange={e => setQ(e.target.value)} /></label>
         <span className="tp-grow" />
+        {/* P952: bring a list of old leads; our AI calls them (Reactivate.jsx) */}
+        <button type="button" className="fx-pillbtn" onClick={() => setReact(true)}><RotateCcw size={15} aria-hidden="true" />Reactivate old leads</button>
         <button type="button" className="fx-pillbtn" aria-label="Change your daily lead spend" onClick={() => setSpend(true)}><Wallet size={15} aria-hidden="true" /><b className="tp-money">{money(dailyTotal(billing.spend))}</b><small>a day</small></button>
       </div>
+
+      <ReactivationCards />
 
       {/* P910: live calls pinned on top, ringing first, each with Sold · Follow up · Not interested. P917: the board
           keeps its full size below them and the page scrolls (useLiveRoom) */}
@@ -244,6 +252,7 @@ export default function Leads() {
 
       {id && (source === 'sample' || leads.some(l => l.id === id)) && <LeadDrawer id={id} onClose={() => navigate(paths.leads())} />}
       <SpendDrawer open={spend} onClose={() => setSpend(false)} />
+      <ReactivateDrawer open={react} onClose={() => setReact(false)} />
     </div>
   )
 }

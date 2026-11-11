@@ -364,3 +364,62 @@ test('plan_change: a bad plan is 400; busy is 409; over the band says over_plan'
   assert.equal(o.status, 400)
   assert.equal((await o.json()).code, 'over_plan')
 })
+
+// ── P952: reactivation lists ─────────────────────────────────────────────────────────────────────────────────────
+const LIST = '6a1f0b52-0000-4000-8000-0000000000aa'
+const agentReq = (body: any) => new Request('https://x.test/lead-spend', { method: 'POST', headers: { Authorization: 'Bearer good' }, body: JSON.stringify(body) })
+function reactWorld(live = false) {
+  const w = world([charge({ id: 'rc1', kind: 'reactivation', key: `reactivation:${LIST}:1`, amount_cents: 96000, note: 'Reactivation · 480 leads · $960' })])
+  const base = w.store.rpc
+  w.store.rpc = async (name, args) => {
+    if (name === 'reactivation_is_live') { w.rpcs.push({ name, args }); return live }
+    if (name === 'reactivation_charge_start') { w.rpcs.push({ name, args }); return { charge_id: 'rc1', amount_cents: 96000 } }
+    if (name === 'reactivation_refunds_due') { w.rpcs.push({ name, args }); return [{ list_id: LIST, charge_id: 'rc1', pi: 'pi_r', cents: 2400, key: `reactivation_refund:${LIST}:2400` }] }
+    if (name === 'reactivation_refunded') { w.rpcs.push({ name, args }); return { refunded_cents: 2400 } }
+    return base(name, args)
+  }
+  return w
+}
+
+test('P952: paying for a list makes one charge and runs it now: OHVARA LEADS, the list line, paid', async () => {
+  const w = reactWorld()
+  const s = withCard({ id: 'pi_r', status: 'succeeded', livemode: false })
+  const res = await handle(agentReq({ action: 'reactivation_pay', list_id: LIST }), w.store, s.stripe, 'sk_test_x')
+  const body = await res.json()
+  assert.equal(res.status, 200)
+  assert.equal(body.status, 'paid')
+  assert.deepEqual(w.rpcs.find(r => r.name === 'reactivation_charge_start')?.args, { p_list: LIST, p_agent: AGENT })
+  const pi = s.calls.find(c => c.path === 'payment_intents')!
+  assert.equal(pi.params.amount, 96000)
+  assert.equal(pi.params.statement_descriptor_suffix, 'LEADS')
+  assert.equal(pi.params.description, 'Reactivation · 480 leads · $960')
+  assert.equal(pi.params.metadata.product, 'ohvara_reactivation')
+})
+
+test('P952: on a live key nothing is charged while reactivation is off', async () => {
+  const w = reactWorld(false)
+  const s = withCard({ id: 'pi_r', status: 'succeeded', livemode: true })
+  const res = await handle(agentReq({ action: 'reactivation_pay', list_id: LIST }), w.store, s.stripe, 'sk_live_x')
+  assert.equal(res.status, 409)
+  assert.equal((await res.json()).code, 'reactivation_off')
+  assert.equal(s.calls.length, 0)
+  assert.equal(w.rpcs.some(r => r.name === 'reactivation_charge_start'), false)
+})
+
+test('P952: a bad list id is refused before anything runs', async () => {
+  const w = reactWorld()
+  const res = await handle(agentReq({ action: 'reactivation_pay', list_id: 'nope' }), w.store, null, 'sk_test_x')
+  assert.equal(res.status, 400)
+})
+
+test('P952: the cron run pays back what the scrub took off, on the same PaymentIntent, idempotent', async () => {
+  const w = reactWorld()
+  w.store.rpc = (orig => async (name: string, args: any) => (name === 'lead_spend_claim_charges' ? [] : orig(name, args)))(w.store.rpc)
+  const s = fakeStripe({ 'POST refunds': () => ({ id: 're_1' }) })
+  const res = await handle(cronReq({ action: 'run' }), w.store, s.stripe, 'sk_test_x')
+  const body = await res.json()
+  assert.equal(body.refunds.refunded, 1)
+  assert.deepEqual(s.calls[0].params, { payment_intent: 'pi_r', amount: 2400, metadata: { ohvara: 'reactivation_scrub', list_id: LIST, charge_id: 'rc1' } })
+  assert.equal(s.calls[0].opts.idempotencyKey, `reactivation_refund:${LIST}:2400`)
+  assert.deepEqual(w.rpcs.find(r => r.name === 'reactivation_refunded')?.args, { p_list: LIST, p_cents: 2400 })
+})

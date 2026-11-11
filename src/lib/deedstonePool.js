@@ -20,6 +20,8 @@ export const SAMPLE_POOL = {
     { id: 'n1', phone: '+12145550101', label: 'Dallas 1', caller_name: CALLER_NAME, active: true, pod: ['va-maya', 'va-keisha'], provider_number_id: null, agents: 4, load: 118, today: 112, days: week([84, 97, 101, 108, 0, 0, 112]) },
     { id: 'n2', phone: '+12145550102', label: 'Dallas 2', caller_name: CALLER_NAME, active: true, pod: ['va-andre', 'va-omar', 'va-lily'], provider_number_id: null, agents: 3, load: 90, today: 61, days: week([40, 52, 58, 66, 0, 0, 61]) },
     { id: 'n3', phone: '+14695550103', label: 'Plano 1', caller_name: CALLER_NAME, active: true, provider_number_id: null, agents: 0, load: 0, today: 0, days: week([0, 0, 0, 0, 0, 0, 0]) },
+    // P952: a reactivation number calls only old-lead lists (never an agent's main number).
+    { id: 'n4', phone: '+15125550199', label: 'Reactivation 1', caller_name: CALLER_NAME, active: true, pool: 'reactivation', provider_number_id: null, agents: 0, load: 0, today: 38, days: week([0, 0, 12, 41, 37, 44, 38]) },
   ],
 }
 
@@ -28,7 +30,8 @@ export const isFull = (n, limit, estimate) => n.load + estimate > limit
 
 // The warning at the top, or null. Same rule as the SQL: every active number hot or full → add a number.
 export function poolWarning(pool) {
-  const act = (pool.numbers || []).filter(n => n.active)
+  // P952: reactivation numbers aren't given to agents, so they don't count here.
+  const act = (pool.numbers || []).filter(n => n.active && n.pool !== 'reactivation')
   if (!act.length) return { tone: 'warn', text: 'No Deedstone numbers yet. Calls go out from the old single number until you add one.' }
   const hot = act.filter(n => isHot(n, pool.limit))
   const room = act.filter(n => !isHot(n, pool.limit) && !isFull(n, pool.limit, pool.estimate))

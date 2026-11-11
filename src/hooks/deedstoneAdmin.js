@@ -9,10 +9,15 @@ export async function loadPool() {
   if (error) return { missing: true }
   return data
 }
-export async function saveNumber({ id = null, phone, label = null, caller_name = null, provider_number_id = null, active = true }) {
-  const { data, error } = await supabase.rpc('admin_deedstone_number_save', {
-    p_id: id, p_phone: phone, p_label: label, p_caller_name: caller_name, p_provider_number_id: provider_number_id, p_active: active,
-  })
+// P952: pool 'main' (agents' calls, texts and the AI caller for new leads) or 'reactivation' (old-lead lists only).
+// Before migration 267 the function has no p_pool: a main number still saves; a reactivation one says so.
+export async function saveNumber({ id = null, phone, label = null, caller_name = null, provider_number_id = null, active = true, pool = 'main' }) {
+  const args = { p_id: id, p_phone: phone, p_label: label, p_caller_name: caller_name, p_provider_number_id: provider_number_id, p_active: active }
+  let { data, error } = await supabase.rpc('admin_deedstone_number_save', { ...args, p_pool: pool || 'main' })
+  if (error && error.code === 'PGRST202') {
+    if (pool === 'reactivation') throw new Error('Reactivation numbers need migration 267 first.')
+    ;({ data, error } = await supabase.rpc('admin_deedstone_number_save', args))
+  }
   if (error) throw fail(error, 'Couldn’t save the number.')
   return data
 }

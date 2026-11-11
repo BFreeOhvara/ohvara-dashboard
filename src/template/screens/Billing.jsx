@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { paths } from '../paths'
-import { Layers, CreditCard, Check, PauseCircle, PlayCircle, LogOut, Phone, CalendarClock, Clock, CircleAlert, Wallet, CalendarCheck2, Users, BadgeCheck, Target, SlidersHorizontal, Clock3, MapPin } from 'lucide-react'
+import { Layers, CreditCard, Check, PauseCircle, PlayCircle, LogOut, Phone, CalendarClock, Clock, CircleAlert, Wallet, CalendarCheck2, Users, BadgeCheck, Target, SlidersHorizontal, Clock3, MapPin, RotateCcw } from 'lucide-react'
 import { useSampleBilling, useSampleActions, useSampleAppointments } from '../data'
 import { Chip, Drawer, Field, SampleTag, Seg, useNote } from '../kit'
 import { Select } from '../Select'
@@ -242,7 +242,7 @@ function PaidAhead({ days }) {
 }
 
 const CHARGE_STATUS = { paid: ['green', 'Paid'], scheduled: ['blue', 'Scheduled'], waiting: ['mute', 'Waiting'], declined: ['rose', 'Declined'], refunded: ['mute', 'Refunded'] }
-const CHARGE_ICON = { lead: Wallet, plan: Layers, setup: BadgeCheck }
+const CHARGE_ICON = { lead: Wallet, plan: Layers, setup: BadgeCheck, reactivation: RotateCcw }
 const money2 = v => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: Number.isInteger(Number(v)) ? 0 : 2, maximumFractionDigits: 2 })}`
 function Charges({ rows }) {
   return (

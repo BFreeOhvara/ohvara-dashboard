@@ -18,7 +18,7 @@ export function shortCover({ rota = {}, dayOff = [], days = [], min = 2, nameOf 
   })
 }
 
-export function adminTodos({ unassigned = [], pipeline = [], failed = [], cover = [], ads = [], states = [], ap, money = n => `$${n}`, dayText = d => String(d), agentName = id => id }) {
+export function adminTodos({ unassigned = [], pipeline = [], failed = [], cover = [], ads = [], states = [], react = [], ap, money = n => `$${n}`, dayText = d => String(d), agentName = id => id }) {
   const rows = []
   for (const l of unassigned) {
     rows.push({ id: `lead-${l.id}`, kind: 'lead', tone: 'warn', title: 'Lead not matched to an agent', sub: `${l.name} · ${[l.city, l.state].filter(Boolean).join(', ')} · came in ${l.came}`, action: 'Assign', to: ap('leads', l.id) })
@@ -38,6 +38,10 @@ export function adminTodos({ unassigned = [], pipeline = [], failed = [], cover 
   // P949: { id, agentId, name, diff: '+FL, −GA', states, startsText, onDone }
   for (const c of states) {
     rows.push({ id: `states-${c.id}`, kind: 'states', tone: 'blue', title: `Update ad states for ${c.name}: ${c.diff}`, sub: `From ${c.startsText}: ${c.states.join(', ')}`, action: 'Open agent', to: ap('agents', c.agentId), onDone: c.onDone })
+  }
+  // P952: an old-lead list that paused itself (too many people asked us to stop calling).
+  for (const l of react) {
+    rows.push({ id: `react-${l.id}`, kind: 'reactivation', tone: 'warn', title: 'Reactivation list paused', sub: `${l.agent || 'An agent'} · ${l.name}${l.pause_reason ? ` · ${l.pause_reason}` : ''}`, action: 'Open list', to: `${ap('leads')}?view=reactivation` })
   }
   for (const x of ads) {
     rows.push({ id: `ad-${x.agent}`, kind: 'ad', tone: 'warn', title: x.kind === 'rejected' ? 'Ad rejected' : 'Ad in review over 24 h', sub: `${agentName(x.agent)} · ${x.text}`, action: 'Open agent', to: ap('agents', x.agent) })

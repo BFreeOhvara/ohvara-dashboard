@@ -1,0 +1,58 @@
+/* P952 — Reactivate old leads: the import drawer (Reactivate.jsx) and the list cards above the Leads board.
+   Tokens only (DESIGN.md). Reuses the P891 import pieces (.bi-ways, .bi-way, .bi-err). */
+
+.rx-map, .rx-preview { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 14px; border: 1px solid var(--ov-line); background: var(--bg-surface); }
+.rx-map > header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.rx-map > header b { font-size: 14px; color: var(--ov-hi); }
+.rx-map > header small { font-size: 12px; color: var(--ov-mute); }
+.rx-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.rx-fields .tp-field select { width: 100%; min-width: 0; }
+@media (max-width: 560px) { .rx-fields { grid-template-columns: minmax(0, 1fr); } }
+
+.rx-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 13.5px; color: var(--ov-mid); }
+.rx-row b { color: var(--ov-hi); font-weight: 600; }
+.rx-row.is-off b { color: var(--ov-mute); font-weight: 500; }
+.rx-row.is-left { padding-top: 8px; border-top: 1px solid var(--ov-line); }
+.rx-row.is-left span, .rx-row.is-price span { color: var(--ov-hi); font-weight: 600; }
+.rx-row.is-price b { font-size: 20px; }
+.rx-note { margin: 0; font-size: 12.5px; color: var(--ov-mute); }
+.rx-attest { font-size: 13px; color: var(--ov-hi); }
+.rx-fine { display: block; font-size: 12px; color: var(--ov-mute); }
+.rx-done { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 18px; border-radius: 14px; background: var(--tp-tint); color: var(--ov-hi); }
+.rx-done svg { color: var(--ov-up); }
+.rx-done p { margin: 0; font-size: 13.5px; color: var(--ov-mid); }
+
+/* The list cards: one row above the board, scrolls sideways when there are more than fit. */
+.fx-leads > .rx-cards { flex: none; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(260px, 340px); gap: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.fx-leads > .rx-cards::-webkit-scrollbar { display: none; }
+.rx-card { display: flex; flex-direction: column; gap: 8px; padding: 10px 14px; min-width: 0; }
+.rx-card > header { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--ov-mid); }
+.rx-card > header b { flex: 1; min-width: 0; font-size: 13.5px; color: var(--ov-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rx-n { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin: 0; }
+.rx-n div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rx-n dt { font-size: 10.5px; color: var(--ov-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rx-n dd { margin: 0; font-size: 14px; font-weight: 600; color: var(--ov-hi); }
+.rx-bar { height: 4px; border-radius: 999px; background: var(--fx-fill); overflow: hidden; }
+.rx-bar i { display: block; height: 100%; border-radius: inherit; background: var(--ov-up); transition: width .4s var(--fx-ease); }
+.rx-unpaid { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--ov-mid); }
+.rx-acts { display: inline-flex; gap: 6px; }
+.rx-acts > button { min-height: 34px; padding: 0 12px; }
+
+/* Admin Leads › Reactivation (adminshell/screens/Reactivation952.jsx). */
+.rx-adm { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.rx-adm-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rx-adm-facts { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.rx-adm-price { font-size: 13px; color: var(--ov-mid); }
+.rx-adm-price b { color: var(--ov-hi); }
+.rx-adm-lists { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.rx-adm-row { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; min-width: 0; }
+.rx-adm-row > header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto; column-gap: 8px; align-items: center; color: var(--ov-mid); }
+.rx-adm-row > header > svg { grid-row: 1; }
+.rx-adm-row > header b { grid-column: 2; font-size: 14px; color: var(--ov-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rx-adm-row > header small { grid-column: 2 / 4; grid-row: 2; font-size: 12px; color: var(--ov-mute); }
+.rx-adm-row > header .tp-chip { grid-column: 3; grid-row: 1; }
+.rx-adm-n { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.rx-adm .rx-adm-n .is-bad dd { color: var(--ov-warn); }
+.rx-adm p.rx-adm-why { display: flex; gap: 8px; align-items: center; margin: 0; padding: 8px 10px; border-radius: 10px; font-size: 12.5px; color: var(--ov-warn); background: var(--ov-warn-tint); }
+.rx-adm-acts { display: flex; gap: 8px; }
+@media (max-width: 560px) { .rx-adm-n { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 8px; } }
