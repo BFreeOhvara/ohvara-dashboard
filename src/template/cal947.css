@@ -1,0 +1,39 @@
+/* P947 — every week calendar (agent, VA, admin Fulfillment), loaded by CalBar.jsx.
+   Today: no tinted column; the date header carries a small filled "Today" pill right after the date ("Tue 3 · Today").
+   Call boxes: the Clients cards' motion (shell914.css): they lift, grow a touch and cast a soft shadow on hover, coming
+   in fast and settling back slowly; a press sinks them. Separate translate/scale properties, so an entrance animation
+   holding `transform` can't pin them. */
+.fx-week .tp-tcol.today { background-color: transparent; }
+.fx-week .tp-tgrid-h b.today small {
+  margin-left: 4px; align-self: center; flex: none; padding: 2px 8px; border-radius: 999px;
+  font-family: var(--font-ui); font-size: 11px; font-weight: 650; line-height: 1.35; letter-spacing: .01em;
+  color: var(--sh-on-accent); background: var(--sh-acc, var(--ov-data-a)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3);
+}
+
+.fx-week.cal910 .tp-ev {
+  transition: translate .7s cubic-bezier(.22, 1, .36, 1), scale .22s cubic-bezier(.22, 1, .36, 1), box-shadow .6s ease, filter .2s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .fx-week.cal910 .tp-ev:hover {
+    translate: 0 -3px; scale: 1.03; z-index: 4; filter: none;
+    box-shadow: inset 0 1px 0 var(--sh-card-hl, rgba(255, 255, 255, .3)), 0 16px 24px -14px rgba(0, 0, 0, .6);
+    transition-duration: .2s, .22s, .25s, .2s;
+  }
+  [data-theme="light"] .fx-week.cal910 .tp-ev:hover { box-shadow: inset 0 1px 0 var(--sh-card-hl, rgba(255, 255, 255, .3)), 0 14px 22px -14px rgba(0, 0, 0, .32); }
+}
+.fx-week.cal910 .tp-ev:active { transform: none; scale: .97; transition-duration: .7s, .09s, .6s, .2s; }
+@media (prefers-reduced-motion: reduce) {
+  .fx-week.cal910 .tp-ev { translate: none !important; scale: none !important; }
+}
+
+/* P947 — the VA's call details: the client pop-up's look (fx-rec: glass, header with X, blurred backdrop, page locked),
+   centred instead of sliding in from the side. */
+.fx-rec-layer .fx-rec.is-center {
+  top: 50%; left: 50%; right: auto; bottom: auto; translate: -50% -50%;
+  width: min(600px, calc(100vw - 32px)); max-height: min(820px, calc(100dvh - 48px));
+}
+.fx-layer .fx-rec.fx-rec.is-center { animation: dr-pop-in .32s cubic-bezier(.22, 1, .36, 1) both; }
+.fx-layer.is-leaving .fx-rec.fx-rec.is-center { animation: dr-pop-out .22s cubic-bezier(.5, 0, .75, 0) forwards; }
+@media (max-width: 999.98px) {
+  .fx-rec-layer .fx-rec.is-center { top: 8px; left: 0; right: 0; bottom: 0; translate: none; width: 100%; max-height: none; border-radius: 26px 26px 0 0; }
+}

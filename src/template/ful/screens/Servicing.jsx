@@ -84,7 +84,7 @@ function WhatHappened({ t }) {
   )
 }
 
-export function TaskDrawer({ id, onClose, inline = false }) {
+export function TaskDrawer({ id, onClose, inline = false, center = false }) {
   const { data: tasks } = useFulTasks()
   const { startTask, putBack, finishTask, moveTask, sendToAgent, showLive } = useFulActions()
   const note = useNote()
@@ -93,7 +93,7 @@ export function TaskDrawer({ id, onClose, inline = false }) {
   const [result, setResult] = useState(null)
   const [why, setWhy] = useState(SEND_REASONS[0])
   const [lost, setLost] = useState(null)
-  if (!t) return <RecordDrawer inline={inline} label="Step not found" kicker="Calendar" onClose={onClose} hero={<h2>Sent back</h2>}><p className="fx-calm"><Check size={16} aria-hidden="true" />This step went back to the agent.</p></RecordDrawer>
+  if (!t) return <RecordDrawer inline={inline} center={center} label="Step not found" kicker="Calendar" onClose={onClose} hero={<h2>Sent back</h2>}><p className="fx-calm"><Check size={16} aria-hidden="true" />This step went back to the agent.</p></RecordDrawer>
   const tone = kindTone(t.kind)
   const done = t.status === 'done'
   const canMove = !done && isCallKind(t.kind) && !!moveTask
@@ -102,7 +102,7 @@ export function TaskDrawer({ id, onClose, inline = false }) {
   const startCall = () => { if (!t.held) startTask(t.id); showLive({ kind: 'task', id: t.id }) }
   const openClient = t.client_id ? <Link to={fp('clients', t.client_id)} className="tp-btn ov-ghost">Open client</Link> : null
   return (
-    <RecordDrawer inline={inline} label={`${KIND[t.kind]} for ${t.name}`} kicker={<>{booked ? 'Booked call' : 'Client step'} · {t.agent}{t.agent ? '’s client' : ''} <HelpDot lesson={t.kind} inline /></>} tone={tone} onClose={onClose}
+    <RecordDrawer inline={inline} center={center} label={`${KIND[t.kind]} for ${t.name}`} kicker={<>{booked ? 'Booked call' : 'Client step'} · {t.agent}{t.agent ? '’s client' : ''} <HelpDot lesson={t.kind} inline /></>} tone={tone} onClose={onClose}
       hero={isCallKind(t.kind) ? <>
         <div className="fx-hero-top"><span className="fx-when"><CalendarClock size={13} aria-hidden="true" />{t.due_text}</span><Chip tone={tone}>{whyShort(t)}</Chip></div>
         <h2>{t.name}</h2>

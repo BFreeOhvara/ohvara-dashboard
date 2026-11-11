@@ -67,5 +67,10 @@ test('the three calendars share the agent week switch and day headers', () => {
   assert.match(team, /cal910\.css/)
   assert.match(team, /fx-week cal910 adm-week/)
   assert.doesNotMatch(team, /className=\{`adm-dayhead/)
-  assert.match(src('./template/ful/screens/Calendar.jsx'), /<Seg label="Week" className="cal-wk"/)
+  // P947: one top row for all three, from one file (CalBar: the week switch, the clock line, Today)
+  assert.match(src('./template/CalBar.jsx'), /<Seg label="Week" className="cal-wk"/)
+  for (const f of ['./template/screens/Calendar.jsx', './template/ful/screens/Calendar.jsx', './adminshell/screens/Team.jsx']) {
+    assert.match(src(f), /<CalBar /)
+    assert.doesNotMatch(src(f), /<Seg label="Week" className="cal-wk"/)
+  }
 })

@@ -1,10 +1,10 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import '../leads873.css'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Phone, MapPin, ChevronRight, Clock, ClipboardCheck, CalendarX2, Settings2, Ban } from 'lucide-react'
 import { CountUp } from '../motion'
 import { useSampleAppointments, useSampleLeads, useSampleClients, useSampleSettings, useSampleActions, useSampleBlocks, useWeek, AGENT_TZ, onAgentClock } from '../data'
-import { Drawer, Empty, Chip, Field, Seg, useNote } from '../kit'
+import { Drawer, Empty, Chip, Field, useNote } from '../kit'
 import { Select } from '../Select'
 import { HoursEditor, CalendarConnect, ClashList } from '../Hours'
 import { clashes } from '../hoursModel'
@@ -14,6 +14,7 @@ import { needsOutcome, clockNow } from '../leadLifecycle'
 import { stageChip } from '../LeadOutcome'
 import { paths } from '../paths'
 import { DayBox, WeekList } from '../DayBox'
+import { CalBar } from '../CalBar'
 import '../cal910.css'
 import { useOpenDay, useStickyDay } from '../useOpenDay'
 import { blockTime, clockOf, zoneAbbr, dateOf } from '../../lib/callSlots'
@@ -154,6 +155,14 @@ export default function Calendar() {
   const shown = view != null ? DAYS.filter(([, d]) => d === view) : DAYS
   const ofDay = d => events.filter(e => e.on === isoOf(d)).sort((a, b) => minutesIn(a.time) - minutesIn(b.time))
   const list = view != null ? ofDay(view) : []
+  // P947: Today (CalBar) goes back to this week and opens today's day.
+  // On Next week the day can't be opened by its number (that week's numbers are on screen), so it goes in the URL directly.
+  const [, setParams] = useSearchParams()
+  const goToday = () => {
+    if (wk === 'this') { if (view !== week.today) openDay(week.today); return }
+    setWk('this')
+    setParams(p => { const q = new URLSearchParams(p); q.set('day', week.isoOf(week.today)); return q }, { state: { dayBox: true } })
+  }
   const headKey = n => e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDay(n) } }
   // P929: boxes never overlap. Each box is as tall as its call (never shorter than it can be read); boxes that would
   // touch sit side by side, as many columns as the busiest moment needs (lib/calLanes).
@@ -168,15 +177,13 @@ export default function Calendar() {
   )
   return (
     <div className="tp-page fx-page">
-      <div className="fx-tools">
-        <Seg label="Week" className="cal-wk" value={wk} onChange={k => { if (view != null) close(); setWk(k) }} options={WEEKS.map(w => ({ ...w, count: events.filter(e => weekIsos(w.key).includes(e.on)).length }))} />
-        <span className="tp-grow" />
-        <p className="tp-sub">Your time ({zoneAbbr(tz)}) · client times beside theirs</p>
-        <span className="cal-tools">
-          <button type="button" className="fx-pillbtn" onClick={() => setPanel('hours')}><Settings2 size={14} aria-hidden="true" />Hours</button>
-          <button type="button" className="fx-pillbtn" onClick={() => setPanel('block')}><Ban size={14} aria-hidden="true" />Block a day</button>
-        </span>
-      </div>
+      {/* P947: the one calendar top row (CalBar.jsx), the same file the VA and admin calendars use; Today jumps to this
+          week and opens today. Hours and Block a day are the agent's own buttons after it. */}
+      <CalBar week={wk} keys={WEEKS.map(w => w.key)} onWeek={k => { if (view != null) close(); setWk(k) }} counts={WEEKS.map(w => events.filter(e => weekIsos(w.key).includes(e.on)).length)}
+        clock={`Your time (${zoneAbbr(tz)}) · client times beside theirs`} todayOn={view != null && view === TODAY} onToday={goToday}>
+        <button type="button" className="fx-pillbtn" onClick={() => setPanel('hours')}><Settings2 size={14} aria-hidden="true" />Hours</button>
+        <button type="button" className="fx-pillbtn" onClick={() => setPanel('block')}><Ban size={14} aria-hidden="true" />Block a day</button>
+      </CalBar>
 
       <WeekList days={NUMS} today={TODAY} onOpen={openDay} name={nameOf} itemsOf={ofDay} line={e => `${e.time} ${e.who}`} />
 

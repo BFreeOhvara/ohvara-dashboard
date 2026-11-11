@@ -1,9 +1,10 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { Phone, MessageSquare, CalendarClock, CircleCheck, PhoneMissed, Forward, Users, ChevronRight, CalendarDays } from 'lucide-react'
+import { Phone, MessageSquare, CalendarClock, CircleCheck, PhoneMissed, Forward, Users, ChevronRight } from 'lucide-react'
 import { useFulCalls, useFulActions, useFulSchedule, useVaBooking, useFulClock, useFulSource, minutesOf, bookedText } from '../data'
-import { Chip, Drawer, Empty, Field, Seg, useNote } from '../../kit'
+import { Chip, Drawer, Empty, Field, useNote } from '../../kit'
 import { DayBox, WeekList } from '../../DayBox'
+import { CalBar } from '../../CalBar'
 import { SlotPick } from '../../SlotPick'
 import { useOpenDay, useStickyDay } from '../../useOpenDay'
 import { useClientZone } from '../../useClientZone'
@@ -49,7 +50,7 @@ const SAMPLE_NOW = '1:32 PM' // sample clock: the next call is 28 minutes after 
 const WEEK_LABEL = ['This week', 'Next week']
 
 // A cancellation call (what the Calls page's drawer was, with every part kept). Start call opens the live-call overlay.
-export function CallDrawer({ id, onClose, inline = false }) {
+export function CallDrawer({ id, onClose, inline = false, center = false }) {
   const { data: calls } = useFulCalls()
   const { markCall, moveCall, showLive } = useFulActions()
   const note = useNote()
@@ -75,7 +76,7 @@ export function CallDrawer({ id, onClose, inline = false }) {
   // P886/P899: the old policy goes once the new one is issued, before the old one's next draft.
   const gate = useGate(k.name)
   return (
-    <RecordDrawer inline={inline} label={`Call with ${k.name}`} kicker={<>Cancel the old policy · {dayName(k.day)}, {dateText(k.day)} <HelpDot lesson="carrier_call" inline /></>} tone={tone} onClose={onClose}
+    <RecordDrawer inline={inline} center={center} label={`Call with ${k.name}`} kicker={<>Cancel the old policy · {dayName(k.day)}, {dateText(k.day)} <HelpDot lesson="carrier_call" inline /></>} tone={tone} onClose={onClose}
       hero={<>
         <div className="fx-hero-top"><span className="fx-when"><CalendarClock size={13} aria-hidden="true" />{k.day === TODAY ? 'Today' : `${dayName(k.day)}, ${dateText(k.day)}`} · {k.when}</span><Chip tone={tone}>{CALL_WORD[k.status]}</Chip></div>
         <h2>{k.name}</h2>
@@ -92,8 +93,12 @@ export function CallDrawer({ id, onClose, inline = false }) {
         <span className="tp-grow" />
         <Link to={fp('messages')} className="tp-btn ov-ghost"><MessageSquare size={14} />Message {k.agent.split(' ')[0]}</Link>
       </>}>
+      {/* P947 (P918 rule): a finished cancel call shows no confirmation number, just when it was done and the VA's note. */}
       {k.status === 'cancelled' && (
-        <section className="fx-blk fs-done"><header><h3><CircleCheck size={16} aria-hidden="true" />Old policy cancelled</h3></header><p className="tp-mid">{k.confirmation ? `Confirmation ${k.confirmation}.` : `Done on the call with ${first}.`}</p></section>
+        <section className="fx-blk fs-done"><header><h3><CircleCheck size={16} aria-hidden="true" />Old policy cancelled</h3></header>
+          <p className="tp-mid">{dayName(k.day)}, {dateText(k.day)}</p>
+          {k.notes?.trim() && <p className="tp-mid fs-done-note">{k.notes.trim()}</p>}
+        </section>
       )}
       {/* P931: the call panel: why, the agent's note (P923), the client, the 3 steps of the real cancel call, Texts. */}
       <CallBody item={k} oldCarrier={k.old_carrier} cancelBy={gate.old_draft} done={k.status === 'cancelled'} now={open && gate.open} bookedWhen={bookedText(k.iso, k.tz)}
@@ -165,29 +170,18 @@ export default function Calendar() {
   const ofDay = d => items.filter(i => i.day === d)
   const days = WEEKS[week]
   const cols = view != null ? [view] : days
-  // P946: a call opens inside the day slide-in, as if its name had been clicked there: the URL is the call's address
-  // with its day (?day=), the box shows the call, and back/X returns to the day's list; X again closes the day.
-  const withDay = d => { const p = new URLSearchParams(location.search); p.set('day', clock.isoOf(d)); return `?${p}` }
+  // P947: a call (a box in the grid, a row in the day's list or in Rest of the week) opens its details in a centred
+  // pop-up over the page, at the call's own address. What was behind it stays exactly as it was: the week, or the day's
+  // panel (?day= is kept), and closing the pop-up comes back to it. (This replaces P946's call inside the day panel.)
   const listUrl = () => ({ pathname: fp('calendar'), search })
-  const linkOf = e => {
-    const to = { pathname: fp('calendar', e.ref), search: withDay(e.day) }
-    if (id) return { to, replace: true, state: location.state } // one call to another: swap in place
-    if (view != null) return { to, state: { fromList: true } } // from the day's list: Back returns to it
-    return { to, state: { dayBox: true } } // from the week: the day opens with the call in it
-  }
-  const pickWeek = w => { setWeek(w); if (id) navigate({ pathname: fp('calendar') }, { replace: true }); else if (day != null) close() }
-  const openDay = d => { if (id) navigate({ pathname: fp('calendar'), search: withDay(d) }, { replace: true, state: location.state?.fromList ? undefined : location.state }); else open(d) }
-  const closeDrawer = () => (location.state?.fromList ? navigate(-1) : navigate(listUrl(), { replace: true, state: location.state?.dayBox ? { dayBox: true } : undefined }))
-  // A booking that was moved to another VA, or handled, still opens its drawer (it says so); the id says which kind.
+  const linkOf = e => ({ to: { pathname: fp('calendar', e.ref), search }, state: { fromCal: true } })
+  const pickWeek = w => { setWeek(w); if (day != null) close() }
+  const openDay = d => open(d)
+  const closeDrawer = () => (location.state?.fromCal ? navigate(-1) : navigate(listUrl(), { replace: true }))
+  const goToday = () => { if (week !== 0) setWeek(0); if (view !== TODAY) open(TODAY) }
+  // A booking that was moved to another VA, or handled, still opens its pop-up (it says so); the id says which kind.
   const item = items.find(i => i.ref === id)
   const kind = (item || {}).kind || (id ? (id.startsWith('cl-') ? 'call' : 'task') : null)
-  // An old link to a call (no ?day=): open its day around it. A call not on these two weeks keeps the drawer.
-  const inBox = !!item && ALL_DAYS.includes(item.day)
-  useEffect(() => {
-    if (inBox && day == null) navigate({ pathname: location.pathname, search: withDay(item.day) }, { replace: true, state: location.state })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inBox, day, id])
-  const detail = !!id && inBox && view === item.day
   const headKey = d => e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDay(d) } }
 
   // P931 (P929 rule): text never cuts off and boxes never overlap. A box is as tall as its call, and never shorter than
@@ -223,18 +217,9 @@ export default function Calendar() {
 
   return (
     <div className="tp-page fx-page fs-sched fs-cal">
-      {/* P931: no type filters or status chips, just This week · Next week. */}
-      {/* P946: the agent Calendar's top row exactly: its week switch (Seg .cal-wk with each week's count), the clock
-          line, and its pill buttons (Today opens today's day, where the agent has Hours and Block a day). */}
-      <div className="fx-tools fs-cal-tools">
-        <Seg label="Week" className="cal-wk" value={week} onChange={pickWeek} options={WEEK_LABEL.map((label, key) => ({ key, label, count: items.filter(i => WEEKS[key].includes(i.day)).length }))} />
-        <span className="tp-grow" />
-        <p className="tp-sub">Your time ({zoneAbbr(clock.tz)}) · client times beside theirs</p>
-        <span className="cal-tools">
-          <button type="button" className="fx-pillbtn" aria-pressed={view === TODAY} onClick={() => { if (week !== 0) setWeek(0); if (view !== TODAY) openDay(TODAY) }}><CalendarDays size={14} aria-hidden="true" />Today</button>
-          <HelpDot lesson="calendar" />
-        </span>
-      </div>
+      {/* P947: the agent Calendar's top row from the same file (CalBar): week switch with counts, clock line, Today. */}
+      <CalBar week={week} onWeek={pickWeek} counts={WEEKS.map(w => items.filter(i => w.includes(i.day)).length)} clock={`Your time (${zoneAbbr(clock.tz)}) · client times beside theirs`}
+        todayOn={view === TODAY} onToday={goToday}><HelpDot lesson="calendar" /></CalBar>
 
       <WeekList days={days} today={TODAY} onOpen={openDay} name={dayName} num={dayNum} itemsOf={ofDay} line={e => `${e.time} ${e.name}`} />
 
@@ -263,33 +248,28 @@ export default function Calendar() {
         </section>
 
         {view != null && (
-          <DayBox title={`${dayName(view)}, ${dateText(view)}`} sub={detail ? item.name : list.length ? `${list.length} booked` : 'Nothing booked'} leaving={leaving} onClose={close} onBack={detail ? closeDrawer : null}>
-            {detail ? (
-              kind === 'call' ? <CallDrawer key={id} id={id} onClose={closeDrawer} inline /> : <TaskDrawer key={id} id={id} onClose={closeDrawer} inline />
-            ) : <>
-              <b className="tp-num fx-huge2"><CountUp value={list.length} /><small> {list.length === 1 ? 'call' : 'calls'}</small></b>
+          <DayBox title={`${dayName(view)}, ${dateText(view)}`} sub={list.length ? `${list.length} booked` : 'Nothing booked'} leaving={leaving} onClose={close}>
+            <b className="tp-num fx-huge2"><CountUp value={list.length} /><small> {list.length === 1 ? 'call' : 'calls'}</small></b>
+            <ul className="fx-rows">
+              {list.map(e => (
+                <li key={e.ref}><Link {...linkOf(e)} className={`fx-row is-${e.st.tone}`}><span className="fx-row-ic"><Phone size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{e.name}</b><small>{e.time} · {e.why}</small></span><ChevronRight size={16} aria-hidden="true" /></Link></li>
+              ))}
+            </ul>
+            {list.length === 0 && <Empty title="A free day" sub="Nothing is booked for this day." />}
+            {rest.length > 0 && <>
+              <h3 className="fx-h3">Rest of the week</h3>
               <ul className="fx-rows">
-                {list.map(e => (
-                  <li key={e.ref}><Link {...linkOf(e)} className={`fx-row is-${e.st.tone}`}><span className="fx-row-ic"><Phone size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{e.name}</b><small>{e.time} · {e.why}</small></span><ChevronRight size={16} aria-hidden="true" /></Link></li>
-                ))}
+                {rest.map(e => <li key={e.ref}><Link {...linkOf(e)} className={`fx-row is-${e.st.tone}`}><span className="tp-grow"><b>{e.name}</b><small>{dayName(e.day)} {e.time} · {e.why}</small></span></Link></li>)}
               </ul>
-              {list.length === 0 && <Empty title="A free day" sub="Nothing is booked for this day." />}
-              {rest.length > 0 && <>
-                <h3 className="fx-h3">Rest of the week</h3>
-                <ul className="fx-rows">
-                  {rest.map(e => <li key={e.ref}><Link {...linkOf(e)} className={`fx-row is-${e.st.tone}`}><span className="tp-grow"><b>{e.name}</b><small>{dayName(e.day)} {e.time} · {e.why}</small></span></Link></li>)}
-                </ul>
-              </>}
             </>}
           </DayBox>
         )}
       </div>
 
-      {/* A call that isn't on these two weeks still opens as a drawer. */}
-      {id && !inBox && kind === 'call' && <CallDrawer key={id} id={id} onClose={() => navigate(listUrl())} />}
-      {id && !inBox && kind && kind !== 'call' && <TaskDrawer key={id} id={id} onClose={() => navigate(listUrl())} />}
-
-      {id && !kind && <RecordDrawer label="Not on your calendar" kicker="Calendar" onClose={() => navigate(listUrl())} hero={<h2>Not on your calendar</h2>}><p className="fx-calm">That item is not here any more.</p></RecordDrawer>}
+      {/* P947: the call's details, centred over the page (any call, on these two weeks or not). */}
+      {id && kind === 'call' && <CallDrawer key={id} id={id} onClose={closeDrawer} center />}
+      {id && kind && kind !== 'call' && <TaskDrawer key={id} id={id} onClose={closeDrawer} center />}
+      {id && !kind && <RecordDrawer center label="Not on your calendar" kicker="Calendar" onClose={closeDrawer} hero={<h2>Not on your calendar</h2>}><p className="fx-calm">That item is not here any more.</p></RecordDrawer>}
     </div>
   )
 }

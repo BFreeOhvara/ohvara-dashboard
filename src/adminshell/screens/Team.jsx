@@ -5,6 +5,7 @@ import { useAdmVas, useAdmDesk, useAdmRota, useAdmActions, useAdmSettings, WEEK,
 import { useAdmShifts } from '../../hooks/useVaShiftsAdmin'
 import { Avatar, Chip, Drawer, Empty, PillTabs, Seg, useNote } from '../../template/kit'
 import { WeekList, DayBox } from '../../template/DayBox'
+import { CalBar } from '../../template/CalBar'
 import { FilterPills } from '../../template/FilterPills'
 import { useOpenDay, useStickyDay } from '../../template/useOpenDay'
 import { GRID_END, GRID_ROWS, GRID_START, lanes, minutesOf, rotaCell, theirTime, vaHue, weekCalls } from '../calendar'
@@ -132,12 +133,9 @@ function TeamCalendar() {
 
   return (
     <>
-      <div className="fx-tools adm-cal-tools">
-        <Seg label="Week" className="cal-wk" value={week} onChange={pickWeek} options={[{ key: 0, label: 'This week', count: countIn(0) }, { key: 1, label: 'Next week', count: countIn(1) }]} />
-        <VaFilter vas={vas} who={who} setWho={setWho} />
-        <span className="tp-grow" />
-        <p className="tp-sub">Central time · client times beside theirs</p>
-      </div>
+      {/* P947: the one calendar top row (template/CalBar.jsx), the same file as the agent and VA calendars. */}
+      <CalBar week={week} onWeek={pickWeek} counts={[countIn(0), countIn(1)]} filters={<VaFilter vas={vas} who={who} setWho={setWho} />}
+        clock="Central time · client times beside theirs" todayOn={view === TODAY} onToday={() => { setSel(null); setWeek(0); if (view !== TODAY) open(TODAY) }} />
 
       <WeekList days={days} today={TODAY} onOpen={open} name={dayName} itemsOf={callsOf} line={c => `${c.time} ${c.client}`} />
 

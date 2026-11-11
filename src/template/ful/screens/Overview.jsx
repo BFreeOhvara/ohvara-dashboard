@@ -203,10 +203,6 @@ export default function Overview() {
           )}
         </Tile>
 
-        {!tr.complete && (
-          <TrainingCard sum={tr} i={1} />
-        )}
-
         <div className="ov946-trio">
           {/* P879/P945: pay is hourly, on the scheduled hours minus days off. Real: shows once the rota is set. */}
           <Tile className="is-fill is-green ov946-hours" i={2} title="Hours this week" icon={Clock3} to={fp('schedule')} label="Open Schedule"
@@ -233,6 +229,9 @@ export default function Overview() {
       </div>
 
       <div className="fx-ovl-side fs-ov-side">
+        {/* P947: until training is done its card sits on top of Today's calls (that column had room to spare), so the
+            page still fits the screen at 1440x900 and 1920x1080: no scroll. */}
+        {!tr.complete && <TrainingCard sum={tr} i={1} />}
         <Tile className="is-deep ov946-today" i={5} title="Today's calls" icon={Sparkles}
           sub={day.today.length ? `${open.length} to call · ${done.length} done` : 'Nothing booked today'} to={fp('calendar')} label="Open Calendar">
           {day.today.length > 0 ? (

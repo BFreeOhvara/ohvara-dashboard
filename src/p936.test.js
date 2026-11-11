@@ -79,7 +79,7 @@ test('training gate: a VA still in training is never picked or offered a slot', 
   const slots = vaSlots({ date: '2026-11-10', clocks: ['10:00 AM'], clientTz: CT, team: [team[0]] })
   assert.equal(slots[0].open, false)
   // the VA sees why on Overview, and admin's Give pickers hold back a VA in training
-  assert.match(src('./template/ful/screens/Overview.jsx'), /!tr\.complete && \(/)
+  assert.match(src('./template/ful/screens/Overview.jsx'), /!tr\.complete && <TrainingCard/) // P947: the card sits above Today's calls
   assert.match(src('./adminshell/screens/Team.jsx'), /canTakeCalls\(v\)/)
   assert.match(src('./adminshell/screens/Clients.jsx'), /canTakeCalls\(v\)/)
   assert.match(src('./template/ful/data.js'), /trained: isTrained\(v\.name\)/)
