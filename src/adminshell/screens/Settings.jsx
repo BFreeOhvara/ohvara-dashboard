@@ -21,6 +21,7 @@ import { WelcomeLoad } from './WelcomeLoad891'
 import { AiCallerSettings } from './AiCalls892'
 import { StripeBilling } from './Billing933'
 import { useCallOpenMin, saveCallOpenMin } from '../../hooks/useCallOpen'
+import { AppAbout } from '../../components/native/AppAbout'
 
 // P849 — admin Settings on the agent page's shape: the profile card and Sign out on the left, one panel whose stretch
 // tabs switch sections. Sections: Profile, People & access (everyone with a login, as Users does today), Switches,
@@ -233,6 +234,7 @@ export default function Settings() {
       <div className="fx-set-side">
         <ProfileCard name={name} email={s.profile.email} />
         <button type="button" className="fx-tile fx-signout" onClick={signOut}><LogOut size={16} aria-hidden="true" />Sign out</button>
+        <AppAbout />
       </div>
       <section className="fx-tile fx-panel" aria-label="Settings">
         <PillTabs label="Settings sections" className="fx-ptabs adm-settabs" itemClass="fx-ptab" value={tab} onChange={setTab} items={TABS.map(([key, label, icon]) => ({ key, label, icon }))} />

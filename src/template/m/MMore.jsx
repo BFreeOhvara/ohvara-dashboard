@@ -18,6 +18,7 @@ import { mp } from './mpaths'
 import { isNativeApp } from '../../lib/native'
 import { NATIVE_BILLING_TEXT } from '../../components/native/NativeBillingNote'
 import { useProducts } from '../useProducts'
+import { AppAbout } from '../../components/native/AppAbout'
 import { label as productsLabel } from '../../lib/products.js'
 
 // P908 — More on a phone: you, live-transfer status, then stacked rows for Billing, Activity and Settings (their full
@@ -84,6 +85,8 @@ export default function MMore() {
         <MoreRow icon={LogOut} label="Sign out" onClick={() => (account.live ? account.signOut() : note('Sign out works once you sign in for real'))} />
         <MoreRow icon={Trash2} label="Delete my account" danger onClick={() => (DeleteDialog ? setPanel('delete') : note('Delete my account works once you sign in for real'))} />
       </ul>
+
+      <AppAbout style={{ margin: '4px 8px 12px' }} />
 
       <GetApp open={panel === 'app'} onClose={close} />
       <Help open={panel === 'help'} onClose={close} onBug={() => setPanel('bug')} onTalk={() => setPanel('talk')} />

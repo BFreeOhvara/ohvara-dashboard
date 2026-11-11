@@ -19,6 +19,7 @@ import { LicenceCard } from '../Licence'
 import { PaymentIntakeCard } from '../PaymentIntake'
 import { DeedstonePhone } from '../DeedstonePhone'
 import { useProducts } from '../useProducts'
+import { AppAbout } from '../../components/native/AppAbout'
 
 // P929: Settings back to the pre-P924 layout (profile card on the left, tabs on the right). Notifications is only the
 // switches; the carrier-email forwarding address that sat under it has its own Email tab, so no section is long.
@@ -124,6 +125,7 @@ export default function Settings() {
       <div className="fx-set-side">
         <ProfileCard profile={profile} />
         <button type="button" className="fx-tile fx-signout" onClick={signOut}><LogOut size={16} aria-hidden="true" />Sign out</button>
+        <AppAbout />
       </div>
 
       <section className="fx-tile fx-panel" aria-label="Settings">

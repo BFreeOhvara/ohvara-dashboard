@@ -13,6 +13,7 @@ import { timezoneLabel } from '../../../lib/timezones'
 import { avatarHue } from '../../avatarHue'
 import { fp } from '../paths'
 import { PhoneInput } from '../../PhoneInput'
+import { AppAbout } from '../../../components/native/AppAbout'
 
 // P845 — Settings, the agent's page for a VA: the profile card and the Sign out box on the left, one panel whose
 // stretch tabs switch sections, each a short form with Discard / Save. VA tabs: Profile, Shift (P846: set hours and
@@ -95,6 +96,7 @@ export default function Settings() {
       <div className="fx-set-side">
         <ProfileCard name={name} email={s.profile.email} />
         <button type="button" className="fx-tile fx-signout" onClick={signOut}><LogOut size={16} aria-hidden="true" />Sign out</button>
+        <AppAbout />
       </div>
 
       <section className="fx-tile fx-panel" aria-label="Settings">
