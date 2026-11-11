@@ -52,7 +52,7 @@ test('result colours: agent Sold green, No show grey, Follow up yellow, Not inte
   assert.equal(vaResultTone({ kind: 'call', status: 'booked' }), null)
   assert.equal(vaResultTone({ kind: 'task', status: 'done', row: { outcome: 'not_reached' } }), 'warn')
   assert.equal(vaResultTone({ kind: 'task', status: 'done', row: { outcome: 'completed' } }), 'green')
-  assert.deepEqual(ADMIN_RESULT_TONE, { cancelled: 'green', no_answer: 'warn', passed: 'mute' })
+  assert.deepEqual(ADMIN_RESULT_TONE, { cancelled: 'green', no_answer: 'warn', failed: 'rose', passed: 'mute' })
 })
 
 test('timings: the day box (280 ms) is in before the details; the entrance is over before it settles', () => {

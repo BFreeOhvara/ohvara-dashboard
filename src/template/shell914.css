@@ -54,16 +54,17 @@
    click. It uses the separate translate/scale properties, so the entrance animations (which hold transform with
    fill-mode both, P912) can never pin it. The lift comes in fast and settles back slowly, so sweeping the mouse across
    a row of cards leaves a wave: one card rising as the last one sinks. Day boxes and plain sections don't move. ── */
-.fx-card:has(.fx-cover), .fx-wk-ev {
+.fx-card:has(.fx-cover), .fx-wk-ev, .adm-todo, .adm-agent {
   transition: translate .7s cubic-bezier(.22, 1, .36, 1), scale .22s cubic-bezier(.22, 1, .36, 1), box-shadow .6s ease, border-color .3s ease, filter .2s ease;
 }
 @media (hover: hover) and (pointer: fine) {
   .fx-card:has(.fx-cover):hover { translate: 0 -5px; transition-duration: .2s, .22s, .25s, .2s, .2s; box-shadow: inset 0 1px 0 var(--sh-card-hl, rgba(255, 255, 255, .3)), 0 22px 30px -18px rgba(0, 0, 0, .55); }
   [data-theme="light"] .fx-card:has(.fx-cover):hover { box-shadow: inset 0 1px 0 var(--sh-card-hl, rgba(255, 255, 255, .3)), 0 20px 28px -18px rgba(0, 0, 0, .3); }
-  .fx-wk-ev:hover { translate: 0 -3px; transition-duration: .2s, .22s, .25s, .2s, .2s; }
+  .fx-wk-ev:hover, .adm-todo:hover, .adm-agent:hover { translate: 0 -3px; transition-duration: .2s, .22s, .25s, .2s, .2s; }
 }
 .fx-card:has(.fx-cover):active, .fx-wk-ev:active { scale: .97; transition-duration: .7s, .09s, .6s, .3s, .2s; }
+.adm-agent:active { scale: .97; transition-duration: .7s, .09s, .6s, .3s, .2s; } /* P964: admin Overview's agent rows */
 .fx-card:has(.fx-cover):has(.fx-over:active) { scale: none; } /* pressing a button on the card presses the button only */
 @media (prefers-reduced-motion: reduce) {
-  .fx-card:has(.fx-cover), .fx-wk-ev { translate: none !important; scale: none !important; }
+  .fx-card:has(.fx-cover), .fx-wk-ev, .adm-todo, .adm-agent { translate: none !important; scale: none !important; }
 }

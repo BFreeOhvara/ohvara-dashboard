@@ -1,7 +1,6 @@
-import { useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, Check, CalendarDays, CreditCard, PhoneCall, Radio, Megaphone, ChevronDown, ChevronUp, MapPin, Shuffle, Rocket, CalendarOff, PhoneIncoming, ListChecks, Headset, Landmark, Users, RotateCcw } from 'lucide-react'
-import { useAdmDay, useAdmMoney, useAdmAgents, useAdmDesk, useAdmCosts, useAdmSetup, useAdmRota, useAdmVas, useAdmSource, SHIFT_MIN, dateText } from '../data'
+import { Check, CalendarDays, CreditCard, PhoneCall, Radio, Megaphone, MapPin, Shuffle, Rocket, CalendarOff, PhoneIncoming, Headset, Landmark, Users, RotateCcw } from 'lucide-react'
+import { useAdmDay, useAdmMoney, useAdmAgents, useAdmDesk, useAdmCosts, useAdmSetup, useAdmRota, useAdmVas, useAdmSource, useAdmSettings, SHIFT_MIN, dateText } from '../data'
 import { useAdmReactivation, pausedLists } from '../reactivation952'
 import { Avatar } from '../../template/kit'
 import { CountUp, usd } from '../../template/motion'
@@ -10,12 +9,14 @@ import { useGhlRow } from '../useGhlRow'
 import { ap } from '../paths'
 import { adAlerts } from '../p879'
 import LiveStatus from '../LiveStatus'
+import { LiveClock } from '../../template/Clock'
 import { adminTodos, shortCover } from '../todos'
 import { useStateChanges, openChanges, diffWords, dayWords, doneStateChange } from '../../template/adStates'
 import Chart from '../../template/Chart'
 import AreaTrend from '../../template/AreaTrend'
 import '../../template/rowbtn936.css'
 import '../p942.css'
+import '../p964.css'
 
 // P849 — the admin Overview: the whole business at a glance on the Solvik shape (head stats, one dominant tile, a
 // right column, colour carried by a few filled tiles). Dominant tile = leads this week as a funnel (in, booked,
@@ -24,7 +25,6 @@ import '../p942.css'
 // P906: "transferred" reads Live calls; no missed transfers (a missed one bounces back and is booked).
 // P914: "Needs you" is To-dos: a clean list of real admin jobs (todos.js), each with one action; what fits shows, the
 // rest wait behind "Show all" (never cut off). Empty: All caught up.
-const TODOS_SHOWN = 5 // P934: at least this many; the box shows as many as fit its height (useTodoFit)
 const TODO_ICON = { lead: Shuffle, card: CreditCard, launch: Rocket, cover: CalendarOff, ad: Megaphone, states: MapPin, reactivation: RotateCcw }
 const money = usd()
 const cents = usd(true)
@@ -41,29 +41,6 @@ function CostLine({ costs, row }) {
       {[['Ad spend', money(t.spend)], ['Per lead', f(t.perLead)], ['Per booked', f(t.perBooked)], ['Per sale', f(t.perSale)]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd className="tp-money">{v}</dd></div>)}
     </dl>
   )
-}
-
-// P934: the To-dos box shows as many rows as its height holds (it's as tall as Leads this week beside it), so it is
-// never half empty; Show all sits pinned at the bottom of the box when more are waiting.
-const TODO_ROW = 64 // one row (58px) and the gap under it
-function useTodoFit(ref, all) {
-  const [fit, setFit] = useState(TODOS_SHOWN)
-  useLayoutEffect(() => {
-    const el = ref.current
-    if (!el || all) return undefined
-    const read = () => {
-      const head = el.querySelector('.fx-tile-h')
-      const cs = getComputedStyle(el)
-      const room = el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - (head?.offsetHeight || 0) - 10 - 46 // header gap, Show all
-      setFit(Math.max(TODOS_SHOWN, Math.floor((room + 6) / TODO_ROW)))
-    }
-    read()
-    if (typeof ResizeObserver === 'undefined') return undefined
-    const ro = new ResizeObserver(read)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [ref, all])
-  return fit
 }
 
 function Todo({ t, i }) {
@@ -101,9 +78,7 @@ export default function Overview() {
   const { data: pipeline } = useAdmSetup()
   const { data: rota } = useAdmRota()
   const { data: vas } = useAdmVas()
-  const [allTodos, setAllTodos] = useState(false)
-  const todoBox = useRef(null)
-  const fit = useTodoFit(todoBox, allTodos)
+  const { data: settings } = useAdmSettings()
   const w = day.week
   const steps = [['in', 'Came in', w.in], ['booked', 'Booked', w.booked], ['transferred', 'Live calls', w.transferred], ['sold', 'Sold', w.sold]]
   const k = n => (n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : money(n))
@@ -128,7 +103,8 @@ export default function Overview() {
   // (data-fold, src/template/fold.js) and the next band, On shift + Revenue, peeks about a third; Agents runs last.
   return (
     <div className="tp-page fx-page adm-ov">
-      <LiveStatus />
+      {/* P964: the date and clock sit on the Live status line, right-aligned (they used to be up in the page header). */}
+      <div className="adm-ov-statusrow"><LiveStatus /><LiveClock tz={settings.tz} /></div>
       <div className="adm-ov-top" data-fold data-fold-next=".adm-ov-pair" data-fold-peek>
         <Tile className="adm-ov-hero" i={0} icon={PhoneIncoming} title="Leads this week" sub={`${day.range} · ${money(w.premium)} a month in new premium`} to={ap('leads')} label="Open Leads">
           <ol className="adm-funnel" aria-label="This week's leads">
@@ -145,22 +121,15 @@ export default function Overview() {
         </Tile>
 
         <div className="fx-ovl-side">
-          <section className={`fx-tile is-deep fx-ovl-needs adm-todos${allTodos ? ' is-all' : ''}`} style={{ '--i': 4 }} aria-label="To-dos">
-            <div className="fx-ovl-needs-in" ref={todoBox}>
-              <header className="fx-tile-h">
-                <span className="adm-tile-ic" aria-hidden="true"><ListChecks size={16} /></span>
-                <span className="tp-grow"><h2>To-dos</h2><p>{todos.length ? `${todos.length} to do` : 'Nothing waiting'}</p></span>
-                {/* P945: booked calls look after themselves (they move on at 10 minutes); the shortcut opens the calendar. */}
-                <Link to={`${ap('team')}?tab=calendar`} className="fx-pillbtn adm-cal-go"><CalendarDays size={14} aria-hidden="true" />Calendar</Link>
-              </header>
+          {/* P964: no header and no Show all. Every to-do stays in the list, which scrolls inside the card; the Calendar button
+              sits at the bottom left. The rows get the agent side's hover wave (shell914.css). */}
+          <section className="fx-tile is-deep fx-ovl-needs adm-todos" style={{ '--i': 4 }} aria-label="To-dos">
+            <div className="fx-ovl-needs-in">
               {todos.length
-                ? <ul className="adm-todo-list">{(allTodos ? todos : todos.slice(0, fit)).map((t, i) => <Todo key={t.id} t={t} i={i} />)}</ul>
+                ? <ul className="adm-todo-list">{todos.map((t, i) => <Todo key={t.id} t={t} i={i} />)}</ul>
                 : <p className="fx-calm"><Check size={16} aria-hidden="true" />All caught up.</p>}
-              {todos.length > fit && (
-                <button type="button" className="fx-pillbtn fx-self adm-needs-more" aria-expanded={allTodos} onClick={() => setAllTodos(v => !v)}>
-                  {allTodos ? <>Show fewer<ChevronUp size={14} /></> : <>Show all {todos.length}<ChevronDown size={14} /></>}
-                </button>
-              )}
+              {/* P945: booked calls look after themselves (they move on at 10 minutes); the shortcut opens the calendar. */}
+              <Link to={`${ap('team')}?tab=calendar`} className="fx-pillbtn adm-cal-go"><CalendarDays size={14} aria-hidden="true" />Calendar</Link>
             </div>
           </section>
         </div>
@@ -210,7 +179,6 @@ export default function Overview() {
             </li>
           ))}
         </ul>
-        <Link to={ap('agents')} className="fx-pillbtn fx-self">All agents<ArrowUpRight size={14} /></Link>
       </Tile>
     </div>
   )

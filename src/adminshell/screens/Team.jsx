@@ -197,7 +197,7 @@ function TeamCalendar() {
             <b className="tp-num fx-huge2">{list.length}<small> {list.length === 1 ? 'call' : 'calls'}</small></b>
             <ul className="fx-rows">
               {list.map(c => (
-                <li key={c.id}><button type="button" className={`fx-row adm-dayrow is-${vaHue(vas, c.va_id)}${admLook(c, '').done ? ' is-past' : ''}${picked?.id === c.id ? ' is-on' : ''}`} onClick={() => setSel({ id: c.id, day: c.day })}>
+                <li key={c.id}><button type="button" className={`fx-row adm-dayrow is-${vaHue(vas, c.va_id)}${admLook(c, '').done ? ` is-past is-res-${admLook(c, '').tone}` : ''}${picked?.id === c.id ? ' is-on' : ''}`} onClick={() => setSel({ id: c.id, day: c.day })}>
                   <span className="fx-row-ic"><Clock size={15} aria-hidden="true" /></span>
                   <span className="tp-grow"><b>{c.client}</b><small>{c.time} · {c.va.split(' ')[0]} · {CALL_WORD[c.status]}</small></span><ChevronRight size={16} aria-hidden="true" />
                 </button></li>
@@ -221,7 +221,8 @@ function VaFilter({ vas, who, setWho }) {
 }
 
 // P913 — Today is a calendar of the VAs' booked calls for today: one row per hour, each call a button in its VA's
-// colour (tap to open it). The current hour is outlined. "Needs a hand" and "Who is free" are gone (the other tabs
+// colour (tap to open it). The current hour is outlined. P964: calls still to come are in their VA's full colour; calls
+// already past are muted and tinted by how they went (green done, amber no answer, red failed, grey passed on). "Needs a hand" and "Who is free" are gone (the other tabs
 // cover them).
 function TodayCalls({ openCall }) {
   const { data: desk } = useAdmDesk()
@@ -246,7 +247,7 @@ function TodayCalls({ openCall }) {
               {inHour.map(c => {
                 const their = theirTime(c.time, c.state)
                 return (
-                  <button key={c.id} type="button" className={`adm-vachip adm-tc-call is-${vaHue(vas, c.va_id)}${['cancelled', 'no_answer'].includes(c.status) ? ' is-done' : ''}${c.status === 'late' ? ' is-late' : ''}`}
+                  <button key={c.id} type="button" className={`adm-vachip adm-tc-call is-${vaHue(vas, c.va_id)}${ADMIN_RESULT_TONE[c.status] ? ` is-res is-res-${ADMIN_RESULT_TONE[c.status]}` : ''}${c.status === 'late' ? ' is-late' : ''}`}
                     aria-label={`${c.time}${their ? ` (${their} for the client)` : ''}, ${c.client}, ${c.va}, ${CALL_WORD[c.status]}`} onClick={() => openCall(c.id)}>
                     <i aria-hidden="true" /><b className="tp-num">{c.time}</b>{c.client}<small>{c.va.split(' ')[0]} · {CALL_WORD[c.status]}</small>
                   </button>

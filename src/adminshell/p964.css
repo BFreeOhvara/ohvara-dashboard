@@ -1,0 +1,70 @@
+/* P964 — admin polish (Brayden, Nov 11). Admin only; tokens only (DESIGN.md v17 shell palette). */
+
+/* 1. Overview: the date and clock sit on the same line as the Live status line, right-aligned. Same type as the clock on
+   the other portals (clock.css): 22px date and AM/PM, time digits 1.7x. */
+.adm .adm-ov-statusrow { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 16px; margin: 0 0 -4px; }
+.adm .adm-ov-statusrow .adm-livestatus { margin: 0; flex: 1 1 260px; min-width: 0; }
+.adm .adm-ov-statusrow .fx-clock { --clk: 22px; margin-left: auto; display: flex; align-items: baseline; gap: 10px; white-space: nowrap; font-family: var(--font-display); font-size: var(--clk); font-weight: 500; letter-spacing: -0.01em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+@media (max-width: 999.98px) { .adm .adm-ov-statusrow .fx-clock { --clk: 18px; gap: 8px; } }
+
+/* 2. To-dos: no header, no Show all. The list scrolls inside the card (the card is as tall as Leads this week beside it);
+   the Calendar button sits bottom left. Room around the list so a row lifting on hover isn't clipped by the scroll box. */
+.adm .adm-todos .adm-todo-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: -6px -6px 0; padding: 6px 6px 6px; scrollbar-width: thin; }
+.adm .adm-todos .fx-ovl-needs-in > .adm-cal-go { flex: none; align-self: flex-start; margin-top: auto; }
+.adm .adm-todos .fx-calm { flex: 1 1 auto; margin: 0; }
+@media (max-width: 999.98px) { .adm .adm-todos .adm-todo-list { flex: none; max-height: 380px; } }
+
+/* 5. Fulfillment → Today: calls still to come are in their VA's full colour; calls already past are muted and tinted by how
+   they went (green done, amber no answer, red failed, grey passed on). */
+.adm-cal .is-sky { --vi: var(--sh-fi-sky); } .adm-cal .is-apricot { --vi: var(--sh-fi-apricot); } .adm-cal .is-sage { --vi: var(--sh-fi-sage); }
+.adm-cal .is-butter { --vi: var(--sh-fi-butter); } .adm-cal .is-lilac { --vi: var(--sh-fi-lilac); }
+.adm-today .adm-tc-call { background: var(--vf, var(--sh-f-sky)); color: var(--vi, var(--ov-hi)); }
+.adm-today .adm-tc-call small { color: inherit; opacity: .78; }
+.adm-today .adm-tc-call i { background: var(--vi, var(--ov-hi)); opacity: .55; }
+.adm-today .adm-tc-call.is-late { box-shadow: inset 0 0 0 2px var(--sh-f-coral); }
+.adm-today .adm-tc-call.is-res { opacity: .62; transition: opacity .2s ease; }
+.adm-today .adm-tc-call.is-res:hover { opacity: .9; }
+.adm-today .adm-tc-call.is-res-green { background: var(--sh-f-sage); color: var(--sh-fi-sage); }
+.adm-today .adm-tc-call.is-res-warn { background: var(--sh-f-apricot); color: var(--sh-fi-apricot); }
+.adm-today .adm-tc-call.is-res-rose { background: var(--sh-f-coral); color: var(--sh-fi-coral); }
+.adm-today .adm-tc-call.is-res-mute { background: var(--sh-f-stone); color: var(--sh-fi-stone); }
+.adm-today .adm-tc-call.is-res i { background: currentColor; }
+/* The Calendar tab's day list takes the same outcome colours (the week grid already does, P958). */
+.adm .fx-row.adm-dayrow.is-res-green { --c: var(--sh-cs-sage); }
+.adm .fx-row.adm-dayrow.is-res-warn { --c: var(--sh-cs-apricot); }
+.adm .fx-row.adm-dayrow.is-res-rose { --c: var(--sh-f-coral); }
+.adm .fx-row.adm-dayrow.is-res-mute { --c: var(--sh-cs-stone); }
+
+/* 6. Revenue → Agent billing: Agent · Plan · Status · Next · Lead spend (last), the cap as a small stepper. */
+.adm .adm-bills .adm-tr { grid-template-columns: minmax(190px, 1.4fr) minmax(130px, .9fr) minmax(100px, .6fr) minmax(110px, .7fr) minmax(230px, 1.3fr); }
+.adm .adm-bills .adm-tr > .adm-cell { display: flex; }
+.adm .adm-bills .adm-th > :nth-child(n) { display: block; }
+.adm .adm-bills .adm-spendcell { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
+.adm .adm-bills .adm-spend-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.adm .adm-bills .adm-capstep { display: inline-flex; flex-direction: column; margin-left: auto; border-radius: 9px; overflow: hidden; border: 1px solid var(--ov-line); background: color-mix(in srgb, var(--ov-hi) 4%, transparent); }
+.adm .adm-bills .adm-capstep button { display: grid; place-items: center; width: 24px; height: 15px; padding: 0; border: 0; background: none; color: var(--ov-mid); cursor: pointer; transition: background-color .15s ease, color .15s ease; }
+.adm .adm-bills .adm-capstep button + button { border-top: 1px solid var(--ov-line); }
+.adm .adm-bills .adm-capstep button:hover { background: color-mix(in srgb, var(--ov-hi) 10%, transparent); color: var(--ov-hi); }
+.adm .adm-bills .adm-capstep button:active { background: color-mix(in srgb, var(--ov-hi) 16%, transparent); }
+.adm .adm-bills .adm-capstep button.is-off { opacity: .35; cursor: not-allowed; }
+.adm .adm-bills .adm-capstep button:focus-visible, .adm .adm-bills .adm-reset:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.adm .adm-bills .adm-reset { padding: 0; border: 0; background: none; color: var(--ov-mid); font-size: 11.5px; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.adm .adm-bills .adm-reset:hover { color: var(--ov-hi); }
+.adm .adm-bills .adm-reset[aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
+@media (max-width: 1279.98px) {
+  .adm .adm-bills .adm-tr { grid-template-columns: minmax(170px, 1.3fr) minmax(120px, .9fr) minmax(100px, .6fr) minmax(220px, 1.2fr); }
+  .adm .adm-bills .adm-tr > .adm-cell:nth-child(4), .adm .adm-bills .adm-th > :nth-child(4) { display: none; }
+  .adm .adm-bills .adm-tr > .adm-cell:nth-child(5) { display: flex; }
+}
+@media (max-width: 999.98px) {
+  .adm .adm-bills .adm-tr { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; }
+  .adm .adm-bills .adm-tr > .adm-cell:nth-child(2), .adm .adm-bills .adm-tr > .adm-cell:nth-child(4) { display: none; }
+  .adm .adm-bills .adm-tr > .adm-cell:nth-child(3) { display: flex; }
+  .adm .adm-bills .adm-tr > .adm-cell:nth-child(5) { display: flex; grid-column: 1 / -1; }
+  .adm .adm-bills .adm-capstep { flex-direction: row; }
+  .adm .adm-bills .adm-capstep button { width: 34px; height: 30px; }
+  .adm .adm-bills .adm-capstep button + button { border-top: 0; border-left: 1px solid var(--ov-line); }
+}
+.adm-undo-toast .adm-undo { padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.adm-undo-toast .adm-undo:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .adm .adm-bills .adm-capstep button, .adm-today .adm-tc-call.is-res { transition: none; } }

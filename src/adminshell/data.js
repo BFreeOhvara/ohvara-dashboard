@@ -968,8 +968,9 @@ const SAMPLE_ACTIONS = {
       ...audit(s, 'Changed lead billing', `Max $${billing.maxDaily} a day · charge ${billing.chargeHour}:00`) })),
     setMaxDaily: (id, dollars) => set(s => {
       const o = { ...s.settings.billing.maxOverride }
+      const before = o[id] ?? s.settings.billing.maxDaily // P964: the stepper lowers it too, so the log says which
       if (dollars == null) delete o[id]; else o[id] = dollars
-      return { settings: { ...s.settings, billing: { ...s.settings.billing, maxOverride: o } }, ...audit(s, dollars == null ? 'Reset a max daily spend' : 'Raised a max daily spend', `${nameOf(s, id)}${dollars == null ? '' : `: $${dollars} a day`}`) }
+      return { settings: { ...s.settings, billing: { ...s.settings.billing, maxOverride: o } }, ...audit(s, dollars == null ? 'Reset a max daily spend' : dollars < before ? 'Lowered a max daily spend' : 'Raised a max daily spend', `${nameOf(s, id)}${dollars == null ? '' : `: $${dollars} a day`}`) }
     }),
     saveSettings: patch => set(s => ({ settings: { ...s.settings, ...patch } })),
     setTz: tz => set(s => ({ settings: { ...s.settings, tz } })),

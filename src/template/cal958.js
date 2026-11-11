@@ -72,5 +72,5 @@ export function vaResultTone(item) {
   return null
 }
 
-// Admin Fulfillment: a VA's cancellation call. Cancelled green, no answer orange, passed on grey.
-export const ADMIN_RESULT_TONE = { cancelled: 'green', no_answer: 'warn', passed: 'mute' }
+// Admin Fulfillment: a VA's cancellation call. Cancelled green, no answer orange, failed red (P964), passed on grey.
+export const ADMIN_RESULT_TONE = { cancelled: 'green', no_answer: 'warn', failed: 'rose', passed: 'mute' }

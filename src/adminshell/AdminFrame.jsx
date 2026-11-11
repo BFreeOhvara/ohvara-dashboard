@@ -4,7 +4,7 @@ import {
   Home, Users, Headset, PhoneIncoming, BookUser, Landmark, Plug, Settings, Search, Bell, Sun, Moon, MessageSquare, ChevronRight, LogOut,
   Ellipsis, CircleHelp, Mail, Keyboard, UserPlus, Shuffle, Hand, Bug, History, TriangleAlert, Wallet, CalendarDays, CalendarOff,
   ShieldCheck, PhoneForwarded, CircleDollarSign, CheckCircle2, Radio, Link2, Copy, Plus, Rocket, BadgeCheck, Hourglass,
-  PhoneCall, Scale,
+  Scale,
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
 import { useIsTestAccount } from '../hooks/useIsTestAccount'
@@ -25,7 +25,6 @@ import {
 } from './data'
 import { useGhlRow } from './useGhlRow'
 import { syncFailed } from './engine'
-import { LiveClock } from '../template/Clock'
 import MoreBelow from '../template/MoreBelow'
 import { ap, ADM_TABS, ADM_LABELS, admPageOf, admTitleOf } from './paths'
 import { STAGE_WORD } from './words'
@@ -193,7 +192,7 @@ function useHeadStats(page) {
 }
 
 export default function AdminFrame() {
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const outlet = useOutlet()
   const source = useAdmSource()
   const isTest = useIsTestAccount() // P929: no sample line on test accounts
@@ -210,7 +209,6 @@ export default function AdminFrame() {
   const { data: vas } = useAdmVas()
   const { data: leads } = useAdmLeads()
   const { data: clients } = useAdmClients()
-  const { data: settings } = useAdmSettings()
   const ghlRow = useGhlRow()
   const close = useCallback(() => setPanel(null), [])
   const open = which => e => { wig.onClick(e); setPanel(which) }
@@ -222,6 +220,8 @@ export default function AdminFrame() {
   const msg = useMessagesToggle(active === 'messages', ap('overview'))
   const flipTheme = e => { wig.onClick(e); setTheme(theme === 'dark' ? 'light' : 'dark') }
   const tabs = ADM_TABS
+  const calTo = `${ap('team')}?tab=calendar`
+  const calOn = active === 'team' && /[?&]tab=calendar/.test(search)
   const tabCount = { leads: day.unassigned.length, billing: day.failed.length }
 
   const rows = useMemo(() => ({
@@ -232,7 +232,7 @@ export default function AdminFrame() {
     ],
     leads: leads.map(l => ({ id: `l-${l.id}`, name: l.name, sub: `${l.agent_id ? STAGE_WORD[l.stage] : 'Not matched'} · ${l.agent || 'no agent'}`, hay: `${l.name} ${l.phone} ${l.city} ${l.agent || ''}`, go: () => ap('leads', l.id) })),
   }), [clients, agents, vas, leads])
-  const pages = [...tabs.map(([k, label]) => ({ to: () => ap(k), label })), { to: () => ap('messages'), label: 'Messages' }, { to: () => ap('connect'), label: 'Connect' }, { to: () => ap('settings'), label: 'Settings' }]
+  const pages = [...tabs.map(([k, label]) => ({ to: () => ap(k), label })), { to: () => ap('messages'), label: 'Messages' }, { to: () => ap('connect'), label: 'Connect' }, { to: () => ap('numbers'), label: 'Deedstone numbers' }, { to: () => ap('settings'), label: 'Settings' }]
 
   const appRef = useRef(null)
   useLayoutEffect(() => {
@@ -297,7 +297,8 @@ export default function AdminFrame() {
         <i className="fx-hair" />
         {/* P934: the working pages that left Settings, each its own page (screens/Work934.jsx). */}
         <NavLink to={ap('bugs')} className="fx-ri tp-wig" aria-label="Bug reports" data-tip="Bug reports" {...wig}><Bug size={18} /></NavLink>
-        <NavLink to={ap('numbers')} className="fx-ri tp-wig" aria-label="Deedstone numbers" data-tip="Deedstone numbers and VA pods" {...wig}><PhoneCall size={18} /></NavLink>
+        {/* P964: the calendar shortcut (where the phone button was): the same calendar the To-dos Calendar button opens. */}
+        <Link to={calTo} className={`fx-ri tp-wig${calOn ? ' active' : ''}`} aria-label="Calendar" data-tip="Calendar" {...wig}><CalendarDays size={18} /></Link>
         <NavLink to={ap('compliance')} className="fx-ri tp-wig" aria-label="Compliance" data-tip="Compliance" {...wig}><Scale size={18} /></NavLink>
         <i className="fx-hair" />
         <button type="button" className="fx-ri tp-wig" aria-label="Help and support" aria-expanded={panel === 'help'} data-tip="Help and support" {...wig} onClick={open('help')}><CircleHelp size={18} /></button>
@@ -321,8 +322,7 @@ export default function AdminFrame() {
               ))}
             </ul>
           )}
-          {/* P860 + P864: the live clock, one line on the title row, on Overview only */}
-          {layout === 'overview' && <LiveClock tz={settings.tz} />}
+          {/* P964: the live clock moved down to the Overview's Live status line (screens/Overview.jsx) */}
         </div>
 
         <main className={`tp-main fx-main adm-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>
