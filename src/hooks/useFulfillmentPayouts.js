@@ -110,10 +110,7 @@ export function useSavePaySettings() {
     },
   })
 }
-export function useSetPayoutsLive() {
-  const save = useSavePaySettings()
-  return { ...save, mutate: (on, opts) => save.mutate({ payouts_live: on }, opts) }
-}
+// P950: no useSetPayoutsLive. payouts_live changes only through Ohvara's server role, with Brayden's yes.
 
 // Prompt 764 — cancels (fulfillment_cancels, migration 145): one row per
 // Cancelled result, its status and pay. A rep reads their own (RLS), an

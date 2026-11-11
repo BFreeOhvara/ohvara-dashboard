@@ -8,6 +8,7 @@ import { Tile, EngineSlot } from '../kit'
 import { useGhlRow } from '../useGhlRow'
 import { ap } from '../paths'
 import { adAlerts } from '../p879'
+import LiveStatus from '../LiveStatus'
 import { adminTodos, shortCover } from '../todos'
 import Chart from '../../template/Chart'
 import AreaTrend from '../../template/AreaTrend'
@@ -118,6 +119,7 @@ export default function Overview() {
   // (data-fold, src/template/fold.js) and the next band, On shift + Revenue, peeks about a third; Agents runs last.
   return (
     <div className="tp-page fx-page adm-ov">
+      <LiveStatus />
       <div className="adm-ov-top" data-fold data-fold-next=".adm-ov-pair" data-fold-peek>
         <Tile className="adm-ov-hero" i={0} icon={PhoneIncoming} title="Leads this week" sub={`${day.range} · ${money(w.premium)} a month in new premium`} to={ap('leads')} label="Open Leads">
           <ol className="adm-funnel" aria-label="This week's leads">

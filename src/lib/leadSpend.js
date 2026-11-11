@@ -52,7 +52,6 @@ export const pauseSpend = (db, paused) => invoke(db, { action: 'pause', paused: 
 export const signupQuote = (db, { tier, daily = null }) => invoke(db, { action: 'signup_quote', tier, daily_cents: daily == null ? null : toCents(daily) })
 export const signupPay = (db, { tier, daily = null }) => invoke(db, { action: 'signup', tier, daily_cents: daily == null ? null : toCents(daily) })
 export const liveCheck = db => invoke(db, { action: 'live_check' })
-export const setLiveCharging = (db, on) => rpc(db, 'admin_billing_live_set', { p_on: !!on })
 export const adminCharges = (db, limit = 30) => rpc(db, 'admin_billing_charges', { p_limit: limit })
 export const acceptPaid = (db, termsVersion, device = typeof navigator !== 'undefined' ? navigator.userAgent : null) =>
   rpc(db, 'billing_accept_paid', { p_terms_version: termsVersion, p_device: device })

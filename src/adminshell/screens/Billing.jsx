@@ -232,8 +232,8 @@ function AgentBills() {
 
 // P945 — Your payouts: each admin sees only their own. Connect the bank their share goes to through Stripe Connect
 // Express (Stripe's own form holds the bank details and identity checks; Ohvara stores nothing), the next payout (their
-// 50% of this week's profit, in Monday's pay run) and their payout history. Nothing is paid until Brayden turns on
-// Owner payouts in Settings › Go live.
+// 50% of this week's profit, in Monday's pay run) and their payout history. Nothing is paid until Ohvara turns on
+// Owner payouts with Brayden's yes (P950: no switch in the portal).
 function YourPayouts() {
   const src = useAdmSource()
   const { profile } = useAuth()
@@ -267,7 +267,7 @@ function YourPayouts() {
           {src === 'real'
             ? <RealBank />
             : <li><Landmark size={14} aria-hidden="true" /><span className="tp-grow">Your bank<small>Chase •••• 7781 · through Stripe</small></span><button type="button" className="fx-pillbtn" onClick={() => note("Opens Stripe's own form (test mode) once you sign in for real")}>Change</button></li>}
-          <li><Lock size={14} aria-hidden="true" /><span className="tp-grow">Owner payouts<small>{live ? 'On: paid in every Monday run' : 'Off: nothing is paid until Brayden turns it on in Settings › Go live'}</small></span>
+          <li><Lock size={14} aria-hidden="true" /><span className="tp-grow">Owner payouts<small>{live ? 'On: paid in every Monday run' : 'Off: nothing is paid until Ohvara turns it on with Brayden’s yes'}</small></span>
             <Chip tone={live ? 'green' : 'mute'}>{live ? 'On' : 'Off'}</Chip></li>
         </ul>
       </div>

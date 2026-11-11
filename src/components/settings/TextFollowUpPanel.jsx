@@ -152,20 +152,20 @@ function AdminControls({ config }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ margin: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>Texting live</p>
           <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--ov-mute)' }}>
-            Off: no lead enters the flow. Turn on only after Twilio approves the A2P campaign. Clients are texted only if the agent ticked “Client agreed to texts” on the booking.
+            Off: no lead enters the flow. Ohvara turns this on with Brayden’s yes, after Twilio approves the A2P campaign. Clients are texted only if the agent ticked “Client agreed to texts” on the booking.
           </p>
         </div>
-        <Switch checked={!!config.sms_live} disabled={save.isPending} onChange={v => save.mutate({ sms_live: v })} label="Texting live" />
+        <SettingsChip tone={config.sms_live ? 'on' : 'off'}>{config.sms_live ? 'On' : 'Off'}</SettingsChip>
       </div>
-      {/* Prompt 751 — the pop-up phone's off switch (recovery_config.voice_live). */}
+      {/* Prompt 751 — the pop-up phone (recovery_config.voice_live). P950: read-only here; no live switches in the portal. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ margin: 0, fontSize: 14.5, fontWeight: 600, color: 'var(--ov-hi)' }}>Calling in the portal</p>
           <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--ov-mute)' }}>
-            Off: Call client works the old way and the portal phone opens as a preview. Turn on once Ohvara's number is approved and the Twilio app is set up.
+            Off: Call client works the old way and the portal phone opens as a preview. Ohvara turns it on with Brayden’s yes, once the number is approved and the Twilio app is set up.
           </p>
         </div>
-        <Switch checked={!!config.voice_live} disabled={save.isPending} onChange={v => save.mutate({ voice_live: v })} label="Calling in the portal" />
+        <SettingsChip tone={config.voice_live ? 'on' : 'off'}>{config.voice_live ? 'On' : 'Off'}</SettingsChip>
       </div>
       {/* Prompt 764 — call recording (recovery_config.recording_live + the notice). */}
       <RecordingSetting config={config} save={save} />
@@ -262,7 +262,7 @@ function RecordingSetting({ config, save }) {
             Records every portal call so AI can check each cancel. Off: nothing is recorded, no notice plays, and cancels wait for you to listen. Check the consent rules for your states before turning it on.
           </p>
         </div>
-        <Switch checked={!!config.recording_live} disabled={save.isPending} onChange={v => save.mutate({ recording_live: v })} label="Record calls" />
+        <SettingsChip tone={config.recording_live ? 'on' : 'off'}>{config.recording_live ? 'On' : 'Off'}</SettingsChip>
       </div>
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <label style={{ flex: 1, minWidth: 220, fontSize: 13.5, fontWeight: 600, color: 'var(--ov-mid)' }}>

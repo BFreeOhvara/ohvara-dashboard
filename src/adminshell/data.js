@@ -390,19 +390,6 @@ const seedFeed = [
   { id: 'f5', who: 'Jordan Hale', text: 'Saved the GoHighLevel location', at: 'Tue', kind: 'connect' },
 ]
 
-export const SWITCHES = [
-  { key: 'sms_live', label: 'Texting live', sub: 'Off means no text is sent by any flow. Stays off until the A2P campaign is approved.', group: 'Calling and texting' },
-  { key: 'voice_live', label: 'Calling in the portal', sub: 'Off opens the portal phone as a preview.', group: 'Calling and texting' },
-  { key: 'ai_caller_live', label: 'AI calls new form leads', sub: 'On: the AI calls every new form lead and books it, transfers it or marks No answer. Settings › AI caller has the rest.', group: 'Calling and texting' },
-  { key: 'recording_live', label: 'Record calls', sub: 'Records cancellation calls and plays the notice first.', group: 'Calling and texting' },
-  { key: 'invite_sms_live', label: 'Invite by text', sub: 'Lets Add someone send the invite as a text.', group: 'Calling and texting' },
-  { key: 'payouts_live', label: 'Payouts send real money', sub: 'On means the Monday run pays VAs through Stripe.', group: 'Money' },
-  { key: 'owner_payouts_live', label: 'Owner payouts', sub: "On means the Monday run also pays each owner their 50% of the profit, to the bank they connected.", group: 'Money' },
-  { key: 'billing_enforced', label: 'Lock unpaid agents', sub: 'Lead spend stops when a payment fails; after 3 days past due the account is on hold.', group: 'Money' },
-  { key: 'submit_live', label: 'Submit page live', sub: 'Opens the new Submit page to every agent.', group: 'Agents' },
-  { key: 'carrier_lookup_live', label: 'Live carrier lookup', sub: 'Agents can look up carrier hours themselves.', group: 'Agents' },
-  { key: 'signup_open', label: 'Sign-up open', sub: 'Lets new agents sign up without an invite.', group: 'Agents' },
-]
 const seedSettings = {
   daysOffPerMonth: 3, // P913/P945: days off a month per VA (they book their own; no approvals)
   profile: { name: ME.name, email: ME.email, phone: ME.phone },
@@ -940,8 +927,7 @@ const SAMPLE_ACTIONS = {
     // P890: no per-cancel decisions (VA pay is hourly). The Monday run can still be paused.
     // P934: no split setter. The owners' profit split is fixed at 50/50 (OWNER_SPLIT); changing it is a code and migration change.
     setPaused: on => set(s => ({ settings: { ...s.settings, payoutsPaused: on }, ...audit(s, on ? 'Paused payouts' : 'Resumed payouts', 'Monday pay run') })),
-    // Settings
-    setSwitch: (key, on) => set(s => ({ settings: { ...s.settings, switches: { ...s.settings.switches, [key]: on } }, ...audit(s, `${on ? 'Turned on' : 'Turned off'} ${SWITCHES.find(x => x.key === key).label}`, 'Sample only') })),
+    // Settings (P950: no live-switch setter. Live flags are changed only by Ohvara's server role, with Brayden's yes)
     savePayRules: payRules => set(s => ({ settings: { ...s.settings, payRules }, ...audit(s, 'Changed pay rules', `$${payRules.hourly} an hour`) })),
     saveBilling: billing => set(s => ({ settings: { ...s.settings, billing: { ...s.settings.billing, ...billing } },
       ...audit(s, 'Changed lead billing', `Max $${billing.maxDaily} a day · charge ${billing.chargeHour}:00 · founding ${billing.foundingCount} for ${billing.foundingMonths} months`) })),

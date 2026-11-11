@@ -1,11 +1,11 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
-import { KeyRound, Webhook, Radio, Power, PackageCheck, BadgeDollarSign, AlertCircle, Loader2, RotateCw } from 'lucide-react'
+import { KeyRound, Webhook, Radio, PackageCheck, BadgeDollarSign, AlertCircle, Loader2, RotateCw } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { invokeBilling } from '../../lib/billing'
-import { adminCharges, liveCheck, setLiveCharging } from '../../lib/leadSpend'
+import { adminCharges, liveCheck } from '../../lib/leadSpend'
 import { deskAdminLabel, deskParts } from '../../lib/bookingDesk'
 import { PRICES } from '../../lib/priceBook.js'
-import { Chip, SampleTag, Switch, useNote } from '../../template/kit'
+import { Chip, SampleTag, useNote } from '../../template/kit'
 import { useAdmSource } from '../data'
 import './billing933.css'
 
@@ -62,44 +62,8 @@ function StripeCheck({ check, busy, error, onRun }) {
   )
 }
 
-// P934: Live charging sits in Settings › Go live with the other go-live switches. It reads the billing server itself.
-export function LiveChargingRow() {
-  const [check, setCheck] = useState(null)
-  const load = useCallback(() => invokeBilling('stripe_check').then(setCheck).catch(() => setCheck(null)), [])
-  useEffect(() => {
-    let live = true
-    invokeBilling('stripe_check').then(c => { if (live) setCheck(c) }).catch(() => {})
-    return () => { live = false }
-  }, [])
-  return <LiveCharging check={check} onChanged={load} bare />
-}
-
-function LiveCharging({ check, onChanged, bare }) {
-  const note = useNote()
-  const [asking, setAsking] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const on = !!check?.live_charging
-  const flip = async next => {
-    setBusy(true)
-    try { await setLiveCharging(supabase, next); note(next ? 'Live charging is on' : 'Live charging is off'); setAsking(false); onChanged() } catch (e) { note(e.message) }
-    setBusy(false)
-  }
-  const rows = (
-    <>
-      <Row icon={Power} title="Live charging" sub={on ? `On since ${when(check.live_charging_at)}. Real cards are charged on the live key: sign-ups, plans and nightly lead spend.` : 'Turns on real card charges on the live key: sign-ups, plans and nightly lead spend. Test keys only charge test cards.'}>
-        <Switch on={on} label="Live charging" onChange={v => (v ? setAsking(true) : flip(false))} />
-      </Row>
-      {asking && (
-        <li className="fx-form-row b933-ask" role="alertdialog" aria-label="Turn on live charging">
-          <span className="tp-grow"><b>Turn on live charging?</b><small>From now, real cards are charged: new sign-ups, monthly plans and tonight's lead spend. Test accounts never are.</small></span>
-          <button type="button" className="tp-btn ov-ghost" onClick={() => setAsking(false)} disabled={busy}>Cancel</button>
-          <button type="button" className="tp-primary fx-accent" onClick={() => flip(true)} disabled={busy}>{busy ? 'Turning on…' : 'Turn on'}</button>
-        </li>
-      )}
-    </>
-  )
-  return bare ? rows : <ul className="tp-list">{rows}</ul>
-}
+// P950: no Live charging switch in the portal. CC turns it on with Brayden's yes (brain/ohvara/Go Live Runbook.md); the
+// Overview status line shows whether it is on.
 
 function Catalog({ mode }) {
   const note = useNote()
@@ -182,7 +146,7 @@ export function StripeBilling() {
       <div>
         {src !== 'real' && <p className="tp-sub"><SampleTag>Real</SampleTag> This tab always reads the real billing server.</p>}
         <StripeCheck check={check} busy={busy} error={error} onRun={run} />
-        <p className="tp-sub">Live charging is in Settings › Go live with the other go-live switches.</p>
+        <p className="tp-sub">Live charging is turned on by Ohvara with Brayden's yes; the Overview shows whether it is on.</p>
       </div>
       <div>
         <Catalog mode={check?.mode} />

@@ -91,6 +91,7 @@
 @media (min-width: 1000px) { .adm .adm-set-two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 .adm .adm-set-two > div { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .adm .adm-set-two > .fx-tile { margin: 0; }
+.adm .adm-livestatus { display: flex; align-items: center; gap: 6px; margin: 0 0 -4px; color: var(--ov-mid); font-size: 12px; font-weight: 500; }
 .adm .ai-golive { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--ov-mid); font-size: 13px; }
 .adm .ai-words-open { width: 100%; }
 .adm .ai-agent-pills { flex-wrap: wrap; }

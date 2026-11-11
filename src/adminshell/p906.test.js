@@ -52,11 +52,13 @@ test('client statuses are P899: Working · Needs attention · Protected, Closed 
   assert.match(src('./screens/Clients.jsx'), /Show closed/)
 })
 
-test('P934: Settings › Go live holds only the go-live switches, each with what it turns on', () => {
+test('P950: no Go live card or live switch in admin Settings; the booking gap is still a setting', () => {
   const l = src('./screens/Launch906.jsx')
-  for (const w of ['sms_live', 'voice_live', 'ai_caller_live', '<LiveChargingRow />', '<SampleSwitch live={live} bare />']) assert.ok(l.includes(w), w)
+  for (const w of ['GoLive', 'LiveChargingRow', 'SampleSwitch', 'setSwitch', '<Switch']) assert.ok(!l.includes(w), w)
   for (const w of ['Call ads (Google)', 'setCallAdsOn', 'Nightly charge time', 'Max daily spend', 'Founding lock']) assert.ok(!l.includes(w), w)
-  assert.match(src('./screens/Settings.jsx'), /<GoLive live=\{account\.live\} \/>/)
+  assert.ok(l.includes('export function BookingGap'))
+  const st = src('./screens/Settings.jsx')
+  assert.doesNotMatch(st, /<GoLive|'golive', 'Go live'/)
 })
 
 test('no AI → VA hand-off shown on admin', () => {

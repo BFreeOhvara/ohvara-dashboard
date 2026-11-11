@@ -188,7 +188,7 @@ function useHeadStats(page) {
     clients: [S(BookUser, clients.length, 'clients'), S(TriangleAlert, att, 'need attention', { chip: att ? ['See who', 'warn'] : null }), S(CalendarDays, clients.reduce((n, c) => n + c.steps.length, 0), 'servicing steps open')],
     billing: [S(CircleDollarSign, wk.inTotal, 'brought in this week', { fmt: money }), S(Wallet, wk.profit, 'profit this week', { fmt: money, chip: [`${wk.split[0].pct}/${wk.split[1].pct} split`, 'blue'] }), S(TriangleAlert, m.failed.length, 'failed payments', { chip: m.failed.length ? ['Follow up', 'warn'] : null })],
     connect: [S(Link2, linked, 'of 5 plugged in'), S(PhoneForwarded, connect.ads.length, 'ad accounts'), S(Plug, connect.sources.forms.filter(f => f.on).length, 'forms on')],
-    settings: [S(Users, agents.length + vas.length, 'people with a login'), S(Radio, ['sms_live', 'voice_live', 'ai_caller_live', 'owner_payouts_live'].filter(k => settings.switches?.[k]).length, 'of 4 go-live switches on', { chip: ['Sample', 'blue'] }), S(Bug, day.openBugs, 'open bug reports')],
+    settings: [S(Users, agents.length + vas.length, 'people with a login'), S(Bug, day.openBugs, 'open bug reports')],
   }[page] || []
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import {
-  User, Users, Power, Wallet, History, SlidersHorizontal, LogOut, Mail, UserPlus, ArrowUpRight, Search, ShieldCheck,
+  User, Users, Wallet, History, SlidersHorizontal, LogOut, Mail, UserPlus, ArrowUpRight, Search, ShieldCheck,
   ShieldOff, Lock, Bot, CreditCard, Hand,
 } from 'lucide-react'
 import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmAudit, useAdmDay, useAdmSource, ME } from '../data'
@@ -15,7 +15,7 @@ import { AddSomeone } from '../AdminFrame'
 import { ap } from '../paths'
 import { PhoneInput } from '../../template/PhoneInput'
 import { ZONES } from '../words'
-import { GoLive, BookingGap } from './Launch906'
+import { BookingGap } from './Launch906'
 import { BookCheck } from './BookCheck899'
 import { WelcomeLoad } from './WelcomeLoad891'
 import { AiCallerSettings } from './AiCalls892'
@@ -29,12 +29,12 @@ import { useCallOpenMin, saveCallOpenMin } from '../../hooks/useCallOpen'
 // P934 (Brayden, Nov 10): the tabs fit one row at 1440 wide. Settings holds only what is set: the working pages (Bug
 // reports, Deedstone numbers and VA pods (with the P932 hold line), Carrier playbook, Wording to approve, Training,
 // Compliance) are their own rail pages
-// (screens/Work934.jsx); Lead split and the Call ads switch are gone; Switches is one small Go live card; Stripe's
+// (screens/Work934.jsx); Lead split and the Call ads switch are gone; there is no Go live card (P950: CC turns live things on with Brayden's yes); Stripe's
 // setup checks are their own tab so no section scrolls. Old ?tab= links land where the section went (MOVED).
-const TABS = [['profile', 'Profile', User], ['people', 'People', Users], ['golive', 'Go live', Power], ['pay', 'Pay', Wallet], ['stripe', 'Stripe', CreditCard],
+const TABS = [['profile', 'Profile', User], ['people', 'People', Users], ['pay', 'Pay', Wallet], ['stripe', 'Stripe', CreditCard],
   ['servicing', 'Servicing', Hand], ['ai', 'AI caller', Bot], ['audit', 'Audit log', History], ['prefs', 'Preferences', SlidersHorizontal]]
 const MOVED = { bugs: 'bugs', numbers: 'numbers', compliance: 'compliance', hold: 'numbers' } // P936: wording, training, playbook gone
-const RENAMED = { switches: 'golive', billing: 'stripe', split: 'golive' }
+const RENAMED = { switches: 'profile', golive: 'profile', billing: 'stripe', split: 'profile' } // P950: Go live is gone; old links land on Profile
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
 
 function FormFoot({ dirty, onDiscard, onSave, label = 'Save changes' }) {
@@ -252,10 +252,6 @@ export default function Settings() {
             <FormFoot dirty={!same(p, s.profile)} onDiscard={() => setP(s.profile)} onSave={() => { saveSettings({ profile: p }); note('Profile saved') }} />
           </>}
           {tab === 'people' && <People />}
-          {tab === 'golive' && <>
-            <Head title="Go live" sub="The switches that turn real things on. Everything else is set, not switched." />
-            <GoLive live={account.live} />
-          </>}
           {tab === 'pay' && <PayRules />}
           {tab === 'stripe' && <StripeBilling />}
           {tab === 'servicing' && <>

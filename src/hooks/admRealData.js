@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 import { isMissing } from './agentRealData'
 import { readGhlSettings, readGhlKeySaved } from '../lib/ghlConnect'
-import { buildAdmState, realClock, SWITCH_HOME } from '../lib/admReal'
+import { buildAdmState, realClock } from '../lib/admReal'
 import { useNote } from '../template/kit'
 
 // P858 — the Admin portal on real data. Same store shape as the sample door (src/adminshell/data.js), read from the
@@ -145,12 +145,6 @@ export function useAdmRealActions() {
       addShift: notYet('The rota'), removeShift: notYet('The rota'), moveShift: notYet('The rota'),
       decideDayOff: (id, approve) => rpc('va_decide_day_off', { p_request: id, p_approve: approve }),
       setPaused: on => run(supabase.from('recovery_config').update({ payouts_paused: on }).eq('id', true)),
-      setSwitch: (key, on) => {
-        const home = SWITCH_HOME[key]
-        if (!home) { note('This switch has no database column yet (on the door list). Nothing changed'); return }
-        const [table, col] = home
-        run(table === 'app_settings' ? supabase.from('app_settings').update({ [col]: on }).eq('id', 1) : supabase.from('recovery_config').update({ [col]: on }).eq('id', true))
-      },
       savePayRules: notYet('The hourly pay rule'),
       saveBilling: notYet('Lead billing settings'), setMaxDaily: notYet('Raising a max daily spend'),
       saveSettings: patch => {
