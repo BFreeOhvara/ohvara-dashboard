@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Check, ChevronDown, ChevronUp, CircleCheck, Landmark, ArrowUpRight, CreditCard, MessageSquare, RotateCw, Wallet, Megaphone, Headset, Receipt, BadgeDollarSign, PiggyBank, Lock, Bot } from 'lucide-react'
+import { Check, CircleCheck, Landmark, ArrowUpRight, CreditCard, MessageSquare, RotateCw, Wallet, Megaphone, Headset, Receipt, BadgeDollarSign, PiggyBank, Lock, Bot } from 'lucide-react'
 import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, useAdmSettings, useAdmSource, useAdmAgentResults, useAdmRevTrend, ownerOf, OWNERS, PLANS, PERIODS, SETUP_FEE, CARD_FEE, AI_RATE } from '../data'
 import { PRICES } from '../../lib/priceBook.js'
 import { deskAdminLabel } from '../../lib/bookingDesk'
@@ -192,7 +192,7 @@ function Breakdown({ p, period }) {
   )
 }
 
-// P964: the cap's stepper moves in $50 steps. It can't go below what the agent spends a day now.
+// P966: the blue Raise button lifts an agent's max daily lead spend $50 a click. No lowering: agents change their own spend.
 const CAP_STEP = 50
 function UndoToast({ toast, onGone }) {
   useEffect(() => {
@@ -227,11 +227,7 @@ function AgentBills() {
     if (real) return // real data: the setter says on its own whether it is wired yet
     setToast({ k: ++toasts.current, text: `Max ${word} to ${money(value ?? base)}`, undo: () => setMaxDaily(a.id, before) })
   }
-  const step = (a, dir) => {
-    const next = max(a.id) + dir * CAP_STEP
-    if (next < a.spend) return
-    set(a, next === base ? null : next, dir > 0 ? 'raised' : 'lowered')
-  }
+  const raise = a => set(a, max(a.id) + CAP_STEP, 'raised')
   return (
     <div className="adm-stack">
       {m.failed.length > 0 && (
@@ -244,7 +240,7 @@ function AgentBills() {
           ))}</ul>
         </Tile>
       )}
-      {/* P964: columns Agent · Plan · Status · Next · Lead spend (last). The cap is a small stepper at the end of the Lead spend cell. */}
+      {/* P964: columns Agent · Plan · Status · Next · Lead spend (last). P966: the blue Raise button sits at the right end of the row, Reset to its left. */}
       <section className="fx-tile adm-table adm-bills" style={{ '--i': 1 }} aria-label="Agent bills">
         <div className="adm-tr adm-th" aria-hidden="true"><span>Agent</span><span>Plan</span><span>Status</span><span>Next</span><span>Lead spend</span></div>
         {agents.map((a, i) => {
@@ -253,7 +249,6 @@ function AgentBills() {
           const custom = st.billing.maxOverride[a.id] != null
           const first = a.name.split(' ')[0]
           const floor = `Can't go below ${money(a.spend)}, what ${first} spends a day now`
-          const canDown = cap - CAP_STEP >= a.spend
           return (
             <div key={a.id} className="adm-tr" style={{ '--i': i }}>
               <Link to={ap('agents', a.id)} className="adm-who"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>{a.billing.method}</small></span></Link>
@@ -262,11 +257,10 @@ function AgentBills() {
               <span className="adm-cell"><small>{a.billing.next}</small></span>
               <span className="adm-cell adm-spendcell">
                 <span className="adm-spend-txt"><b className="tp-money">{money(a.spend)} a day</b><small>· Max {money(cap)}</small></span>
-                <span className="adm-capstep" role="group" aria-label={`Max daily lead spend for ${a.name}`}>
-                  <button type="button" aria-label={`Raise ${a.name}'s max by ${money(CAP_STEP)}`} onClick={() => step(a, 1)}><ChevronUp size={13} aria-hidden="true" /></button>
-                  <button type="button" aria-label={`Lower ${a.name}'s max by ${money(CAP_STEP)}`} aria-disabled={!canDown} title={canDown ? undefined : floor} className={canDown ? undefined : 'is-off'} onClick={() => step(a, -1)}><ChevronDown size={13} aria-hidden="true" /></button>
+                <span className="adm-capact">
+                  {custom && <button type="button" className="adm-reset" aria-disabled={base < a.spend} title={base < a.spend ? floor : undefined} onClick={() => { if (base >= a.spend) set(a, null, 'reset') }}>Reset</button>}
+                  <button type="button" className="fx-pillbtn adm-raise" aria-label={`Raise ${a.name}'s max by ${money(CAP_STEP)}`} onClick={() => raise(a)}>Raise</button>
                 </span>
-                {custom && <button type="button" className="adm-reset" aria-disabled={base < a.spend} title={base < a.spend ? floor : undefined} onClick={() => { if (base >= a.spend) set(a, null, 'reset') }}>Reset</button>}
               </span>
             </div>
           )

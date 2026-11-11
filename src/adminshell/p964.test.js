@@ -38,12 +38,10 @@ test('Fulfillment Today: results map to green, amber, red; the outcome word stay
   for (const k of ['green', 'warn', 'rose', 'mute']) assert.ok(css.includes(`.adm-tc-call.is-res-${k}`), k)
 })
 
-test('Agent billing: Agent, Plan, Status, Next, Lead spend; stepper in $50 steps, no Raise button; Profit split above the stage', () => {
+test('Agent billing: Agent, Plan, Status, Next, Lead spend; Raise in $50 steps (P966: the button is back); Profit split above the stage', () => {
   const b = src('./screens/Billing.jsx')
   assert.match(b, /<span>Agent<\/span><span>Plan<\/span><span>Status<\/span><span>Next<\/span><span>Lead spend<\/span>/)
-  assert.doesNotMatch(b, />Raise<|'Raise'/)
   assert.match(b, /const CAP_STEP = 50/)
-  assert.match(b, /if \(next < a\.spend\) return/)
   assert.match(b, /Undo/)
   assert.ok(b.indexOf('<Split p={p} />') < b.indexOf('className="fx-tile adm-rev-stage"'), 'Profit split before the By week box')
   assert.ok(b.indexOf('<Split p={p} />') > b.indexOf('<Headline p={p}'))

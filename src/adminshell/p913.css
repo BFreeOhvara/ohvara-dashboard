@@ -64,7 +64,7 @@
 .adm-dayhead.is-today { background: var(--sh-f-sky); color: var(--sh-fi-sky); }
 .adm-dayhead.is-on { box-shadow: inset 0 0 0 2px var(--sh-sky); }
 .adm-rowbtn { appearance: none; border: 0; font: inherit; cursor: pointer; text-align: left; border-radius: 8px; background: transparent; color: inherit; }
-.adm-rowbtn:hover { background: color-mix(in srgb, var(--ov-hi) 7%, transparent); }
+/* P966: no grey highlight on an hour slot under the mouse (the call boxes keep their pop). */
 
 /* Fulfillment: days off without approvals */
 .adm-allow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }

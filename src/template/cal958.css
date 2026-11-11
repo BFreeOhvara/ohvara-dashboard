@@ -28,7 +28,11 @@
 .fx-week .tp-ev.ev958.is-violet { --cf: var(--sh-cf-lilac); --ci: var(--sh-ci); }
 
 /* A call that has passed with a result: its result's colour, dimmed so it reads as done. Hover brings it up a little. */
-.fx-week .tp-tgrid-b .tp-tcol .tp-ev.ev958.is-past { opacity: .6; }
+/* P966: a passed call comes in already dimmed: its entrance ends at the dimmed look, so it never shows at full colour and
+   then fades once the entrance is over. Only calls still to come end at full colour (fx-pop, flow.css). */
+@keyframes fx-pop-past { 0% { transform: scale(.6); opacity: 0; } 100% { transform: scale(1); opacity: .6; } }
+.fx-week .tp-tgrid-b .tp-tcol .tp-ev.ev958.is-past { opacity: .6; animation-name: fx-pop-past; }
+.fx-week.is-settled .tp-tgrid-b .tp-tcol .tp-ev.ev958.is-past { animation: none; }
 .fx-week .tp-tgrid-b .tp-tcol .tp-ev.ev958.is-past:hover { opacity: .85; }
 /* Passed with no result yet: its own colour and a small dot ("Mark result"). */
 .ev958-mark {
