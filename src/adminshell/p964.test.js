@@ -17,9 +17,10 @@ test('Overview: To-dos has no header and no Show all; Calendar sits at the botto
   assert.match(wave, /\.fx-wk-ev:hover, \.adm-todo:hover, \.adm-agent:hover \{ translate: 0 -3px;/)
 })
 
-test('admin rail: the phone button is gone, a Calendar shortcut goes to the same calendar as the To-dos button', () => {
+test('admin rail: Give a call is replaced by a Calendar shortcut to the same calendar as the To-dos button; the Deedstone numbers phone icon stays', () => {
   const f = src('./AdminFrame.jsx')
-  assert.doesNotMatch(f, /PhoneCall/)
+  assert.match(f, /aria-label="Deedstone numbers"[^>]*><PhoneCall/)
+  assert.doesNotMatch(f, /Give a call|GiveCall/)
   assert.match(f, /const calTo = `\$\{ap\('team'\)\}\?tab=calendar`/)
   assert.match(f, /aria-label="Calendar" data-tip="Calendar"/)
   // the VA rail keeps its phone button

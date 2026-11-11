@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Link, NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom'
+import { Link, NavLink, useLocation, useOutlet } from 'react-router-dom'
 import {
   Home, Users, Headset, PhoneIncoming, BookUser, Landmark, Plug, Settings, Search, Bell, Sun, Moon, MessageSquare, ChevronRight, LogOut,
-  Ellipsis, CircleHelp, Mail, Keyboard, UserPlus, Shuffle, Hand, Bug, History, TriangleAlert, Wallet, CalendarDays, CalendarOff,
+  Ellipsis, CircleHelp, Mail, Keyboard, UserPlus, Shuffle, Bug, History, TriangleAlert, Wallet, CalendarDays, CalendarOff,
   ShieldCheck, PhoneForwarded, CircleDollarSign, CheckCircle2, Radio, Link2, Copy, Plus, Rocket, BadgeCheck, Hourglass,
-  Scale,
+  PhoneCall, Scale,
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
 import { useIsTestAccount } from '../hooks/useIsTestAccount'
@@ -92,25 +92,6 @@ export function AddSomeone({ open, onClose }) {
       </div>
       {via !== 'link' && <Field label={via === 'email' ? 'Email' : 'Mobile number'}><input type={via === 'email' ? 'email' : 'tel'} value={to} onChange={e => setTo(e.target.value)} placeholder={via === 'email' ? 'name@example.com' : '(555) 555-0100'} /></Field>}
       <p className="tp-sub">Agents sign up and pay on their own; they show on Setup once they've paid. Admins are added by another admin outside the portal.</p>
-    </Drawer>
-  )
-}
-
-// Give a call: the desk's calls not started yet. P945: they move on by themselves at 10 minutes; this gives one now.
-function GiveCall({ open, onClose }) {
-  const { data: day } = useAdmDay()
-  const navigate = useNavigate()
-  const keep = useKeep(open)
-  if (!keep) return null
-  return (
-    <Drawer open={open} center onClose={onClose} title="Give a call" sub={day.late.length ? 'Not started yet. They move to the next free VA by themselves at 10 minutes; pick one to give it now.' : 'Every call has started or is still ahead. Missed ones move on by themselves.'}>
-      <ul className="tp-list">
-        {day.late.map(c => (
-          <li key={c.id}><button type="button" className="fx-mrow" onClick={() => { onClose(); navigate(`${ap('team')}?call=${c.id}`) }}>
-            <Avatar name={c.client} tone="warn" /><span className="tp-grow"><b>{c.client}</b><small>{c.time} · {c.old_carrier}</small></span><Hand size={15} aria-hidden="true" />
-          </button></li>
-        ))}
-      </ul>
     </Drawer>
   )
 }
@@ -232,7 +213,7 @@ export default function AdminFrame() {
     ],
     leads: leads.map(l => ({ id: `l-${l.id}`, name: l.name, sub: `${l.agent_id ? STAGE_WORD[l.stage] : 'Not matched'} · ${l.agent || 'no agent'}`, hay: `${l.name} ${l.phone} ${l.city} ${l.agent || ''}`, go: () => ap('leads', l.id) })),
   }), [clients, agents, vas, leads])
-  const pages = [...tabs.map(([k, label]) => ({ to: () => ap(k), label })), { to: () => ap('messages'), label: 'Messages' }, { to: () => ap('connect'), label: 'Connect' }, { to: () => ap('numbers'), label: 'Deedstone numbers' }, { to: () => ap('settings'), label: 'Settings' }]
+  const pages = [...tabs.map(([k, label]) => ({ to: () => ap(k), label })), { to: () => ap('messages'), label: 'Messages' }, { to: () => ap('connect'), label: 'Connect' }, { to: () => ap('settings'), label: 'Settings' }]
 
   const appRef = useRef(null)
   useLayoutEffect(() => {
@@ -290,15 +271,15 @@ export default function AdminFrame() {
         <i className="fx-hair" />
         <button type="button" className="fx-ri tp-wig" aria-label="Add a VA" data-tip="Add a VA" {...wig} onClick={open('add')}><UserPlus size={18} /></button>
         {/* P934: no Route a lead here; a real unmatched lead is routed from its notification (RouteLeadDrawer). */}
-        <button type="button" className="fx-ri tp-wig" aria-label="Give a call" data-tip={day.late.length ? `${day.late.length} not started yet` : 'Give a call'} {...wig} onClick={open('give')}><Hand size={18} /></button>
+        {/* P964: the calendar shortcut (in the old hand button's slot): the same calendar the To-dos Calendar button opens. */}
+        <Link to={calTo} className={`fx-ri tp-wig${calOn ? ' active' : ''}`} aria-label="Calendar" data-tip="Calendar" {...wig}><CalendarDays size={18} /></Link>
         <i className="fx-hair" />
         <NavLink to={ap('messages')} className="fx-ri tp-wig" aria-label="Messages" data-tip="Messages" {...wig}><MessageSquare size={18} />{day.unread > 0 && <span className="fx-badge">{day.unread}</span>}</NavLink>
         <NavLink to={ap('connect')} className="fx-ri tp-wig" aria-label="Connect" data-tip={syncFailed(ghlRow) ? 'Connect · the last sync failed' : 'Connect'} {...wig}><Plug size={18} />{syncFailed(ghlRow) && <span className="adm-warndot" aria-label="The last sync failed" />}</NavLink>
         <i className="fx-hair" />
         {/* P934: the working pages that left Settings, each its own page (screens/Work934.jsx). */}
         <NavLink to={ap('bugs')} className="fx-ri tp-wig" aria-label="Bug reports" data-tip="Bug reports" {...wig}><Bug size={18} /></NavLink>
-        {/* P964: the calendar shortcut (where the phone button was): the same calendar the To-dos Calendar button opens. */}
-        <Link to={calTo} className={`fx-ri tp-wig${calOn ? ' active' : ''}`} aria-label="Calendar" data-tip="Calendar" {...wig}><CalendarDays size={18} /></Link>
+        <NavLink to={ap('numbers')} className="fx-ri tp-wig" aria-label="Deedstone numbers" data-tip="Deedstone numbers and VA pods" {...wig}><PhoneCall size={18} /></NavLink>
         <NavLink to={ap('compliance')} className="fx-ri tp-wig" aria-label="Compliance" data-tip="Compliance" {...wig}><Scale size={18} /></NavLink>
         <i className="fx-hair" />
         <button type="button" className="fx-ri tp-wig" aria-label="Help and support" aria-expanded={panel === 'help'} data-tip="Help and support" {...wig} onClick={open('help')}><CircleHelp size={18} /></button>
@@ -342,7 +323,6 @@ export default function AdminFrame() {
       <BellDrawer open={panel === 'bell'} onClose={close} onRoute={() => setPanel('route')} />
       <AddSomeone open={panel === 'add'} onClose={close} />
       <RouteLeadDrawer open={panel === 'route'} onClose={close} />
-      <GiveCall open={panel === 'give'} onClose={close} />
       <Help open={panel === 'help'} onClose={close} onBug={() => setPanel('bug')} />
       <ReportBug open={panel === 'bug'} onClose={close} role="Admin" />
       <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} />
