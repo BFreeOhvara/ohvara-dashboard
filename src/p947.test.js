@@ -18,9 +18,10 @@ test('P947: Today is a filled pill on the date header, not a tinted column; call
   assert.match(css, /\.tp-ev:hover \{[^}]*translate: 0 -3px; scale: 1\.03/)
 })
 
-test('P947: a VA call opens as a centred pop-up from the grid and the day list; no confirmation number', () => {
+// P958 replaced P947's centred pop-up: the call's details slide in from the right over the open day.
+test('P947/P958: a VA call opens its details from the grid and the day list; no confirmation number', () => {
   const cal = src('./template/ful/screens/Calendar.jsx')
-  assert.match(cal, /<CallDrawer key=\{id\} id=\{id\} onClose=\{closeDrawer\} center \/>/)
+  assert.match(cal, /<CallDrawer key=\{id\} id=\{id\} onClose=\{closeDrawer\} \/>/)
   assert.doesNotMatch(cal, /onClose=\{closeDrawer\} inline/) // the day panel keeps its list (no call inside it)
   assert.doesNotMatch(cal, /Confirmation \$\{/)
   assert.match(src('./template/Record.jsx'), /is-center/)

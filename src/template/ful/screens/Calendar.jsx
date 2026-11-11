@@ -11,7 +11,6 @@ import { useClientZone } from '../../useClientZone'
 import { sampleSlots, hoursLine } from '../../carriers'
 import { vaSlots, freeVa, zoneAbbr } from '../../../lib/callSlots'
 import { RecordDrawer } from '../../Record'
-import { CountUp } from '../../motion'
 import { TaskDrawer } from './Servicing'
 import { StartCall } from '../StartCall'
 import { fp } from '../paths'
@@ -22,6 +21,9 @@ import { useGate } from '../../docs886/data'
 import { CallBody } from '../CallPanel'
 import { whyShort } from '../callSteps'
 import { calLanes, boxMinutes } from '../../../lib/calLanes'
+import { EV_MIN_PX, clientAt, evClass, evLine2, evLook, vaResultTone } from '../../cal958'
+import { EvText } from '../../CalEv'
+import { useDayFirst, useSettled } from '../../useCal958'
 import { clientStatus, clientStatusOf } from '../../../lib/clientCheck.js'
 
 // P918 — Calendar: every booked call (this was the Schedule page; Schedule is now the VA's own hours). This week ·
@@ -131,13 +133,15 @@ export function CallDrawer({ id, onClose, inline = false, center = false }) {
 
 
 
-// P931: one booked call on the grid: client name, time, one short why line, coloured by the client's status. Defined
-// here (not inside Calendar) so a click that opens the panel keeps every box as it is: no remount, no replayed pop-in.
-function Ev({ e, top, height, lane: [k, of], link }) {
+// P931: one booked call on the grid, coloured by the client's status. Defined here (not inside Calendar) so a click
+// that opens the details keeps every box as it is: no remount, no replayed pop-in. P958: two lines, time · name over
+// type · client time; a call that has passed with a result takes the result's colour (Done green, Couldn't reach
+// orange, Passed on grey), dimmed; passed with no result yet, a "Mark result" dot.
+function Ev({ e, look, top, height, lane: [k, of], link, onPick }) {
   return (
-    <Link {...link} className={`tp-ev fs-ev is-${e.st.tone}${e.done ? ' is-done' : ''}${of > 1 ? ' is-lane' : ''}`} aria-label={`${e.time}, ${e.name}, ${e.why}, ${e.st.label}`}
+    <Link {...link} onClick={ev => onPick(e, ev)} className={`tp-ev fs-ev ${evClass(look)}${of > 1 ? ' is-lane' : ''}`} aria-label={`${e.time}, ${e.name}, ${e.word}, ${look.done ? 'done' : e.st.label}${look.mark ? ', mark the result' : ''}`}
       style={{ top: `${top}%`, height: `${height}%`, left: `calc(${(k / of) * 100}% + ${of > 1 ? 2 : 4}px)`, width: `calc(${100 / of}% - ${of > 1 ? 4 : 8}px)` }}>
-      <b>{e.name}</b><span className="tp-num">{e.time}</span><small>{e.why}</small>
+      <EvText l1={`${e.time} · ${e.name}`} l2={evLine2(e.word, e.client)} mark={look.mark} />
     </Link>
   )
 }
@@ -163,8 +167,16 @@ export default function Calendar() {
   const todayIso = clock.isoOf(TODAY)
   const items = useMemo(() => raw.filter(i => !clientOfItem(i)?.lead).map(i => {
     const c = clientOfItem(i)
-    return { ...i, why: whyShort(i), st: clientStatus(c ? clientStatusOf(c, todayIso) : 'working') }
-  }), [raw, todayIso])
+    return { ...i, why: whyShort(i), st: clientStatus(c ? clientStatusOf(c, todayIso) : 'working'), client: clientAt(i.iso, clock.tz, i.tz) }
+  }), [raw, todayIso, clock.tz])
+  // P958: how each box looks: ended with a result = the result's colour, dimmed; ended with none yet = the dot.
+  const nowMs = Date.parse(clock.nowIso)
+  const lookOf = e => {
+    const past = Date.parse(e.iso) + SLOT * 60000 <= nowMs
+    return evLook({ base: e.st.tone, past, result: vaResultTone(e), needs: !e.done })
+  }
+  const settled = useSettled()
+  const dayFirst = useDayFirst()
   // An open day (from a link) shows its own week.
   const week = view != null ? (WEEKS[1].includes(view) ? 1 : 0) : weekPick
   const ofDay = d => items.filter(i => i.day === d)
@@ -173,8 +185,16 @@ export default function Calendar() {
   // P947: a call (a box in the grid, a row in the day's list or in Rest of the week) opens its details in a centred
   // pop-up over the page, at the call's own address. What was behind it stays exactly as it was: the week, or the day's
   // panel (?day= is kept), and closing the pop-up comes back to it. (This replaces P946's call inside the day panel.)
+  // P958: a call's address carries its own day (?day=), so the day list behind the details is always that call's day.
   const listUrl = () => ({ pathname: fp('calendar'), search })
-  const linkOf = e => ({ to: { pathname: fp('calendar', e.ref), search }, state: { fromCal: true } })
+  const searchOf = d => { const q = new URLSearchParams(search); q.set('day', clock.isoOf(d)); return `?${q}` }
+  const linkOf = e => ({ to: { pathname: fp('calendar', e.ref), search: searchOf(e.day) }, state: { fromCal: true } })
+  // P958: from the week (or another day's row) the day opens first, then the details slide in over it.
+  const pick = (e, ev) => {
+    if (view === e.day || ev.ctrlKey || ev.shiftKey || ev.button > 0) return
+    ev.preventDefault()
+    dayFirst(false, () => open(e.day), () => navigate(linkOf(e).to, { state: { fromCal: true } }))
+  }
   const pickWeek = w => { setWeek(w); if (day != null) close() }
   const openDay = d => open(d)
   const closeDrawer = () => (location.state?.fromCal ? navigate(-1) : navigate(listUrl(), { replace: true }))
@@ -184,11 +204,10 @@ export default function Calendar() {
   const kind = (item || {}).kind || (id ? (id.startsWith('cl-') ? 'call' : 'task') : null)
   const headKey = d => e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDay(d) } }
 
-  // P931 (P929 rule): text never cuts off and boxes never overlap. A box is as tall as its call, and never shorter than
-  // its words need (measured: if any box's words don't fit, every box grows to fit, and close calls sit side by side).
+  // P931 (P929 rule): text never cuts off and boxes never overlap. P958: a box is as tall as its call and never
+  // shorter than its two lines (EV_MIN_PX); close calls sit side by side.
   const gridRef = useRef(null)
   const [pxPerMin, setPx] = useState(0)
-  const [minPx, setMinPx] = useState(40)
   useLayoutEffect(() => {
     const el = gridRef.current
     if (!el) return undefined
@@ -198,17 +217,8 @@ export default function Calendar() {
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
-  useLayoutEffect(() => {
-    const el = gridRef.current
-    if (!el || !pxPerMin) return
-    let need = 0
-    el.querySelectorAll('.fs-ev').forEach(b => { if (b.scrollHeight > b.clientHeight + 1) need = Math.max(need, b.scrollHeight + 2) })
-    // Measured after layout on purpose: the box size depends on how the words wrapped. It only ever grows, so it settles.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (need > minPx && need <= pxPerMin * 60) setMinPx(Math.ceil(need))
-  }, [pxPerMin, minPx, items, view, week])
   const total = ROWS * 60
-  const span = boxMinutes(SLOT, minPx, pxPerMin)
+  const span = boxMinutes(SLOT, EV_MIN_PX, pxPerMin)
   const startOf = e => minutesOf(e.time) - START * 60
   const lanesOf = list => calLanes(list.map(e => ({ id: e.ref, start: startOf(e), end: startOf(e) + span })))
 
@@ -225,7 +235,7 @@ export default function Calendar() {
 
       {/* P931: the grid keeps a set hour height (ful.css) instead of squeezing into the window, so every box can be read. */}
       <div className="fx-grid" data-fold>
-        <section className={`fx-tile ${view != null ? 'fx-s8 is-day' : 'fx-s12 is-week'} fx-week cal910`} style={{ '--i': 0, '--days': cols.length, '--rows': ROWS }} aria-label={view != null ? `${dayName(view)}, ${dateText(view)}` : WEEK_LABEL[week]}>
+        <section className={`fx-tile ${view != null ? 'fx-s8 is-day' : 'fx-s12 is-week'} fx-week cal910${settled ? ' is-settled' : ''}`} style={{ '--i': 0, '--days': cols.length, '--rows': ROWS }} aria-label={view != null ? `${dayName(view)}, ${dateText(view)}` : WEEK_LABEL[week]}>
           <div className="tp-tgrid-h"><span />{cols.map(d => (
             <b key={d} role="button" tabIndex={0} aria-pressed={d === view} title={d === view ? 'Back to the week' : `Open ${dayName(d)} ${dayNum(d)}`} className={`${d === TODAY ? 'today' : ''}${d === view ? ' is-on' : ''}`} onClick={() => openDay(d)} onKeyDown={headKey(d)}>
               {dayName(d)} <span>{dayNum(d)}</span>{d === TODAY && <small>Today</small>}
@@ -238,7 +248,7 @@ export default function Calendar() {
               const lanes = lanesOf(dayItems)
               return (
                 <div key={d} className={`tp-tcol${d === TODAY ? ' today' : ''}`} data-day={d} onClick={e => { if (view == null && e.target === e.currentTarget) openDay(d) }}>
-                  {dayItems.map(e => <Ev key={e.ref} e={e} link={linkOf(e)} lane={lanes[e.ref] || [0, 1]}
+                  {dayItems.map(e => <Ev key={e.ref} e={e} look={lookOf(e)} link={linkOf(e)} onPick={pick} lane={lanes[e.ref] || [0, 1]}
                     top={Math.max(0, Math.min(100, (startOf(e) / total) * 100))} height={(span / total) * 100} />)}
                   {d === TODAY && <i className="tp-now" style={{ top: `${((minutesOf(NOW) - START * 60) / total) * 100}%` }} aria-hidden="true" />}
                 </div>
@@ -249,27 +259,28 @@ export default function Calendar() {
 
         {view != null && (
           <DayBox title={`${dayName(view)}, ${dateText(view)}`} sub={list.length ? `${list.length} booked` : 'Nothing booked'} leaving={leaving} onClose={close}>
-            <b className="tp-num fx-huge2"><CountUp value={list.length} /><small> {list.length === 1 ? 'call' : 'calls'}</small></b>
+            <b className="tp-num fx-huge2">{list.length}<small> {list.length === 1 ? 'call' : 'calls'}</small></b>
             <ul className="fx-rows">
               {list.map(e => (
-                <li key={e.ref}><Link {...linkOf(e)} className={`fx-row is-${e.st.tone}`}><span className="fx-row-ic"><Phone size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{e.name}</b><small>{e.time} · {e.why}</small></span><ChevronRight size={16} aria-hidden="true" /></Link></li>
+                <li key={e.ref}><Link {...linkOf(e)} className={`fx-row is-${lookOf(e).tone}${lookOf(e).done ? ' is-past' : ''}`}><span className="fx-row-ic"><Phone size={15} aria-hidden="true" /></span><span className="tp-grow"><b>{e.name}</b><small>{e.time} · {e.why}</small></span><ChevronRight size={16} aria-hidden="true" /></Link></li>
               ))}
             </ul>
             {list.length === 0 && <Empty title="A free day" sub="Nothing is booked for this day." />}
             {rest.length > 0 && <>
               <h3 className="fx-h3">Rest of the week</h3>
               <ul className="fx-rows">
-                {rest.map(e => <li key={e.ref}><Link {...linkOf(e)} className={`fx-row is-${e.st.tone}`}><span className="tp-grow"><b>{e.name}</b><small>{dayName(e.day)} {e.time} · {e.why}</small></span></Link></li>)}
+                {rest.map(e => <li key={e.ref}><Link {...linkOf(e)} onClick={ev => pick(e, ev)} className={`fx-row is-${e.st.tone}`}><span className="tp-grow"><b>{e.name}</b><small>{dayName(e.day)} {e.time} · {e.why}</small></span></Link></li>)}
               </ul>
             </>}
           </DayBox>
         )}
       </div>
 
-      {/* P947: the call's details, centred over the page (any call, on these two weeks or not). */}
-      {id && kind === 'call' && <CallDrawer key={id} id={id} onClose={closeDrawer} center />}
-      {id && kind && kind !== 'call' && <TaskDrawer key={id} id={id} onClose={closeDrawer} center />}
-      {id && !kind && <RecordDrawer center label="Not on your calendar" kicker="Calendar" onClose={closeDrawer} hero={<h2>Not on your calendar</h2>}><p className="fx-calm">That item is not here any more.</p></RecordDrawer>}
+      {/* P958: the call's details slide in from the right over the open day (any call, on these two weeks or not); the
+          day list on the right stays as it is. */}
+      {id && kind === 'call' && <CallDrawer key={id} id={id} onClose={closeDrawer} />}
+      {id && kind && kind !== 'call' && <TaskDrawer key={id} id={id} onClose={closeDrawer} />}
+      {id && !kind && <RecordDrawer label="Not on your calendar" kicker="Calendar" onClose={closeDrawer} hero={<h2>Not on your calendar</h2>}><p className="fx-calm">That item is not here any more.</p></RecordDrawer>}
     </div>
   )
 }

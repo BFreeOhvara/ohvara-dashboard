@@ -72,7 +72,8 @@ test('Calendar: no type filters or status chips, just the weeks; boxes are stabl
   // The box component lives outside Calendar, so a click doesn't remount every box (the "reload").
   assert.ok(cal.indexOf('function Ev(') < cal.indexOf('export default function Calendar('))
   assert.doesNotMatch(cal.slice(cal.indexOf('export default function Calendar(')), /const Ev = /)
-  assert.match(cal, /<b>\{e\.name\}<\/b><span className="tp-num">\{e\.time\}<\/span><small>\{e\.why\}<\/small>/)
+  // P958: two lines, time · name over type · client time (CalEv EvText).
+  assert.match(cal, /<EvText l1=\{`\$\{e\.time\} · \$\{e\.name\}`\} l2=\{evLine2\(e\.word, e\.client\)\}/)
   assert.match(cal, /clientStatus\(c \? clientStatusOf\(c, todayIso\)/)
   assert.match(read('./template/ful/ful.css'), /\.tp-ev\.fs-ev > \* \{ white-space: normal; overflow: visible; text-overflow: clip;/)
 })
