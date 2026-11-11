@@ -17,6 +17,7 @@ import { SpendSheet } from './MMore'
 import { mp } from './mpaths'
 import { targetOf } from '../../lib/deedstoneCall'
 import { DeedstoneCallButton } from '../DeedstoneCall'
+import { isNativeApp } from '../../lib/native'
 
 // P908 — Leads on a phone: one status at a time. Swipe sideways (or tap a status) to move between Booked, No show,
 // Follow up, Not interested and Sold, each with its count (P924: no Closed). Cards are full width with Call in thumb reach;
@@ -211,7 +212,7 @@ export default function MLeads() {
         {find
           ? <label className="mx-find"><Search size={18} aria-hidden="true" /><input autoFocus aria-label="Find a lead" placeholder="Name, city or phone" value={q} onChange={e => setQ(e.target.value)} /><button type="button" className="mx-ib" aria-label="Close search" onClick={() => { setQ(''); setFind(false) }}><X size={18} aria-hidden="true" /></button></label>
           : <>
-            <button type="button" className="mx-pill" onClick={() => setSpend(true)} aria-label="Change your daily lead spend"><Wallet size={17} aria-hidden="true" /><b className="tp-money">{money(dailyTotal(billing.spend))}</b><small>a day</small><ChevronRight size={16} aria-hidden="true" /></button>
+            <button type="button" className="mx-pill" onClick={() => setSpend(true)} disabled={isNativeApp()} aria-label={isNativeApp() ? 'Daily lead spend, changed on the Ohvara website' : 'Change your daily lead spend'}><Wallet size={17} aria-hidden="true" /><b className="tp-money">{money(dailyTotal(billing.spend))}</b><small>a day</small><ChevronRight size={16} aria-hidden="true" /></button>
             <span className="tp-grow" />
             <button type="button" className="mx-ib is-soft" aria-label="Find a lead" onClick={() => setFind(true)}><Search size={20} aria-hidden="true" /></button>
           </>}

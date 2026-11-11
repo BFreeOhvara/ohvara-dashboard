@@ -7,6 +7,8 @@ import {
   parseCsv, looksLikeHeader, guessMapping, mappingMissing, cleanList, priceFor, usd0,
   REACT_FIELDS, REMOVED_ORDER, REMOVED_LABEL, REACT_ATTEST, LIST_STATUS, normalizePhone,
 } from '../lib/reactivation.js'
+import { isNativeApp } from '../lib/native'
+import { NATIVE_BILLING_TEXT } from '../components/native/NativeBillingNote'
 import './p891.css'
 import './react952.css'
 
@@ -110,6 +112,8 @@ export function ReactivateDrawer({ open, onClose }) {
 
   const footer = done
     ? <button type="button" className="tp-primary fx-accent" onClick={close}>Done</button>
+    // P956: no payments inside the phone app (P775 rule); the list is paid for on the website.
+    : read && !read.error && clean && isNativeApp() ? <small className="rx-fine">{NATIVE_BILLING_TEXT} Pay for this list there.</small>
     : read && !read.error && clean ? <>
       <label className="tp-check rx-attest"><input type="checkbox" checked={attest} onChange={e => setAttest(e.target.checked)} /><span>{REACT_ATTEST}</span></label>
       <button type="button" className="tp-primary fx-accent" disabled={!canPay} onClick={pay}>

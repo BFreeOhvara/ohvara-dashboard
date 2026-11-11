@@ -25,6 +25,13 @@ import MClients from './m/MClients'
 import MCalendar from './m/MCalendar'
 import MMore from './m/MMore'
 import { DeedstoneCallProvider } from './DeedstoneCall'
+import { isNativeApp } from '../lib/native'
+import { NativeBillingNote } from '../components/native/NativeBillingNote'
+
+// P956: no payments inside the phone app (P775 rule). Billing there is one line: it's managed on the website.
+function NativeBilling() {
+  return <div className="tp-page fx-page"><NativeBillingNote /></div>
+}
 
 // The template's screens at the real agent URLs (SHELL_ROUTES), inside the app's own router. ShellSwap decides
 // who gets here. P848: the data is sample until "Show sample data" is off (or this viewer picks View: Real); then
@@ -52,11 +59,11 @@ export default function AgentShell({ account }) {
           <Routes>
             <Route element={<ShellFrame />}>
               {Object.entries(SHELL_ROUTES).map(([key, path]) => {
-                const Screen = SCREENS[key]
+                const Screen = key === 'billing' && isNativeApp() ? NativeBilling : SCREENS[key]
                 // P924: Request a service is gone; its old address lands on Clients.
                 if (key === 'requestService') return <Route key={key} path={path} element={<Navigate to={SHELL_ROUTES.clients} replace />} />
                 // Screens read the id as :id (the /template routes); the real client URL calls it :clientId.
-                return <Route key={key} path={path.replace(':clientId', ':id')} element={<Pick d={Screen} m={PHONE[key]} />} />
+                return <Route key={key} path={path.replace(':clientId', ':id')} element={<Pick d={Screen} m={Screen === NativeBilling ? NativeBilling : PHONE[key]} />} />
               })}
             </Route>
             <Route path="*" element={<Navigate to={SHELL_ROUTES.overview} replace />} />

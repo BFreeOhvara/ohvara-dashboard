@@ -22,8 +22,8 @@ const Spinner = () => (
 
 // The agent portal swap: an agent at one of the shell URLs (paths.js SHELL_ROUTES) gets the template's screens.
 // P837: a Fulfillment rep at a Fulfillment URL (fulshell/paths.js) gets the same design, on real data.
-// P849: an admin at an admin URL gets the admin shell. Everyone else (logged out, an agent or rep in the phone app)
-// gets `children`, today's routes, untouched. /preview/admin is the admin shell with nobody signed in.
+// P849: an admin at an admin URL gets the admin shell. Everyone else (logged out, or an agent not yet open)
+// gets `children`, today's routes, untouched. P956: the phone app gets the same shells as the website. /preview/admin is the admin shell with nobody signed in.
 // P919: the old admin pages are gone. No ?classic=1 and no switch back; an admin is never sent to an old page, on the
 // web or in the phone app: old addresses land on their new page (adminOldTarget). The flag the old switch remembered
 // is cleared on load, so a tab that chose the old pages lands on the new ones.

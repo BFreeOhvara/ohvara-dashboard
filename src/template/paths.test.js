@@ -123,7 +123,7 @@ test('showShell', () => {
   assert.equal(s('agent', '/agent'), true)
   assert.equal(s('agent', '/settings'), true)
   assert.equal(s('agent', '/agent/book'), false)
-  assert.equal(s('agent', '/agent', true), false)
+  assert.equal(s('agent', '/agent', true), true) // P956: the phone app gets the shell too
   for (const role of ['admin', 'fulfillment']) {
     assert.equal(s(role, '/settings'), false)
     assert.equal(s(role, '/agent/submit'), false)
@@ -138,7 +138,7 @@ test('showShell: every shell URL for an agent on the web, trailing slash and ids
   // Not a shell URL, or not an agent on the web: today's pages.
   for (const p of ['/agent/clients/a/b', '/agent/team', '/admin', '/fulfillment', '/login', '/protect']) assert.equal(s('agent', p), false, p)
   for (const role of ['admin', 'fulfillment', 'va', undefined, '']) assert.equal(s(role, '/agent/leads'), false, String(role))
-  assert.equal(s('agent', '/messages', true), false)
+  assert.equal(s('agent', '/messages', true), true) // P956
 })
 
 test('every SHELL_ROUTES path is a shell path', () => {

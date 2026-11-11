@@ -15,6 +15,8 @@ import { TalkDrawer } from '../Talk'
 import { ReportBug } from '../ReportBug'
 import { Sheet } from './Sheet'
 import { mp } from './mpaths'
+import { isNativeApp } from '../../lib/native'
+import { NATIVE_BILLING_TEXT } from '../../components/native/NativeBillingNote'
 
 // P908 — More on a phone: you, live-transfer status, then stacked rows for Billing, Activity and Settings (their full
 // pages, with a back arrow), Messages, Submit, the app, help, sign out and delete. Rows 64 px.
@@ -27,6 +29,7 @@ function MoreRow({ to, icon: Icon, label, sub, right, onClick, danger }) {
 
 export default function MMore() {
   const account = useAccount()
+  const native = isNativeApp()
   const [theme, setTheme] = useTheme()
   const { data: b } = useSampleBilling()
   const { data: s } = useSampleSettings()
@@ -55,14 +58,14 @@ export default function MMore() {
       </Link>
 
       <ul className="mx-stack">
-        <MoreRow to={mp.billing()} icon={CreditCard} label="Billing" sub={`${money(dailyTotal(b.spend))} a day · next charge ${money(b.nightNow.tonight.total)} ${b.nightly.at.toLowerCase()}`} />
+        <MoreRow to={mp.billing()} icon={CreditCard} label="Billing" sub={native ? NATIVE_BILLING_TEXT : `${money(dailyTotal(b.spend))} a day · next charge ${money(b.nightNow.tonight.total)} ${b.nightly.at.toLowerCase()}`} />
         <MoreRow to={mp.activity()} icon={History} label="Activity" sub={act[0] ? `${act[0].who}: ${act[0].text}` : 'Everything our team did for you'} />
         <MoreRow to={mp.settings()} icon={Settings} label="Settings" sub={s.hours ? `${s.hours.start} to ${s.hours.end}${days ? ` · ${days} days` : ''}` : 'Your hours, alerts and account'} />
       </ul>
       <ul className="mx-stack">
         <MoreRow to={paths.messages()} icon={MessageSquare} label="Messages" sub="You and our team" right={unread > 0 ? <span className="mx-count">{unread}</span> : null} />
         <MoreRow to={paths.submit()} icon={FileUp} label="Submit a policy" sub="A sale for servicing" />
-        <MoreRow icon={Smartphone} label="Get the phone app" sub="Alerts the moment a lead comes in" onClick={() => setPanel('app')} />
+        {!native && <MoreRow icon={Smartphone} label="Get the phone app" sub="Alerts the moment a lead comes in" onClick={() => setPanel('app')} />}
         <MoreRow icon={CircleHelp} label="Help and support" sub="Talk to someone, or report a bug" onClick={() => setPanel('help')} />
       </ul>
       {isTemplateAddress() && (

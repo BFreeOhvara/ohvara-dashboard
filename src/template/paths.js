@@ -58,9 +58,11 @@ export function isShellPath(pathname) {
   return PATTERNS.some(re => re.test(p))
 }
 
-// Phone app keeps today's pages while build 3 is in App Review (a master build reaches it over the air). Before removing: shell Billing must show NativeBillingNote (no payments in the app), .tp-phone-top and .tp-bar need safe-area padding, and any store text change goes to the door.
-export function showShell({ role, pathname, native }) {
-  return role === 'agent' && isShellPath(pathname) && !native
+// P956: the phone app gets the same shell as the website (it used to keep the old pages, which is why TestFlight
+// build 4 showed a long-gone Home). In the app, shell Billing shows NativeBillingNote (AgentShell) and the phone bars
+// pad for the notch and home bar (flow.css). `native` is still accepted so old callers don't break; it no longer matters.
+export function showShell({ role, pathname }) {
+  return role === 'agent' && isShellPath(pathname)
 }
 
 // A location from either address, as the plain shell path ('/agent/inbounds/abc' -> '/leads/abc', '/agent' -> '/').
