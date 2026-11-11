@@ -6,6 +6,7 @@ import { useIsTestAccount } from '../../hooks/useIsTestAccount'
 import { useSampleLeads, useSampleNeeds, useSampleThreads, useDataSource, useDataStatus } from '../data'
 import { useAccount, initials } from '../kit'
 import { avatarHue } from '../avatarHue'
+import { useNavKeys } from '../useProducts'
 import { liveCalls } from '../agentView'
 import { paths, layoutOf } from '../paths'
 import { AddClients } from '../AddClients891'
@@ -30,10 +31,10 @@ import '@fontsource/urbanist/700.css'
 // you; the page; one + for everything you create, in thumb reach; and a bottom tab bar (Overview · Leads · Clients ·
 // Calendar · More) clear of the notch and the home bar. Pages with no tab (Billing, Settings, …) get a back arrow.
 const TABS = [
-  { to: mp.home, label: 'Overview', icon: Home, end: true },
+  { to: mp.home, label: 'Overview', icon: Home, end: true, key: 'overview' },
   { to: mp.leads, label: 'Leads', icon: PhoneIncoming, key: 'leads' },
-  { to: mp.clients, label: 'Clients', icon: Users },
-  { to: mp.calendar, label: 'Calendar', icon: CalendarDays },
+  { to: mp.clients, label: 'Clients', icon: Users, key: 'clients' },
+  { to: mp.calendar, label: 'Calendar', icon: CalendarDays, key: 'calendar' },
   { to: mp.more, label: 'More', icon: Ellipsis, more: true },
 ]
 const PAGES = [
@@ -53,6 +54,8 @@ export default function MobileFrame() {
   const { data: threads } = useSampleThreads()
   const { data: needs } = useSampleNeeds()
   const { data: leads } = useSampleLeads()
+  const navKeys = useNavKeys() // P955: tabs for what they bought
+  const tabs = TABS.filter(t => !t.key || navKeys.has(t.key))
   const [panel, setPanel] = useState(null)
   const [scrolled, setScrolled] = useState(false)
   const unread = threads.reduce((n, t) => n + t.unread, 0)
@@ -95,8 +98,8 @@ export default function MobileFrame() {
 
       <button type="button" className="mx-fab" aria-label="Create" aria-haspopup="dialog" onClick={pick('create')}><Plus size={26} aria-hidden="true" /></button>
 
-      <nav className="mx-tabs" aria-label="Pages">
-        {TABS.map(t => (
+      <nav className="mx-tabs" aria-label="Pages" style={{ '--mx-n': tabs.length }}>
+        {tabs.map(t => (
           <NavLink key={t.label} to={t.to()} end={t.end} className={({ isActive }) => `mx-tab${(isActive && !(t.end && sub)) || (t.more && sub) ? ' active' : ''}`}>
             <span className="mx-tab-ic"><t.icon size={22} aria-hidden="true" />{t.key === 'leads' && waiting > 0 && <span className="mx-badge" aria-label={`${waiting} waiting on you`}>{waiting}</span>}</span>
             {t.label}
@@ -117,7 +120,7 @@ export default function MobileFrame() {
           <ul className="mx-rows">{needs.fyi.map(f => <li key={f.id}><Link to={mp.lead(f.ref)} className="mx-row is-link" onClick={close}><span className="tp-grow"><b>{f.name}</b><small>{f.title}. {f.what}</small></span></Link></li>)}</ul>
         </>}
       </ActionSheet>
-      {panel === 'search' && <Palette onClose={close} pages={PAGES} />}
+      {panel === 'search' && <Palette onClose={close} pages={PAGES.filter(x => !['Leads', 'Clients'].includes(x.label) || navKeys.has(x.label.toLowerCase()))} />}
       <AddClients open={panel === 'add'} onClose={close} />
       <BookCall open={panel === 'book'} onClose={close} />
       <AddNote open={panel === 'note'} onClose={close} />

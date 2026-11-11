@@ -157,12 +157,14 @@ function LaunchChecks({ c }) {
 }
 
 // P941 — the agent's finished sign-up, read-only at the top of the ticket.
+// P955: with the products they picked; a ticket exists only with Leads (setup.js hasTicket).
 function SignupBlock({ c }) {
   const s = signupOf(c, { plans: PLANS })
   return (
     <Block title="Their sign-up" sub="What they picked and paid for. Read-only.">
       <dl className="adm-su" data-testid="adm-signup">
         <div><dt>Agent</dt><dd>{c.name}</dd></div>
+        <div className="is-wide"><dt>Products</dt><dd className="adm-su-chips" data-testid="adm-signup-products">{s.products.map(x => <Chip key={x.key} tone={x.tone}>{x.label}</Chip>)}<small>Leads paid: {s.via}</small></dd></div>
         <div><dt>Plan</dt><dd>{s.plan}</dd></div>
         <div><dt>Daily spend</dt><dd><span className="tp-money">{money(s.daily)}</span> a day</dd></div>
         <div><dt>Paid</dt><dd>{s.paid ? <>On {s.paid.short} · <span className="tp-money">{cents(s.paid.total)}</span><small>Setup <span className="tp-money">{money(s.paid.setup)}</span> · first month <span className="tp-money">{money(s.paid.plan)}</span> · first 2 days of leads <span className="tp-money">{cents(s.paid.leads)}</span></small></> : s.paidOn ? `On ${s.paidOn}` : 'Not yet'}</dd></div>

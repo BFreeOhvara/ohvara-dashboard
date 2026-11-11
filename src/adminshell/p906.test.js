@@ -31,7 +31,8 @@ test('lead statuses are the five (P913), and a lead with no agent is an alert, n
 })
 
 test('the plan panel: plan from the spend band, tonight = spend + 12%, every sample plan covered', () => {
-  const agents = admSnapshot().agents
+  // P955: the band plan is for agents with Leads; Servicing-only and Reactivation-only agents have no lead spend.
+  const agents = admSnapshot().agents.filter(a => (a.picked || ['leads']).includes('leads'))
   for (const a of agents) assert.equal(a.plan, tierOf(a.spend).key, a.name)
   const plans = new Set(agents.map(a => a.plan))
   for (const k of Object.keys(PLANS).filter(k => k !== 'servicing')) assert.ok(plans.has(k), `no sample agent on ${k}`)

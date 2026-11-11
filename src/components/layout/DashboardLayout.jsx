@@ -241,7 +241,7 @@ function InboundTitle() {
 
 // What the header says over a gated page (usePortal's view), for a self-signup.
 const GATE_TITLES = {
-  welcome: { group: 'Today', label: 'Welcome', icon: Home, line: 'Pick a plan to open your portal' },
+  welcome: { group: 'Today', label: 'Welcome', icon: Home, line: 'Pick what you need to open your portal' },
   confirm: { group: 'Today', label: 'Welcome', icon: Home, line: 'Confirming your payment' },
   unlocked: { line: 'Servicing is on' },
   servicing: { line: 'Servicing plan needed to submit deals' },

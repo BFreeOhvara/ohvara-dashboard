@@ -1,0 +1,9 @@
+/* P955 — products on the admin side: small chips on an agent's row and in the pop-up, a removal waiting, and the
+   Revenue split by product. Tokens only (DESIGN.md); money in .tp-money. */
+.adm-prod { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; min-width: 0; }
+.adm-prod .tp-chip { font-size: 11px; }
+.adm-prod > .is-ending .tp-chip { opacity: .72; }
+.adm-prod-end { margin: 8px 0 0; font-size: 12.5px; font-weight: 600; color: var(--ov-warn, var(--ov-hi)); }
+.adm-prod-sub { margin: 8px 0 0; }
+.adm-su-chips > small { flex-basis: 100%; }
+

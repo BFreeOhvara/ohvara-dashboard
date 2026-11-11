@@ -19,6 +19,8 @@ import '../bill910.css'
 import { StatesDrawer } from '../YourStates'
 import { useAgentStates, statesText } from '../useStates'
 import { dayWords } from '../adStates'
+import { ProductsCard } from '../Products955'
+import { useProducts } from '../useProducts'
 
 // P878 — Billing, from the hole check (N-G-02, N-G-09, N-H-28, N-A-23, N-A-30, N-I-03, N-I-05). Sample only: nothing is
 // charged. P909: the prices are final (price book version 3). P889: one daily spend and How you take leads (Appointments only, or Appointments +
@@ -298,12 +300,16 @@ export default function Billing() {
   const [range, setRange] = useState('week')
   const [panel, setPanel] = useState(null)
   const st = useAgentStates()
+  // P955: what they bought. Without Leads there's no plan by spend, no nightly charge, no paid-ahead days, no booking
+  // desk, results or hours here: Servicing pays its month, Reactivation pays per list.
+  const { has } = useProducts()
+  const leads = has('leads')
   const n = b.nightNow
-  const noCard = b.card && !b.card.onFile && b.products !== 'servicing'
+  const noCard = leads && b.card && !b.card.onFile && b.products !== 'servicing'
   const tierNow = planOf(b)
   const pendingTo = b.planNext ? TIERS.find(t => t.key === b.planNext.key) : null
   const daily = dailyTotal(b.spend)
-  const unpaid = n.ahead.find(d => d.status === 'failed')
+  const unpaid = leads ? n.ahead.find(d => d.status === 'failed') : null
   const running = !b.paused && !b.cancel && !noCard
   const face = cardOf(b.card)
   const save = () => {
@@ -338,7 +344,7 @@ export default function Billing() {
           <button type="button" className="tp-primary fx-accent" onClick={() => { fixCard(); note(`Card updated and charged. ${unpaid.day} is paid. Sample only`) }}><CreditCard size={15} />Fix card</button>
         </section>
       )}
-      {b.upgradeFailed && (
+      {leads && b.upgradeFailed && (
         <section className="fx-tile fx-s12 sp-alert" style={{ '--i': 0 }} role="alert" data-alert="upgrade">
           <span className="tp-grow"><b>Your upgrade to {b.upgradeFailed.to} didn{'’'}t go through</b><small>Nothing changed: you{'’'}re still on {tierNow.label}, with its spend range. Fix your card, then switch again.</small></span>
           <button type="button" className="tp-primary fx-accent" onClick={() => { fixCard(); note('Card updated. Switch plan again to upgrade. Sample only') }}><CreditCard size={15} />Fix card</button>
@@ -351,8 +357,11 @@ export default function Billing() {
         </section>
       )}
 
+      {/* P955: what they bought, in any mix: Add, Remove (ends on the next bill date), Keep */}
+      <ProductsCard i={0} />
+
       {/* P917: billing that looks like billing. The plan, with Change plan (the spend slider in a drawer) */}
-      <section className="fx-tile is-fill is-blue fx-s7 bl-plan" style={{ '--i': 0 }} aria-label="Your plan">
+      {leads && <section className="fx-tile is-fill is-blue fx-s7 bl-plan" style={{ '--i': 0 }} aria-label="Your plan">
         <header className="fx-tile-h"><span className="tp-grow"><h2>Your plan</h2><p>Month to month. Cancel anytime</p></span><SampleTag /></header>
         <div className="bl-plan-hero">
           <span><small>Current plan</small><b className="bl-plan-name">{tierNow.label}</b></span>
@@ -371,25 +380,28 @@ export default function Billing() {
           <button type="button" className="tp-btn ov-ghost" data-open="states" onClick={() => setPanel('states')}><MapPin size={15} />Your states</button>
           {b.pending && <small className="bl-pending">{b.pending.starts}</small>}
         </div>
-      </section>
+      </section>}
 
       {/* Payment method and the next charge */}
       <section className="fx-tile fx-s5 bl-pay" style={{ '--i': 1 }} aria-label="Payment method">
         <header className="fx-tile-h"><span className="tp-grow"><h2>Payment method</h2><p>{face ? 'Shows on your statement as OHVARA LEADS' : 'No card on file yet'}</p></span></header>
-        {face ? <CardFace face={face} /> : <p className="fx-calm">Leads start once a card is on file.</p>}
+        {face ? <CardFace face={face} /> : <p className="fx-calm">{leads ? 'Leads start once a card is on file.' : 'Add a card before you add a product or send a list.'}</p>}
         <div className="tp-row tp-wrap">
           {face
             ? <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('card')}><CreditCard size={15} />Update card</button>
             : <button type="button" className="tp-primary fx-accent" onClick={() => { addCard(); note('Card added. Your first two days are charged tonight. Sample only') }}><CreditCard size={15} />Add card</button>}
         </div>
-        {face && <div className="bl-next" data-row="next"><small>Next charge</small><b className="tp-money">{next.big}</b><span>{next.sub}</span></div>}
+        {face && leads && <div className="bl-next" data-row="next"><small>Next charge</small><b className="tp-money">{next.big}</b><span>{next.sub}</span></div>}
+        {face && !leads && has('servicing') && <div className="bl-next" data-row="next"><small>Next bill</small><b>{b.nextBill || 'With your first month'}</b><span>Servicing, every month</span></div>}
+        {face && !leads && !has('servicing') && <div className="bl-next" data-row="next"><small>How you pay</small><b>Per list</b><span>Each reactivation list is charged when you send it. Nothing monthly</span></div>}
       </section>
 
       <section className="fx-tile fx-s7 bl-ch" style={{ '--i': 2 }} aria-label="Charges">
-        <header className="fx-tile-h"><span className="tp-grow"><h2>Charges</h2><p>Lead spend each night, your plan each month (and the difference when you move up), the {money(SETUP_FEE)} setup fee once. Sample amounts.</p></span></header>
+        <header className="fx-tile-h"><span className="tp-grow"><h2>Charges</h2><p>{leads ? `Lead spend each night, your plan each month (and the difference when you move up), the ${money(SETUP_FEE)} setup fee once.` : has('servicing') ? `Servicing each month, the ${money(SETUP_FEE)} setup fee once, and any list you send.` : 'Each list you send. Nothing monthly.'} Sample amounts.</p></span></header>
         <Charges rows={chargesOf(b)} />
       </section>
 
+      {leads && <>
       <div className="fx-s5 bl-side">
       <section className="fx-tile bl-paid" style={{ '--i': 3 }} aria-label="Paid ahead">
         <header className="fx-tile-h"><span className="tp-grow"><h2>Paid ahead</h2><p>One paid day always in hand</p></span><Chip tone={running && !unpaid ? 'green' : 'mute'}>{b.cancel ? `Ending ${b.cancel.on}` : b.paused ? 'Paused' : noCard ? 'No card' : unpaid ? 'Fix card' : 'Leads running'}</Chip></header>
@@ -435,6 +447,7 @@ export default function Billing() {
           <li><button type="button" className="fx-mrow" onClick={() => setPanel('cancel')} disabled={!!b.cancel}><LogOut size={17} aria-hidden="true" /><span className="tp-grow"><b>Cancel your plan</b><small>Unspent credit is refunded; the {money(SETUP_FEE)} setup fee isn’t</small></span></button></li>
         </ul>
       </section>
+      </>}
 
       <Drawer open={panel === 'plan'} onClose={() => setPanel(null)} title="Change plan" sub={`Now ${tierNow.label}, ${money(tierNow.monthly)} a month, ${money(daily)} a day. The slider stays inside this plan`}>
         <div className="bl910">

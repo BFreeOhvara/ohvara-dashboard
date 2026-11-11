@@ -7,6 +7,7 @@ import { deskAdminLabel, deskParts } from '../../lib/bookingDesk'
 import { PRICES } from '../../lib/priceBook.js'
 import { Chip, SampleTag, useNote } from '../../template/kit'
 import { useAdmSource } from '../data'
+import { chargeWhat } from '../products955'
 import './billing933.css'
 
 // P933 — Settings › Billing (admins only): the Stripe check (key mode from its prefix only, the webhook endpoint and its
@@ -157,7 +158,7 @@ export function StripeBilling() {
 }
 
 // Revenue › Charges: the latest charges with their parts. The booking desk is labelled with its rate for admins.
-const KIND = { nightly: 'Lead spend', signup: 'Sign-up', plan_month: 'Plan', plan_upgrade: 'Plan upgrade', live_check: '$1 live check' }
+// P955: a product added in Billing reads "Added Servicing" etc. (chargeWhat), the server's note on hover.
 const TONE = { paid: 'green', failed: 'warn', due: 'teal', processing: 'teal', canceled: 'mute', refunded: 'mute' }
 export function RecentCharges() {
   const src = useAdmSource()
@@ -180,7 +181,7 @@ export function RecentCharges() {
           <thead><tr>{['When', 'Agent', 'What', 'Ads', desk, 'Setup + plan', 'Total', ''].map(h => <th key={h} scope="col">{h}</th>)}</tr></thead>
           <tbody>{list.map(c => (
             <tr key={c.id}>
-              <td>{when(c.at)}</td><td>{c.agent}</td><td title={c.note || ''}>{KIND[c.kind] || c.kind}{c.for_day ? ` · ${c.for_day}` : ''}</td>
+              <td>{when(c.at)}</td><td>{c.agent}</td><td title={c.note || ''}>{chargeWhat(c)}{c.for_day ? ` · ${c.for_day}` : ''}</td>
               <td className="tp-money">{c.spend_cents ? cents(c.spend_cents) : '—'}</td><td className="tp-money">{c.fee_cents ? cents(c.fee_cents) : '—'}</td>
               <td className="tp-money">{(c.setup_cents || 0) + (c.plan_cents || 0) + (c.extra_cents || 0) ? cents((c.setup_cents || 0) + (c.plan_cents || 0) + (c.extra_cents || 0)) : '—'}</td>
               <td className="tp-money">{cents(c.cents)}{c.refunded_cents ? <small> · {cents(c.refunded_cents)} back</small> : null}</td>
@@ -196,7 +197,10 @@ export function RecentCharges() {
 
 const SAMPLE = [
   { id: 's1', at: '2026-11-09T20:00:00', agent: 'Dana Ruiz', kind: 'nightly', for_day: '2026-11-11', cents: 11200, spend_cents: 10000, fee_cents: 1200, status: 'paid' },
+  { id: 's6', at: '2026-11-09T16:40:00', agent: 'Marcus Lee', kind: 'product_add', products: ['servicing'], note: 'Added Servicing · 20 days left this month $332.67', cents: 33267, setup_cents: 0, plan_cents: 33267, status: 'paid' },
   { id: 's2', at: '2026-11-09T14:12:00', agent: 'Marcus Lee', kind: 'signup', cents: 202200, spend_cents: 20000, fee_cents: 2400, setup_cents: 29900, plan_cents: 149900, status: 'paid' },
   { id: 's3', at: '2026-11-09T09:30:00', agent: 'Brayden', kind: 'live_check', cents: 100, refunded_cents: 100, status: 'paid' },
   { id: 's4', at: '2026-11-08T20:00:00', agent: 'Sam Patel', kind: 'nightly', for_day: '2026-11-10', cents: 5600, spend_cents: 5000, fee_cents: 600, status: 'failed' },
+  { id: 's7', at: '2026-11-04T10:20:00', agent: 'Tom Alvarez', kind: 'product_add', products: ['leads'], note: `Added Starter plan · setup $${PRICES.setupFee}.00 · first month $${PRICES.tiers[0].monthly}.00 · first 2 days: $140.00 to your ads · $16.80 booking desk`,
+    cents: 115480, spend_cents: 14000, fee_cents: 1680, setup_cents: 29900, plan_cents: 69900, status: 'paid' },
 ]

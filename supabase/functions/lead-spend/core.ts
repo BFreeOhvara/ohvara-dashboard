@@ -39,6 +39,10 @@
 //     { action: 'signup_quote', tier, daily_cents }     billing_signup_quote: setup + first month + first 2 days + booking desk.
 //     { action: 'signup', tier, daily_cents }           billing_signup_start, then the charge runs straight away:
 //                                                       { status: paid | failed | processing | due, skipped? }.
+//   P955 (signed-in agent): signup_quote / signup take products: ['leads'|'servicing'|'reactivation', ...] (any mix;
+//                                                       reactivation only = no charge, status paid at once).
+//                           { action: 'product_add', product, tier?, daily_cents? }  billing_product_add, then the charge
+//                                                       runs straight away (reactivation: added, no charge).
 //   P952 (signed-in agent): { action: 'reactivation_pay', list_id }  reactivation_charge_start (the agent's own unpaid
 //                                                       list: $2 x callable leads, one charge, OHVARA LEADS), then the
 //                                                       charge runs straight away: { status: paid | failed | processing | due }.
@@ -52,7 +56,7 @@ import { type Stripe, StripeError } from '../_shared/fulfillmentPayouts.ts'
 
 export type Charge = {
   id: string; agent_id: string; key: string
-  kind: 'weekly' | 'change' | 'va_cost' | 'nightly' | 'plan_upgrade' | 'signup' | 'plan_month' | 'live_check' | 'reactivation'; amount_cents: number
+  kind: 'weekly' | 'change' | 'va_cost' | 'nightly' | 'plan_upgrade' | 'signup' | 'plan_month' | 'live_check' | 'reactivation' | 'product_add'; amount_cents: number
   attempts: number; stripe_pi: string | null; week_start: string; note: string | null; customer: string | null; recheck: boolean
   for_day?: string | null; spend_cents?: number | null; fee_cents?: number | null
   note?: string | null; tier_to?: string | null
@@ -106,13 +110,13 @@ export const words = (c: Charge) =>
   c.kind === 'plan_upgrade' ? (c.note || `Upgrade to ${c.tier_to}`)
   : c.kind === 'va_cost' ? 'Team time (pilot)'
     : c.kind === 'nightly' ? `Lead spend for ${c.for_day}: ${usd(c.spend_cents)} to your ads${c.fee_cents ? ` + ${usd(c.fee_cents)} booking desk` : ''}`
-      : c.kind === 'signup' || c.kind === 'plan_month' ? (c.note || 'Ohvara plan')
+      : c.kind === 'signup' || c.kind === 'plan_month' || c.kind === 'product_add' ? (c.note || 'Ohvara plan')
         : c.kind === 'live_check' ? 'Ohvara live check ($1, refunded)'
           : c.kind === 'reactivation' ? (c.note || 'Reactivation leads')
           : c.kind === 'change' ? 'Lead spend (raised this week)' : 'Lead spend, week of ' + c.week_start
 // Which catalog product a charge belongs to (P933 stripe_catalog), for Stripe's own reports.
 export const productOf = (c: Charge) =>
-  c.kind === 'signup' ? 'ohvara_signup' : c.kind === 'plan_month' || c.kind === 'plan_upgrade' ? `ohvara_plan_${c.tier_to || 'servicing'}`
+  c.kind === 'signup' || c.kind === 'product_add' ? 'ohvara_signup' : c.kind === 'plan_month' || c.kind === 'plan_upgrade' ? `ohvara_plan_${c.tier_to || 'servicing'}`
     : c.kind === 'live_check' ? 'ohvara_live_check' : c.kind === 'reactivation' ? 'ohvara_reactivation' : 'ohvara_lead_spend'
 
 async function chargeOne(store: Store, stripe: Stripe, c: Charge, liveOk = false) {
@@ -212,6 +216,13 @@ export async function cardOf(stripe: Stripe, customer: string | null): Promise<s
   return `${brand.charAt(0).toUpperCase()}${brand.slice(1)} ending ${pm?.card?.last4 || '••••'}`
 }
 
+// P955: the products picked (leads, servicing, reactivation). null = not sent (the P933 way); false = not valid.
+export function productsOf(v: unknown): string[] | null | false {
+  if (v == null) return null
+  if (!Array.isArray(v) || !v.length || v.length > 3) return false
+  return v.every(x => ['leads', 'servicing', 'reactivation'].includes(x as string)) ? [...new Set(v as string[])] : false
+}
+
 export async function handle(req: Request, store: Store, stripe: Stripe | null, key: string | undefined): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
@@ -262,21 +273,50 @@ export async function handle(req: Request, store: Store, stripe: Stripe | null, 
       }
       case 'signup_quote': {
         const d = body.daily_cents == null ? null : cents(body.daily_cents)
-        return json(await store.rpc('billing_signup_quote', { p_tier: String(body.tier || ''), p_daily_cents: d, p_agent: me }))
+        const products = productsOf(body.products)
+        if (products === false) return json({ error: 'Pick Leads, Servicing or Reactivation' }, 400)
+        return json(await store.rpc('billing_signup_quote', { p_tier: String(body.tier || ''), p_daily_cents: d, p_agent: me, p_products: products }))
       }
       case 'signup': {
-        if (!['starter', 'growth', 'pro', 'servicing'].includes(body.tier)) return json({ error: 'Pick a plan' }, 400)
-        const d = body.tier === 'servicing' ? null : cents(body.daily_cents)
-        if (body.tier !== 'servicing' && d == null) return json({ error: 'Spend must be whole cents, $0 to $1,000 a day' }, 400)
+        // P955: products = any mix of leads, servicing, reactivation (not sent = the P933 way: tier 'servicing' or a lead plan).
+        const products = productsOf(body.products)
+        if (products === false) return json({ error: 'Pick Leads, Servicing or Reactivation' }, 400)
+        const leads = products ? products.includes('leads') : body.tier !== 'servicing'
+        if (leads && !['starter', 'growth', 'pro'].includes(body.tier)) return json({ error: 'Pick a plan' }, 400)
+        if (!products && !['starter', 'growth', 'pro', 'servicing'].includes(body.tier)) return json({ error: 'Pick a plan' }, 400)
+        const d = leads ? cents(body.daily_cents) : null
+        if (leads && d == null) return json({ error: 'Spend must be whole cents, $0 to $1,000 a day' }, 400)
         // P941: a lead plan is charged only once the sign-up has everything the campaign needs (states + licence tick,
         // time zone, hours; save_signup_details). Nothing is charged while anything is missing.
-        if (body.tier !== 'servicing') {
+        if (leads) {
           const missing = await store.rpc('signup_details_missing', { p_agent: me })
           if (Array.isArray(missing) && missing.length) {
             return json({ error: `Finish your details first: ${missing.join(', ')}. Nothing was charged.`, code: 'details_missing', missing }, 400)
           }
         }
-        const q = await store.rpc('billing_signup_start', { p_tier: body.tier, p_daily_cents: d, p_agent: me })
+        const q = await store.rpc('billing_signup_start', { p_tier: leads ? body.tier : 'servicing', p_daily_cents: d, p_agent: me, p_products: products })
+        // Reactivation only: nothing to charge; the portal is open.
+        if (q?.free) return json({ ...q, status: 'paid', failure: null, skipped: null })
+        const charged: any = await runCharges(store, stripe, key, me)
+        const mine = charged?.results?.find((r: any) => r.id === q.charge_id)?.result
+        return json({ ...q, status: mine?.status ?? q.status ?? 'due', failure: mine?.failure ?? null, skipped: charged?.skipped ?? null })
+      }
+      case 'product_add': {
+        // P955: add Leads or Servicing in Billing (charged now: setup when due, the days left, the first days of leads);
+        // Reactivation is added with no charge. Leads needs the sign-up details saved first (states, hours).
+        if (!['leads', 'servicing', 'reactivation'].includes(body.product)) return json({ error: 'Pick a product' }, 400)
+        const leads = body.product === 'leads'
+        if (leads && !['starter', 'growth', 'pro'].includes(body.tier)) return json({ error: 'Pick a plan' }, 400)
+        const d = leads ? cents(body.daily_cents) : null
+        if (leads && d == null) return json({ error: 'Spend must be whole cents, $0 to $1,000 a day' }, 400)
+        if (leads) {
+          const missing = await store.rpc('signup_details_missing', { p_agent: me })
+          if (Array.isArray(missing) && missing.length) {
+            return json({ error: `Finish your details first: ${missing.join(', ')}. Nothing was charged.`, code: 'details_missing', missing }, 400)
+          }
+        }
+        const q = await store.rpc('billing_product_add', { p_product: body.product, p_tier: leads ? body.tier : null, p_daily_cents: d, p_agent: me })
+        if (q?.status === 'added') return json({ ...q, status: 'paid', failure: null, skipped: null })
         const charged: any = await runCharges(store, stripe, key, me)
         const mine = charged?.results?.find((r: any) => r.id === q.charge_id)?.result
         return json({ ...q, status: mine?.status ?? q.status ?? 'due', failure: mine?.failure ?? null, skipped: charged?.skipped ?? null })
@@ -305,8 +345,8 @@ export async function handle(req: Request, store: Store, stripe: Stripe | null, 
         return json({ error: 'Unknown action' }, 400)
     }
   } catch (e: any) {
-    if (['min_daily', 'max_daily', 'over_plan', 'servicing_only', 'bad_tier'].includes(e?.hint)) return json({ error: e.message, code: e.hint }, 400)
-    if (['busy', 'test_account', 'comped', 'already_paid', 'no_card', 'empty'].includes(e?.hint)) return json({ error: e.message, code: e.hint }, 409)
+    if (['min_daily', 'max_daily', 'over_plan', 'servicing_only', 'bad_tier', 'no_products', 'bad_product', 'details_missing'].includes(e?.hint)) return json({ error: e.message, code: e.hint }, 400)
+    if (['busy', 'test_account', 'comped', 'already_paid', 'no_card', 'empty', 'already_have', 'pending_removal', 'not_signed_up'].includes(e?.hint)) return json({ error: e.message, code: e.hint }, 409)
     if (e?.code === '42501') return json({ error: e.message || 'Not allowed' }, 403)
     return json({ error: e?.message || 'Something went wrong' }, 500)
   }

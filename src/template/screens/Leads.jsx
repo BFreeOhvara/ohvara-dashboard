@@ -20,6 +20,8 @@ import '../leads873.css'
 import '../p878.css'
 import { FilterPills } from '../FilterPills'
 import { ReactivateDrawer, ReactivationCards } from '../Reactivate'
+import { AddLeadsCard } from '../Products955'
+import { useProducts } from '../useProducts'
 
 // P898: Leads as a board of the agent's five statuses (agentView.js), left to right: Booked, No show, Follow up, Not
 // interested, Sold. P924: no Closed: a lead that never reached the agent (couldn't reach, opted out, wrong number)
@@ -199,8 +201,11 @@ export default function Leads() {
   const { data: billing } = useSampleBilling()
   const [q, setQ] = useState('')
   const [spend, setSpend] = useState(false)
-  const [react, setReact] = useState(false)
   const [params, setParams] = useSearchParams()
+  // P955: ?react=1 (Billing → Start a reactivation list) opens Reactivate old leads. Without Leads, no daily spend here.
+  const [react, setReact] = useState(() => params.get('react') === '1')
+  const { has } = useProducts()
+  const closeReact = () => { setReact(false); if (params.get('react')) { const p = new URLSearchParams(params); p.delete('react'); setParams(p, { replace: true }) } }
   // P924: no Closed on Leads. A lead that never reached the agent is never on their side (useSampleLeads).
   const ALL = LANES
   const laneKey = ALL.some(l => l.key === params.get('lane')) ? params.get('lane') : 'all'
@@ -221,10 +226,11 @@ export default function Leads() {
         <span className="tp-grow" />
         {/* P952: bring a list of old leads; our AI calls them (Reactivate.jsx) */}
         <button type="button" className="fx-pillbtn" onClick={() => setReact(true)}><RotateCcw size={15} aria-hidden="true" />Reactivate old leads</button>
-        <button type="button" className="fx-pillbtn" aria-label="Change your daily lead spend" onClick={() => setSpend(true)}><Wallet size={15} aria-hidden="true" /><b className="tp-money">{money(dailyTotal(billing.spend))}</b><small>a day</small></button>
+        {has('leads') && <button type="button" className="fx-pillbtn" aria-label="Change your daily lead spend" onClick={() => setSpend(true)}><Wallet size={15} aria-hidden="true" /><b className="tp-money">{money(dailyTotal(billing.spend))}</b><small>a day</small></button>}
       </div>
 
       <ReactivationCards />
+      <AddLeadsCard compact />
 
       {/* P910: live calls pinned on top, ringing first, each with Sold · Follow up · Not interested. P917: the board
           keeps its full size below them and the page scrolls (useLiveRoom) */}
@@ -252,7 +258,7 @@ export default function Leads() {
 
       {id && (source === 'sample' || leads.some(l => l.id === id)) && <LeadDrawer id={id} onClose={() => navigate(paths.leads())} />}
       <SpendDrawer open={spend} onClose={() => setSpend(false)} />
-      <ReactivateDrawer open={react} onClose={() => setReact(false)} />
+      <ReactivateDrawer open={react} onClose={closeReact} />
     </div>
   )
 }

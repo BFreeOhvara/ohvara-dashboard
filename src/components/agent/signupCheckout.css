@@ -81,3 +81,26 @@
   .sc-tz { grid-template-columns: 1fr; }
   .sc-day { grid-template-columns: 40px auto minmax(0, 1fr) auto minmax(0, 1fr); gap: 6px; }
 }
+
+/* P955: "What do you need?": Leads, Servicing, Reactivation, tick one or more. Tokens only. */
+.sc-prods { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 14px 0 16px; }
+.sc-prod { cursor: pointer; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--ov-line); transition: border-color .15s, background-color .15s; }
+.sc-prod:hover { border-color: var(--ov-data-a); }
+.sc-prod.is-on { border-color: var(--ov-data-a); background: var(--ov-data-a-tint); }
+.sc-prod:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sc-prod-top { display: flex; align-items: center; gap: 10px; }
+.sc-prod-top b { flex: 1; font-size: 15.5px; font-weight: 600; color: var(--ov-hi); }
+.sc-box { flex: none; width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--ov-line); display: grid; place-items: center; color: var(--ov-white); background: var(--ov-surface-tint); }
+.sc-box.is-on { background: var(--ov-data-a); border-color: var(--ov-data-a); }
+.sc-prod-line { font-size: 13px; line-height: 1.45; color: var(--ov-mid); }
+.sc-prod-price { margin-top: auto; display: flex; flex-direction: column; gap: 2px; }
+.sc-prod-price .lk-money { font-size: 15px; font-weight: 600; color: var(--ov-hi); }
+.sc-prod-price small { font-size: 12.5px; color: var(--ov-mute); }
+.sc-grid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.sc-h { margin: 0; font-size: 15px; font-weight: 600; color: var(--ov-hi); }
+.sc-next { margin: 0; padding: 14px 16px; display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; line-height: 1.5; color: var(--ov-mid); }
+.sc-next svg { flex: none; margin-top: 2px; color: var(--ov-data-a); }
+.sc-next b { color: var(--ov-hi); font-weight: 600; }
+@media (max-width: 760px) {
+  .sc-prods, .sc-grid3 { grid-template-columns: 1fr; }
+}

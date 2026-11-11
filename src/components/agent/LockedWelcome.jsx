@@ -19,7 +19,7 @@ import './lockedWelcome.css'
 //   UnlockedMoment    "You're in", one time
 //   AddServicingCard  a Leads-only payer on Submit or Clients
 // P933: the weekly Servicing checkout is gone. The welcome now sells the final
-// plans (Starter / Growth / Pro by daily lead spend, or Servicing only) through
+// products (P955: Leads, Servicing, Reactivation, any mix) through
 // SignupCheckout: plan, card, one charge (setup + first month + first 2 days of
 // leads + booking desk). In the phone app there are no prices and no pay buttons
 // (P775). The database is the real lock; all of this only decides what to render.
@@ -59,51 +59,11 @@ function Hero({ chip, title, line, children }) {
 const PB = pricesOf(BOOK)
 const usd = n => `$${Number(n).toLocaleString('en-US')}`
 
-function ProductCards({ onPlans }) {
-  const leadFrom = Math.min(...PB.tiers.map(t => t.monthly))
-  return (
-    <div className="lk-prod">
-      <section className="ov-card lk-pc" aria-label="Leads">
-        <div className="lk-pc-top">
-          <span className="lk-tile"><Phone size={22} strokeWidth={2} aria-hidden="true" /></span>
-          <h3>Leads + servicing</h3>
-          <span className="pv-pill pv-p-sold">Available now</span>
-        </div>
-        <p>Set a daily lead spend and we bring you people to sell to, then keep every sale on the books.</p>
-        <ul>
-          <Bullet><b>Appointments</b> booked on your calendar, and <b>live calls</b> transferred to you</Bullet>
-          <Bullet>Every lead called by our AI in seconds, texted, booked and reminded</Bullet>
-          <Bullet>Servicing for every policy you sell through us</Bullet>
-        </ul>
-        <div className="lk-pc-foot">
-          <span>From</span><span className="lk-money lk-pc-price">{usd(leadFrom)}</span><span>a month + your lead spend</span>
-          <span className="lk-gap" />
-          <button type="button" className="ov-ghost lk-btn" onClick={onPlans}>See plans</button>
-        </div>
-      </section>
-      <section className="ov-card lk-pc" aria-label="Servicing only">
-        <div className="lk-pc-top">
-          <span className="lk-tile"><ShieldCheck size={22} strokeWidth={2} aria-hidden="true" /></span>
-          <h3>Servicing only</h3>
-          <span className="pv-pill pv-p-sold">Available now</span>
-        </div>
-        <p>Submit each deal you close and we keep it on the books.</p>
-        <ul>{COVERS.map(c => <Bullet key={c}>{c}</Bullet>)}</ul>
-        <div className="lk-pc-foot">
-          <span className="lk-money lk-pc-price">{usd(PB.servicingOnly)}</span><span>a month, up to {PB.servicingBase} clients</span>
-          <span className="lk-gap" />
-          <button type="button" className="ov-ghost lk-btn" onClick={onPlans}>See plans</button>
-        </div>
-      </section>
-    </div>
-  )
-}
-
 function HowItWorks() {
   const steps = [
-    ['Pick your plan', 'By how much you want to spend on leads each day, or servicing only.'],
-    ['Add your card and pay', `Setup (${usd(PB.setupFee)} once), your first month and your first days of leads. Your portal opens straight away.`],
-    ['Leads start coming in', 'We call, text and book them for you. You take the calls and close.'],
+    ['Pick what you need', 'Leads, Servicing, Reactivation, or any mix. The portal comes with all of them.'],
+    ['Add your card', `Leads or Servicing: setup (${usd(PB.setupFee)} once) and your first month, plus your first days of leads. Reactivation only: nothing today.`],
+    ['Your portal opens', 'Straight away. Add or remove a product any time in Billing.'],
   ]
   return (
     <section className="ov-card lk-steps" aria-label="How it works">
@@ -180,10 +140,9 @@ export function LockedWelcome({ portal }) {
             <CheckAgainButton onCheck={lookAgain(portal)} />
           </div>
         )}
-        <Hero chip="Your portal is waiting" title={welcomeLine(portal.profile)} line="Pick a plan, add your card and your portal opens right away.">
-          <button type="button" className="ov-hero-btn" onClick={toPlans}>Choose a plan</button>
+        <Hero chip="Your portal is waiting" title={welcomeLine(portal.profile)} line="Pick what you need, add your card and your portal opens right away.">
+          <button type="button" className="ov-hero-btn" onClick={toPlans}>Pick what you need</button>
         </Hero>
-        <ProductCards onPlans={toPlans} />
         <HowItWorks />
         <SignupCheckout portal={portal} sectionRef={sectionRef} />
       </div>

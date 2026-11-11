@@ -40,7 +40,7 @@
 
 /* Bottom tab bar + the create button --------------------------------------------------------------------------- */
 .mx-tabs {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(var(--mx-n, 5), minmax(0, 1fr));
   padding: 6px 6px calc(var(--mx-sb) + 6px); background: color-mix(in srgb, var(--sh-surface) 86%, transparent);
   backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--sh-line);
 }

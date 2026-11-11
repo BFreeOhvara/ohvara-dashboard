@@ -11,6 +11,7 @@ import {
   useSampleActivity, useSampleClients, useSampleLeads, useSampleThreads, useSampleBilling, useSampleAppointments, useSampleSettings, useSampleActions, useSampleNeeds, useDataStatus, useDataSource,
 } from './data'
 import { NeedRows, FyiList, NoticeRows } from './NeedsNow'
+import { useNavKeys } from './useProducts'
 import { liveCalls } from './agentView'
 import { useNeedAction } from './needAction'
 import { useClientStatusOf } from './checkSettings'
@@ -347,6 +348,8 @@ export default function TemplateFrame() {
   const { data: threads } = useSampleThreads()
   const { data: settings } = useSampleSettings()
   const { data: billing } = useSampleBilling()
+  // P955: tabs for what they bought (lib/products.js navFor); Overview, Calendar, Activity and Billing always.
+  const navKeys = useNavKeys()
   const stats = useHeadStats(layout)
   // P911/P914: the top-right Messages icon shows selected while Messages is open; a second click goes back to Overview
   // with the same page swap as a nav tab.
@@ -421,7 +424,7 @@ export default function TemplateFrame() {
       <header className={`tp-top fx-top${menuOn ? ' is-menu' : ''}`}>
         <span className="fx-top-gap" aria-hidden="true" />
         <PillTabs as="nav" label="Pages" className="tp-tabs fx-tabs" itemClass="tp-tab fx-tab" value={active} persistKey="tpl-tabs"
-          items={TABS.map(t => ({ key: t.key, to: t.to(), label: t.label, extra: t.key === 'leads' && needs > 0 ? <span className="fx-tb is-circle" aria-label={`${needs} waiting on you`}>{needs}</span> : null }))} />
+          items={TABS.filter(t => navKeys.has(t.key)).map(t => ({ key: t.key, to: t.to(), label: t.label, extra: t.key === 'leads' && needs > 0 ? <span className="fx-tb is-circle" aria-label={`${needs} waiting on you`}>{needs}</span> : null }))} />
         <div className="fx-tr">
           {msgLink}
           <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} />{bell > 0 && <span className="fx-badge">{bell}</span>}</button>
@@ -482,7 +485,7 @@ export default function TemplateFrame() {
         <Link to={paths.settings()} className="fx-btab"><Settings size={20} aria-hidden="true" />Settings</Link>
       </nav>
 
-      {panel === 'search' && <Palette onClose={close} pages={PAGES} />}
+      {panel === 'search' && <Palette onClose={close} pages={PAGES.filter(x => !x.key || navKeys.has(x.key))} />}
       <BellDrawer open={panel === 'bell'} onClose={close} />
       <BookCall open={panel === 'book'} onClose={close} />
       <CreateMenu open={panel === 'create'} onClose={close} at={menuAt} pick={setPanel} />

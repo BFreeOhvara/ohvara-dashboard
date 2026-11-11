@@ -18,6 +18,9 @@ import { mp } from './mpaths'
 import { targetOf } from '../../lib/deedstoneCall'
 import { DeedstoneCallButton } from '../DeedstoneCall'
 import { isNativeApp } from '../../lib/native'
+import { ReactivateDrawer } from '../Reactivate'
+import { AddLeadsCard } from '../Products955'
+import { useProducts } from '../useProducts'
 
 // P908 — Leads on a phone: one status at a time. Swipe sideways (or tap a status) to move between Booked, No show,
 // Follow up, Not interested and Sold, each with its count (P924: no Closed). Cards are full width with Call in thumb reach;
@@ -178,6 +181,10 @@ export default function MLeads() {
   const [q, setQ] = useState('')
   const [find, setFind] = useState(false)
   const [spend, setSpend] = useState(false)
+  // P955: Billing → Start a reactivation list lands here with ?react=1. Without Leads, no daily spend pill.
+  const [react, setReact] = useState(() => params.get('react') === '1')
+  const { has } = useProducts()
+  const closeReact = () => { setReact(false); setParams(prev => { const p = new URLSearchParams(prev); p.delete('react'); return p }, { replace: true }) }
   const laneKey = LANE_ALL.some(l => l.key === params.get('lane')) ? params.get('lane') : 'booked'
   const idx = LANE_ALL.findIndex(l => l.key === laneKey)
   const n = q.trim().toLowerCase()
@@ -212,13 +219,14 @@ export default function MLeads() {
         {find
           ? <label className="mx-find"><Search size={18} aria-hidden="true" /><input autoFocus aria-label="Find a lead" placeholder="Name, city or phone" value={q} onChange={e => setQ(e.target.value)} /><button type="button" className="mx-ib" aria-label="Close search" onClick={() => { setQ(''); setFind(false) }}><X size={18} aria-hidden="true" /></button></label>
           : <>
-            <button type="button" className="mx-pill" onClick={() => setSpend(true)} disabled={isNativeApp()} aria-label={isNativeApp() ? 'Daily lead spend, changed on the Ohvara website' : 'Change your daily lead spend'}><Wallet size={17} aria-hidden="true" /><b className="tp-money">{money(dailyTotal(billing.spend))}</b><small>a day</small><ChevronRight size={16} aria-hidden="true" /></button>
+            {has('leads') && <button type="button" className="mx-pill" onClick={() => setSpend(true)} disabled={isNativeApp()} aria-label={isNativeApp() ? 'Daily lead spend, changed on the Ohvara website' : 'Change your daily lead spend'}><Wallet size={17} aria-hidden="true" /><b className="tp-money">{money(dailyTotal(billing.spend))}</b><small>a day</small><ChevronRight size={16} aria-hidden="true" /></button>}
             <span className="tp-grow" />
             <button type="button" className="mx-ib is-soft" aria-label="Find a lead" onClick={() => setFind(true)}><Search size={20} aria-hidden="true" /></button>
           </>}
       </div>
 
       <LiveStrip leads={shown} compact />
+      <AddLeadsCard compact className="mx-suggest" />
 
       <div className="mx-stabs" role="tablist" aria-label="Status" ref={tabs}>
         {LANE_ALL.map(l => (
@@ -244,6 +252,7 @@ export default function MLeads() {
 
       {id && (source === 'sample' || leads.some(l => l.id === id)) && <LeadSheet key={id} id={id} onClose={() => (window.history.state?.idx > 0 ? navigate(-1) : navigate(mp.leads(laneKey)))} />}
       <SpendSheet open={spend} onClose={() => setSpend(false)} />
+      <ReactivateDrawer open={react} onClose={closeReact} />
     </div>
   )
 }

@@ -7,6 +7,7 @@
 // the "seatbelt", in plain words: launchChecks below) -> Turn campaign on (locked until then) -> done.
 // No React, so tests read it under node --test. The agent's own setup progress uses the same launchChecks words.
 import { hoursText, zoneWord } from '../lib/signupDetails.js'
+import { needsTicket, productChips } from './products955.js'
 
 // Who does a step. Ohvara = an admin on the ticket; Engine = GoHighLevel (carries the Engine-slot pill).
 export const OWNERS = {
@@ -44,6 +45,9 @@ const has = (c, key) => (c.done || []).includes(key)
 
 // A ticket exists only once the agent has paid the setup fee and their first days of spend.
 export const isPaid = c => has(c, 'paid')
+// P955: and only with Leads. Servicing-only and Reactivation-only agents never get a ticket; an agent who adds Leads
+// later in Billing gets one once that charge (product_add) is paid.
+export const hasTicket = c => needsTicket(c, isPaid)
 
 // Every step counts for every ticket.
 export const stepsFor = () => SETUP_STEPS
@@ -180,6 +184,9 @@ export function signupOf(c, { plans = {} } = {}) {
     hours: rows.length ? hoursText(rows) : (c.launch?.hours || ''),
     tz: zoneWord(s.tz) || c.launch?.tz || '',
     live: s.live != null ? !!s.live : c.lead === 'live',
+    // P955: what they picked, and how Leads was paid (at sign-up, or added later in Billing).
+    products: productChips(c),
+    via: c.leadsAdded ? `Added Leads in Billing${c.leadsAdded.on ? ` on ${c.leadsAdded.on}` : ''}` : 'At sign-up',
   }
 }
 

@@ -8,6 +8,9 @@ import { canMove, RESULT_LABEL, clientCards, unsubmittedSales } from '../templat
 import { normalizeSettings } from '../lib/agentSettings'
 import { outcomeArgs } from '../lib/leadOutcomes'
 import { invokeBilling } from '../lib/billing'
+import { loadProducts, planState, productQuote, productAdd, productRemove, productKeep } from '../lib/leadSpend'
+import { loadSignupDetails, saveSignupDetails } from '../lib/signupDetails'
+import { productsWord } from '../template/productsView'
 import { zoneOf } from '../lib/callSlots'
 import { checkLists } from '../lib/clientCheck'
 import { nightly as nightlyOf, expected } from '../template/spendPlan'
@@ -272,13 +275,17 @@ export function useBillingReal() {
   const q = useQuery({
     queryKey: ['p848', 'billing', profile?.id], enabled: !!profile?.id,
     queryFn: async () => {
-      const [spend, balance, pause] = await Promise.all([
+      const [spend, balance, pause, products, plan] = await Promise.all([
         soft(supabase.from('agent_inbound_spend').select(['inbound_type', 'weekly_cents', 'paused'].join(',')).eq('agent_id', profile.id)),
         soft(supabase.from('agent_lead_balance').select('balance_cents').eq('agent_id', profile.id).maybeSingle(), null),
         // P890: Pause leads (p890_cleanup.sql). Missing until it's applied: never paused.
         soft(supabase.from('agent_lead_pause').select('active, paused_at, resume_on').eq('agent_id', profile.id).maybeSingle(), null),
+        // P955: what they bought (268_products.sql) and the bill month (for "Ends on <next bill date>"). Either one not
+        // on the database yet reads as nothing: the screens fall back to the old one-word products.
+        loadProducts(supabase, profile.id).catch(() => null),
+        planState(supabase).catch(() => null),
       ])
-      return { spend, balance, pause }
+      return { spend, balance, pause, products, plan }
     },
   })
   const clients = useClientsReal()
@@ -290,8 +297,14 @@ export function useBillingReal() {
     const weekFrom = new Date(d0.getTime() - ((d0.getUTCDay() + 6) % 7) * 86400000).toISOString().slice(0, 10)
     const monthFrom = `${now.slice(0, 7)}-01`
     const daily = t => Math.round(((spend.find(r => r.inbound_type === t && !r.paused)?.weekly_cents || 0) / 7) / 100)
+    const pr = q.data?.products
+    const month = q.data?.plan?.month
     const b = {
-      plan: 'paid', products: profile?.has_servicing === false ? 'leads' : 'both',
+      plan: 'paid', products: pr ? productsWord(pr.picked) : profile?.has_servicing === false ? 'leads' : 'both',
+      // P955: picked + a removal waiting (next from nextFrom), the setups paid, the bill month.
+      ...(pr ? { picked: pr.picked, next: pr.next, nextFrom: pr.nextFrom, setupPaid: pr.setupPaid, leadsSetupPaid: pr.leadsSetupPaid, signedUp: pr.signedUp } : {}),
+      ...(month?.next ? { planMonth: { today: now.slice(0, 10), start: month.start, next: month.next } } : {}),
+      ...(q.data?.plan?.tier ? { tier: q.data.plan.tier } : {}),
       // P889: one daily spend (the old per-type rows add up until p889's lead_product_set is live).
       spend: { daily: daily('booked_appointment') + daily('live_call') }, pending: null, booked: 0, usual: 0,
       // P924: one set of hours: the agent's working hours are their live-call hours too (258 keeps the server in step).
@@ -301,7 +314,7 @@ export function useBillingReal() {
       card: { label: null, onFile: true },
       va: { on: false, hours: 0, rate: 0 }, bought: { week: boughtOf(leads.data, weekFrom), month: boughtOf(leads.data, monthFrom) }, saved: [], paused: pausedOf(q.data?.pause), cancel: null,
       payment: { card: null, failed: profile?.billing_status === 'past_due' || profile?.billing_status === 'unpaid' },
-      next_charge: 'Tonight, 8 PM', nextBill: null, servicing: { status: 'active', next: null }, cancellations: null, history: [], real: true,
+      next_charge: 'Tonight, 8 PM', nextBill: month?.next ? dayWord(month.next) : null, servicing: { status: 'active', next: null }, cancellations: null, history: [], real: true,
     }
     return { ...b, submitted: clients.data.length, nightNow: nightlyOf(b.nightly, b.spend, b.plan), expected: expected(b.spend, b.take.mode), servicing: { ...b.servicing, status: b.products === 'leads' ? 'off' : 'active' } }
   }, [q.data, profile, now, clients.data.length, leads.data, settings.data])
@@ -490,6 +503,14 @@ export function useActionsReal() {
       setTake: soon('Changing how you take leads here'),
       topUp: soon('Topping up here'),
       setProducts: soon('Switching products here'),
+      // P955: Billing → Your products. The server quotes and charges (lead-spend product_add); errors keep their code
+      // (lead-spend: .code, the RPCs: .hint) for the screen's words. Every add, remove and keep reloads billing.
+      quoteProduct: q => productQuote(supabase, q),
+      addProduct: async q => { try { return await productAdd(supabase, q) } finally { again() } },
+      removeProduct: async p => { try { return await productRemove(supabase, p) } finally { again() } },
+      keepProduct: async p => { try { return await productKeep(supabase, p) } finally { again() } },
+      loadDetails: () => loadSignupDetails(supabase),
+      saveDetails: d => saveSignupDetails(supabase, d),
       // P890: lead_pause_set / lead_pause_resume (p890_cleanup.sql). Until applied they say "starts soon".
       pause: p => rpcOrSoon('lead_pause_set', { p_resume_on: p?.untilIso || null }, 'Pausing here'),
       resume: () => rpcOrSoon('lead_pause_resume', {}, 'Resuming here'),

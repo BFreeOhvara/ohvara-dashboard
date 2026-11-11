@@ -49,8 +49,26 @@ export const planQuote = (db, tier) => rpc(db, 'billing_plan_quote', { p_tier: t
 export const changePlan = (db, { tier, daily = null }) => invoke(db, { action: 'plan_change', tier, daily_cents: daily == null ? null : toCents(daily) })
 export const pauseSpend = (db, paused) => invoke(db, { action: 'pause', paused: !!paused })
 // P933: sign-up (plan + card + one charge), the Live charging switch, the $1 live check, recent charges.
-export const signupQuote = (db, { tier, daily = null }) => invoke(db, { action: 'signup_quote', tier, daily_cents: daily == null ? null : toCents(daily) })
-export const signupPay = (db, { tier, daily = null }) => invoke(db, { action: 'signup', tier, daily_cents: daily == null ? null : toCents(daily) })
+export const signupQuote = (db, { tier, daily = null, products = null }) =>
+  invoke(db, { action: 'signup_quote', tier, daily_cents: daily == null ? null : toCents(daily), ...(products ? { products } : {}) })
+export const signupPay = (db, { tier, daily = null, products = null }) =>
+  invoke(db, { action: 'signup', tier, daily_cents: daily == null ? null : toCents(daily), ...(products ? { products } : {}) })
+// P955 — the products an agent bought (agent_billing_plans: picked, a removal waiting for the next bill date) and
+// adding/removing one in Billing. Adding a paid product charges through lead-spend; removing ends at the next bill
+// date (reactivation at once); keep undoes a removal.
+export async function loadProducts(db, agentId) {
+  const { data, error } = await db.from('agent_billing_plans')
+    .select('picked, picked_next, picked_next_from, signed_up_at, setup_paid_at, leads_setup_at').eq('agent_id', agentId).maybeSingle()
+  if (error) throw error
+  return data ? { picked: data.picked || ['leads'], next: data.picked_next, nextFrom: data.picked_next_from, signedUp: !!(data.signed_up_at || data.setup_paid_at),
+    setupPaid: !!data.setup_paid_at, leadsSetupPaid: !!data.leads_setup_at } : null
+}
+export const productQuote = (db, { product, tier = null, daily = null }) =>
+  rpc(db, 'billing_product_quote', { p_product: product, p_tier: tier, p_daily_cents: daily == null ? null : toCents(daily) })
+export const productAdd = (db, { product, tier = null, daily = null }) =>
+  invoke(db, { action: 'product_add', product, tier, daily_cents: daily == null ? null : toCents(daily) })
+export const productRemove = (db, product) => rpc(db, 'billing_product_remove', { p_product: product })
+export const productKeep = (db, product) => rpc(db, 'billing_product_keep', { p_product: product })
 export const liveCheck = db => invoke(db, { action: 'live_check' })
 export const adminCharges = (db, limit = 30) => rpc(db, 'admin_billing_charges', { p_limit: limit })
 export const acceptPaid = (db, termsVersion, device = typeof navigator !== 'undefined' ? navigator.userAgent : null) =>

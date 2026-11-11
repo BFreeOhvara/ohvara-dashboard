@@ -9,6 +9,8 @@ import { dailyTotal, rangeWords, deliveredRange, deliveredOf } from '../spendPla
 import { usd } from '../motion'
 import { CallBtn, NeedList, Sec } from './bits'
 import { mp } from './mpaths'
+import { AddLeadsCard } from '../Products955'
+import { useProducts } from '../useProducts'
 import { targetOf } from '../../lib/deedstoneCall'
 
 // P908 — the Overview on a phone: only what matters, stacked. Live calls first, then your next call (Call in reach),
@@ -20,6 +22,7 @@ export default function MOverview() {
   const { data: clients } = useSampleClients()
   const { data: bill } = useSampleBilling()
   const statusOf = useClientStatusOf()
+  const { has } = useProducts() // P955: no daily spend tile without Leads
   const money = usd()
   const next = o.nextAppt
   const personOf = a => (a.kind === 'client' ? clients.find(c => c.id === a.ref) : leads.find(l => l.id === a.ref))
@@ -67,11 +70,14 @@ export default function MOverview() {
         <NeedList items={[...needs.now, ...(needs.notices || [])]} />
       </Sec>
 
+      {/* P955: without Leads, one small Add Leads card */}
+      <AddLeadsCard className="mx-card" />
+
       <Sec title="This week">
         <ul className="mx-tiles is-three">
           <li aria-label={`${dl.total} delivered: ${dl.booked} booked, ${dl.live} live calls. About ${rangeWords(wk)} a week`}><CalendarCheck size={18} aria-hidden="true" /><b className="tp-num">{dl.total}</b><small>delivered</small><em>{dl.booked} booked</em><em>{dl.live} live call{dl.live === 1 ? '' : 's'}</em><em>about {rangeWords(wk)}</em></li>
           <li><ShieldCheck size={18} aria-hidden="true" /><b className="tp-num">{prot}</b><small>protected</small><em>{clients.length} clients</em></li>
-          <li><Wallet size={18} aria-hidden="true" /><b className="tp-money">{money(dailyTotal(bill.spend))}</b><small>a day</small><Link to={mp.billing()} className="mx-link">Change</Link></li>
+          {has('leads') && <li><Wallet size={18} aria-hidden="true" /><b className="tp-money">{money(dailyTotal(bill.spend))}</b><small>a day</small><Link to={mp.billing()} className="mx-link">Change</Link></li>}
         </ul>
       </Sec>
     </div>

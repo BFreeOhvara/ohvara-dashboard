@@ -9,9 +9,11 @@ import { Avatar, Chip, Drawer, PillTabs, SampleTag, Seg, Switch, useNote } from 
 import { CountUp, usd } from '../../template/motion'
 import { Tile } from '../kit'
 import RevenueStock from '../RevenueStock'
+import ProductSplit from '../ProductSplit'
 import { ap } from '../paths'
 import { BILL_WORD, BANK_WORD } from '../words'
 import { OWNER_LIMIT } from '../p879'
+import { planLineOf, planPriceOf } from '../products955'
 import '../p879.css'
 import { useAuth } from '../../hooks/useAuth'
 import { invokeConnect, usePayoutAccounts, useRefreshPayouts } from '../../hooks/useFulfillmentPayouts'
@@ -163,7 +165,8 @@ function Headline({ p, label }) {
 }
 
 // P913 — the breakdown, last: where revenue came from, what it cost, the profit, and the owners' split.
-function Breakdown({ p }) {
+// P955: plus the split by product (Leads · Servicing · Reactivation · Setup) beside where revenue came from.
+function Breakdown({ p, period }) {
   return (
     <div className="adm-rev-break">
       <Tile i={2} title="Revenue" sub="What Ohvara earned">
@@ -174,6 +177,7 @@ function Breakdown({ p }) {
           <li className="is-total"><BadgeDollarSign size={14} aria-hidden="true" /><span className="tp-grow">Revenue</span><b className="tp-money">{money(p.inTotal)}</b></li>
         </ul>
       </Tile>
+      <ProductSplit period={period} i={3} />
       <Tile i={3} title="Costs and profit" sub="Revenue minus VA pay, AI minutes and card fees">
         <ul className="adm-sum">
           <Line icon={Headset} label="VA pay" sub={p.runs.length ? `${p.runs.length} pay ${p.runs.length === 1 ? 'run' : 'runs'} paid` : 'No run paid yet'} n={p.vaPay} neg />
@@ -213,7 +217,7 @@ function AgentBills() {
           return (
             <div key={a.id} className="adm-tr" style={{ '--i': i }}>
               <Link to={ap('agents', a.id)} className="adm-who"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>{a.billing.method}</small></span></Link>
-              <span className="adm-cell"><b>{PLANS[a.plan].label}</b><small>{money(PLANS[a.plan].price)} a month</small></span>
+              <span className="adm-cell"><b>{planLineOf(a, PLANS).label}</b><small>{planPriceOf(a, PLANS) ? `${money(planPriceOf(a, PLANS))} a month` : 'Pays per list'}</small></span>
               <span className="adm-cell"><b className="tp-money">{money(a.spend)} a day</b>
                 <small>Max {money(max(a.id))}{st.billing.maxOverride[a.id] ? ' (raised)' : ''}{' '}
                   <button type="button" className="fx-pillbtn" onClick={() => {
@@ -371,7 +375,7 @@ export default function Billing() {
           </div>
         </Grow>
       </section>
-      <Breakdown p={p} />
+      <Breakdown p={p} period={period} />
     </div>
   )
 }

@@ -7,6 +7,8 @@ import { Avatar, Empty } from '../kit'
 import { CountUp } from '../motion'
 import { SetupProgress } from '../SetupProgress'
 import { useLaunchView } from '../launchView'
+import { AddLeadsCard } from '../Products955'
+import { useProducts } from '../useProducts'
 import { NeedCard } from '../NeedsNow'
 import { useNeedAction } from '../needAction'
 import { laneOf, LANES } from '../stages'
@@ -162,11 +164,13 @@ export default function Overview() {
   const weekCalls = workWeek(appts, today).reduce((n, d) => n + appts.filter(a => inDay(a, d)).length, 0)
   // P941: until their leads are live, the setup steps (the admin's Setup ticket, in the same words) lead the page.
   const setup = useLaunchView()
+  // P955: the setup steps are the Leads setup: only with Leads. Without it, one small Add Leads card.
+  const { has } = useProducts()
 
   return (
     <div className="tp-page fx-page fx-ovl">
       <div className="fx-ovl-main">
-        {setup && !setup.live && <section className="fx-tile fx-ovl-setup" style={{ '--i': 0 }} aria-label="Getting your leads live"><SetupProgress view={setup} compact /></section>}
+        {has('leads') && setup && !setup.live && <section className="fx-tile fx-ovl-setup" style={{ '--i': 0 }} aria-label="Getting your leads live"><SetupProgress view={setup} compact /></section>}
         {/* P867: the hero fills the window (data-fold) so the Your book / Next up / Lead mix row peeks a third */}
         <Tile className="fx-ovl-hero" i={0} data-fold data-fold-next=".fx-ovl-book" title="Delivered this week" sub={`Your lead spend delivers about ${rangeWords(wk)} a week: booked calls and live calls`} to={paths.calendar()} label="Open Calendar">
           {/* P843: the number is the hero; the range already sits in the subtitle, so the side line only says what it is */}
@@ -211,6 +215,7 @@ export default function Overview() {
       </div>
 
       <div className="fx-ovl-side">
+        <AddLeadsCard />
         {/* P917: no live-call cards here; a live call waiting for its result is a to-do (and pinned on Leads) */}
         <section className="fx-tile is-deep fx-ovl-needs" style={{ '--i': 4 }} aria-label="Your to-dos">
           <div className="fx-ovl-needs-in">
