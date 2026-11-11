@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import {
   User, Users, Wallet, History, SlidersHorizontal, LogOut, Mail, UserPlus, ArrowUpRight, Search, ShieldCheck,
-  ShieldOff, Lock, Bot, CreditCard, Hand,
+  ShieldOff, Lock, Bot, CreditCard, Hand, Smartphone,
 } from 'lucide-react'
 import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmAudit, useAdmDay, useAdmSource, ME } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
@@ -22,6 +22,7 @@ import { AiCallerSettings } from './AiCalls892'
 import { StripeBilling } from './Billing933'
 import { useCallOpenMin, saveCallOpenMin } from '../../hooks/useCallOpen'
 import { AppAbout } from '../../components/native/AppAbout'
+import { AppReviewLogins } from './AppReview962'
 
 // P849 — admin Settings on the agent page's shape: the profile card and Sign out on the left, one panel whose stretch
 // tabs switch sections. Sections: Profile, People & access (everyone with a login, as Users does today), Switches,
@@ -33,7 +34,7 @@ import { AppAbout } from '../../components/native/AppAbout'
 // (screens/Work934.jsx); Lead split and the Call ads switch are gone; there is no Go live card (P950: CC turns live things on with Brayden's yes); Stripe's
 // setup checks are their own tab so no section scrolls. Old ?tab= links land where the section went (MOVED).
 const TABS = [['profile', 'Profile', User], ['people', 'People', Users], ['pay', 'Pay', Wallet], ['stripe', 'Stripe', CreditCard],
-  ['servicing', 'Servicing', Hand], ['ai', 'AI caller', Bot], ['audit', 'Audit log', History], ['prefs', 'Preferences', SlidersHorizontal]]
+  ['servicing', 'Servicing', Hand], ['ai', 'AI caller', Bot], ['audit', 'Audit log', History], ['review', 'Review', Smartphone], ['prefs', 'Preferences', SlidersHorizontal]]
 const MOVED = { bugs: 'bugs', numbers: 'numbers', compliance: 'compliance', hold: 'numbers' } // P936: wording, training, playbook gone
 const RENAMED = { switches: 'profile', golive: 'profile', billing: 'stripe', split: 'profile' } // P950: Go live is gone; old links land on Profile
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
@@ -261,6 +262,7 @@ export default function Settings() {
           </>}
           {tab === 'ai' && <AiCallerSettings />}
           {tab === 'audit' && <Audit />}
+          {tab === 'review' && <AppReviewLogins />}
           {tab === 'prefs' && <Prefs />}
         </div>
       </section>
