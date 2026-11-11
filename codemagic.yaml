@@ -63,7 +63,10 @@ workflows:
       - name: Fetch signing files from Apple
         script: |
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          app-store-connect fetch-signing-files "$BUNDLE_ID"             --type IOS_APP_STORE             --profiles-dir "$HOME/Library/MobileDevice/Provisioning Profiles"             --create
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --profiles-dir "$HOME/Library/MobileDevice/Provisioning Profiles" \
+            --create
       - name: Add the certificate to the keychain
         script: keychain add-certificates
       - name: Signing profiles
@@ -98,7 +101,14 @@ workflows:
           if [ "$SUBMIT_TO_APP_STORE" != "1" ]; then
             echo "TestFlight only: the build is uploaded by the publishing step below."; exit 0
           fi
-          app-store-connect publish             --path build/ios/ipa/*.ipa             --testflight             --app-store             --cancel-previous-submissions             --release-type MANUAL             --locale en-US             --whats-new "$(cat app-store/whats-new.txt)"
+          app-store-connect publish \
+            --path build/ios/ipa/*.ipa \
+            --testflight \
+            --app-store \
+            --cancel-previous-submissions \
+            --release-type MANUAL \
+            --locale en-US \
+            --whats-new "$(cat app-store/whats-new.txt)"
     artifacts: &ios_artifacts
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
