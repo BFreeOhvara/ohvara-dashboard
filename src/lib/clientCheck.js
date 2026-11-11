@@ -148,6 +148,20 @@ export const listQuestion = l => (l.clients.length === 1
   ? `This policy drafted on the ${ordinal(l.day)}. Is it still on the books?`
   : `These policies drafted on the ${ordinal(l.day)}. Are they still on the books?`)
 
+// P949 — every unanswered check in ONE box: "These policies drafted Oct 27 – Nov 1. Are they still on the books?"
+// rows = [{ c, draft }] oldest draft first; from/to = the first and last draft dates.
+export function mergeLists(lists = []) {
+  const rows = lists.flatMap(l => l.clients.map(c => ({ c, draft: l.draft })))
+  if (!rows.length) return null
+  const drafts = lists.map(l => l.draft).sort()
+  return { rows, from: drafts[0], to: drafts[drafts.length - 1], drafts }
+}
+// "Oct 27 – Nov 1", or one date "Nov 3".
+export const draftRange = (from, to) => (from === to ? shortDate(from) : `${shortDate(from)} – ${shortDate(to)}`)
+export const mergedQuestion = m => (m.rows.length === 1
+  ? `This policy drafted ${draftRange(m.from, m.to)}. Is it still on the books?`
+  : `These policies drafted ${draftRange(m.from, m.to)}. Are they still on the books?`)
+
 // An answer for one client on the check for `draft`. Yes clears it; No hands it to the team (a save call).
 export function answerCheck(c, draft, onBooks) {
   const base = { ...c, checked_through: !c.checked_through || draft > c.checked_through ? draft : c.checked_through }

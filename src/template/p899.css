@@ -40,3 +40,8 @@
   .ck-off { margin-left: 52px; }
   .ck-f .tp-primary { width: 100%; justify-content: center; }
 }
+/* P949: one box for every draft date. Full width; the rows sit in columns on wide screens. */
+.ck-lists.is-one { grid-template-columns: minmax(0, 1fr); }
+.ck-one .ck-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 8px; }
+.ck-more { align-self: flex-start; }
+.ck-one .ck-rows li small { white-space: normal; }

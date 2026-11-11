@@ -21,7 +21,9 @@ test('one chart component (Recharts, the shadcn way) in admin, agent and VA', ()
   for (const f of ['./adminshell/screens/Overview.jsx', './adminshell/screens/Numbers916.jsx', './template/ful/screens/Overview.jsx']) {
     assert.match(src(f), /<Chart\b/, f)
   }
-  assert.match(src('./template/screens/Overview.jsx'), /<AreaTrend\b/)
+  // P949: the agent Overview went back to its P936 chart (the area chart is admin-only)
+  assert.match(src('./template/screens/Overview.jsx'), /<Chart\b/)
+  assert.doesNotMatch(src('./template/screens/Overview.jsx'), /AreaTrend/)
   // the old hand-made bars are gone
   assert.doesNotMatch(src('./adminshell/screens/Overview.jsx'), /function WeekGrid|adm-wg-bar/)
   assert.doesNotMatch(src('./adminshell/screens/Billing.jsx'), /adm-rev-chart|adm-wg-bar/)

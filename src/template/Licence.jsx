@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { BadgeCheck } from 'lucide-react'
-import { useNote } from './kit'
-import { useSampleSettings, useSampleActions } from './data'
+import { useSampleSettings } from './data'
 import { US_STATES } from '../lib/usStates'
 import { LICENCE_LIMITS, NOT_TAKING, LICENSED_WORDS, asPick, pickCount, pickReady } from './licenceModel'
 import './p878.css'
 import './p881.css'
 import { clockNow } from './leadLifecycle'
+import { useSaveStates } from './useStates'
 
 // The agent's licence states (setup and Settings). P878/P881's registry check (licenceModel, src/lib/nipr.js) stays
 // built but off for launch.
@@ -50,8 +50,7 @@ export function LicenceForm({ value, onChange, limits = LICENCE_LIMITS }) {
 // Settings > Licence.
 export function LicenceCard() {
   const { data: s } = useSampleSettings()
-  const { saveLicence } = useSampleActions()
-  const note = useNote()
+  const saveStates = useSaveStates() // P949: same path as Billing › Your states (history + the admin's to-do)
   const saved = asPick(s.licence)
   const [draft, setDraft] = useState(saved)
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved)
@@ -62,7 +61,7 @@ export function LicenceCard() {
       <LicenceForm value={draft} onChange={setDraft} />
       <footer className="fx-form-f">
         <button type="button" className="tp-btn ov-ghost" disabled={!dirty} onClick={() => setDraft(saved)}>Discard</button>
-        <button type="button" className="tp-primary fx-accent" disabled={!dirty || !ready} onClick={() => { saveLicence(draft); note('States saved. Leads come from these states only') }}><BadgeCheck size={15} />Save states</button>
+        <button type="button" className="tp-primary fx-accent" disabled={!dirty || !ready} onClick={() => saveStates(draft.states, !!draft.licensed)}><BadgeCheck size={15} />Save states</button>
       </footer>
     </>
   )

@@ -5320,10 +5320,7 @@ html.is-native a, html.is-native img { -webkit-touch-callout: none; }
   --sh-ci: #13171A;
   --sh-card-edge: transparent;
   --sh-card-hl: rgba(255, 255, 255, 0.2);
-  --sh-cs-sky: var(--sh-sky);         --sh-csi-sky: var(--sh-on-sel);
-  --sh-cs-sage: var(--sh-sage);       --sh-csi-sage: var(--sh-on-sel);
-  --sh-cs-apricot: var(--sh-apricot); --sh-csi-apricot: var(--sh-on-sel);
-  --sh-cs-stone: var(--sh-stone);     --sh-csi-stone: var(--sh-on-sel);
+  /* P949: no darkened status fills in light mode; --sh-cs-* stays the board's light fill with dark ink (see :root) */
   --sh-deep-panel: rgba(28, 32, 31, 0.9);
   --sh-deep-ink: #F2F4F0;
 }
@@ -5344,7 +5341,6 @@ html.is-native a, html.is-native img { -webkit-touch-callout: none; }
 [data-theme="light"] {
   --sh-f-sky: #86AEDE;       /* one step deeper than P831 so the highlight holds its shape on the light page */
   --sh-acc-hover: #7AA4D8;
-  --sh-cs-lilac: var(--sh-lilac); --sh-csi-lilac: var(--sh-on-sel);
 }
 /* P840 backdrop: a real pre-blurred landscape photo (scripts/make-shell-backdrop-840.py; Unsplash License, credited
    there), the same image in both themes. Dark: a dark overlay so cards read; light: a soft light wash. */
@@ -5376,7 +5372,6 @@ html.is-native a, html.is-native img { -webkit-touch-callout: none; }
   --sh-butter: #6A5310;                                /* ink deep enough to read on the light page (6:1) */
   --sh-f-butter: #ECD27C;  --sh-fi-butter: #3A2C05;
   --sh-cf-butter: color-mix(in srgb, var(--sh-f-butter) 75%, transparent);
-  --sh-cs-butter: var(--sh-butter); --sh-csi-butter: var(--sh-on-sel);
   /* Neutral counts: dark grey with an off-white number on light */
   --sh-count: #4A4E48; --sh-count-ink: #F2F4F0;
   --sh-on-color: var(--sh-sel); --sh-on-color-ink: var(--sh-on-sel);

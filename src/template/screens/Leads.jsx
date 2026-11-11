@@ -93,7 +93,8 @@ function Row({ e, lead, last }) {
   )
 }
 
-function LeadDrawer({ id, onClose }) {
+// P949: also the pop-up a booking opens on Calendar (`extra` = the calendar's own buttons, e.g. Can't make it).
+export function LeadDrawer({ id, onClose, extra = null }) {
   const { data: lead } = useSampleLead(id)
   const { moveLead, addLeadNote, askTeamToCall, sendBookingLink, rebookLead } = useSampleActions()
   const source = useDataSource()
@@ -130,6 +131,7 @@ function LeadDrawer({ id, onClose }) {
         <CallOrCopy lead={lead} closed={closed} />
         <button type="button" className="tp-btn ov-ghost" disabled={closed} onClick={() => setPanel('team')}><Users size={14} />Ask our team to call</button>
         {lead.stage === 'follow_up' && <button type="button" className="tp-btn ov-ghost" disabled={lead.linkSent} onClick={() => { sendBookingLink(lead.id); note(`Booking link sent. ${lead.first_name} picks a time on your calendar`) }}><Link2 size={14} />{lead.linkSent ? 'Link sent' : 'Send booking link'}</button>}
+        {extra}
         <span className="tp-grow" />
         {canMove(lead, 'sold') && <button type="button" className={`tp-btn is-res is-${agentStatus('sold').tone}`} onClick={() => setOutcome('sold')}><Check size={14} />Sold</button>}
         {canMove(lead, 'not_interested') && <button type="button" className={`tp-btn is-res is-${agentStatus('not_interested').tone}`} onClick={() => setOutcome('not_interested')}><X size={14} />Not interested</button>}

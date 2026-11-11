@@ -11,14 +11,14 @@ import { FilterPills } from '../FilterPills'
 import { CallOrCopy } from '../CallOrCopy'
 import { agentOpensSaveCall } from '../ful/data'
 import { useCheckSettings, todayFor } from '../checkSettings'
-import { CLIENT_STATUS, STATUS_ORDER, clientStatusOf, clientStatus, requestTag, workingWhy, dueCheck, nextCheck, checkLists, listQuestion, answerList, shortDate, ordinal } from '../../lib/clientCheck.js'
+import { CLIENT_STATUS, STATUS_ORDER, clientStatusOf, clientStatus, requestTag, workingWhy, dueCheck, nextCheck, checkLists, mergeLists, mergedQuestion, answerList, shortDate, ordinal } from '../../lib/clientCheck.js'
 import { stagesOf, dateWord } from '../../lib/clientStages.js'
 import { StageBlock } from '../Stages911'
 import '../p899.css'
 
 // P899 — Clients, simplified. Agents don't work clients, the team does: the agent sees whether a policy is safe
 // (Working, Needs attention, Protected; Closed behind a switch) and once a month confirms it's still on the books.
-// One "Still on the books?" list per draft date sits on top; each card and drawer can answer it too, and any
+// P949: one "Still on the books?" box for every draft date sits on top; each card and drawer can answer it too, and any
 // client can be marked Lapsed. Rules: lib/clientCheck.js.
 const fullName = c => `${c.client_first_name} ${c.client_last_name}`
 const where = c => [c.carrier_name, [c.city, c.state].filter(Boolean).join(', ')].filter(Boolean).join(' · ')
@@ -27,43 +27,63 @@ const where = c => [c.carrier_name, [c.city, c.state].filter(Boolean).join(', ')
 function useAnswer() {
   const { answerChecks } = useSampleActions()
   const note = useNote()
-  return (clients, draft, fellOff = []) => {
+  return (clients, draft, fellOff = [], quiet = false) => {
     const { yes, no } = answerList({ clients }, fellOff)
     answerChecks?.({ yes, no, draft })
     no.forEach(id => { const c = clients.find(x => x.id === id); agentOpensSaveCall({ who: fullName(c), why: 'off_books', draft, state: c.state, city: c.city }) })
+    if (quiet) return { yes, no }
     note(no.length ? `${no.length === 1 ? fullName(clients.find(x => x.id === no[0])) : `${no.length} clients`}: our team is calling to save ${no.length === 1 ? 'it' : 'them'}${yes.length ? `. ${yes.length} still on the books` : ''}` : yes.length === 1 ? `${fullName(clients[0])}: still on the books` : `All ${yes.length} still on the books`)
   }
 }
 
-// One list per draft date: "These policies drafted on the 7th. Are they still on the books?" One tap for all, or
-// tick only the ones that fell off.
-function CheckList({ list, i }) {
+// P949 — one box for every unanswered check: "These policies drafted Oct 27 – Nov 1. Are they still on the books?"
+// One list of clients (each with its draft date), "Fell off?" ticks, the first 5 then Show all, and one button.
+const SHOW = 5
+function CheckBox({ m }) {
   const answer = useAnswer()
   const [off, setOff] = useState([])
+  const [all, setAll] = useState(false)
   const flip = id => setOff(o => (o.includes(id) ? o.filter(x => x !== id) : [...o, id]))
-  const many = list.clients.length > 1
+  const many = m.rows.length > 1
+  const shown = all ? m.rows : m.rows.slice(0, SHOW)
+  // Each draft date is answered on its own (the check is per draft); the ticks say which fell off.
+  const note = useNote()
+  const save = () => {
+    let yes = 0
+    const no = []
+    for (const d of m.drafts) {
+      const clients = m.rows.filter(r => r.draft === d).map(r => r.c)
+      const r = answer(clients, d, off.filter(id => clients.some(c => c.id === id)), true)
+      yes += r.yes.length
+      no.push(...r.no)
+    }
+    const name = id => fullName(m.rows.find(r => r.c.id === id).c)
+    note(no.length ? `${no.length === 1 ? name(no[0]) : `${no.length} clients`}: our team is calling to save ${no.length === 1 ? 'it' : 'them'}${yes ? `. ${yes} still on the books` : ''}` : yes === 1 ? `${fullName(m.rows[0].c)}: still on the books` : `All ${yes} still on the books`)
+    setOff([])
+  }
   return (
-    <section className="fx-tile ck-list" style={{ '--i': i }} aria-label={`Still on the books? Drafted on the ${ordinal(list.day)}`}>
+    <section className="fx-tile ck-list ck-one" style={{ '--i': 0 }} aria-label="Still on the books?" data-check-box>
       <header className="ck-h">
         <span className="ck-ic"><CalendarCheck size={18} aria-hidden="true" /></span>
-        <span className="tp-grow"><h2>Still on the books?</h2><p>{listQuestion(list)}</p><small>Drafted {shortDate(list.draft)} · asked {shortDate(list.askOn)}</small></span>
+        <span className="tp-grow"><h2>Still on the books?</h2><p data-check-q>{mergedQuestion(m)}</p><small>{m.rows.length} {m.rows.length === 1 ? 'policy' : 'policies'} · tick only the ones that fell off</small></span>
       </header>
       <ul className="ck-rows">
-        {list.clients.map(c => {
+        {shown.map(({ c, draft }) => {
           const gone = off.includes(c.id)
           return (
             <li key={c.id} className={gone ? 'is-off' : ''}>
               <Avatar name={fullName(c)} tone={gone ? 'mute' : 'warn'} />
-              <span className="tp-grow"><Link to={paths.client(c.id)}><b>{fullName(c)}</b></Link><small>{[c.carrier_name, [c.city, c.state].filter(Boolean).join(', ')].filter(Boolean).join(' · ')}</small></span>
+              <span className="tp-grow"><Link to={paths.client(c.id)}><b>{fullName(c)}</b></Link><small>{[`Drafted ${shortDate(draft)}`, c.carrier_name, [c.city, c.state].filter(Boolean).join(', ')].filter(Boolean).join(' · ')}</small></span>
               <label className="ck-off"><input type="checkbox" checked={gone} onChange={() => flip(c.id)} /><span>{gone ? 'Fell off' : many ? 'Fell off?' : 'No longer on the books'}</span></label>
             </li>
           )
         })}
       </ul>
+      {m.rows.length > SHOW && <button type="button" className="tp-link ck-more" data-check-more onClick={() => setAll(a => !a)}>{all ? 'Show fewer' : `Show all ${m.rows.length}`}</button>}
       <footer className="ck-f">
         {off.length === 0
-          ? <button type="button" className="tp-primary fx-accent" onClick={() => answer(list.clients, list.draft)}><Check size={16} aria-hidden="true" />{many ? 'All still on the books' : 'Still on the books'}</button>
-          : <button type="button" className="tp-primary fx-accent" onClick={() => { answer(list.clients, list.draft, off); setOff([]) }}><Check size={16} aria-hidden="true" />Save: {off.length} fell off{list.clients.length - off.length ? `, ${list.clients.length - off.length} still on` : ''}</button>}
+          ? <button type="button" className="tp-primary fx-accent" onClick={save}><Check size={16} aria-hidden="true" />{many ? 'All still on the books' : 'Still on the books'}</button>
+          : <button type="button" className="tp-primary fx-accent" onClick={save}><Check size={16} aria-hidden="true" />Save: {off.length} fell off{m.rows.length - off.length ? `, ${m.rows.length - off.length} still on` : ''}</button>}
         <small>{off.length ? 'Our team calls each one that fell off to save it.' : 'Tick only the ones that fell off.'}</small>
       </footer>
     </section>
@@ -197,6 +217,7 @@ export default function Clients() {
   const statusOf = useMemo(() => new Map(clients.map(c => [c.id, clientStatusOf(c, today, settings)])), [clients, today, settings])
   const counts = useMemo(() => Object.fromEntries(Object.keys(CLIENT_STATUS).map(s => [s, clients.filter(c => statusOf.get(c.id) === s).length])), [clients, statusOf])
   const lists = useMemo(() => checkLists(clients, today, settings), [clients, today, settings])
+  const merged = useMemo(() => mergeLists(lists), [lists])
   const open = clients.filter(c => showClosed || statusOf.get(c.id) !== 'closed')
   const rows = open.filter(c => (stage === 'all' || statusOf.get(c.id) === stage) && `${fullName(c)} ${c.client_phone} ${c.carrier_name || ''}`.toLowerCase().includes(q.trim().toLowerCase()))
   const keys = showClosed ? [...STATUS_ORDER, 'closed'] : STATUS_ORDER
@@ -223,7 +244,7 @@ export default function Clients() {
         <Link to={paths.submit()} className="tp-primary fx-accent"><Plus size={16} />Submit a policy</Link>
       </div>
 
-      {showLists && <div className="ck-lists" aria-label="Monthly check">{lists.map((l, i) => <CheckList key={l.draft} list={l} i={i} />)}</div>}
+      {showLists && <div className="ck-lists is-one" aria-label="Monthly check"><CheckBox key={merged.drafts.join()} m={merged} /></div>}
 
       <div className="fx-cgrid ck-grid" aria-label="Clients">
         {rows.map((c, i) => <ClientCard key={c.id} c={c} i={i} today={today} settings={settings} onLapsed={setLapsing} />)}

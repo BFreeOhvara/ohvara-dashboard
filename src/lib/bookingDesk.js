@@ -11,6 +11,10 @@ export const DESK_NAME = 'Booking desk'
 export const DESK_WORDS_TEMPLATE = 'Your ad money goes 100% to your ads. The booking desk is {pct} of it and pays for the AI calling every lead in seconds, the texts, booking, reminders and our team. More spend means more leads to work, so it grows with your spend.'
 export const deskWords = rate => DESK_WORDS_TEMPLATE.replace('{pct}', `${Math.round((Number(rate) || 0) * 100)}%`)
 
+// P949 — Billing's Booking desk card (P933's words): the line under the name and the one paragraph.
+export const deskOfSpend = rate => `${Math.round((Number(rate) || 0) * 100)}% of your ad spend`
+export const DESK_CARD_WORDS = 'It pays for the AI calling every lead in seconds, the texts, booking, reminders and our team. More spend means more leads to work, so it grows with your spend.'
+
 // Admin only: "Booking desk (12%)".
 export const deskAdminLabel = rate => `${DESK_NAME} (${Math.round((Number(rate) || 0) * 100)}%)`
 
@@ -43,3 +47,10 @@ export function monthlyEstimate(daily, rate) {
   const desk = Math.round(ads * (Number(rate) || 0))
   return { ads, desk, text: `At ${whole(daily)}/day: about ${whole(ads)} to your ads + ${whole(desk)} booking desk.` }
 }
+
+// P949 — "Charged each night" stacked, one whole line each: ['$100 to your ads', '$12 booking desk'].
+export const deskLines = (spend, desk) => [`${cents2(spend)} to your ads`, `${cents2(desk)} booking desk`]
+// "on $100 a day to your ads" / "with $3,000 to your ads" (the Booking desk card's figures).
+export const toAds = (word, n, perDay = false) => `${word} ${whole(n)}${perDay ? ' a day' : ''} to your ads`
+// A month of the desk at this daily spend: { desk, sub: 'with $3,000 to your ads' }.
+export const deskMonth = (daily, rate) => { const m = monthlyEstimate(daily, rate); return { desk: m.desk, sub: toAds('with', m.ads) } }

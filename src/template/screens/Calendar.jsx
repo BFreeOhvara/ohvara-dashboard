@@ -15,6 +15,7 @@ import { stageChip } from '../LeadOutcome'
 import { paths } from '../paths'
 import { DayBox, WeekList } from '../DayBox'
 import { CalBar } from '../CalBar'
+import { LeadDrawer } from './Leads'
 import '../cal910.css'
 import { useOpenDay, useStickyDay } from '../useOpenDay'
 import { blockTime, clockOf, zoneAbbr, dateOf } from '../../lib/callSlots'
@@ -220,7 +221,10 @@ export default function Calendar() {
         )}
       </div>
 
-      <Drawer open={!!open} onClose={() => setOpen(null)} title={open?.who || ''} sub={open && `${open.day}, ${monOf(open.date)} ${open.date}, ${open.time} your time${open.iso && open.tz && clockOf(open.iso, open.tz) !== open.time ? ` · ${clockOf(open.iso, open.tz)} ${zoneAbbr(open.tz, open.iso)} for them` : ''}`}
+      {/* P949: a lead's booking opens the same pop-up as on Leads (details, status, messages, actions) */}
+      {open?.kind === 'lead' && leadRef && <LeadDrawer id={open.ref} onClose={() => setOpen(null)}
+        extra={!ask && ['booked', 'showed'].includes(leadRef.stage) ? <button type="button" className="tp-btn ov-ghost" data-cant onClick={() => { setCant(open); setOpen(null) }}><CalendarX2 size={14} />Can{'’'}t make it</button> : null} />}
+      <Drawer open={!!open && open.kind !== 'lead'} onClose={() => setOpen(null)} title={open?.who || ''} sub={open && `${open.day}, ${monOf(open.date)} ${open.date}, ${open.time} your time${open.iso && open.tz && clockOf(open.iso, open.tz) !== open.time ? ` · ${clockOf(open.iso, open.tz)} ${zoneAbbr(open.tz, open.iso)} for them` : ''}`}
         footer={<><Link to={open?.kind === 'lead' ? paths.lead(open.ref) : paths.client(open?.ref)} className="tp-primary fx-accent" onClick={() => setOpen(null)}>{open?.kind === 'lead' ? 'Open lead' : 'Open client'}</Link>
           {open?.kind === 'lead'
             ? <button type="button" className="tp-btn ov-ghost" onClick={() => { setCant(open); setOpen(null) }}><CalendarX2 size={14} />Can{'’'}t make it</button>

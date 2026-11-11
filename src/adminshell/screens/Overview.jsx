@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, Check, CalendarDays, CreditCard, PhoneCall, Radio, Megaphone, ChevronDown, ChevronUp, Shuffle, Rocket, CalendarOff, PhoneIncoming, ListChecks, Headset, Landmark, Users } from 'lucide-react'
+import { ArrowUpRight, Check, CalendarDays, CreditCard, PhoneCall, Radio, Megaphone, ChevronDown, ChevronUp, MapPin, Shuffle, Rocket, CalendarOff, PhoneIncoming, ListChecks, Headset, Landmark, Users } from 'lucide-react'
 import { useAdmDay, useAdmMoney, useAdmAgents, useAdmDesk, useAdmCosts, useAdmSetup, useAdmRota, useAdmVas, SHIFT_MIN, dateText } from '../data'
 import { Avatar } from '../../template/kit'
 import { CountUp, usd } from '../../template/motion'
@@ -10,6 +10,7 @@ import { ap } from '../paths'
 import { adAlerts } from '../p879'
 import LiveStatus from '../LiveStatus'
 import { adminTodos, shortCover } from '../todos'
+import { useStateChanges, openChanges, diffWords, dayWords, doneStateChange } from '../../template/adStates'
 import Chart from '../../template/Chart'
 import AreaTrend from '../../template/AreaTrend'
 import '../../template/rowbtn936.css'
@@ -23,7 +24,7 @@ import '../p942.css'
 // P914: "Needs you" is To-dos: a clean list of real admin jobs (todos.js), each with one action; what fits shows, the
 // rest wait behind "Show all" (never cut off). Empty: All caught up.
 const TODOS_SHOWN = 5 // P934: at least this many; the box shows as many as fit its height (useTodoFit)
-const TODO_ICON = { lead: Shuffle, card: CreditCard, launch: Rocket, cover: CalendarOff, ad: Megaphone }
+const TODO_ICON = { lead: Shuffle, card: CreditCard, launch: Rocket, cover: CalendarOff, ad: Megaphone, states: MapPin }
 const money = usd()
 const cents = usd(true)
 const REV_SERIES = [{ key: 'plans', label: 'Plan fees', color: 'var(--ox-1)' }, { key: 'fee', label: 'Booking desk', color: 'var(--ox-3)' }, { key: 'setup', label: 'Setup fees', color: 'var(--ox-4)' }]
@@ -71,6 +72,7 @@ function Todo({ t, i }) {
       <span className="adm-todo-ic"><Icon size={15} aria-hidden="true" /></span>
       <span className="tp-grow"><b>{t.title}</b><small>{t.sub}</small></span>
       <Link to={t.to} className="fx-pillbtn adm-todo-go">{t.action}</Link>
+      {t.onDone && <button type="button" className="fx-pillbtn adm-todo-go" aria-label={`Done: ${t.title}`} onClick={t.onDone}><Check size={14} aria-hidden="true" />Done</button>}
     </li>
   )
 }
@@ -107,8 +109,12 @@ export default function Overview() {
   const ahead = Object.keys(rota.rota || {}).map(Number).filter(d => Number.isFinite(d) && d >= day.today).sort((a, b) => a - b).slice(0, 10)
   const cover = shortCover({ rota: rota.rota, dayOff: rota.dayOff, days: ahead, min: SHIFT_MIN, nameOf: id => (vas.find(v => v.id === id)?.name || 'A VA').split(' ')[0] })
   // P879 (N-A-04): an ad rejected, or in review over 24 h, from the engine (sample until 858 + GoHighLevel).
+  // P949: an agent's state change waits here until the campaign has the new states (sample store until the sync does it).
+  const stateChanges = useStateChanges()
+  const states = openChanges(stateChanges).map(c => ({ ...c, name: agents.find(a => a.id === c.agentId)?.name || c.agentName, diff: diffWords(c), startsText: dayWords(c.starts),
+    onDone: () => doneStateChange(c.id, new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) }))
   const todos = adminTodos({
-    unassigned: day.unassigned, pipeline, failed: day.failed, cover, ads: day.real ? [] : adAlerts(),
+    unassigned: day.unassigned, pipeline, failed: day.failed, cover, ads: day.real ? [] : adAlerts(), states,
     ap, money, dayText: dateText, agentName: id => agents.find(a => a.id === id)?.name || 'An agent',
   })
   const onShift = day.onShift.map(v => ({ ...v, calls: desk.filter(c => c.va_id === v.id) }))

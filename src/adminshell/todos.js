@@ -5,6 +5,7 @@
 //   failed      agents whose card was declined (their leads stop until it's fixed)  → See bill
 //   cover       days ahead with fewer VAs on shift than the minimum once days off come out  → Open rota
 //   ads         an ad rejected, or in review over 24 h  → Open agent
+//   states      P949: an agent changed their states; their campaign needs the new ones by the next day  → Open agent, Done
 // Order: money and leads first (a lead waiting, a declined card), then launches, then the team, then ads.
 // P945: no "Call past its time · Give it": a booked call nobody starts moves on by itself (lib/callEscalation.js),
 // so it never needs an admin. The Overview has a Calendar shortcut instead.
@@ -17,7 +18,7 @@ export function shortCover({ rota = {}, dayOff = [], days = [], min = 2, nameOf 
   })
 }
 
-export function adminTodos({ unassigned = [], pipeline = [], failed = [], cover = [], ads = [], ap, money = n => `$${n}`, dayText = d => String(d), agentName = id => id }) {
+export function adminTodos({ unassigned = [], pipeline = [], failed = [], cover = [], ads = [], states = [], ap, money = n => `$${n}`, dayText = d => String(d), agentName = id => id }) {
   const rows = []
   for (const l of unassigned) {
     rows.push({ id: `lead-${l.id}`, kind: 'lead', tone: 'warn', title: 'Lead not matched to an agent', sub: `${l.name} · ${[l.city, l.state].filter(Boolean).join(', ')} · came in ${l.came}`, action: 'Assign', to: ap('leads', l.id) })
@@ -33,6 +34,10 @@ export function adminTodos({ unassigned = [], pipeline = [], failed = [], cover 
   }
   for (const g of cover) {
     rows.push({ id: `cover-${g.day}`, kind: 'cover', tone: 'blue', title: 'Shift short on cover', sub: `${dayText(g.day)} · ${g.on} of ${g.min} VAs on shift${g.off.length ? ` · ${g.off.join(', ')} off` : ''}`, action: 'Open rota', to: `${ap('team')}?tab=rota` })
+  }
+  // P949: { id, agentId, name, diff: '+FL, −GA', states, startsText, onDone }
+  for (const c of states) {
+    rows.push({ id: `states-${c.id}`, kind: 'states', tone: 'blue', title: `Update ad states for ${c.name}: ${c.diff}`, sub: `From ${c.startsText}: ${c.states.join(', ')}`, action: 'Open agent', to: ap('agents', c.agentId), onDone: c.onDone })
   }
   for (const x of ads) {
     rows.push({ id: `ad-${x.agent}`, kind: 'ad', tone: 'warn', title: x.kind === 'rejected' ? 'Ad rejected' : 'Ad in review over 24 h', sub: `${agentName(x.agent)} · ${x.text}`, action: 'Open agent', to: ap('agents', x.agent) })

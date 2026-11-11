@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { paths } from '../paths'
-import { Layers, CreditCard, Check, PauseCircle, PlayCircle, LogOut, Phone, CalendarClock, Clock, CircleAlert, Wallet, CalendarCheck2, Users, BadgeCheck, Target, SlidersHorizontal, Clock3 } from 'lucide-react'
+import { Layers, CreditCard, Check, PauseCircle, PlayCircle, LogOut, Phone, CalendarClock, Clock, CircleAlert, Wallet, CalendarCheck2, Users, BadgeCheck, Target, SlidersHorizontal, Clock3, MapPin } from 'lucide-react'
 import { useSampleBilling, useSampleActions, useSampleAppointments } from '../data'
 import { Chip, Drawer, Field, SampleTag, Seg, useNote } from '../kit'
 import { Select } from '../Select'
 import { usd } from '../motion'
 import { DeskInfo } from '../../components/agent/DeskInfo'
-import { deskBreakdown, deskParts, monthlyEstimate } from '../../lib/bookingDesk'
+import { deskBreakdown, deskParts, monthlyEstimate, deskLines, deskOfSpend, toAds, deskMonth, DESK_CARD_WORDS } from '../../lib/bookingDesk'
 import { bought, planOf, dailyTotal, spendOk, nightlyFor, monthlyBill, feeWords, LEAD_FEE, SETUP_FEE, PAID_MIN_DAILY, TIERS, bandOf, bandText, switchDaily } from '../spendPlan'
 import { planChange, changeWords } from '../../lib/planChange'
 import { liveHoursText } from '../../lib/leadSplit'
@@ -16,6 +16,9 @@ import { cardOf, chargesOf } from '../billing917'
 import '../p878.css'
 import '../p893.css'
 import '../bill910.css'
+import { StatesDrawer } from '../YourStates'
+import { useAgentStates, statesText } from '../useStates'
+import { dayWords } from '../adStates'
 
 // P878 — Billing, from the hole check (N-G-02, N-G-09, N-H-28, N-A-23, N-A-30, N-I-03, N-I-05). Sample only: nothing is
 // charged. P909: the prices are final (price book version 3). P889: one daily spend and How you take leads (Appointments only, or Appointments +
@@ -158,7 +161,7 @@ function PlanSpend({ tier, daily, onDaily, dirty, ok, onSave, onReset, forDay })
       <div className="bl-spend-scale" aria-hidden="true"><small>{money(lo)}</small><small>{money(hi)}</small></div>
       <p className="bl-band-note">The {tier.label} plan covers {bandText(tier)} a day. To spend outside that, switch plan below.</p>
       <dl className="bl-spend-live">
-        <div><dt>Charged each night</dt><dd><b className="tp-money">{money(night.total)}</b><small>{deskParts(night.net, night.fee)}</small></dd></div>
+        <div className="bl-night"><dt>Charged each night</dt><dd><b className="tp-money">{money(night.total)} a night</b>{deskLines(night.net, night.fee).map(t => <small key={t}>{t}</small>)}</dd></div>
         <div><dt>Your plan</dt><dd><b>{tier.label}</b><small>{money(tier.monthly)} a month</small></dd></div>
         <div><dt>About a month</dt><dd><b className="tp-money">{money(month.total)}</b><small>Plan + spend + {feeWords}</small></dd></div>
       </dl>
@@ -294,6 +297,7 @@ export default function Billing() {
   const [spend, setDraft] = useState({ daily: Math.max(PAID_MIN_DAILY, dailyTotal(b.spend)) })
   const [range, setRange] = useState('week')
   const [panel, setPanel] = useState(null)
+  const st = useAgentStates()
   const n = b.nightNow
   const noCard = b.card && !b.card.onFile && b.products !== 'servicing'
   const tierNow = planOf(b)
@@ -359,9 +363,12 @@ export default function Billing() {
           <div><dt>Next plan bill</dt><dd><b>{b.nextBill || 'With your first charge'}</b><small>Covers the team, servicing, portal and app</small></dd></div>
           {pendingTo && <div data-row="plan-next"><dt>Plan change</dt><dd><b>Changes to {pendingTo.label} on {b.planNext.on}</b><small>{money(pendingTo.monthly)} a month from then. You keep {tierNow.label} until then</small><button type="button" className="tp-btn ov-ghost bl-undo" onClick={undo}>Undo</button></dd></div>}
           {lock && <div data-row="lock"><dt>{lock[0]}</dt><dd><b>{lock[1]}</b><small>{lock[2]}</small></dd></div>}
+          {/* P949: the one campaign setting agents change themselves */}
+          <div data-row="states"><dt>Your states</dt><dd><b>{statesText(st.states)}</b><small>{st.waiting ? `Changing ${dayWords(st.waiting.starts)}` : 'Your leads only come from these states'}</small></dd></div>
         </dl>
         <div className="tp-row tp-wrap bl-plan-acts">
           <button type="button" className="tp-primary fx-accent" onClick={() => setPanel('plan')}><SlidersHorizontal size={15} />Change plan</button>
+          <button type="button" className="tp-btn ov-ghost" data-open="states" onClick={() => setPanel('states')}><MapPin size={15} />Your states</button>
           {b.pending && <small className="bl-pending">{b.pending.starts}</small>}
         </div>
       </section>
@@ -383,7 +390,8 @@ export default function Billing() {
         <Charges rows={chargesOf(b)} />
       </section>
 
-      <section className="fx-tile fx-s5 bl-paid" style={{ '--i': 3 }} aria-label="Paid ahead">
+      <div className="fx-s5 bl-side">
+      <section className="fx-tile bl-paid" style={{ '--i': 3 }} aria-label="Paid ahead">
         <header className="fx-tile-h"><span className="tp-grow"><h2>Paid ahead</h2><p>One paid day always in hand</p></span><Chip tone={running && !unpaid ? 'green' : 'mute'}>{b.cancel ? `Ending ${b.cancel.on}` : b.paused ? 'Paused' : noCard ? 'No card' : unpaid ? 'Fix card' : 'Leads running'}</Chip></header>
         <PaidAhead days={n.ahead} />
         <p className="pb-note">Each evening at 8 PM we charge the day after tomorrow, so tomorrow is always paid. If a card is declined, tomorrow still runs; a day that isn{'’'}t paid by the time it starts brings no new leads. Spend a day didn{'’'}t use comes off the next charge.</p>
@@ -391,6 +399,17 @@ export default function Billing() {
           <span className="tp-row tp-wrap">{b.paused.until && <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('pause')}>Extend</button>}<button type="button" className="tp-primary fx-accent" onClick={() => { resume(); note('Resumed. New leads start tomorrow') }}><PlayCircle size={15} />Resume now</button></span></div>}
         {b.cancel && <div className="sp-paused"><b>Your plan ends {b.cancel.on}</b><small>Changed your mind? Nothing stops until then.</small><button type="button" className="tp-primary fx-accent fx-self" onClick={() => { keepPlan(); note('Welcome back. Nothing changes') }}>Keep my account</button></div>}
       </section>
+
+      {/* P949: what the booking desk is, in the room under Paid ahead (P933's words) */}
+      <section className="fx-tile bl-desk" style={{ '--i': 4 }} aria-label="Booking desk">
+        <header className="fx-tile-h"><span className="tp-grow"><h2>Booking desk</h2><p>{deskOfSpend(LEAD_FEE)}</p></span></header>
+        <p>{DESK_CARD_WORDS}</p>
+        <dl className="bl-desk-nums">
+          <div><dt>Each night</dt><dd><b className="tp-money">{money2(nightlyFor('paid', daily).fee)}</b><small>{toAds('on', daily, true)}</small></dd></div>
+          <div><dt>About a month</dt><dd><b className="tp-money">{money(deskMonth(daily, LEAD_FEE).desk)}</b><small>{deskMonth(daily, LEAD_FEE).sub}</small></dd></div>
+        </dl>
+      </section>
+      </div>
 
       <section className="fx-tile fx-s12 bl-results" id="results" style={{ '--i': 4 }} aria-label="Results">
         <header className="fx-tile-h"><span className="tp-grow"><h2>Results</h2><p>What your lead spend bought</p></span><Seg label="Range" value={range} onChange={setRange} options={[{ key: 'week', label: 'This week' }, { key: 'month', label: 'This month' }]} /></header>
@@ -424,6 +443,7 @@ export default function Billing() {
           <OtherPlans tierNow={tierNow} daily={daily} month={b.planMonth || { today: '2026-11-02', start: '2026-11-01', next: '2026-12-01' }} pending={b.planNext} onSwitch={switchPlan} />
         </div>
       </Drawer>
+      <StatesDrawer open={panel === 'states'} onClose={() => setPanel(null)} />
       <CardDrawer open={panel === 'card'} onClose={() => setPanel(null)} face={face} />
       <PauseDrawer open={panel === 'pause'} onClose={() => setPanel(null)} appts={appts} />
       <CancelDrawer open={panel === 'cancel'} onClose={() => setPanel(null)} b={b} onPause={() => setPanel('pause')} onTalk={() => setPanel('talk')} />
