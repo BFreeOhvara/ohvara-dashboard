@@ -194,7 +194,7 @@ export const LESSONS = [
       'Your Overview shows the next call with a countdown, why we\'re calling, the agent\'s note, the carrier and Start call. Today\'s calls lists the rest of the day, each in its status colour.',
       'Call at the booked time. No answer: log it, and the system books the next try for the next business day.',
       'The client wants another time? Open the call and press Move. They get a text with the new time.',
-      'On the Calendar, click a call: its day slides in with that call open inside it. Back or X returns to the day\'s calls; X again closes the day.',
+      'On the Calendar, click a call (in the week, or in a day\'s list on the right): its details open in a pop-up in the middle of the screen. X closes it and you\'re back where you were.',
       'You call only from the phone on the left rail: Start call when a call is due, or a call that comes in. There is no Call button on Clients.',
     ],
     script: {
