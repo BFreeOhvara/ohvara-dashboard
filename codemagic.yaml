@@ -4,8 +4,10 @@
 #
 # Set up once in Codemagic (brain/App Store Launch Checklist.md has the clicks):
 #   - Team integrations → App Store Connect → the API key, named "Ohvara ASC key"
-#   - Code signing identities → iOS: an Apple Distribution certificate + an App
-#     Store profile for com.ohvara.portal (Codemagic can make both with the key)
+#   - iOS signing is automatic (P951): environment group ohvara_ios with
+#     CERTIFICATE_PRIVATE_KEY (secret). The certificate and the App Store profile
+#     for com.ohvara.portal are fetched or created from Apple on every build; no
+#     uploaded profile or certificate is used.
 #   - Code signing identities → Android keystores: the upload keystore,
 #     reference name "ohvara_upload"
 #   - Environment groups:
@@ -22,42 +24,66 @@ workflows:
     max_build_duration: 60
     integrations:
       app_store_connect: Ohvara ASC key
-    environment:
+    environment: &ios_env
       groups:
         - ohvara_web
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.ohvara.portal
+        # P951: ohvara_ios holds CERTIFICATE_PRIVATE_KEY (secret), the private key
+        # for the Apple Distribution certificate. With it every build fetches (or
+        # creates) the certificate and the App Store profile straight from Apple,
+        # so a capability ticked at developer.apple.com is picked up automatically.
+        - ohvara_ios
       vars:
         BUNDLE_ID: com.ohvara.portal
         # The app's Apple ID (App Store Connect → the app → App Information).
         APP_STORE_APPLE_ID: "6824336893"
         # The app ships this same build inside it; no over-the-air zip needed.
         OTA_SKIP: "1"
+        # P951: "1" in the ios-submit workflow only. TestFlight-only is the default.
+        SUBMIT_TO_APP_STORE: "0"
       node: 22
       xcode: latest
-    scripts:
+    scripts: &ios_scripts
       - name: Install
         script: npm ci
       - name: Build the portal
         script: npm run build
       - name: Copy it into the iPhone project
         script: npx cap sync ios
+      # P951: automatic signing. No profile is uploaded to Codemagic any more; the
+      # profile is made fresh from Apple's current capabilities on every build.
+      - name: Signing key present
+        script: |
+          if [ -z "$CERTIFICATE_PRIVATE_KEY" ]; then
+            echo "CERTIFICATE_PRIVATE_KEY is missing. Codemagic > Teams > Global variables and secrets (or the app's Environment variables) > group ohvara_ios > add CERTIFICATE_PRIVATE_KEY (secret) = the contents of ios_distribution_private_key."
+            echo "Steps: brain/App Store Launch Checklist.md > Automatic iOS signing."
+            exit 1
+          fi
+      - name: Set up the keychain
+        script: keychain initialize
+      - name: Fetch signing files from Apple
+        script: |
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --profiles-dir "$HOME/Library/MobileDevice/Provisioning Profiles" \
+            --create
+      - name: Add the certificate to the keychain
+        script: keychain add-certificates
       - name: Signing profiles
         script: xcode-project use-profiles --project ios/App/App.xcodeproj
       # P928: build 4 carries the Time Sensitive entitlement (P880 live-transfer
-      # alerts). A profile made before that capability was ticked can't sign it,
-      # so stop here with the fix instead of a long Xcode signing error.
+      # alerts). Safety net since P951: the profile is fetched fresh now, so this only
+      # fails when the capability is not ticked on the App ID itself.
       - name: Profile has Time Sensitive
         script: |
-          for f in "$HOME/Library/MobileDevice/Provisioning Profiles/"*.mobileprovision; do
+          for f in "$HOME/Library/MobileDevice/Provisioning Profiles/"*.mobileprovision "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/"*.mobileprovision; do
+            [ -f "$f" ] || continue
             if security cms -D -i "$f" 2>/dev/null | grep -q "com.ohvara.portal" && security cms -D -i "$f" 2>/dev/null | grep -q "usernotifications.time-sensitive"; then
               echo "Profile OK: $(basename "$f")"; exit 0
             fi
           done
-          echo "The App Store profile for com.ohvara.portal has no Time Sensitive Notifications."
-          echo "Fix: developer.apple.com > Identifiers > com.ohvara.portal > tick Time Sensitive Notifications > Save."
-          echo "Then Codemagic > Team settings > Code signing identities > iOS provisioning profiles: delete the old com.ohvara.portal App Store profile, Fetch profiles, pick the new one. Start the build again."
+          echo "The App Store profile Apple just made for com.ohvara.portal has no Time Sensitive Notifications."
+          echo "Fix: developer.apple.com > Identifiers > com.ohvara.portal > tick Time Sensitive Notifications > Save. Then start the build again (the profile is remade on its own)."
           exit 1
       - name: Next build number
         script: |
@@ -67,13 +93,52 @@ workflows:
           echo "Build $NEXT"
       - name: Build the .ipa
         script: xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App
-    artifacts:
+      # P951: only does anything in the ios-submit workflow (SUBMIT_TO_APP_STORE=1):
+      # uploads the build and sends version for App Review with What's New from
+      # app-store/whats-new.txt. Release stays MANUAL.
+      - name: Upload and submit for App Review (ios-submit only)
+        script: |
+          if [ "$SUBMIT_TO_APP_STORE" != "1" ]; then
+            echo "TestFlight only: the build is uploaded by the publishing step below."; exit 0
+          fi
+          app-store-connect publish \
+            --path build/ios/ipa/*.ipa \
+            --testflight \
+            --app-store \
+            --cancel-previous-submissions \
+            --release-type MANUAL \
+            --locale en-US \
+            --whats-new "$(cat app-store/whats-new.txt)"
+    artifacts: &ios_artifacts
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
     publishing:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
+
+  # P951: same build, then sent for App Review. Start it only with Brayden's yes
+  # (scripts/app/build.mjs ios --submit). Release stays manual: after approval,
+  # Release in App Store Connect.
+  ios-submit:
+    name: iPhone → TestFlight + App Review
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: Ohvara ASC key
+    environment:
+      groups:
+        - ohvara_web
+        - ohvara_ios
+      vars:
+        BUNDLE_ID: com.ohvara.portal
+        APP_STORE_APPLE_ID: "6824336893"
+        OTA_SKIP: "1"
+        SUBMIT_TO_APP_STORE: "1"
+      node: 22
+      xcode: latest
+    scripts: *ios_scripts
+    artifacts: *ios_artifacts
 
   android-internal:
     name: Android → Play internal testing
