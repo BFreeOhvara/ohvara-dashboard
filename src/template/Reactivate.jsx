@@ -83,7 +83,9 @@ export function ReactivateDrawer({ open, onClose }) {
   const price = priceFor(draft ? draft.callable : clean?.callable || 0, { priceCents: terms.price_cents, minLeads: terms.min_leads })
   const removed = draft ? draft.removed : clean?.counts
   const tooMany = body.length > 5000
-  const canPay = !!clean && !price.belowMin && attest && !busy && !tooMany && !terms.unavailable
+  // Real accounts: closed until Ohvara turns calling on (reactivation_live). Sample always lets you try it.
+  const closed = terms.unavailable || (source === 'real' && !terms.loading && !terms.live)
+  const canPay = !!clean && !price.belowMin && attest && !busy && !tooMany && !closed && !terms.loading
 
   const pay = async () => {
     setBusy(true); setErr(null)
@@ -125,7 +127,7 @@ export function ReactivateDrawer({ open, onClose }) {
           <p>We check every number against the national Do Not Call and litigator lists first. Anyone taken off there is refunded. Calls start after that, from 8 AM to 8 PM in each person’s time zone.</p>
         </div>
       ) : <>
-        {terms.unavailable && <p className="bi-err" role="status"><TriangleAlert size={15} aria-hidden="true" />Reactivation opens soon. You can’t send a list yet.</p>}
+        {closed && <p className="bi-err" role="status"><TriangleAlert size={15} aria-hidden="true" />Reactivation opens soon. You can’t send a list yet.</p>}
         <Field label="List name"><input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. 2024 mortgage leads" maxLength={120} /></Field>
         <div className="bi-import">
           <div className="bi-ways">
