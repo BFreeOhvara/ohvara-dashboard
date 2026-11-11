@@ -19,7 +19,7 @@ const LEAD = '0b7e4c1a-2d3f-4a5b-9c6d-7e8f9a0b1c2d'
 
 const ON: Settings = {
   enabled: true, location_id: LOC, workflow_new_inbound: 'wf-new-000001', workflow_appointment_reminder: 'wf-appt-00001',
-  workflow_no_show: 'wf-noshow-001', workflow_opt_out: null,
+  workflow_no_show: 'wf-noshow-001', workflow_opt_out: null, texts_live: true,
 }
 
 const row = (o: Partial<OutboxRow> = {}): OutboxRow => ({
@@ -297,4 +297,15 @@ test('P939: a saved control URL is used for campaign on/off', async () => {
   t.d.secrets = async () => ({ controlUrl: saved })
   await run(t.d)
   assert.equal(t.posts[0]?.url, saved)
+})
+
+test('P954: texts off: the contact, tags and fields still go, but nobody is added to a texting workflow', async () => {
+  for (const texts_live of [false, undefined]) {
+    const t = deps({ settings: { ...ON, texts_live }, rows: [row(), row({ id: 2, event: 'stage', stage: 'booked' }), row({ id: 3, event: 'appointment_reminder' })] })
+    const res = await run(t.d)
+    assert.deepEqual(await res.json(), { claimed: 3, sent: 3, failed: 0 })
+    assert.equal(t.sent.filter(x => x.url.includes('/workflow/')).length, 0)
+    assert.ok(t.sent.some(x => x.url.endsWith('/contacts/upsert')))
+    assert.equal(t.calls.filter(c => c.fn === 'ghl_finish_outbox' && c.args.p_ok === true).length, 3)
+  }
 })

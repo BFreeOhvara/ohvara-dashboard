@@ -6,7 +6,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(63);
+select plan(64);
 
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 select '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authenticated',
@@ -105,7 +105,7 @@ select ok(not has_table_privilege('anon', 'public.ghl_control_log', 'select'), '
 
 -- ── e. Launch checks on the server, Turn campaign on, Place test call, the gate ──
 select is((select array_to_string(array(select jsonb_array_elements_text(public.agent_launch_checks('f9150000-0000-4000-8000-00000000000b')->'failed')), ',')),
-          'profile,paid,testCall', 'e1 Owen fails profile, paid and the test call');
+          'paid,states,hours,testCall', 'e1 Owen fails paid, states, hours and the test call (P941 split profile into states + hours)');
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"f9150000-0000-4000-8000-00000000000a","role":"authenticated"}', true);
 select throws_ok($$select public.admin_turn_campaign_on('f9150000-0000-4000-8000-00000000000b')$$, 'P0001', null, 'e2 Turn campaign on is refused while a check fails');
@@ -153,11 +153,12 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"f9150000-0000-4000-8000-00000000000f","role":"authenticated"}', true);
 select lives_ok($$select public.va_request_day_off((date_trunc('month', current_date + 40) + interval '2 days')::date)$$, 'f1 a first day off books');
 select lives_ok($$select public.va_request_day_off((date_trunc('month', current_date + 40) + interval '3 days')::date)$$, 'f2 a second one books');
-select throws_ok($$select public.va_request_day_off((date_trunc('month', current_date + 40) + interval '4 days')::date)$$, 'P0001',
-                 'You''ve used all 2 of your days off this month.', 'f3 a third at a 2-day allowance is refused');
-select throws_ok($$insert into public.va_day_off_requests (va_id, off_date) values ('f9150000-0000-4000-8000-00000000000f', (date_trunc('month', current_date + 40) + interval '5 days')::date)$$,
+select lives_ok($$select public.va_request_day_off((date_trunc('month', current_date + 40) + interval '4 days')::date)$$, 'f2b a third one books (allowance is 3 since P945)');
+select throws_ok($$select public.va_request_day_off((date_trunc('month', current_date + 40) + interval '5 days')::date)$$, 'P0001',
+                 'You''ve used all 3 of your days off this month.', 'f3 a fourth at a 3-day allowance is refused');
+select throws_ok($$insert into public.va_day_off_requests (va_id, off_date) values ('f9150000-0000-4000-8000-00000000000f', (date_trunc('month', current_date + 40) + interval '6 days')::date)$$,
                  'P0001', null, 'f4 a direct insert can''t get round it');
-select is((select string_agg(status, ',') from public.va_day_off_requests where va_id = 'f9150000-0000-4000-8000-00000000000f'), 'approved,approved', 'f5 booked days need no approval');
+select is((select string_agg(status, ',') from public.va_day_off_requests where va_id = 'f9150000-0000-4000-8000-00000000000f'), 'approved,approved,approved', 'f5 booked days need no approval');
 reset role;
 
 select * from finish();

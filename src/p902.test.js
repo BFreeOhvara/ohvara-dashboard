@@ -187,7 +187,7 @@ test('GoHighLevel flow_stop takes the contact out of the no-answer workflow', as
     const body = url.endsWith('/contacts/upsert') ? JSON.stringify({ contact: { id: 'c1' } }) : '{}'
     return { ok: true, status: 200, text: async () => body }
   }
-  const S = { enabled: true, location_id: 'l1C08ntBrFjLS0elLIYU', workflow_new_inbound: null, workflow_appointment_reminder: null, workflow_no_show: null, workflow_opt_out: null, workflow_no_answer: 'wf-na-000001' }
+  const S = { enabled: true, location_id: 'l1C08ntBrFjLS0elLIYU', workflow_new_inbound: null, workflow_appointment_reminder: null, workflow_no_show: null, workflow_opt_out: null, workflow_no_answer: 'wf-na-000001', texts_live: true } // P954: workflows only while texts are on
   const rows = [ROW({ id: 1, event: 'flow_stop', detail: { reason: 'replied' } }), ROW({ id: 2, detail: { first_call_outcome: 'no_answer', text_flow: 'no_answer' } })]
   await run({ apiKey: 'k', ghl: k => ghlClient(k, fetchFn), settings: async () => ({ data: S, error: null }), rpc: async fn => ({ data: fn === 'ghl_claim_outbox' ? rows : null, error: null }), log: () => {} })
   assert.ok(sent.includes('DELETE /contacts/c1/workflow/wf-na-000001'))
