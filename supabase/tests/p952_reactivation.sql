@@ -60,33 +60,31 @@ select is((select reactivation_live from public.recovery_config limit 1), false,
 select pg_temp.as_admin();
 select throws_ok($$ update public.recovery_config set reactivation_live = true $$, '42501', null, 'a2 a signed-in admin cannot turn reactivation on');
 select throws_ok($$ update public.reactivation_settings set scrub_provider = 'stub' $$, '42501', null, 'a3 nor connect a scrub provider');
-select lives_ok($$ select public.admin_reactivation_settings_save(200, 100, 5) $$, 'a4 an admin can save the price, minimum and attempts');
+select lives_ok($$ select public.admin_reactivation_settings_save(p_delivered_cents => 2000, p_max_attempts => 5) $$, 'a4 an admin can save the price per delivered and attempts (P957)');
 
 -- ── b. import: cleaning, minimum, price ─────────────────────────────────────────────────────────────────────────────
 select pg_temp.as_agent();
-select is((public.reactivation_terms() ->> 'price_cents')::int, 200, 'b1 terms: $2 per lead');
+select is((public.reactivation_terms() ->> 'delivered_cents')::int, 2000, 'b1 terms: $20 per delivered (P957; was $2 a lead)');
 select is((public.reactivation_terms() -> 'licensed'), '["TX", "GA", "FL"]'::jsonb, 'b2 terms: the agent''s licensed states');
 select throws_ok($$ select public.reactivation_create('No tick', (select rows from p952_rows), false) $$, 'P0001', 'Tick the line about the list first', 'b3 no tick, no list');
-select throws_ok($$ select public.reactivation_create('Small', '[{"first":"A","phone":"5126012001","state":"TX"}]'::jsonb, true) $$, 'P0001', null, 'b4 under the 100 minimum is refused');
+select ok(not (public.reactivation_terms() ? 'min_leads'), 'b4 no list minimum any more (P957)');
 create temp table p952_made as select public.reactivation_create('Aged pack March', (select rows from p952_rows), true) as r;
 select is((select (r ->> 'callable')::int from p952_made), 103, 'b5 103 callable after cleaning');
-select is((select r -> 'removed' from p952_made), '{"dnc": 1, "existing": 1, "duplicate": 1, "bad_number": 1, "unlicensed": 2}'::jsonb, 'b6 removed: bad, duplicate, existing, 2 unlicensed (AZ, NY), DNC');
-select is((select (r ->> 'amount_cents')::int from p952_made), 20600, 'b7 price $206 = 103 x $2; removed are free');
+select is((select r -> 'removed' from p952_made), '{"dnc": 1, "existing": 1, "duplicate": 1, "bad_number": 1, "unlicensed": 2, "over_limit": 0}'::jsonb, 'b6 removed: bad, duplicate, existing, 2 unlicensed (AZ, NY), DNC');
+select is((select (r ->> 'amount_cents')::int from p952_made), 0, 'b7 uploading is free (P957)');
 select is((select count(*)::int from public.reactivation_contacts), 0, 'b8 the agent cannot read the people rows directly');
 select is((select jsonb_array_length(public.my_reactivation_lists())), 1, 'b9 the agent sees their list');
 select pg_temp.as_owner();
-select is((select status from public.reactivation_lists), 'draft', 'b10 a new list waits for payment');
+select is((select status from public.reactivation_lists), 'draft', 'b10 a new list waits for the card check');
 
--- ── c. the charge (lead-spend's door) ───────────────────────────────────────────────────────────────────────────────
-create temp table p952_ch as select public.reactivation_charge_start((select id from public.reactivation_lists), 'a9520000-0000-4000-8000-00000000000a') as r;
-select is((select kind || ':' || amount_cents || ':' || note from public.lead_spend_charges where id = (select (r ->> 'charge_id')::uuid from p952_ch)),
-          'reactivation:20600:Reactivation · 103 leads · $206', 'c1 one reactivation charge, OHVARA LEADS line');
-select throws_ok($$ select public.reactivation_charge_start((select id from public.reactivation_lists), 'a9520000-0000-4000-8000-00000000000b') $$, '42501', null, 'c2 not someone else''s list');
-select is((select count(*)::int from public.lead_spend_claim_charges(5, 'a9520000-0000-4000-8000-00000000000a')), 1, 'c3 the charge engine claims it');
-select is((public.lead_spend_charge_result((select (r ->> 'charge_id')::uuid from p952_ch), 'paid', 'pi_test_1') ->> 'status'), 'paid', 'c4 paid');
-select is((select status from public.reactivation_lists), 'waiting_scrub', 'c5 paid → waiting for the scrub');
+-- ── c. the start: a card check, no charge (P957) ───────────────────────────────────────────────────────────────────
+select throws_ok($$ select public.reactivation_start_list((select id from public.reactivation_lists), 'a9520000-0000-4000-8000-00000000000a') $$, 'P0001', 'Check your card first', 'c1 no card check, no start');
+select throws_ok($$ select public.reactivation_start_list((select id from public.reactivation_lists), 'a9520000-0000-4000-8000-00000000000b') $$, '42501', null, 'c2 not someone else''s list');
+select is((public.reactivation_card_record('a9520000-0000-4000-8000-00000000000a', 'pm_1', 'fp_1', 'credit', 'visa', '4242', 'ok') ->> 'ok')::boolean, true, 'c3 a card check passes');
+select is((public.reactivation_start_list((select id from public.reactivation_lists), 'a9520000-0000-4000-8000-00000000000a') ->> 'status'), 'waiting_scrub', 'c4 started');
+select is((select status from public.reactivation_lists), 'waiting_scrub', 'c5 started → waiting for the scrub');
 select is((select count(*)::int from public.reactivation_contacts where status = 'waiting_scrub'), 103, 'c6 nobody is callable before the scrub');
-select throws_ok($$ select public.reactivation_charge_start((select id from public.reactivation_lists), 'a9520000-0000-4000-8000-00000000000a') $$, 'P0001', 'This list is already paid', 'c7 never charged twice');
+select throws_ok($$ select public.reactivation_start_list((select id from public.reactivation_lists), 'a9520000-0000-4000-8000-00000000000a') $$, 'P0001', 'This list has already started', 'c7 never started twice');
 
 -- ── d. the scrub ────────────────────────────────────────────────────────────────────────────────────────────────────
 select is((select count(*)::int from public.reactivation_scrub_claim()), 0, 'd1 no provider connected → nothing is scrubbed, the list waits');
@@ -94,12 +92,12 @@ update public.reactivation_settings set scrub_provider = 'stub';   -- CC, as the
 select is((select count(*)::int from public.reactivation_scrub_claim()), 1, 'd2 with a provider the list is claimed');
 select is((public.reactivation_scrub_done((select id from public.reactivation_lists),
           '[{"phone":"+15126012001","reason":"national_dnc"},{"phone":"+15126022002","reason":"litigator"}]'::jsonb, 'stub') ->> 'refund_cents')::int,
-          400, 'd3 two flagged → $4 back');
-select is((select status || ':' || callable || ':' || refund_due_cents from public.reactivation_lists), 'working:101:400', 'd4 working, 101 callable, $4 to pay back');
+          0, 'd3 two flagged → nothing to pay back (the list was free)');
+select is((select status || ':' || callable || ':' || refund_due_cents from public.reactivation_lists), 'working:101:0', 'd4 working, 101 callable, nothing to pay back');
 select is((select national from public.dnc_numbers where phone = '+15126012001'), true, 'd5 the national DNC number is remembered');
-select is((select count(*)::int from public.reactivation_refunds_due()), 1, 'd6 the refund is due on the same charge');
-select lives_ok($$ select public.reactivation_refunded((select id from public.reactivation_lists), 400) $$, 'd7 refund recorded');
-select is((select refunded_cents from public.lead_spend_charges where kind = 'reactivation'), 400, 'd8 the charge shows $4 refunded');
+select is((select count(*)::int from public.reactivation_refunds_due()), 0, 'd6 no refunds due');
+select is((select count(*)::int from public.lead_spend_charges where agent_id = 'a9520000-0000-4000-8000-00000000000a'), 0, 'd7 no charge at all so far');
+select is((select (removed ->> 'national_dnc')::int + (removed ->> 'litigator')::int from public.reactivation_lists), 2, 'd8 the two flagged show as removed');
 
 -- ── e. nothing dials while the flag is off ─────────────────────────────────────────────────────────────────────────
 update public.reactivation_contacts set next_at = now() - interval '1 minute' where status = 'queued';
@@ -115,6 +113,10 @@ select ok((public.reactivation_tick() ? 'started'), 'f1 flag on → the dialer r
 select ok((select count(*) filter (where status = 'calling') <= 30 and (count(*) filter (where status = 'calling') = 0 or public.reactivation_window_ok('TX', now()))
              and count(*) filter (where status = 'calling' and lead_id is null) = 0 from public.reactivation_contacts),
           'f2 at most 30 a minute, only inside their hours, each with its own hidden lead row');
+-- P957: undo whatever the tick dialed, so the rest of the file doesn't depend on the clock.
+delete from public.ai_calls where reactivation_contact_id is not null;
+update public.reactivation_contacts set lead_id = null, status = 'queued' where status in ('calling', 'queued');
+delete from public.leads where reactivation_id is not null;
 select ok(not public.reactivation_window_ok('TX', '2026-11-10 13:30:00+00'::timestamptz), 'f3 7:30 AM Central is closed');
 select ok(public.reactivation_window_ok('TX', '2026-11-10 16:00:00+00'::timestamptz), 'f4 10 AM Central / 9 AM El Paso is open (both TX zones)');
 select ok(not public.reactivation_window_ok('TX', '2026-11-11 02:30:00+00'::timestamptz), 'f5 8:30 PM Central is closed (8 PM stop, not 9)');
@@ -141,9 +143,10 @@ select pg_temp.as_owner();
 select is((public.ai_caller_result((select id from public.ai_calls where reactivation_contact_id = (select id from p952_p)), 'booked',
            jsonb_build_object('duration_secs', 120, 'booked_for', now() + interval '1 day')) ->> 'status'), 'booked', 'g2 booked');
 select is((select inbound_stage || ':' || (reactivated_at is not null) || ':' || (delivered_at is not null) || ':' || coalesce(text_flow, 'none')
-             from public.leads where reactivation_id = (select id from p952_p)), 'booked:true:true:none', 'g3 booked, delivered, no text flow');
+             from public.leads where reactivation_id = (select id from p952_p)), 'booked:false:false:none', 'g3 booked, but hidden until the $20 is paid (P957), no text flow');
+select public.lead_spend_charge_result((select id from public.lead_spend_charges where kind = 'reactivation_delivery'), 'paid', 'pi_test_d1');
 select pg_temp.as_agent();
-select is((select count(*)::int from public.leads where reactivation_id is not null and (qualifier_answers ->> 'reactivation')::boolean), 1, 'g4 now on the agent''s board, tagged Reactivated');
+select is((select count(*)::int from public.leads where reactivation_id is not null and (qualifier_answers ->> 'reactivation')::boolean), 1, 'g4 paid → on the agent''s board, tagged Reactivated');
 select pg_temp.as_owner();
 select is((select count(*)::int from public.ghl_outbox where lead_id = (select lead_id from public.reactivation_contacts where id = (select id from p952_p))), 0, 'g5 nothing goes to GoHighLevel (no texts)');
 

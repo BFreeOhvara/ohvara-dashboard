@@ -49,6 +49,16 @@
 //                                                       On a live key it needs recovery_config.reactivation_live too.
 //   Cron 'run' also pays back what the reactivation scrub took off a paid list (reactivation_refunds_due), on the
 //   same PaymentIntent, idempotent per list and amount.
+//   P957 (final model): uploading a list is free; each DELIVERED appointment or live call is one $20
+//   'reactivation_delivery' charge made by the database (reactivation_bill), which pg_net hands straight to
+//     cron { action: 'reactivation_charge', agent_id }  runs that agent's due charges now (the 15-minute 'run' is the
+//                                                       fallback). The lead shows only once it's paid (269).
+//   'reactivation_pay' is retired (410 retired). Instead, signed-in agent:
+//     { action: 'reactivation_start', list_id, pi? }    the card check, then reactivation_start_list (free):
+//        default card -> not prepaid -> its fingerprint not on another account -> a $1 hold (manual capture, 3-D Secure
+//        when the bank asks, Stripe Radar on) released at once. 3-D Secure: { code: 'needs_action', client_secret, pi }
+//        -> the portal runs stripe.handleNextAction and calls again with pi. Every check is kept (reactivation_cards).
+//   A transfer reported under 30 s after it was charged is paid back like the scrub refunds (delivery_id rows).
 //   Admin: { action: 'live_check' }                     $1 on the admin's own saved card, refunded straight away. Runs on a
 //                                                       test or a live key (Brayden's yes in chat); shows in Revenue.
 
@@ -56,7 +66,7 @@ import { type Stripe, StripeError } from '../_shared/fulfillmentPayouts.ts'
 
 export type Charge = {
   id: string; agent_id: string; key: string
-  kind: 'weekly' | 'change' | 'va_cost' | 'nightly' | 'plan_upgrade' | 'signup' | 'plan_month' | 'live_check' | 'reactivation' | 'product_add'; amount_cents: number
+  kind: 'weekly' | 'change' | 'va_cost' | 'nightly' | 'plan_upgrade' | 'signup' | 'plan_month' | 'live_check' | 'reactivation' | 'product_add' | 'reactivation_delivery'; amount_cents: number
   attempts: number; stripe_pi: string | null; week_start: string; note: string | null; customer: string | null; recheck: boolean
   for_day?: string | null; spend_cents?: number | null; fee_cents?: number | null
   note?: string | null; tier_to?: string | null
@@ -112,12 +122,12 @@ export const words = (c: Charge) =>
     : c.kind === 'nightly' ? `Lead spend for ${c.for_day}: ${usd(c.spend_cents)} to your ads${c.fee_cents ? ` + ${usd(c.fee_cents)} booking desk` : ''}`
       : c.kind === 'signup' || c.kind === 'plan_month' || c.kind === 'product_add' ? (c.note || 'Ohvara plan')
         : c.kind === 'live_check' ? 'Ohvara live check ($1, refunded)'
-          : c.kind === 'reactivation' ? (c.note || 'Reactivation leads')
+          : c.kind === 'reactivation' || c.kind === 'reactivation_delivery' ? (c.note || 'Reactivation')
           : c.kind === 'change' ? 'Lead spend (raised this week)' : 'Lead spend, week of ' + c.week_start
 // Which catalog product a charge belongs to (P933 stripe_catalog), for Stripe's own reports.
 export const productOf = (c: Charge) =>
   c.kind === 'signup' || c.kind === 'product_add' ? 'ohvara_signup' : c.kind === 'plan_month' || c.kind === 'plan_upgrade' ? `ohvara_plan_${c.tier_to || 'servicing'}`
-    : c.kind === 'live_check' ? 'ohvara_live_check' : c.kind === 'reactivation' ? 'ohvara_reactivation' : 'ohvara_lead_spend'
+    : c.kind === 'live_check' ? 'ohvara_live_check' : c.kind === 'reactivation' || c.kind === 'reactivation_delivery' ? 'ohvara_reactivation' : 'ohvara_lead_spend'
 
 async function chargeOne(store: Store, stripe: Stripe, c: Charge, liveOk = false) {
   let pi: any = null
@@ -172,14 +182,17 @@ export async function reactivationRefunds(store: Store, stripe: Stripe | null, k
   const gate = await chargingAllowed(store, key)
   if (!gate.ok) return { skipped: gate.live ? 'live charging is off' : 'no Stripe key', refunded: 0 }
   const got = await store.rpc('reactivation_refunds_due', {})
-  const due: { list_id: string; charge_id: string; pi: string; cents: number; key: string }[] = Array.isArray(got) ? got : []
+  const due: { list_id?: string; delivery_id?: string; charge_id: string; pi: string; cents: number; key: string }[] = Array.isArray(got) ? got : []
   let refunded = 0
   for (const r of due) {
     if (!(r.cents > 0) || !r.pi) continue
     try {
-      await stripe('POST', 'refunds', { payment_intent: r.pi, amount: r.cents, metadata: { ohvara: 'reactivation_scrub', list_id: r.list_id, charge_id: r.charge_id } },
-        { idempotencyKey: r.key })
-      await store.rpc('reactivation_refunded', { p_list: r.list_id, p_cents: r.cents })
+      // P957: a delivered live call that turned out under 30 s is paid back the same way.
+      const meta = r.delivery_id ? { ohvara: 'reactivation_short_transfer', delivery_id: r.delivery_id, charge_id: r.charge_id }
+        : { ohvara: 'reactivation_scrub', list_id: r.list_id, charge_id: r.charge_id }
+      await stripe('POST', 'refunds', { payment_intent: r.pi, amount: r.cents, metadata: meta }, { idempotencyKey: r.key })
+      if (r.delivery_id) await store.rpc('reactivation_delivery_refunded', { p_delivery: r.delivery_id, p_cents: r.cents })
+      else await store.rpc('reactivation_refunded', { p_list: r.list_id, p_cents: r.cents })
       refunded++
     } catch { /* left due; the next run tries again with the same key */ }
   }
@@ -201,6 +214,76 @@ export async function liveCheck(store: Store, stripe: Stripe, key: string | unde
     refunded = true
   }
   return { status, refunded, mode: isLiveKey(key) ? 'live' : 'test', failure: r?.failure ?? null }
+}
+
+// -- P957: the card check before a reactivation list starts --------------------------------------------------------
+// Nobody gets leads without a real, chargeable card: not prepaid/gift, not already backing another account, and a $1
+// hold that clears (the bank's 3-D Secure when it asks; Radar decides like any payment). The hold is released at once.
+// Returns { ok: true, card } or { ok: false, code, error, client_secret?, pi? }.
+export const CHECK_CENTS = 100
+const ucBrand = (b: unknown) => { const x = String(b || 'Card'); return x.charAt(0).toUpperCase() + x.slice(1) }
+export async function reactivationCardCheck(store: Store, stripe: Stripe, key: string | undefined, me: string, piId: string | null = null) {
+  const off = { ok: false, code: 'reactivation_off', error: 'Reactivation opens soon. Nothing was charged.' }
+  const gate = await chargingAllowed(store, key)
+  if (!gate.ok) return off
+  if (gate.live && (await store.rpc('reactivation_is_live', {})) !== true) return off
+  const record = (pm: any, status: string, failure: string | null = null) => store.rpc('reactivation_card_record', {
+    p_agent: me, p_pm: pm?.id ?? null, p_fingerprint: pm?.card?.fingerprint ?? null, p_funding: pm?.card?.funding ?? null,
+    p_brand: pm?.card?.brand ?? null, p_last4: pm?.card?.last4 ?? null, p_status: status, p_failure: failure })
+  const customer = await store.rpc('billing_customer_of', { p_agent: me })
+  if (!customer) { await record(null, 'no_card'); return { ok: false, code: 'no_card', error: 'Add a card first.' } }
+  const cu = await stripe('GET', `customers/${customer}`)
+  const method = cu?.invoice_settings?.default_payment_method
+  const pmId = typeof method === 'string' ? method : method?.id
+  if (!pmId) { await record(null, 'no_card'); return { ok: false, code: 'no_card', error: 'Add a card first.' } }
+  const pm = typeof method === 'object' && method?.card ? method : await stripe('GET', `payment_methods/${pmId}`)
+  if (pm?.type && pm.type !== 'card') { await record(pm, 'no_card'); return { ok: false, code: 'no_card', error: 'Add a credit or debit card.' } }
+  const label = `${ucBrand(pm?.card?.brand)} ending ${pm?.card?.last4 || '••••'}`
+  if (pm?.card?.funding === 'prepaid') {
+    await record(pm, 'prepaid', 'Prepaid card')
+    return { ok: false, code: 'prepaid', error: `Prepaid and gift cards can't be used for reactivation. Add a credit or debit card. (${label})` }
+  }
+  if (await store.rpc('reactivation_card_shared', { p_agent: me, p_fingerprint: pm?.card?.fingerprint ?? null })) {
+    await record(pm, 'shared', 'On another account')
+    return { ok: false, code: 'shared_card', error: 'This card is already on another Ohvara account. Use a different card, or contact us.' }
+  }
+  let pi: any
+  try {
+    if (piId) {
+      // After 3-D Secure in the portal: the same hold, read back (it must be ours, for this agent).
+      pi = await stripe('GET', `payment_intents/${piId}`)
+      if (pi?.metadata?.ohvara !== 'reactivation_card_check' || pi?.metadata?.agent_id !== me) return { ok: false, code: 'bad_check', error: 'Start the card check again.' }
+    } else {
+      pi = await stripe('POST', 'payment_intents', {
+        amount: CHECK_CENTS, currency: 'usd', customer, payment_method: pm.id, capture_method: 'manual', confirm: true,
+        payment_method_types: ['card'], payment_method_options: { card: { request_three_d_secure: 'automatic' } },
+        description: 'Ohvara card check ($1 hold, released)', statement_descriptor_suffix: 'CHECK',
+        metadata: { ohvara: 'reactivation_card_check', agent_id: me, product: 'ohvara_reactivation' },
+      }, { idempotencyKey: `react_card:${me}:${pm.id}:${Math.floor(Date.now() / 600000)}` })
+    }
+  } catch (e) {
+    if (e instanceof StripeError) {
+      const msg = (e as StripeError).message || 'The card was declined.'
+      await record(pm, 'declined', msg)
+      return { ok: false, code: 'declined', error: `${msg} Try another card.` }
+    }
+    throw e
+  }
+  if (pi?.livemode && !gate.live) { await record(pm, 'declined', 'Live card on test mode'); return { ok: false, code: 'declined', error: 'Live payments are off (test mode only).' } }
+  if (pi?.status === 'requires_action') {
+    await record(pm, 'needs_action', 'Bank asked to confirm')
+    return { ok: false, code: 'needs_action', error: 'Your bank wants you to confirm the card.', client_secret: pi.client_secret, pi: pi.id }
+  }
+  if (pi?.status !== 'requires_capture' && pi?.status !== 'succeeded') {
+    const msg = pi?.last_payment_error?.message || 'The card was declined.'
+    await record(pm, 'declined', msg)
+    return { ok: false, code: 'declined', error: `${msg} Try another card.` }
+  }
+  // Passed: release the hold (the $1 never stays on the card).
+  try { if (pi.status === 'requires_capture') await stripe('POST', `payment_intents/${pi.id}/cancel`, {}, { idempotencyKey: `react_card_release:${pi.id}` }) }
+  catch { /* an uncaptured hold falls off by itself within 7 days */ }
+  await record(pm, 'ok')
+  return { ok: true, card: label }
 }
 
 // The customer's default card, as words ("Visa ending 4242"), or null. Never the number.
@@ -232,6 +315,11 @@ export async function handle(req: Request, store: Store, stripe: Stripe | null, 
   const cron = req.headers.get('x-ohvara-cron')
   if (cron) {
     if (!(await store.cronOk(cron))) return json({ error: 'Not allowed' }, 401)
+    // P957: a delivered appointment or live call charges straight away (269 reactivation_bill -> pg_net).
+    if (body.action === 'reactivation_charge') {
+      if (typeof body.agent_id !== 'string' || !/^[0-9a-f-]{36}$/.test(body.agent_id)) return json({ error: 'agent_id' }, 400)
+      return json(await runCharges(store, stripe, key, body.agent_id))
+    }
     if (body.action !== 'run') return json({ error: 'Unknown action' }, 400)
     const ran = await runCharges(store, stripe, key)
     return json({ ...ran, refunds: await reactivationRefunds(store, stripe, key) })
@@ -321,16 +409,17 @@ export async function handle(req: Request, store: Store, stripe: Stripe | null, 
         const mine = charged?.results?.find((r: any) => r.id === q.charge_id)?.result
         return json({ ...q, status: mine?.status ?? q.status ?? 'due', failure: mine?.failure ?? null, skipped: charged?.skipped ?? null })
       }
-      case 'reactivation_pay': {
+      case 'reactivation_pay':
+        // P952's pay-per-list is retired (P957): lists are free; each delivered appointment or live call is charged.
+        return json({ error: 'Lists are free to start now. You pay for each appointment or live call we deliver.', code: 'retired' }, 410)
+      case 'reactivation_start': {
         if (typeof body.list_id !== 'string' || !/^[0-9a-f-]{36}$/.test(body.list_id)) return json({ error: 'Pick a list' }, 400)
-        // A live key charges only once reactivation is turned on (with Brayden's yes); a test key always may (test mode).
-        if (isLiveKey(key) && (await store.rpc('reactivation_is_live', {})) !== true) {
-          return json({ error: 'Reactivation opens soon. Nothing was charged.', code: 'reactivation_off' }, 409)
-        }
-        const q = await store.rpc('reactivation_charge_start', { p_list: body.list_id, p_agent: me })
-        const charged: any = await runCharges(store, stripe, key, me)
-        const mine = charged?.results?.find((r: any) => r.id === q.charge_id)?.result
-        return json({ ...q, status: mine?.status ?? 'due', failure: mine?.failure ?? null, skipped: charged?.skipped ?? null })
+        const pi = typeof body.pi === 'string' && /^pi_[A-Za-z0-9_]+$/.test(body.pi) ? body.pi : null
+        if (!stripe) return json({ error: "Billing isn't set up yet.", code: 'reactivation_off' }, 503)
+        const chk: any = await reactivationCardCheck(store, stripe, key, me, pi)
+        if (!chk.ok) return json(chk, chk.code === 'needs_action' ? 202 : chk.code === 'reactivation_off' ? 409 : 402)
+        const started = await store.rpc('reactivation_start_list', { p_list: body.list_id, p_agent: me })
+        return json({ ok: true, card: chk.card, ...started })
       }
       case 'live_check': {
         if (!(await store.isAdmin(me))) return json({ error: 'Admins only' }, 403)
@@ -346,7 +435,7 @@ export async function handle(req: Request, store: Store, stripe: Stripe | null, 
     }
   } catch (e: any) {
     if (['min_daily', 'max_daily', 'over_plan', 'servicing_only', 'bad_tier', 'no_products', 'bad_product', 'details_missing'].includes(e?.hint)) return json({ error: e.message, code: e.hint }, 400)
-    if (['busy', 'test_account', 'comped', 'already_paid', 'no_card', 'empty', 'already_have', 'pending_removal', 'not_signed_up'].includes(e?.hint)) return json({ error: e.message, code: e.hint }, 409)
+    if (['busy', 'test_account', 'comped', 'already_paid', 'no_card', 'empty', 'already_have', 'pending_removal', 'not_signed_up', 'card_owed', 'over_limit', 'retired'].includes(e?.hint)) return json({ error: e.message, code: e.hint }, 409)
     if (e?.code === '42501') return json({ error: e.message || 'Not allowed' }, 403)
     return json({ error: e?.message || 'Something went wrong' }, 500)
   }

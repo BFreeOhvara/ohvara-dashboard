@@ -59,15 +59,16 @@ test('the products words carry the price book prices', () => {
   assert.match(PRODUCTS.leads.sub, new RegExp(`\\${m(PRICES.setupFee)} setup`))
   assert.equal(PRODUCTS.servicing.price, `${m(PRICES.servicingOnly)} a month`)
   assert.match(PRODUCTS.servicing.sub, new RegExp(`up to ${PRICES.servicingBase} clients`))
-  assert.equal(PRODUCTS.reactivation.price, `${m(REACT_DEFAULTS.priceCents / 100)} a lead`)
-  assert.match(PRODUCTS.reactivation.sub, new RegExp(`at least ${REACT_DEFAULTS.minLeads}`))
-  // The decided prices (P955): $299 setup, Servicing $499 up to 100 clients, $2 a callable lead, min 100.
+  assert.equal(PRODUCTS.reactivation.price, `${m(REACT_DEFAULTS.deliveredCents / 100)} per appointment or live call`)
+  assert.match(PRODUCTS.reactivation.sub, /free to upload/)
+  // The decided prices (P955): $299 setup, Servicing $499 up to 100 clients. Reactivation (P957): free to upload,
+  // $20 per delivered appointment or live call.
   assert.equal(PRICES.setupFee, 299)
   assert.equal(PRICES.servicingOnly, 499)
   assert.equal(PRICES.servicingBase, 100)
   assert.equal(PRICES.servicingStepPrice, 200)
-  assert.equal(REACT_DEFAULTS.priceCents, 200)
-  assert.equal(REACT_DEFAULTS.minLeads, 100)
+  assert.equal(REACT_DEFAULTS.deliveredCents, 2000)
+  assert.equal(REACT_DEFAULTS.minLeads, undefined)
 })
 
 test('pickedOf: picked, or the old one-word products', () => {
@@ -97,7 +98,7 @@ test('removeWords: next bill date for monthly products, at once for Reactivation
   assert.match(w.lines.join(' '), /keep your portal and Reactivation/)
   const two = removeWords({ ...b, picked: ['leads', 'servicing'] }, 'servicing')
   assert.doesNotMatch(two.lines.join(' '), /portal and Reactivation/)
-  assert.deepEqual(removeWords(b, 'reactivation').lines[0], 'Lists already paid keep calling.')
+  assert.deepEqual(removeWords(b, 'reactivation').lines[0], 'Lists already started keep calling, and each appointment or live call is still charged.')
 })
 
 test('sampleQuote: prorated in a running month, full month otherwise; setup once', () => {

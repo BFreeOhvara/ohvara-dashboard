@@ -43,7 +43,7 @@ export function costOf(b, key) {
     const n = b?.clients?.total || 0
     return { big: `${money(servicingOnlyPrice(n))} a month`, sub: n > PRICES.servicingBase ? `${n} clients` : `Up to ${PRICES.servicingBase} clients` }
   }
-  return { big: `${money(REACT_DEFAULTS.priceCents / 100)} a lead`, sub: 'Per list, when you send one. Nothing monthly' }
+  return { big: `${money(REACT_DEFAULTS.deliveredCents / 100)} per appointment`, sub: 'Or live call we deliver. Free to upload. Nothing monthly' }
 }
 
 // The rows of the products card, in the shared order.
@@ -54,10 +54,10 @@ export const canRemove = (b, key) => stateOf(b, key).kind === 'on' && !(key === 
 
 // The remove confirm, in plain words. ends = the next bill date (iso), for Leads or Servicing.
 export function removeWords(b, key, ends = b?.planMonth?.next || b?.nextFrom) {
-  if (key === 'reactivation') return { title: 'Remove Reactivation?', lines: ['Lists already paid keep calling.', 'You can add it again any time.'], button: 'Remove now' }
+  if (key === 'reactivation') return { title: 'Remove Reactivation?', lines: ['Lists already started keep calling, and each appointment or live call is still charged.', 'You can add it again any time.'], button: 'Remove now' }
   const left = afterRemove(Array.isArray(b?.next) ? b.next : pickedOf(b), key)
   const lines = [`Ends on ${dayWords(ends)}. You keep it until then.`]
-  if (!monthly(left)) lines.push('After that nothing is charged monthly. You keep your portal and Reactivation: you pay per list, when you send one.')
+  if (!monthly(left)) lines.push('After that nothing is charged monthly. You keep your portal and Reactivation: free to upload, you pay per appointment or live call we deliver.')
   if (key === 'leads') lines.push(`New leads stop then. The ${money(PRICES.setupFee)} setup fee isn’t refunded.`)
   return { title: `Remove ${PRODUCTS[key].label}?`, lines, button: `Remove on ${dayWords(ends)}` }
 }

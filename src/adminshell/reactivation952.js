@@ -1,12 +1,20 @@
 // P952 — Reactivate old leads, the admin side. Sample store + the real calls (migration 267: admin_reactivation_view,
-// admin_reactivation_settings_save, admin_reactivation_pause). Not applied yet → the page says so, never an error.
+// admin_reactivation_settings_save, admin_reactivation_pause; P957 269 adds accounts, the per-delivery price and the
+// new-account limits). Not applied yet → the page says so, never an error.
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { supabase } from '../lib/supabase'
 import { listQuality, REACT_DEFAULTS } from '../lib/reactivation.js'
 
 const p = o => ({ total: 0, worked: 0, reached: 0, booked: 0, transferred: 0, stop: 0, not_interested: 0, wrong: 0, remaining: 0, removed: 0, ...o })
 const SEED = {
-  settings: { price_cents: 200, min_leads: 100, max_attempts: 5, pause_stop_rate: 0.05, pause_min_reached: 20, scrub_provider: 'none', live: false, numbers: 1 },
+  settings: { delivered_cents: 2000, transfer_min_secs: 30, new_until_paid: 3, new_max_callable: 300, new_daily_calls: 100, max_callable: 5000,
+    daily_calls: 1000, watch_calls: 60, max_attempts: 5, pause_stop_rate: 0.05, pause_min_reached: 20, scrub_provider: 'none', live: false, numbers: 1 },
+  accounts: [
+    { agent_id: 'ag-1', agent: 'Marcus Webb', calls: 436, cost_cents: 10400, paid: 27, paid_cents: 54000, owed: 0, free_rebooks: 2, dupes: 0,
+      card: { status: 'ok', brand: 'visa', last4: '4242', funding: 'credit' }, shared_card: false, limits: { is_new: false }, watch: false },
+    { agent_id: 'ag-2', agent: 'Tasha Greene', calls: 88, cost_cents: 1860, paid: 0, paid_cents: 0, owed: 1, free_rebooks: 0, dupes: 14,
+      card: { status: 'ok', brand: 'mastercard', last4: '5100', funding: 'debit' }, shared_card: false, limits: { is_new: true }, watch: true },
+  ],
   lists: [
     { id: 'rl-1', name: '2024 mortgage leads', status: 'working', agent: 'Marcus Webb', created_at: '2026-10-28T15:00:00Z', uploaded: 512, callable: 480, amount_cents: 96000, refunded_cents: 0, cost_cents: 7420,
       progress: p({ total: 480, worked: 312, reached: 96, booked: 14, transferred: 6, stop: 3, not_interested: 21, wrong: 7, remaining: 168 }) },
@@ -24,7 +32,7 @@ const subscribe = f => { subs.add(f); return () => subs.delete(f) }
 const snap = () => sample
 
 // Settings in the shape lib/reactivation.js reads.
-export const rulesOf = s => ({ ...REACT_DEFAULTS, priceCents: s?.price_cents, minLeads: s?.min_leads, maxAttempts: s?.max_attempts, pauseStopRate: Number(s?.pause_stop_rate), pauseMinReached: s?.pause_min_reached })
+export const rulesOf = s => ({ ...REACT_DEFAULTS, deliveredCents: s?.delivered_cents, maxAttempts: s?.max_attempts, pauseStopRate: Number(s?.pause_stop_rate), pauseMinReached: s?.pause_min_reached })
 export const qualityOf = (l, s) => listQuality(l.progress || p(), rulesOf(s))
 
 export function useAdmReactivation(src) {
@@ -40,8 +48,10 @@ export function useAdmReactivation(src) {
   const view = src === 'real' ? real : local
   const save = async next => {
     if (src !== 'real') { put({ ...sample, settings: { ...sample.settings, ...next } }); return }
-    const { error } = await supabase.rpc('admin_reactivation_settings_save', { p_price_cents: next.price_cents, p_min_leads: next.min_leads,
-      p_max_attempts: next.max_attempts, p_pause_stop_rate: next.pause_stop_rate, p_pause_min_reached: next.pause_min_reached })
+    const { error } = await supabase.rpc('admin_reactivation_settings_save', { p_delivered_cents: next.delivered_cents, p_max_attempts: next.max_attempts,
+      p_pause_stop_rate: next.pause_stop_rate, p_pause_min_reached: next.pause_min_reached, p_transfer_min_secs: next.transfer_min_secs,
+      p_new_until_paid: next.new_until_paid, p_new_max_callable: next.new_max_callable, p_new_daily_calls: next.new_daily_calls,
+      p_max_callable: next.max_callable, p_daily_calls: next.daily_calls, p_watch_calls: next.watch_calls })
     if (error) throw new Error(error.message || 'Couldn’t save.')
     await refresh()
   }
@@ -57,6 +67,10 @@ export function useAdmReactivation(src) {
   return { ...view, refresh, save, pause }
 }
 
-// Admin to-dos: a list that paused itself (too many "stop calling").
-export const pausedLists = view => (view?.lists || []).filter(l => l.status === 'paused')
+// Admin to-dos: a list that paused itself (too many "stop calling", or a declined $20), and (P957) an account with lots
+// of AI calls and no paid appointment yet (watch).
+export const pausedLists = view => [
+  ...(view?.lists || []).filter(l => l.status === 'paused'),
+  ...(view?.accounts || []).filter(a => a.watch).map(a => ({ id: `watch-${a.agent_id}`, watch: true, agent: a.agent, calls: a.calls, cost_cents: a.cost_cents })),
+]
 export const resetAdmReactivation = () => put(structuredClone(SEED))

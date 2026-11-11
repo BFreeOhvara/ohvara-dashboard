@@ -244,7 +244,7 @@ function PaidAhead({ days }) {
 }
 
 const CHARGE_STATUS = { paid: ['green', 'Paid'], scheduled: ['blue', 'Scheduled'], waiting: ['mute', 'Waiting'], declined: ['rose', 'Declined'], refunded: ['mute', 'Refunded'] }
-const CHARGE_ICON = { lead: Wallet, plan: Layers, setup: BadgeCheck, reactivation: RotateCcw }
+const CHARGE_ICON = { lead: Wallet, plan: Layers, setup: BadgeCheck, reactivation: RotateCcw, reactivation_delivery: RotateCcw }
 const money2 = v => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: Number.isInteger(Number(v)) ? 0 : 2, maximumFractionDigits: 2 })}`
 function Charges({ rows }) {
   return (
@@ -301,7 +301,7 @@ export default function Billing() {
   const [panel, setPanel] = useState(null)
   const st = useAgentStates()
   // P955: what they bought. Without Leads there's no plan by spend, no nightly charge, no paid-ahead days, no booking
-  // desk, results or hours here: Servicing pays its month, Reactivation pays per list.
+  // desk, results or hours here: Servicing pays its month, Reactivation pays per delivered appointment (P957).
   const { has } = useProducts()
   const leads = has('leads')
   const n = b.nightNow
@@ -393,7 +393,7 @@ export default function Billing() {
         </div>
         {face && leads && <div className="bl-next" data-row="next"><small>Next charge</small><b className="tp-money">{next.big}</b><span>{next.sub}</span></div>}
         {face && !leads && has('servicing') && <div className="bl-next" data-row="next"><small>Next bill</small><b>{b.nextBill || 'With your first month'}</b><span>Servicing, every month</span></div>}
-        {face && !leads && !has('servicing') && <div className="bl-next" data-row="next"><small>How you pay</small><b>Per list</b><span>Each reactivation list is charged when you send it. Nothing monthly</span></div>}
+        {face && !leads && !has('servicing') && <div className="bl-next" data-row="next"><small>How you pay</small><b>Per appointment</b><span>Free to upload. $20 per appointment or live call we deliver. Nothing monthly</span></div>}
       </section>
 
       <section className="fx-tile fx-s7 bl-ch" style={{ '--i': 2 }} aria-label="Charges">

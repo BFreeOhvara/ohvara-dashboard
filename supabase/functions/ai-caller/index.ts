@@ -126,6 +126,12 @@ const store: Store = {
     if (!data.phone) return data.pool === 'reactivation' ? { phone: '', providerId: null, pool: 'reactivation' } : null
     return { phone: data.phone, providerId: data.provider_number_id ?? null, pool: data.pool ?? 'main' }
   },
+  // P957: a reactivation transfer's connected seconds (under 30 s is free) and the yes/no to booking texts.
+  async transferSecs(id, secs) {
+    const { error } = await admin.rpc('reactivation_transfer_secs', { p_call: id, p_secs: Math.max(0, Math.round(secs)) })
+    if (error && !/no_delivery/.test(error.message)) console.error('ai-caller transferSecs', id, error.message)
+  },
+  async textOk(id, yes) { return rpc('reactivation_text_consent', { p_call: id, p_yes: yes }) },
   async clearCheck(c, agentId, why) {
     if (!agentId) return
     try {

@@ -9,7 +9,9 @@
 export type EndReason = 'no_answer' | 'voicemail' | 'busy' | 'failed' | 'hangup' | 'transferred' | 'max_duration'
 export type Ev =
   | { type: 'answered'; providerCallId: string; callId: string | null; controlUrl?: string | null }
-  | { type: 'ended'; providerCallId: string; callId: string | null; reason: EndReason; durationSecs?: number; costCents?: number; summary?: string; transcriptRef?: string }
+  | { type: 'ended'; providerCallId: string; callId: string | null; reason: EndReason; durationSecs?: number; costCents?: number; summary?: string; transcriptRef?: string
+      transferSecs?: number } // P957: how long a live transfer stayed connected to the agent, when the provider says
+  | { type: 'transfer_ended'; providerCallId: string; callId: string | null; transferSecs: number }
   | { type: 'tool'; providerCallId: string; callId: string | null; toolCallId: string | null; name: string; args: Record<string, unknown> }
 
 export type StartArgs = {
@@ -54,6 +56,13 @@ export const noProvider = (): Provider => ({
   toolReply: (_id, r) => r,
 })
 
+// P957: seconds the transferred caller stayed connected, from Retell's call object (null when it doesn't say).
+export function retellTransferSecs(c: any): number | null {
+  const end = Number(c?.transfer_end_timestamp), from = Number(c?.end_timestamp)
+  if (!Number.isFinite(end) || !Number.isFinite(from) || end <= 0 || from <= 0 || end < from) return null
+  return Math.round((end - from) / 1000)
+}
+
 // ── Retell ──────────────────────────────────────────────────────────────────────────────────────────────────────
 // Outbound: POST /v2/create-phone-call. Webhook events call_started / call_ended / call_analyzed; custom functions
 // POST { name, args, call } to our URL and get our JSON back. Transfer: the agent's transfer_call tool reads the
@@ -85,12 +94,17 @@ export function retell(key: string, agentId: string, fetchFn: Fetch): Provider {
       const id = s(c.call_id ?? c.chat_id), callId = s(c.metadata?.call_id) || null
       if (body?.name && body?.args) return { type: 'tool', providerCallId: id, callId, toolCallId: null, name: s(body.name), args: body.args ?? {} }
       if (body?.event === 'call_started') return { type: 'answered', providerCallId: id, callId }
+      // P957: the transfer leg's end (Retell 'transfer_ended', or transfer_end_timestamp on the call). Connected time =
+      // transfer end - the AI's end. CHECK on the first real transfer (P926 step 4) that these are the fields Retell sends.
+      const tSecs = retellTransferSecs(c)
+      if (body?.event === 'transfer_ended') return tSecs == null ? null : { type: 'transfer_ended', providerCallId: id, callId, transferSecs: tSecs }
       if (body?.event === 'call_ended' || body?.event === 'call_analyzed') {
         const answered = (c.duration_ms ?? 0) > 0 && !['dial_no_answer', 'voicemail_reached', 'dial_busy', 'dial_failed'].includes(c.disconnection_reason)
         return {
           type: 'ended', providerCallId: id, callId, reason: end[c.disconnection_reason] ?? (answered ? 'hangup' : 'failed'),
           durationSecs: Math.round((c.duration_ms ?? 0) / 1000), costCents: typeof c.call_cost?.combined_cost === 'number' ? c.call_cost.combined_cost : undefined,
           summary: s(c.call_analysis?.call_summary).slice(0, 1200) || undefined, transcriptRef: id || undefined,
+          ...(tSecs == null ? {} : { transferSecs: tSecs }),
         }
       }
       return null
@@ -177,7 +191,8 @@ export function ghl(push: ((body: unknown) => Promise<void>) | null, workflowId:
       const id = s(body?.call_id ? `ghl-${body.call_id}` : body?.providerCallId), callId = s(body?.call_id) || null
       if (body?.tool) return { type: 'tool', providerCallId: id, callId, toolCallId: null, name: s(body.tool), args: body.args ?? {} }
       if (body?.event === 'answered') return { type: 'answered', providerCallId: id, callId }
-      if (body?.event === 'ended') return { type: 'ended', providerCallId: id, callId, reason: (body.reason as EndReason) || 'hangup', durationSecs: Number(body.duration_secs) || 0, summary: s(body.summary).slice(0, 1200) || undefined }
+      if (body?.event === 'ended') return { type: 'ended', providerCallId: id, callId, reason: (body.reason as EndReason) || 'hangup', durationSecs: Number(body.duration_secs) || 0, summary: s(body.summary).slice(0, 1200) || undefined,
+        ...(Number.isFinite(Number(body.transfer_secs)) && body.transfer_secs != null ? { transferSecs: Number(body.transfer_secs) } : {}) }
       return null
     },
     toolReply: (_id, r) => r,

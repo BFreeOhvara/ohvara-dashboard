@@ -10,7 +10,7 @@
 import { aiStep, AI_RULES, ASK_AGENT_REASONS, SAID_OUTCOMES, WAIT_QUESTIONS, WAIT_RULE, transferSay, AI_CALL_WORDS } from './rules.js'
 import type { Ev, Provider } from './providers.ts'
 import { whisperWords } from '../help-transfer/core.ts'
-import { reactOpener } from './reactivation.js'
+import { reactOpener, TEXT_ASK } from './reactivation.js'
 
 export type Phase = 'queued' | 'dialing' | 'talking' | 'checking' | 'transferring' | 'booking' | 'done' | 'to_va'
 export type Call = {
@@ -52,6 +52,9 @@ export interface Store {
   // see from their agent ever after. null = AI_FROM_NUMBER.
   endStats?(callId: string, patch: Record<string, unknown>): Promise<void>
   deedstoneFrom?(agentId: string, callId: string): Promise<{ phone: string; providerId: string | null; pool?: string } | null>
+  // P957 (reactivation): a live transfer's connected seconds (under 30 s is free), and the yes/no to booking texts.
+  transferSecs?(callId: string, secs: number): Promise<void>
+  textOk?(callId: string, yes: boolean): Promise<unknown>
 }
 export type Env = { now(): number; from: string | null; words: Record<string, string> ; pauseMs?: number }
 
@@ -125,9 +128,11 @@ const END_TO_EVENT: Record<string, string> = { no_answer: 'no_answer', voicemail
 export async function onEvent(store: Store, provider: Provider, env: Env, ev: Ev) {
   const c = (ev.callId && (await store.call(ev.callId))) || (await store.callByProvider(ev.providerCallId))
   if (!c) return { ok: false, code: 'unknown_call' }
+  if (ev.type === 'transfer_ended') { await store.transferSecs?.(c.id, ev.transferSecs); return { ok: true } } // P957
   if (c.status === 'done' || c.status === 'to_va') {
     // P940: a call that got its result mid-call (not now, opt-out, no times) still gets its minutes and cost at the end.
     if (ev.type === 'ended' && c.status === 'done') await store.endStats?.(c.id, { duration_secs: ev.durationSecs ?? 0, cost_cents: ev.costCents, summary: ev.summary, transcript_ref: ev.transcriptRef })
+    if (ev.type === 'ended' && ev.transferSecs != null) await store.transferSecs?.(c.id, ev.transferSecs)
     return ev.type === 'tool' ? provider.toolReply(ev.toolCallId, { end: true }) : { ok: true, already: true }
   }
 
@@ -146,6 +151,7 @@ export async function onEvent(store: Store, provider: Provider, env: Env, ev: Ev
     if (ph === 'transferring' && ev.reason === 'transferred') {
       if (c.check_id) await store.markCheck(c.check_id, { status: 'connected', connected_at: new Date(env.now()).toISOString(), delivered: true }, ['ringing'])
       await store.result(c.id, 'transferred', patch)
+      if (ev.transferSecs != null) await store.transferSecs?.(c.id, ev.transferSecs)
       return { ok: true }
     }
     if (c.booked_for) { await store.result(c.id, 'booked', patch); return { ok: true } }
@@ -252,7 +258,9 @@ export async function tool(store: Store, provider: Provider, env: Env, c: Call, 
       }
       const lead = lead0
       const chk = await store.insertCheck({ agent_id: agent.id, lead_id: c.lead_id, ai_call_id: c.id,
-        summary: { name: lead?.first ?? null, age: lead?.age ?? null, state: lead?.state ?? null, need: lead?.need ?? null, your_client: false } })
+        // P957: a reactivation person's name shows only once their $20 is paid, so the agent's alert and whisper say
+        // "a reactivated lead" instead.
+        summary: { name: lead?.reactivation ? 'a reactivated lead' : (lead?.first ?? null), age: lead?.age ?? null, state: lead?.state ?? null, need: lead?.need ?? null, your_client: false } })
       // P926: a test call's check is answered for the agent (Yes / No at once; none runs out after 30 s like a real one).
       const t = lead?.test?.check
       const sent = chk && (t
@@ -311,7 +319,17 @@ export async function tool(store: Store, provider: Provider, env: Env, c: Call, 
       if (!Number.isFinite(Date.parse(at))) return { ok: false, code: 'bad_time' }
       const r = await store.book(c.id, at)
       if (!r.ok) return { ok: false, ...(await slotsReply(store, env, c, undefined, agent?.first)) }
-      return { ok: true, booked_for: at, spoken: spokenSlot(at, (await store.lead(c.lead_id))?.tz ?? null, nowMs), end_after: true }
+      const bl = await store.lead(c.lead_id)
+      // P957: a reactivation person is asked before any text (no cold texts to an imported list).
+      if (bl?.reactivation) return { ok: true, booked_for: at, spoken: spokenSlot(at, bl.tz ?? null, nowMs), ask_text: TEXT_ASK, next: 'text_ok' }
+      return { ok: true, booked_for: at, spoken: spokenSlot(at, bl?.tz ?? null, nowMs), end_after: true }
+    }
+    case 'text_ok': { // P957: their answer to "Can I text you the confirmation?" (reactivation only)
+      const a = String(args.answer ?? args.yes ?? '').toLowerCase()
+      const yes = a === 'yes' || a === 'true'
+      if (!lead0?.reactivation) return { ok: true, end_after: true }
+      await store.textOk?.(c.id, yes)
+      return { ok: true, texts: yes, end_after: true }
     }
     case 'hang_up_pause': { // P940: after the goodbye, 2-3 s for them to hang up first; then the AI ends the call
       if (env.pauseMs) await new Promise(r => setTimeout(r, env.pauseMs))

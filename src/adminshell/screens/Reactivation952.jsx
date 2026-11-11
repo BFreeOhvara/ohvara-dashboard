@@ -3,13 +3,14 @@ import { RotateCcw, PauseCircle, PlayCircle, SlidersHorizontal, ShieldAlert } fr
 import { Chip, Drawer, Empty, Field, SampleTag, useNote } from '../../template/kit'
 import { useAdmSource } from '../data'
 import { useAdmReactivation, qualityOf } from '../reactivation952'
-import { LIST_STATUS, pctText, usd0 } from '../../lib/reactivation.js'
+import { statusOf, pctText, usd0 } from '../../lib/reactivation.js'
 import '../../template/react952.css'
 
 // P952 — admin Leads › Reactivation. Every agent's old-lead list with its quality: contact rate (reached ÷ worked),
 // booked rate (booked + transferred ÷ reached) and stop rate (stop calling ÷ reached). A list over the stop limit
-// pauses itself and lands on Needs you; an admin can pause or resume any list here. Price, minimum, tries and the
-// pause limit are admin settings. The switch (reactivation_live) and the scrub provider are CC-only.
+// pauses itself and lands on Needs you; an admin can pause or resume any list here. P957: the price per delivered
+// appointment or live call, the new-account limits, tries and the pause limit are admin settings; Accounts shows each
+// agent's calls vs paid appointments (many calls, nothing paid = watch, also a to-do), their card and duplicate leads. The switch (reactivation_live) and the scrub provider are CC-only.
 export function ReactivationView() {
   const src = useAdmSource()
   const v = useAdmReactivation(src)
@@ -20,12 +21,18 @@ export function ReactivationView() {
   if (v.missing) return <Empty title="Reactivation isn’t set up yet" sub="It needs migration 267. Nothing is called until then." />
   if (!s) return null
   const run = async (fn, ok) => { setBusy(true); try { await fn(); note(ok + (src === 'real' ? '' : ' (sample)')) } catch (e) { note(e.message) } finally { setBusy(false) } }
-  const open = () => setEdit({ price: String(s.price_cents / 100), min: String(s.min_leads), tries: String(s.max_attempts), rate: String(Math.round(Number(s.pause_stop_rate) * 100)), reached: String(s.pause_min_reached) })
+  const open = () => setEdit({ price: String(s.delivered_cents / 100), secs: String(s.transfer_min_secs), untilPaid: String(s.new_until_paid),
+    newMax: String(s.new_max_callable), newDaily: String(s.new_daily_calls), max: String(s.max_callable), daily: String(s.daily_calls), watch: String(s.watch_calls),
+    tries: String(s.max_attempts), rate: String(Math.round(Number(s.pause_stop_rate) * 100)), reached: String(s.pause_min_reached) })
+  const n = k => Number(edit?.[k])
   const save = () => run(async () => {
-    await v.save({ price_cents: Math.round(Number(edit.price) * 100), min_leads: Number(edit.min), max_attempts: Number(edit.tries), pause_stop_rate: Number(edit.rate) / 100, pause_min_reached: Number(edit.reached) })
+    await v.save({ delivered_cents: Math.round(n('price') * 100), transfer_min_secs: n('secs'), new_until_paid: n('untilPaid'), new_max_callable: n('newMax'),
+      new_daily_calls: n('newDaily'), max_callable: n('max'), daily_calls: n('daily'), watch_calls: n('watch'),
+      max_attempts: n('tries'), pause_stop_rate: n('rate') / 100, pause_min_reached: n('reached') })
     setEdit(null)
   }, 'Reactivation settings saved')
-  const ok = edit && Number(edit.price) >= 0.5 && Number(edit.price) <= 50 && Number(edit.min) >= 1 && Number(edit.tries) >= 1 && Number(edit.tries) <= 10 && Number(edit.rate) > 0 && Number(edit.rate) <= 100 && Number(edit.reached) >= 1
+  const ok = edit && n('price') >= 1 && n('price') <= 500 && n('secs') >= 5 && n('secs') <= 600 && n('untilPaid') >= 0 && n('newMax') >= 1 && n('newDaily') >= 1
+    && n('max') >= n('newMax') && n('daily') >= 1 && n('watch') >= 1 && n('tries') >= 1 && n('tries') <= 10 && n('rate') > 0 && n('rate') <= 100 && n('reached') >= 1
   return (
     <section className="rx-adm" aria-label="Reactivation lists">
       <div className="rx-adm-top">
@@ -36,21 +43,35 @@ export function ReactivationView() {
           {src !== 'real' && <SampleTag>Sample</SampleTag>}
         </span>
         <span className="tp-grow" />
-        <span className="rx-adm-price"><b className="tp-money">{usd0(s.price_cents)}</b> a lead · at least {s.min_leads} · {s.max_attempts} tries</span>
+        <span className="rx-adm-price"><b className="tp-money">{usd0(s.delivered_cents)}</b> per appointment or live call · {s.max_attempts} tries</span>
         <button type="button" className="tp-btn ov-ghost" onClick={open}><SlidersHorizontal size={15} aria-hidden="true" />Settings</button>
       </div>
+      {(v.accounts || []).length > 0 && (
+        <div className="rx-adm-acc" role="region" aria-label="Accounts">
+          <table>
+            <thead><tr><th>Agent</th><th>AI calls</th><th>AI cost</th><th>Paid</th><th>Charged</th><th>Owed</th><th>Card</th><th>Flags</th></tr></thead>
+            <tbody>{v.accounts.map(a => (
+              <tr key={a.agent_id} className={a.watch ? 'is-bad' : ''}>
+                <td>{a.agent}</td><td className="tp-money">{a.calls}</td><td className="tp-money">{usd0(a.cost_cents || 0)}</td>
+                <td className="tp-money">{a.paid}</td><td className="tp-money">{usd0(a.paid_cents || 0)}</td><td className="tp-money">{a.owed}</td>
+                <td>{a.card ? `${a.card.brand || 'card'} ${a.card.last4 || ''} · ${a.card.status}` : 'not checked'}</td>
+                <td>{[a.watch && 'Many calls, nothing paid', a.shared_card && 'Card on another account', a.dupes > 0 && `${a.dupes} leads also on another account`, a.limits?.is_new && 'New account limits', a.free_rebooks > 0 && `${a.free_rebooks} free rebooks`].filter(Boolean).join(' · ') || '—'}</td>
+              </tr>))}</tbody>
+          </table>
+        </div>
+      )}
       {!(v.lists || []).length && <Empty title="No lists yet" sub="When an agent sends a list of old leads, it shows here with how it’s going." />}
       <ul className="rx-adm-lists">
         {(v.lists || []).map((l, i) => {
           const q = qualityOf(l, s)
-          const [tone, word] = LIST_STATUS[l.status] || ['mute', l.status]
+          const [tone, word] = statusOf(l)
           const pr = l.progress || {}
           const over = q.stop > Number(s.pause_stop_rate)
           return (
             <li key={l.id} className="fx-card rx-adm-row" style={{ '--i': i }}>
               <header>
                 <RotateCcw size={14} aria-hidden="true" />
-                <b>{l.name}</b><small>{l.agent} · {l.callable} people · <span className="tp-money">{usd0(l.amount_cents)}</span>{l.refunded_cents ? <> · <span className="tp-money">{usd0(l.refunded_cents)}</span> back</> : null}</small>
+                <b>{l.name}</b><small>{l.agent} · {l.callable} people · {l.model === 'per_lead' ? <span className="tp-money">{usd0(l.amount_cents)}</span> : <>{l.delivered || 0} delivered · <span className="tp-money">{usd0(l.charged_cents || 0)}</span></>}{l.refunded_cents ? <> · <span className="tp-money">{usd0(l.refunded_cents)}</span> back</> : null}{l.dupes ? ` · ${l.dupes} on another account` : ''}</small>
                 <Chip tone={tone}>{word}</Chip>
               </header>
               <dl className="rx-n rx-adm-n">
@@ -73,11 +94,17 @@ export function ReactivationView() {
           )
         })}
       </ul>
-      <Drawer open={!!edit} onClose={() => setEdit(null)} title="Reactivation settings" sub="Applies to lists sent from now on (price and minimum) and to every list (tries and the pause limit)."
+      <Drawer open={!!edit} onClose={() => setEdit(null)} title="Reactivation settings" sub="The price applies to appointments and live calls from now on; limits, tries and the pause limit to every list."
         footer={<button type="button" className="tp-primary fx-accent" disabled={!ok || busy} onClick={save}>Save settings</button>}>
         {edit && <>
-          <Field label="Price per callable lead ($)" hint="Numbers we take off are free."><input inputMode="decimal" value={edit.price} onChange={e => setEdit({ ...edit, price: e.target.value })} /></Field>
-          <Field label="Minimum leads per list" hint="Counted after cleaning."><input inputMode="numeric" value={edit.min} onChange={e => setEdit({ ...edit, min: e.target.value })} /></Field>
+          <Field label="Price per appointment or live call ($)" hint="Upload is free. A no-show rebook is free."><input inputMode="decimal" value={edit.price} onChange={e => setEdit({ ...edit, price: e.target.value })} /></Field>
+          <Field label="A live call counts after (seconds connected)"><input inputMode="numeric" value={edit.secs} onChange={e => setEdit({ ...edit, secs: e.target.value })} /></Field>
+          <Field label="New accounts: limits until this many appointments are paid"><input inputMode="numeric" value={edit.untilPaid} onChange={e => setEdit({ ...edit, untilPaid: e.target.value })} /></Field>
+          <Field label="New accounts: people being called, at most"><input inputMode="numeric" value={edit.newMax} onChange={e => setEdit({ ...edit, newMax: e.target.value })} /></Field>
+          <Field label="New accounts: AI calls a day"><input inputMode="numeric" value={edit.newDaily} onChange={e => setEdit({ ...edit, newDaily: e.target.value })} /></Field>
+          <Field label="Everyone else: people being called, at most"><input inputMode="numeric" value={edit.max} onChange={e => setEdit({ ...edit, max: e.target.value })} /></Field>
+          <Field label="Everyone else: AI calls a day"><input inputMode="numeric" value={edit.daily} onChange={e => setEdit({ ...edit, daily: e.target.value })} /></Field>
+          <Field label="Flag an account after this many calls with nothing paid"><input inputMode="numeric" value={edit.watch} onChange={e => setEdit({ ...edit, watch: e.target.value })} /></Field>
           <Field label="Tries per person" hint="Day 1, 2, 4, 7 and 14. Up to 10."><input inputMode="numeric" value={edit.tries} onChange={e => setEdit({ ...edit, tries: e.target.value })} /></Field>
           <Field label="Pause a list when the stop rate is over (%)" hint="Stop calling ÷ people reached."><input inputMode="decimal" value={edit.rate} onChange={e => setEdit({ ...edit, rate: e.target.value })} /></Field>
           <Field label="…once this many people were reached"><input inputMode="numeric" value={edit.reached} onChange={e => setEdit({ ...edit, reached: e.target.value })} /></Field>

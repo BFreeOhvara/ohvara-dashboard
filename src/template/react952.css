@@ -56,3 +56,12 @@
 .rx-adm p.rx-adm-why { display: flex; gap: 8px; align-items: center; margin: 0; padding: 8px 10px; border-radius: 10px; font-size: 12.5px; color: var(--ov-warn); background: var(--ov-warn-tint); }
 .rx-adm-acts { display: flex; gap: 8px; }
 @media (max-width: 560px) { .rx-adm-n { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 8px; } }
+
+/* P957: admin Accounts (calls vs paid appointments). Scrolls sideways inside its own box on a phone. */
+.rx-adm-acc { overflow-x: auto; border: 1px solid var(--ov-line); border-radius: 12px; background: var(--bg-surface); }
+.rx-adm-acc table { width: 100%; border-collapse: collapse; font-size: 12.5px; color: var(--ov-mid); }
+.rx-adm-acc th { text-align: left; font-weight: 600; color: var(--ov-mute); padding: 8px 10px; border-bottom: 1px solid var(--ov-line); white-space: nowrap; }
+.rx-adm-acc td { padding: 8px 10px; border-bottom: 1px solid var(--ov-line); white-space: nowrap; }
+.rx-adm-acc td:first-child { color: var(--ov-hi); }
+.rx-adm-acc tr:last-child td { border-bottom: 0; }
+.rx-adm-acc tr.is-bad td:last-child { color: var(--ov-warn); }

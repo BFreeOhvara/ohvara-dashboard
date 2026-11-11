@@ -4,13 +4,18 @@
 //
 // How it works (brain/ohvara/Reactivation.md): an agent uploads or pastes an aged-lead list on Leads → we clean it
 // (duplicates, people already theirs, states they aren't licensed in, bad numbers, our do-not-call list) → they tick
-// the responsibility line and pay a flat price per callable lead → the national Do Not Call + litigator scrub runs →
-// our AI calls each person (calls only, never texts) from the separate reactivation numbers, day 1, 2, 4, 7 and 14,
-// 8 AM–8 PM their time → booked or live-transferred people land on the Leads board tagged Reactivated.
+// the responsibility line → a card check ($1 hold, released) starts it free → the national Do Not Call + litigator
+// scrub runs → our AI calls each person from the separate reactivation numbers, day 1, 2, 4, 7 and 14, 8 AM–8 PM
+// their time → each booked appointment or live call (30 s+) is charged $20, and only then does that person land on
+// the Leads board tagged Reactivated (P957, migration 269). No cold texts: only someone who booked AND said yes to
+// "Can I text you the confirmation?" gets the booking texts.
 
 export const REACT_DEFAULTS = {
-  priceCents: 200,          // per lead still callable after cleaning (admin setting)
-  minLeads: 100,            // per list (admin setting)
+  deliveredCents: 2000,     // P957: per booked appointment or live call (admin setting). Upload is free.
+  transferMinSecs: 30,      // a live call counts once the agent was connected this long
+  newUntilPaid: 3,          // new accounts: limits until this many appointments are paid (admin settings)
+  newMaxCallable: 300,      // new accounts: callable people across their lists
+  newDailyCalls: 100,       // new accounts: AI calls a day
   maxRows: 5000,            // per upload
   cadenceDays: [0, 1, 3, 6, 13], // day 1, 2, 4, 7, 14 (days after the list starts)
   maxAttempts: 5,           // admin setting, 1 to 5
@@ -22,7 +27,14 @@ export const REACT_DEFAULTS = {
 
 // The responsibility line the agent ticks before paying (wording is Brayden's; ship note).
 export const REACT_ATTEST = 'These people asked to be contacted about life insurance, and I have the right to have them contacted by phone. I’m responsible for this list.'
-export const REACT_ATTEST_VERSION = 'p952-v1'
+export const REACT_ATTEST_VERSION = 'p957-v1'
+
+// P957: the one price line, everywhere (site, sign-up, Billing, the upload screen).
+export const REACT_PRICE_LINE = 'Free to upload. $20 per appointment or live call we deliver.'
+export const reactPriceLine = (cents = REACT_DEFAULTS.deliveredCents) =>
+  cents === 2000 ? REACT_PRICE_LINE : `Free to upload. ${usd0(cents)} per appointment or live call we deliver.`
+// What the AI asks after booking (ai-caller/reactivation.js says the same). Only a yes sends the booking texts.
+export const TEXT_ASK = 'Can I text you the confirmation?'
 
 // The AI's first words on a reactivation call (P940 script otherwise unchanged; {first} = first name).
 export const REACT_OPENER = 'Hey {first}, this is Max with Deedstone Insurance. A while back you’d asked about mortgage protection, I’m just following up to see if that’s still something you’re looking into.'
@@ -163,6 +175,7 @@ export const REMOVED_LABEL = {
   dnc: 'On our do-not-call list',
   national_dnc: 'On the national Do Not Call list',
   litigator: 'Known TCPA litigators',
+  over_limit: 'Past your limit for now (kept off, not called)',
 }
 
 // rows: parsed rows WITHOUT the header. ctx: { licensed: ['TX', …], existing: Set|array of +1 phones,
@@ -189,15 +202,35 @@ export function cleanList(rows, map, ctx = {}) {
 }
 
 // ── Money ───────────────────────────────────────────────────────────────────────────────────────────────────────
-export function priceFor(callable, s = REACT_DEFAULTS) {
-  const each = s.priceCents ?? REACT_DEFAULTS.priceCents
-  const min = s.minLeads ?? REACT_DEFAULTS.minLeads
+// P957: nothing is charged for a list. limits = reactivation_limits() ({ room, max_callable, is_new, … }); people past
+// the room are kept off the list (over_limit) and never called.
+export function listFit(callable, limits = null) {
   const n = Math.max(0, Math.floor(callable || 0))
-  return { each, n, min, cents: n * each, belowMin: n < min, short: Math.max(0, min - n) }
+  const room = limits && limits.room != null && Number.isFinite(Number(limits.room)) ? Math.max(0, Number(limits.room)) : Infinity
+  const fits = Math.min(n, room)
+  return { n, fits, over: n - fits, empty: fits === 0 }
 }
 export const usd0 = c => `$${(Math.round(c) / 100).toLocaleString('en-US', { minimumFractionDigits: (c % 100) ? 2 : 0, maximumFractionDigits: 2 })}`
-// The Billing line: "Reactivation · 480 leads · $960" (+ "· $24 back" when the scrub took some off).
-export const billingLine = l => `Reactivation · ${l.callable ?? l.n} leads · ${usd0(l.amount_cents ?? l.cents)}${l.refunded_cents ? ` · ${usd0(l.refunded_cents)} back` : ''}`
+// Billing lines. A delivery: "Reactivation · appointment booked · $20" / "· live call · $20" (+ "· paid back" when a
+// live call turned out under 30 s). Old P952 per-list charges keep their own line.
+export const deliveryLine = d => `Reactivation · ${d.kind === 'transferred' ? 'live call' : 'appointment booked'} · ${usd0(d.amount_cents ?? REACT_DEFAULTS.deliveredCents)}${d.refunded_cents ? ' · paid back' : ''}`
+export const billingLine = l => (l.kind === 'booked' || l.kind === 'transferred' ? deliveryLine(l)
+  : `Reactivation · ${l.callable ?? l.n} leads · ${usd0(l.amount_cents ?? l.cents)}${l.refunded_cents ? ` · ${usd0(l.refunded_cents)} back` : ''}`)
+// The limits in words for a new account.
+export const limitsLine = (lim = {}) => (lim.is_new
+  ? `New accounts: up to ${lim.max_callable ?? REACT_DEFAULTS.newMaxCallable} people and ${lim.daily_calls ?? REACT_DEFAULTS.newDailyCalls} calls a day until ${lim.until_paid ?? REACT_DEFAULTS.newUntilPaid} appointments are paid.`
+  : '')
+// The card check's refusals, in words (lead-spend reactivation_start codes).
+export const CARD_WORDS = {
+  prepaid: 'Prepaid and gift cards can’t be used. Add a credit or debit card.',
+  shared_card: 'This card is already on another Ohvara account. Use a different card, or contact us.',
+  declined: 'Your card was declined. Try another card.',
+  no_card: 'Add a card first.',
+  needs_action: 'Your bank wants you to confirm the card.',
+  card_owed: 'A charge on your card failed. Update your card in Billing and your lists start again.',
+  over_limit: 'You’ve reached your limit for now. It goes up once 3 appointments are paid.',
+  reactivation_off: 'Reactivation opens soon. Nothing was charged.',
+}
 
 // ── Calling ─────────────────────────────────────────────────────────────────────────────────────────────────────
 // When attempt k (1-based) is due, from the list's start. Past the last attempt → null (stop).
@@ -259,13 +292,16 @@ export function listQuality(p, s = REACT_DEFAULTS) {
 export const pctText = r => `${Math.round(r * 100)}%`
 
 // List statuses in words (agent and admin).
+// statusOf(list): the [tone, word] for a list, card pauses included.
+export const statusOf = l => (l?.status === 'paused' && l?.pause_kind === 'card' ? LIST_STATUS.card : LIST_STATUS[l?.status] || ['mute', l?.status])
 export const LIST_STATUS = {
-  draft: ['mute', 'Not paid'],
-  waiting_payment: ['warn', 'Paying'],
+  draft: ['mute', 'Not started'],
+  waiting_payment: ['warn', 'Paying'],     // P952 lists only
   payment_failed: ['rose', 'Card declined'],
   waiting_scrub: ['blue', 'Checking the list'],
   working: ['green', 'Calling'],
   paused: ['warn', 'Paused'],
+  card: ['rose', 'Paused: card declined'], // P957: pause_kind 'card'
   done: ['mute', 'Finished'],
   cancelled: ['mute', 'Cancelled'],
 }

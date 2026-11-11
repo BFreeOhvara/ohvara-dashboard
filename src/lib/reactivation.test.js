@@ -3,7 +3,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   parseCsv, sniffDelimiter, guessMapping, looksLikeHeader, mappingMissing, normalizePhone, normalizeState, cleanList,
-  priceFor, billingLine, attemptDueAt, afterCall, listProgress, listQuality, reactOpener, REACT_DEFAULTS, inWindow,
+  listFit, billingLine, attemptDueAt, afterCall, listProgress, listQuality, reactOpener, REACT_DEFAULTS, inWindow,
 } from './reactivation.js'
 
 const MESSY = `First Name,Last Name,Phone,State,Age,Mortgage Balance,Lead Date,Vendor
@@ -69,11 +69,10 @@ test('a single name column splits into first and last', () => {
   assert.equal(r.kept[0].last, 'Ann Smith')
 })
 
-test('price: $2 per callable lead, 100 minimum, removed are free', () => {
-  assert.deepEqual(priceFor(480), { each: 200, n: 480, min: 100, cents: 96000, belowMin: false, short: 0 })
-  assert.equal(priceFor(99).belowMin, true)
-  assert.equal(priceFor(99).short, 1)
-  assert.equal(priceFor(250, { priceCents: 150, minLeads: 50 }).cents, 37500)
+test('P957: a list is free, no minimum; only the new-account room caps it', () => {
+  assert.deepEqual(listFit(99), { n: 99, fits: 99, over: 0, empty: false })
+  assert.deepEqual(listFit(480, { room: 300 }), { n: 480, fits: 300, over: 180, empty: false })
+  assert.equal(listFit(0).empty, true)
   assert.equal(billingLine({ callable: 480, amount_cents: 96000 }), 'Reactivation · 480 leads · $960')
   assert.equal(billingLine({ callable: 468, amount_cents: 96000, refunded_cents: 2400 }), 'Reactivation · 468 leads · $960 · $24 back')
 })

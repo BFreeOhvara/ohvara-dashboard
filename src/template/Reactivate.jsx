@@ -1,11 +1,11 @@
 import { useMemo, useRef, useState } from 'react'
-import { Upload, ClipboardPaste, TriangleAlert, CircleCheck, RotateCcw, CreditCard, Trash2 } from 'lucide-react'
+import { Upload, ClipboardPaste, TriangleAlert, CircleCheck, RotateCcw, ShieldCheck, Trash2 } from 'lucide-react'
 import { Drawer, Field, Chip, useNote } from './kit'
 import { useReactivation, useDataSource, useSampleLeads, useSampleClients } from './data'
 import { SAMPLE_DNC } from './reactivation.js'
 import {
-  parseCsv, looksLikeHeader, guessMapping, mappingMissing, cleanList, priceFor, usd0,
-  REACT_FIELDS, REMOVED_ORDER, REMOVED_LABEL, REACT_ATTEST, LIST_STATUS, normalizePhone,
+  parseCsv, looksLikeHeader, guessMapping, mappingMissing, cleanList, listFit, usd0, reactPriceLine, limitsLine, CARD_WORDS,
+  REACT_FIELDS, REMOVED_ORDER, REMOVED_LABEL, REACT_ATTEST, statusOf, normalizePhone,
 } from '../lib/reactivation.js'
 import { isNativeApp } from '../lib/native'
 import { NATIVE_BILLING_TEXT } from '../components/native/NativeBillingNote'
@@ -14,20 +14,22 @@ import './react952.css'
 
 // P952 — Leads → Reactivate old leads. The agent brings a list of their own old leads (a CSV or a paste), says which
 // column is which, sees what we take off (bad numbers, duplicates, people already theirs, states they aren't licensed
-// in, our do-not-call list) and the price, ticks that the list is theirs to call, and pays. Our side cleans it again
-// (that's the count charged), checks it against the national Do Not Call and litigator lists, then our AI calls each
-// person (calls only, no texts). Booked and transferred people land on the board tagged Reactivated.
+// in, our do-not-call list), ticks that the list is theirs to call, and starts it. P957: uploading is free. Starting
+// checks the card ($1 hold, released; prepaid/gift and cards on another account refused). Our side cleans it again,
+// checks the national Do Not Call and litigator lists, then our AI calls each person. Each booked appointment or live
+// call is $20, and only once it's paid does the person land on the board tagged Reactivated.
 // Lists show as progress cards above the board (ReactivationCards).
 
 const FIELD_LABEL = Object.fromEntries(REACT_FIELDS.map(f => [f.key, f.label]))
 const OPTIONAL = new Set(['age', 'mortgage', 'lead_date', 'source'])
 const WHY = {
+  ...CARD_WORDS,
   attest: 'Tick the line about the list first.',
-  below_min: null, // the server's own words say how many are left
-  empty: 'The list is empty.',
+  empty: 'Nobody is left to call in this list.',
   too_many: 'Up to 5,000 people per list. Split it in two.',
-  reactivation_off: 'Reactivation opens soon. Nothing was charged.',
 }
+// Server words first (they carry the card and amounts), our words when there are none.
+const why = e => e?.message && !/^(Edge Function|FunctionsHttpError)/.test(e.message) ? e.message : WHY[e?.code] || 'Something went wrong. Nothing was charged.'
 
 function useExisting() {
   const { data: leads = [] } = useSampleLeads()
@@ -55,7 +57,7 @@ export function ReactivateDrawer({ open, onClose }) {
 
   const reset = () => { setName(''); setPaste(''); setRead(null); setHead(true); setMap({}); setAttest(false); setErr(null); setDraft(null); setDone(null); if (file.current) file.current.value = '' }
   const close = () => {
-    // A list checked but not paid is thrown away, so nothing is left half-made.
+    // A list checked but not started is thrown away, so nothing is left half-made.
     if (draft && !done) rx.discard(draft.list_id).catch(() => {})
     reset(); onClose()
   }
@@ -82,14 +84,16 @@ export function ReactivateDrawer({ open, onClose }) {
   const clean = useMemo(() => (body.length && !missing.length
     ? cleanList(body, map, { licensed: terms.licensed || [], existing, dnc: source === 'sample' ? SAMPLE_DNC : [] })
     : null), [body, map, missing.length, terms.licensed, existing, source])
-  const price = priceFor(draft ? draft.callable : clean?.callable || 0, { priceCents: terms.price_cents, minLeads: terms.min_leads })
+  const each = terms.delivered_cents ?? 2000
+  const fit = listFit(draft ? draft.callable : clean?.callable || 0, draft ? null : terms.limits)
   const removed = draft ? draft.removed : clean?.counts
   const tooMany = body.length > 5000
+  const owed = (terms.owed || 0) > 0
   // Real accounts: closed until Ohvara turns calling on (reactivation_live). Sample always lets you try it.
   const closed = terms.unavailable || (source === 'real' && !terms.loading && !terms.live)
-  const canPay = !!clean && !price.belowMin && attest && !busy && !tooMany && !closed && !terms.loading
+  const canStart = !!clean && !fit.empty && attest && !busy && !tooMany && !closed && !owed && !terms.loading
 
-  const pay = async () => {
+  const start = async () => {
     setBusy(true); setErr(null)
     try {
       let d = draft
@@ -98,40 +102,39 @@ export function ReactivateDrawer({ open, onClose }) {
           age: c.age, mortgage_cents: c.mortgage_cents, lead_date: c.lead_date, source: c.source }))
         d = await rx.create(name.trim() || 'Old leads', rows, attest, existing)
         setDraft(d)
-        // Our check took more off than the preview (our do-not-call list): show the new price, pay on the next tap.
-        if (d.amount_cents !== clean.callable * terms.price_cents) { setBusy(false); return }
       }
-      const r = await rx.pay(d.list_id)
-      if (r?.status === 'failed') { setErr(r.failure || 'The card was declined. Update it on Billing, then try again.'); setBusy(false); return }
-      setDone({ ...d, status: r?.status })
-      note(source === 'sample' ? 'List paid. Sample only, nothing was charged' : `Paid ${usd0(d.amount_cents)}. We’re checking the list now`)
+      const r = await rx.start(d.list_id)
+      setDone({ ...d, card: r?.card })
+      note(source === 'sample' ? 'List started. Sample only, nothing was charged' : 'Card checked. We’re checking the list now')
     } catch (e) {
-      setErr(WHY[e.code] || e.message || 'Something went wrong. Nothing was charged.')
+      setErr(why(e))
     } finally { setBusy(false) }
   }
 
   const footer = done
     ? <button type="button" className="tp-primary fx-accent" onClick={close}>Done</button>
-    // P956: no payments inside the phone app (P775 rule); the list is paid for on the website.
-    : read && !read.error && clean && isNativeApp() ? <small className="rx-fine">{NATIVE_BILLING_TEXT} Pay for this list there.</small>
+    // P956: no payments inside the phone app (P775 rule); the card check happens on the website.
+    : read && !read.error && clean && isNativeApp() ? <small className="rx-fine">{NATIVE_BILLING_TEXT} Start this list there.</small>
     : read && !read.error && clean ? <>
       <label className="tp-check rx-attest"><input type="checkbox" checked={attest} onChange={e => setAttest(e.target.checked)} /><span>{REACT_ATTEST}</span></label>
-      <button type="button" className="tp-primary fx-accent" disabled={!canPay} onClick={pay}>
-        <CreditCard size={16} aria-hidden="true" />{busy ? 'Paying…' : price.belowMin ? `At least ${price.min} people needed` : `Pay ${usd0(price.cents)}`}
+      <button type="button" className="tp-primary fx-accent" disabled={!canStart} onClick={start}>
+        <ShieldCheck size={16} aria-hidden="true" />{busy ? 'Checking your card…' : fit.empty ? 'Nobody left to call' : 'Check card & start'}
       </button>
-      <small className="rx-fine">Charged now on your card on file. Shows as OHVARA LEADS. Numbers we take off are free.</small>
+      <small className="rx-fine">Free to start. We place a $1 hold to check your card and release it at once. You’re charged <span className="tp-money">{usd0(each)}</span> only when we book an appointment or connect a live call. Shows as OHVARA LEADS.</small>
     </> : null
 
   return (
-    <Drawer open={open} onClose={close} title="Reactivate old leads" sub="Old leads you bought or collected. Our AI calls each one, books them on your calendar or rings you live." footer={footer}>
+    <Drawer open={open} onClose={close} title="Reactivate old leads" sub={`Old leads you bought or collected. Our AI calls each one, books them on your calendar or rings you live. ${reactPriceLine(each)}`} footer={footer}>
       {done ? (
         <div className="rx-done" role="status">
           <CircleCheck size={28} aria-hidden="true" />
-          <b>Paid {usd0(done.amount_cents)} for {done.callable} people</b>
-          <p>We check every number against the national Do Not Call and litigator lists first. Anyone taken off there is refunded. Calls start after that, from 8 AM to 8 PM in each person’s time zone.</p>
+          <b>{done.callable.toLocaleString('en-US')} people ready to call</b>
+          <p>We check every number against the national Do Not Call and litigator lists first. Calls start after that, from 8 AM to 8 PM in each person’s time zone. Each appointment or live call is <span className="tp-money">{usd0(each)}</span>; you see the person’s name and number once it’s paid.</p>
         </div>
       ) : <>
         {closed && <p className="bi-err" role="status"><TriangleAlert size={15} aria-hidden="true" />Reactivation opens soon. You can’t send a list yet.</p>}
+        {owed && <p className="bi-err" role="alert"><TriangleAlert size={15} aria-hidden="true" />{CARD_WORDS.card_owed}</p>}
+        {limitsLine(terms.limits) && <p className="rx-note">{limitsLine(terms.limits)}</p>}
         <Field label="List name"><input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. 2024 mortgage leads" maxLength={120} /></Field>
         <div className="bi-import">
           <div className="bi-ways">
@@ -167,14 +170,15 @@ export function ReactivateDrawer({ open, onClose }) {
           {clean && (
             <section className="rx-preview" aria-label="What we’ll call">
               <div className="rx-row is-total"><span>People in the list</span><b className="tp-money">{(draft?.uploaded ?? clean.total).toLocaleString('en-US')}</b></div>
-              {REMOVED_ORDER.filter(k => removed?.[k]).map(k => (
+              {[...REMOVED_ORDER, 'over_limit'].filter(k => removed?.[k]).map(k => (
                 <div key={k} className="rx-row is-off"><span>{REMOVED_LABEL[k]}</span><b className="tp-money">−{removed[k].toLocaleString('en-US')}</b></div>
               ))}
-              <div className="rx-row is-left"><span>We’ll call</span><b className="tp-money">{price.n.toLocaleString('en-US')}</b></div>
-              <div className="rx-row is-price"><span>{usd0(price.each)} each</span><b className="tp-money">{usd0(price.cents)}</b></div>
-              {draft && draft.amount_cents !== clean.callable * terms.price_cents && <p className="rx-note" role="status">Our check took a few more off. The price above is the new total.</p>}
-              {price.belowMin && <p className="bi-err" role="alert"><TriangleAlert size={15} aria-hidden="true" />A list needs at least {price.min} people we can call. Add {price.short} more.</p>}
-              <p className="rx-note">Before any call, every number is checked against the national Do Not Call and litigator lists. Anyone taken off there is refunded.</p>
+              {!draft && fit.over > 0 && <div className="rx-row is-off"><span>{REMOVED_LABEL.over_limit}</span><b className="tp-money">−{fit.over.toLocaleString('en-US')}</b></div>}
+              <div className="rx-row is-left"><span>We’ll call</span><b className="tp-money">{fit.fits.toLocaleString('en-US')}</b></div>
+              <div className="rx-row is-price"><span>Upload</span><b className="tp-money">Free</b></div>
+              <div className="rx-row is-price"><span>Each appointment or live call</span><b className="tp-money">{usd0(each)}</b></div>
+              {fit.empty && <p className="bi-err" role="alert"><TriangleAlert size={15} aria-hidden="true" />Nobody is left to call in this list.</p>}
+              <p className="rx-note">A no-show gets a free rebook from our AI, and the same person is never charged twice. A live call counts once you’ve been connected {terms.transfer_min_secs ?? 30} seconds. No texts go to your list: only people who book and say yes to a confirmation text get one.</p>
             </section>
           )}
         </>}
@@ -187,6 +191,7 @@ export function ReactivateDrawer({ open, onClose }) {
 const HOVER = {
   waiting_scrub: 'Checking every number against the Do Not Call lists. Calls start after that.',
   paused: 'Paused by our team while we look at it.',
+  card: 'A $20 charge was declined. Update your card in Billing and calls start again.',
 }
 
 // One card per list: worked / reached / booked / transferred / remaining.
@@ -206,33 +211,37 @@ function ListCard({ l, rx }) {
   const note = useNote()
   const [busy, setBusy] = useState(false)
   const p = l.progress || {}
-  const [tone, word] = LIST_STATUS[l.status] || ['mute', l.status]
+  const [tone, word] = statusOf(l)
+  const cardPaused = l.status === 'paused' && l.pause_kind === 'card'
   const total = p.total || l.callable || 0
   const pct = total ? Math.round(((p.worked || 0) / total) * 100) : 0
-  const unpaid = l.status === 'draft' || l.status === 'payment_failed'
-  const pay = async () => {
+  const unstarted = l.status === 'draft'
+  const start = async () => {
     setBusy(true)
     try {
-      const r = await rx.pay(l.id)
-      note(r?.status === 'failed' ? (r.failure || 'The card was declined') : 'Paid. We’re checking the list now')
-    } catch (e) { note(WHY[e.code] || e.message) } finally { setBusy(false) }
+      await rx.start(l.id)
+      note('Card checked. We’re checking the list now')
+    } catch (e) { note(why(e)) } finally { setBusy(false) }
   }
   const drop = async () => { setBusy(true); try { await rx.discard(l.id) } catch (e) { note(e.message) } finally { setBusy(false) } }
   const N = [['Worked', p.worked], ['Reached', p.reached], ['Booked', p.booked], ['Transferred', p.transferred], ['Remaining', p.remaining]]
   return (
     <article className="fx-card rx-card">
-      <header title={HOVER[l.status] || undefined}><RotateCcw size={14} aria-hidden="true" /><b title={l.name}>{l.name}</b><Chip tone={tone}>{word}</Chip></header>
-      {unpaid ? (
+      <header title={HOVER[cardPaused ? 'card' : l.status] || undefined}><RotateCcw size={14} aria-hidden="true" /><b title={l.name}>{l.name}</b><Chip tone={tone}>{word}</Chip></header>
+      {cardPaused && <p className="rx-note" role="status">{HOVER.card}</p>}
+      {unstarted && isNativeApp() ? <p className="rx-note">{l.callable} people · {NATIVE_BILLING_TEXT} Start this list there.</p>
+      : unstarted ? (
         <div className="rx-unpaid">
-          <span>{l.callable} people · <b className="tp-money">{usd0(l.amount_cents)}</b></span>
+          <span>{l.callable} people · <b className="tp-money">Free</b> to start</span>
           <span className="rx-acts">
-            <button type="button" className="tp-primary fx-accent" disabled={busy} onClick={pay}><CreditCard size={14} aria-hidden="true" />Pay</button>
+            <button type="button" className="tp-primary fx-accent" disabled={busy} onClick={start}><ShieldCheck size={14} aria-hidden="true" />{busy ? 'Checking…' : 'Start'}</button>
             <button type="button" className="tp-btn ov-ghost" disabled={busy} onClick={drop} aria-label={`Remove ${l.name}`}><Trash2 size={14} aria-hidden="true" /></button>
           </span>
         </div>
       ) : <>
         <dl className="rx-n">{N.map(([k, v]) => <div key={k}><dt>{k}</dt><dd className="tp-money">{(v || 0).toLocaleString('en-US')}</dd></div>)}</dl>
         <div className="rx-bar" role="progressbar" aria-label={`${pct}% worked`} aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${pct}%` }} /></div>
+        {l.delivered > 0 && <small className="rx-fine">{l.delivered} delivered · <span className="tp-money">{usd0(l.charged_cents || 0)}</span> charged</small>}
       </>}
     </article>
   )

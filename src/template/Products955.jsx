@@ -193,7 +193,7 @@ function useStartList() {
       const w = addResultWords(r, 'Reactivation')
       setBusy(false)
       if (!w.ok) return note(w.text)
-      note('Reactivation added. Nothing monthly: you pay per list, when you send one')
+      note('Reactivation added. Free to upload: you pay per appointment or live call we deliver')
       go()
     } catch (e) { setBusy(false); note(failWords(e)) }
   }
@@ -216,7 +216,7 @@ function ProductRow({ p, b, onAdd, i }) {
     try {
       const r = await removeProduct(p.key)
       setAsk(false)
-      if (p.key === 'reactivation') note(`Reactivation removed. Lists already paid keep calling.${sampleWords(src)}`)
+      if (p.key === 'reactivation') note(`Reactivation removed. Lists already started keep calling.${sampleWords(src)}`)
       else note(`${p.label} ends on ${dayWords(r?.ends)}. You keep it until then.${src === 'sample' ? ' Sample only' : ''}`)
     } catch (e) { note(failWords(e).replace(' Nothing was charged.', '')) }
     setBusy(false)
@@ -256,7 +256,7 @@ function ProductRow({ p, b, onAdd, i }) {
         </>}
         {s.kind === 'starting' && <>
           <Chip tone="blue">From {dayWords(s.on)}</Chip>
-          <small>Nothing monthly. You pay per list</small>
+          <small>Nothing monthly. Free to upload, $20 per appointment or live call</small>
         </>}
       </span>
       {ask && (
@@ -286,7 +286,7 @@ export function ProductsCard({ i = 0 }) {
   return (
     <section className="fx-tile fx-s12 pr955" style={{ '--i': i }} aria-label="Your products" id="products">
       <header className="fx-tile-h"><span className="tp-grow"><h2>Your products</h2><p>Pick what you need, in any mix. Your portal is always included.</p></span><SampleTag /></header>
-      {ending && onlyRx && <p className="pr-after" data-row="after">From {dayWords(b.nextFrom)} nothing is charged monthly. You keep your portal and Reactivation: you pay per list, when you send one.</p>}
+      {ending && onlyRx && <p className="pr-after" data-row="after">From {dayWords(b.nextFrom)} nothing is charged monthly. You keep your portal and Reactivation: free to upload, you pay per appointment or live call we deliver.</p>}
       <ul className="pr-list">{rows.map((p, k) => <ProductRow key={p.key} p={p} b={b} i={k} onAdd={setPanel} />)}</ul>
       <LeadsDrawer open={panel === 'leads'} onClose={close} />
       <ServicingDrawer open={panel === 'servicing'} onClose={close} />

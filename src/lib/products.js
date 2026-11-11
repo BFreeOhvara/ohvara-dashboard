@@ -6,7 +6,7 @@
 //   Leads         a plan by daily spend band + the booking desk + $299 setup. Servicing of what's sold through
 //                 Ohvara is included (+50 added clients).
 //   Servicing     $499 a month up to 100 clients, +$200 per extra 100. $299 setup (once per account).
-//   Reactivation  $2 per callable lead per list, min 100. No monthly plan, no setup fee.
+//   Reactivation  P957: free to upload, $20 per appointment or live call we deliver. No monthly plan, no setup fee.
 // Everyone gets the portal. Leads + Servicing = both plans, one $299 setup, 150 added clients included.
 
 import { PRICES } from './priceBook.js'
@@ -32,8 +32,8 @@ export const PRODUCTS = {
   reactivation: {
     key: 'reactivation', label: 'Reactivation',
     line: 'Upload your old leads; we clean the list and call them back for you.',
-    price: `${money(REACT_DEFAULTS.priceCents / 100)} a lead`,
-    sub: `per list, at least ${REACT_DEFAULTS.minLeads} · no monthly plan, no setup fee`,
+    price: `${money(REACT_DEFAULTS.deliveredCents / 100)} per appointment or live call`,
+    sub: 'free to upload · no monthly plan, no setup fee',
   },
 }
 

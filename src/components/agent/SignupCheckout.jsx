@@ -8,7 +8,7 @@ import { DeskInfo } from './DeskInfo'
 import { SignupDetails } from './SignupDetails'
 import { emptyDetails, fromSaved, detailsMissing, loadSignupDetails, saveSignupDetails, NOT_TAKING } from '../../lib/signupDetails'
 import { PRODUCTS, ORDER, norm, signupNeeds } from '../../lib/products'
-import { REACT_DEFAULTS } from '../../lib/reactivation'
+import { REACT_PRICE_LINE } from '../../lib/reactivation'
 import './signupCheckout.css'
 
 // P933 — sign-up on the final prices (replaces the weekly Embedded Checkout). Pick a plan (Starter / Growth / Pro by
@@ -27,7 +27,6 @@ import './signupCheckout.css'
 const CardForm = lazy(() => import('./StripeForms').then(m => ({ default: m.CardForm })))
 
 const P = pricesOf(BOOK)
-const REACT_MIN = REACT_DEFAULTS.minLeads
 const money = n => `$${(Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2, maximumFractionDigits: 2 })}`
 const cents = c => money((Number(c) || 0) / 100)
 
@@ -104,7 +103,7 @@ function Summary({ quote, rate, picked }) {
     return (
       <div className="sc-sum" data-testid="sc-summary">
         <div className="lk-sum sc-total"><span>Charged today</span><span className="lk-money" data-testid="sc-total">$0</span></div>
-        <p className="sc-sub">No monthly plan and no setup fee. Each list is paid when you upload it: {PRODUCTS.reactivation.price}, at least {REACT_MIN} per list.</p>
+        <p className="sc-sub">No monthly plan and no setup fee. {REACT_PRICE_LINE}</p>
       </div>
     )
   }
@@ -122,7 +121,7 @@ function Summary({ quote, rate, picked }) {
       )}
       <div className="lk-sum sc-total"><span>Charged today</span><span className="lk-money" data-testid="sc-total">{cents(quote.total_cents)}</span></div>
       {days > 0 && <p className="sc-sub"><DeskInfo rate={rate} /></p>}
-      {picked.includes('reactivation') && <p className="sc-sub">Reactivation: nothing today. Each list is paid when you upload it.</p>}
+      {picked.includes('reactivation') && <p className="sc-sub">Reactivation: nothing today. {REACT_PRICE_LINE}</p>}
       {quote.founding_left > 0 && <p className="sc-sub sc-found"><Check size={14} strokeWidth={2.6} aria-hidden="true" />Founding price: the first agents keep these prices for 12 months. {quote.founding_left} {quote.founding_left === 1 ? 'place' : 'places'} left.</p>}
     </div>
   )
@@ -224,7 +223,7 @@ export function SignupCheckout({ portal, sectionRef }) {
             <SignupDetails value={details} onChange={setDetails} notTaking={notTaking} missing={missing} />
           </>}
           {needs.clientsAfter && <p className="ov-card sc-next"><Users size={16} aria-hidden="true" /><span><b>Servicing:</b> you’ll add your clients right after you pay (import a list or add them one by one). The first {P.servicingBase} are included.</span></p>}
-          {picked.includes('reactivation') && <p className="ov-card sc-next"><RotateCcw size={16} aria-hidden="true" /><span><b>Reactivation:</b> upload your first list any time from Leads. You’ll see the price before you pay, and confirm you’re allowed to have them called.</span></p>}
+          {picked.includes('reactivation') && <p className="ov-card sc-next"><RotateCcw size={16} aria-hidden="true" /><span><b>Reactivation:</b> upload your first list any time from Leads. {REACT_PRICE_LINE} We check your card first, and you confirm you’re allowed to have them called.</span></p>}
         </div>
         <section className="ov-card lk-co sc-co" aria-label="Checkout">
           <div className="lk-co-top"><h3>{needs.charge ? 'Pay and open your portal' : 'Open your portal'}</h3></div>

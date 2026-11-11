@@ -12,6 +12,8 @@
 //                       CHECK the response fields against their docs when the account is opened (parseBlacklist).
 //   stub                tests only: numbers ending 0000 = national DNC, 9999 = litigator. Never set on live.
 
+import { FLOW_STEPS, fillWords } from '../_shared/leadFlows.js'
+
 export type Flag = { phone: string; reason: 'national_dnc' | 'litigator' }
 export type Scrubber = { name: string; check(phones: string[]): Promise<Flag[]> }
 export type Store = { rpc(name: string, args: Record<string, unknown>): Promise<any> }
@@ -74,4 +76,50 @@ export async function scrubRun(store: Store, provider: string, scrubber: Scrubbe
     }
   }
   return { lists: claimed.length, results }
+}
+
+// -- P957: booking texts, only to people who booked AND said yes to "Can I text you the confirmation?" ----------------
+// pg_cron (reactivation_tick, while sms_live) -> { action: 'texts' }: reactivation_texts_claim hands back due texts
+// (nothing unless sms_live AND reactivation_live; never from a main number; cancelled if they stopped, the time moved
+// or the appointment passed). Words = the normal booked flow (leadFlows.js) without the booking link, which imported
+// people don't have; the first text says how to stop. Sent from the reactivation pool number the claim picked.
+export type TextJob = { id: string; step: string; to: string; from: string; first: string; agent: string; appt_at: string; tz: string }
+export type Send = (to: string, from: string, body: string) => Promise<{ ok: boolean; id?: string; error?: string }>
+
+const NO_LINK: Record<string, [string, string]> = {
+  bk_confirm: [' from {number}. Reply C to confirm or change it here: {link}', '. Reply C to confirm, or reply with a better time. Reply STOP to opt out.'],
+  bk_day_before: [' Reply C to confirm or change it here: {link}', ' Reply C to confirm, or reply with a better time.'],
+  bk_morning: [' Need a different time? {link}', ' Need a different time? Just reply.'],
+  bk_1h: [' Need a different time? {link}', ' Need a different time? Just reply.'],
+}
+export function reactivationTextBody(j: Pick<TextJob, 'step' | 'first' | 'agent' | 'appt_at' | 'tz'>): string | null {
+  const step = (FLOW_STEPS as any).booked.find((x: any) => x.key === j.step)
+  const fix = NO_LINK[j.step]
+  if (!step || !fix) return null
+  const at = new Date(j.appt_at)
+  const tz = j.tz || 'America/Chicago'
+  const part = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('en-US', { timeZone: tz, ...o }).format(at)
+  const zone = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' }).formatToParts(at).find(x => x.type === 'timeZoneName')?.value
+  return fillWords(String(step.words).replace(fix[0], fix[1]), {
+    first: j.first, agent: j.agent, day: part({ weekday: 'long' }), time: part({ hour: 'numeric', minute: '2-digit' }), zone,
+  })
+}
+
+export async function textsRun(store: Store, send: Send | null, limit = 20) {
+  if (!send) return { sent: 0, failed: 0, skipped: 'no_twilio' }
+  const jobs: TextJob[] = (await store.rpc('reactivation_texts_claim', { p_limit: limit })) ?? []
+  let sent = 0, failed = 0
+  for (const j of jobs) {
+    const body = reactivationTextBody(j)
+    if (!body) { await store.rpc('reactivation_text_sent', { p_id: j.id, p_ok: false, p_provider_id: null, p_failure: 'unknown step' }); failed++; continue }
+    try {
+      const r = await send(j.to, j.from, body)
+      await store.rpc('reactivation_text_sent', { p_id: j.id, p_ok: r.ok, p_provider_id: r.id ?? null, p_failure: r.ok ? null : (r.error ?? 'send failed') })
+      if (r.ok) sent++; else failed++
+    } catch (e) {
+      await store.rpc('reactivation_text_sent', { p_id: j.id, p_ok: false, p_provider_id: null, p_failure: String((e as Error)?.message || e).slice(0, 200) })
+      failed++
+    }
+  }
+  return { sent, failed, claimed: jobs.length }
 }
