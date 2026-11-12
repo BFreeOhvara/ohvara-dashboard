@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { PhoneIncoming, ShieldCheck, RotateCcw, Plus, Loader2, CircleAlert, ArrowRight } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { PhoneIncoming, ShieldCheck, RotateCcw, Loader2, CircleAlert, ArrowRight } from 'lucide-react'
 import { useSampleActions, useDataSource } from './data'
-import { Chip, Drawer, SampleTag, Seg, useNote } from './kit'
+import { Drawer, Seg, useNote } from './kit'
 import { paths } from './paths'
 import { useProducts } from './useProducts'
 import { PRODUCTS } from '../lib/products.js'
@@ -11,7 +11,7 @@ import { deskParts } from '../lib/bookingDesk'
 import { DeskInfo } from '../components/agent/DeskInfo'
 import { SignupDetails } from '../components/agent/SignupDetails'
 import { emptyDetails, fromSaved, detailsMissing, NOT_TAKING } from '../lib/signupDetails'
-import { productRows, costOf, canRemove, removeWords, quoteLines, cents, dayWords, bandRange, clampDaily, failWords, addResultWords } from './productsView'
+import { stateOf, costOf, canRemove, removeWords, quoteLines, cents, dayWords, bandRange, clampDaily, failWords, addResultWords } from './productsView'
 import '../components/agent/signupCheckout.css'
 import './bill910.css'
 import './products955.css'
@@ -23,7 +23,6 @@ import './products955.css'
 // sign-up details (states, hours, live transfers) and saves them first. Reactivation is free to add and takes them to
 // Leads → Import leads. Sample: nothing is charged (?pay=declined previews a declined card).
 
-const ICON = { leads: PhoneIncoming, servicing: ShieldCheck, reactivation: RotateCcw }
 const sampleWords = src => (src === 'sample' ? ' Sample only, nothing was charged.' : '')
 
 // The quote as rows; the last is the total.
@@ -200,99 +199,126 @@ function useStartList() {
   return [busy, start]
 }
 
-function ProductRow({ p, b, onAdd, i }) {
+// P969 — products live inside the Billing plan card (no separate box). The rows show what this agent has (Servicing, Your
+// own leads); Change opens ManageDrawer (Remove / Keep, the same confirm words as before); Add opens the drawers above.
+// Leads itself is the plan card's hero (Change plan). Nothing here changes a rule: billing, card checks and limits are
+// the server's, through the same actions.
+
+// Remove (with its confirm words) or Keep (undo a removal) for one product, in a drawer opened from the plan card.
+export function ManageDrawer({ product, open, onClose }) {
+  const { b, picked } = useProducts()
   const { removeProduct, keepProduct } = useSampleActions()
   const note = useNote()
   const src = useDataSource()
-  const [ask, setAsk] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [listBusy, startList] = useStartList()
-  const Icon = ICON[p.key]
-  const s = p.state
-  const cost = costOf(b, p.key)
-  const words = removeWords(b, p.key)
+  const [last, setLast] = useState(product)
+  if (product && product !== last) setLast(product)
+  const key = product || last
+  if (!key) return null
+  const p = PRODUCTS[key]
+  const s = stateOf(b, key)
+  const cost = costOf(b, key)
+  const words = removeWords(b, key)
+  const only = picked.length === 1
   const remove = async () => {
     setBusy(true)
     try {
-      const r = await removeProduct(p.key)
-      setAsk(false)
-      if (p.key === 'reactivation') note(`Your own leads removed. Lists already started keep calling.${sampleWords(src)}`)
+      const r = await removeProduct(key)
+      if (key === 'reactivation') note(`Your own leads removed. Lists already started keep calling.${sampleWords(src)}`)
       else note(`${p.label} ends on ${dayWords(r?.ends)}. You keep it until then.${src === 'sample' ? ' Sample only' : ''}`)
+      onClose()
     } catch (e) { note(failWords(e).replace(' Nothing was charged.', '')) }
     setBusy(false)
   }
   const keep = async () => {
     setBusy(true)
-    try { await keepProduct(p.key); note(`You keep ${p.label}. Nothing changes.`) } catch (e) { note(failWords(e).replace(' Nothing was charged.', '')) }
+    try { await keepProduct(key); note(`You keep ${p.label}. Nothing changes.`); onClose() } catch (e) { note(failWords(e).replace(' Nothing was charged.', '')) }
     setBusy(false)
   }
   return (
-    <li className={`pr-row is-${s.kind}`} data-product={p.key} data-state={s.kind} style={{ '--i': i }}>
-      <span className={`pr-ic is-${p.key}`}><Icon size={17} aria-hidden="true" /></span>
-      <span className="pr-main">
-        <b>{p.label}</b>
-        <p>{p.line}</p>
-        <small><span className="tp-money">{p.price}</span> · {p.sub}</small>
-      </span>
-      <span className="pr-side">
-        {s.kind === 'on' && <>
-          <Chip tone="green">On</Chip>
-          <b className="tp-money pr-cost">{cost.big}</b><small>{cost.sub}</small>
-          <span className="pr-acts">
-            {p.key === 'reactivation' && <button type="button" className="tp-btn ov-ghost" disabled={listBusy} onClick={startList}>Import leads</button>}
-            {canRemove(b, p.key) && !ask && <button type="button" className="pr-quiet" onClick={() => setAsk(true)}>Remove</button>}
-          </span>
-        </>}
-        {s.kind === 'off' && <>
-          <Chip tone="mute">Not added</Chip>
-          {p.key === 'reactivation'
-            ? <button type="button" className="tp-primary fx-accent" disabled={listBusy} onClick={startList}>{listBusy ? <Loader2 size={15} className="animate-spin" aria-hidden="true" /> : <RotateCcw size={15} aria-hidden="true" />}Import leads</button>
-            : <button type="button" className="tp-primary fx-accent" onClick={() => onAdd(p.key)} data-add={p.key}><Plus size={15} aria-hidden="true" />Add</button>}
-        </>}
-        {s.kind === 'ending' && <>
-          <Chip tone="warn">Ends {dayWords(s.on)}</Chip>
-          <small>You keep it until then</small>
-          <button type="button" className="tp-primary fx-accent" disabled={busy} onClick={keep} data-keep={p.key}>Keep {p.label}</button>
-        </>}
-        {s.kind === 'starting' && <>
-          <Chip tone="blue">From {dayWords(s.on)}</Chip>
-          <small>Nothing monthly. Free to upload, $20 per appointment or live call</small>
-        </>}
-      </span>
-      {ask && (
-        <div className="pr-confirm" role="alertdialog" aria-label={words.title}>
+    <Drawer open={open} onClose={onClose} title={p.label} sub={p.line}
+      footer={<>
+        {s.kind === 'ending' && <button type="button" className="tp-primary fx-accent" disabled={busy} onClick={keep} data-keep={key}>Keep {p.label}</button>}
+        {s.kind === 'on' && canRemove(b, key) && <button type="button" className="tp-btn ov-ghost tp-danger" disabled={busy} onClick={remove} data-confirm-remove={key}>{words.button}</button>}
+        <button type="button" className="tp-btn ov-ghost" onClick={onClose}>Close</button>
+      </>}>
+      <ul className="pr-facts">
+        <li><span className="tp-money">{cost.big}</span>. {cost.sub}.</li>
+        {s.kind === 'ending' && <li>Ends {dayWords(s.on)}. You keep it until then.</li>}
+        {s.kind === 'on' && !canRemove(b, key) && <li>{only ? 'It’s your only product. Add another first.' : 'It can’t be removed right now.'}</li>}
+      </ul>
+      {s.kind === 'on' && canRemove(b, key) && (
+        <div className="pr-confirm" role="group" aria-label={words.title}>
           <b>{words.title}</b>
           {words.lines.map(l => <p key={l}>{l}</p>)}
-          <span className="pr-acts">
-            <button type="button" className="tp-btn ov-ghost" onClick={() => setAsk(false)}>Keep {p.label}</button>
-            <button type="button" className="tp-btn ov-ghost tp-danger" disabled={busy} onClick={remove} data-confirm-remove={p.key}>{words.button}</button>
-          </span>
         </div>
       )}
-    </li>
+    </Drawer>
   )
 }
 
-// The products card on Billing. ?add=leads or ?add=servicing opens that drawer (the "Add Leads" cards link here).
-export function ProductsCard({ i = 0 }) {
-  const { b, picked } = useProducts()
-  const [params, setParams] = useSearchParams()
-  const want = params.get('add')
-  const [panel, setPanel] = useState(() => (['leads', 'servicing'].includes(want) && !picked.includes(want) ? want : null))
-  const close = () => { setPanel(null); if (want) { const p = new URLSearchParams(params); p.delete('add'); setParams(p, { replace: true }) } }
-  const rows = productRows(b)
-  const ending = rows.find(r => r.state.kind === 'ending')
-  const onlyRx = Array.isArray(b.next) && !b.next.some(k => k === 'leads' || k === 'servicing')
+// The plan card's product lines: only what this agent has (or is about to have). Leads is the card's hero.
+export function PlanProductRows({ onManage, charged = '' }) {
+  const { b } = useProducts()
+  const [listBusy, startList] = useStartList()
+  const sv = stateOf(b, 'servicing')
+  const rx = stateOf(b, 'reactivation')
+  const ld = stateOf(b, 'leads')
+  const cs = costOf(b, 'servicing')
+  const cr = costOf(b, 'reactivation')
   return (
-    <section className="fx-tile fx-s12 pr955" style={{ '--i': i }} aria-label="Your products" id="products">
-      <header className="fx-tile-h"><span className="tp-grow"><h2>Your products</h2><p>Pick what you need, in any mix. Your portal is always included.</p></span><SampleTag /></header>
-      {ending && onlyRx && <p className="pr-after" data-row="after">From {dayWords(b.nextFrom)} nothing is charged monthly. You keep your portal and Your own leads: free to upload, you pay per appointment or live call we deliver.</p>}
-      <ul className="pr-list">{rows.map((p, k) => <ProductRow key={p.key} p={p} b={b} i={k} onAdd={setPanel} />)}</ul>
-      <LeadsDrawer open={panel === 'leads'} onClose={close} />
-      <ServicingDrawer open={panel === 'servicing'} onClose={close} />
-    </section>
+    <>
+      {ld.kind === 'ending' && (
+        <div data-row="leads-ending"><dt>Leads</dt><dd><b>Ends {dayWords(ld.on)}</b><small>You keep it until then</small>
+          <button type="button" className="tp-btn ov-ghost bl-undo" onClick={() => onManage('leads')} data-keep="leads">Keep Leads</button></dd></div>
+      )}
+      {sv.kind !== 'off' && (
+        <div data-row="servicing" data-state={sv.kind}><dt>Servicing</dt><dd>
+          <b className="tp-money">{sv.kind === 'starting' ? `From ${dayWords(sv.on)}` : cs.big}</b>
+          <small>{sv.kind === 'ending' ? `Ends ${dayWords(sv.on)} · ${cs.sub}` : cs.sub}</small>
+          <button type="button" className="tp-btn ov-ghost bl-undo" onClick={() => onManage('servicing')} data-manage="servicing">{sv.kind === 'ending' ? 'Keep' : 'Change'}</button></dd></div>
+      )}
+      {rx.kind !== 'off' && (
+        <div data-row="own" data-state={rx.kind}><dt>Your own leads</dt><dd>
+          <b className="tp-money">{rx.kind === 'starting' ? `From ${dayWords(rx.on)}` : `${cr.big} or live call`}</b>
+          <small>Nothing monthly. Free to upload{rx.kind === 'starting' ? '' : charged}</small>
+          <span className="tp-row tp-wrap">
+            <button type="button" className="tp-btn ov-ghost bl-undo" disabled={listBusy} onClick={startList} data-import="own">Import leads</button>
+            {rx.kind === 'on' && canRemove(b, 'reactivation') && <button type="button" className="tp-btn ov-ghost bl-undo" onClick={() => onManage('reactivation')} data-manage="reactivation">Change</button>}
+          </span></dd></div>
+      )}
+    </>
   )
 }
+
+// The plan card's quiet adds and the one removal that has no other home: Add servicing, Import leads, Remove Leads.
+export function PlanProductActions({ onAdd, onManage }) {
+  const { b, picked } = useProducts()
+  const [listBusy, startList] = useStartList()
+  const sv = stateOf(b, 'servicing')
+  const rx = stateOf(b, 'reactivation')
+  const ld = stateOf(b, 'leads')
+  return (
+    <>
+      {sv.kind === 'off' && <button type="button" className="tp-btn ov-ghost" onClick={() => onAdd('servicing')} data-add="servicing"><ShieldCheck size={15} aria-hidden="true" />Add servicing</button>}
+      {rx.kind === 'off' && <button type="button" className="tp-btn ov-ghost" disabled={listBusy} onClick={startList} data-import="own"><RotateCcw size={15} aria-hidden="true" />Import leads</button>}
+      {ld.kind === 'on' && picked.length > 1 && canRemove(b, 'leads') && <button type="button" className="pr-quiet" onClick={() => onManage('leads')} data-manage="leads">Remove Leads</button>}
+    </>
+  )
+}
+
+// The drawers Billing opens for products. panel: 'leads' | 'servicing' (add) or 'manage-<product>'.
+export function ProductDrawers({ panel, close }) {
+  const manage = typeof panel === 'string' && panel.startsWith('manage-') ? panel.slice(7) : null
+  return (
+    <>
+      <LeadsDrawer open={panel === 'leads'} onClose={close} />
+      <ServicingDrawer open={panel === 'servicing'} onClose={close} />
+      <ManageDrawer product={manage} open={!!manage} onClose={close} />
+    </>
+  )
+}
+
 
 // The one small "Add Leads" card (not pushy): Overview for accounts without Leads. compact = the line on Leads.
 // P959: Your own leads only: sold leads stay on Leads → Sold. One quiet line, only once something is sold; no Submit, no Clients.

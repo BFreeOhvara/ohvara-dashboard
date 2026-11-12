@@ -176,7 +176,7 @@ export default function Overview() {
           {/* P843: the number is the hero; the range already sits in the subtitle, so the side line only says what it is */}
           <div className="fx-chart-head fx-bk-head">
             <b className="tp-num fx-bk-num" aria-label={`${dl.total} delivered: ${dl.booked} booked, ${dl.live} live calls`}><CountUp value={dl.total} /></b>
-            <span className="fx-bk-side"><b>delivered</b><small className="fx-dl-split"><span className="tp-num">{dl.booked}</span> booked · <span className="tp-num">{dl.live}</span> live call{dl.live === 1 ? '' : 's'}</small>{prev != null && <small>{prev} last week</small>}<i className={`fx-delta is-${status[1]}`}>{status[0]}</i></span>
+            <span className="fx-bk-side"><b>Delivered</b><small className="fx-dl-split"><span className="tp-num">{dl.booked}</span> booked · <span className="tp-num">{dl.live}</span> live call{dl.live === 1 ? '' : 's'}</small>{prev != null && <small>{prev} last week</small>}<i className={`fx-delta is-${status[1]}`}>{status[0]}</i></span>
           </div>
           <div className="fx-key">
             <span><i className="is-line" />{chart.mode === 'days' ? 'Delivered per day' : 'Delivered per week'}</span>

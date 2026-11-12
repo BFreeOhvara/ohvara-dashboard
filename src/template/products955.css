@@ -63,3 +63,8 @@
   .pr-confirm { grid-column: 1 / -1; }
   .pr-suggest { flex-wrap: wrap; }
 }
+
+/* P969 — products inside the plan card: the quiet text button reads on the filled card */
+.bl-plan .pr-quiet { color: inherit; opacity: 0.78; }
+.bl-plan .pr-quiet:hover { opacity: 1; }
+.bl-rows .bl-undo + .bl-undo, .bl-rows .tp-row .bl-undo { margin-top: 6px; }

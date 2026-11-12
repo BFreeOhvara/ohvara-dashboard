@@ -19,7 +19,8 @@ import '../bill910.css'
 import { StatesDrawer } from '../YourStates'
 import { useAgentStates, statesText } from '../useStates'
 import { dayWords } from '../adStates'
-import { ProductsCard } from '../Products955'
+import { ProductDrawers, PlanProductRows, PlanProductActions } from '../Products955'
+import { useProductPanel } from '../useProductPanel'
 import { useProducts } from '../useProducts'
 import { PRICES } from '../../lib/priceBook.js'
 
@@ -305,6 +306,8 @@ export default function Billing() {
   const [spend, setDraft] = useState({ daily: Math.max(PAID_MIN_DAILY, dailyTotal(b.spend)) })
   const [range, setRange] = useState('week')
   const [panel, setPanel] = useState(null)
+  const [prod, setProd, closeProd] = useProductPanel()
+  const manage = k => setProd(`manage-${k}`)
   const st = useAgentStates()
   // P955: what they bought. Without Leads there's no plan by spend, no nightly charge, no paid-ahead days, no booking
   // desk, results or hours here: Servicing pays its month, Reactivation pays per delivered appointment (P957).
@@ -313,6 +316,7 @@ export default function Billing() {
   // P959: what "Your own leads" has charged ($20 per delivered appointment or live call, once paid)
   const ownRows = chargesOf(b).filter(c => c.kind === 'reactivation' || c.kind === 'reactivation_delivery')
   const ownTotal = ownRows.reduce((t, c) => t + (Number(c.amount) || 0), 0)
+  const ownCharged = ownRows.length ? ` · ${money2(ownTotal)} charged so far` : ''
   const n = b.nightNow
   const noCard = leads && b.card && !b.card.onFile && b.products !== 'servicing'
   const tierNow = planOf(b)
@@ -365,9 +369,6 @@ export default function Billing() {
         </section>
       )}
 
-      {/* P955: what they bought, in any mix: Add, Remove (ends on the next bill date), Keep */}
-      <ProductsCard i={0} />
-
       {/* P917: billing that looks like billing. The plan, with Change plan (the spend slider in a drawer) */}
       {leads && <section className="fx-tile is-fill is-blue fx-s7 bl-plan" style={{ '--i': 0 }} aria-label="Your plan">
         <header className="fx-tile-h"><span className="tp-grow"><h2>Your plan</h2><p>Month to month. Cancel anytime</p></span><SampleTag /></header>
@@ -381,10 +382,12 @@ export default function Billing() {
           {pendingTo && <div data-row="plan-next"><dt>Plan change</dt><dd><b>Changes to {pendingTo.label} on {b.planNext.on}</b><small>{money(pendingTo.monthly)} a month from then. You keep {tierNow.label} until then</small><button type="button" className="tp-btn ov-ghost bl-undo" onClick={undo}>Undo</button></dd></div>}
           {/* P949: the one campaign setting agents change themselves */}
           <div data-row="states"><dt>Your states</dt><dd><b>{statesText(st.states)}</b><small>{st.waiting ? `Changing ${dayWords(st.waiting.starts)}` : 'Your leads only come from these states'}</small></dd></div>
+          <PlanProductRows onManage={manage} charged={ownCharged} />
         </dl>
         <div className="tp-row tp-wrap bl-plan-acts">
           <button type="button" className="tp-primary fx-accent" onClick={() => setPanel('plan')}><SlidersHorizontal size={15} />Change plan</button>
           <button type="button" className="tp-btn ov-ghost" data-open="states" onClick={() => setPanel('states')}><MapPin size={15} />Your states</button>
+          <PlanProductActions onAdd={setProd} onManage={manage} />
           {b.pending && <small className="bl-pending">{b.pending.starts}</small>}
         </div>
       </section>}
@@ -392,13 +395,16 @@ export default function Billing() {
       {!leads && <section className="fx-tile is-fill is-blue fx-s7 bl-plan" style={{ '--i': 0 }} aria-label="Your plan">
         <header className="fx-tile-h"><span className="tp-grow"><h2>Your plan</h2><p>Month to month. Cancel anytime</p></span><SampleTag /></header>
         <div className="bl-plan-hero">
-          <span><small>Current plan</small><b className="bl-plan-name">{has('servicing') ? 'Servicing' : 'No monthly plan'}</b></span>
+          <span><small>Current plan</small><b className="bl-plan-name">{has('servicing') ? 'Servicing' : 'Your own leads'}</b></span>
           <span><small>Plan price</small><b className="tp-money">{money(has('servicing') ? PRICES.servicingOnly : 0)}<small> / month</small></b></span>
           <span><small>Daily lead spend</small><b className="tp-money">$0<small> / day</small></b><NotOn /></span>
         </div>
-        {has('reactivation') && <dl className="bl-rows">
-          <div data-row="own"><dt>Your own leads</dt><dd><b className="tp-money">{money2(ownTotal)}</b><small>{ownRows.length ? `${ownRows.length} charged so far` : 'Nothing charged yet'} · $20 per appointment or live call we deliver. Free to upload</small></dd></div>
-        </dl>}
+        <dl className="bl-rows">
+          <PlanProductRows onManage={manage} charged={ownCharged} />
+        </dl>
+        <div className="tp-row tp-wrap bl-plan-acts">
+          <PlanProductActions onAdd={setProd} onManage={manage} />
+        </div>
       </section>}
 
       {/* Payment method and the next charge */}
@@ -497,6 +503,7 @@ export default function Billing() {
           <OtherPlans tierNow={tierNow} daily={daily} month={b.planMonth || { today: '2026-11-02', start: '2026-11-01', next: '2026-12-01' }} pending={b.planNext} onSwitch={switchPlan} />
         </div>
       </Drawer>
+      <ProductDrawers panel={prod} close={closeProd} />
       <StatesDrawer open={panel === 'states'} onClose={() => setPanel(null)} />
       <CardDrawer open={panel === 'card'} onClose={() => setPanel(null)} face={face} />
       <PauseDrawer open={panel === 'pause'} onClose={() => setPanel(null)} appts={appts} />
