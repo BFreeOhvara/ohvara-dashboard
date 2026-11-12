@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { PhoneIncoming, CalendarDays, Search, Wallet, Clock, MapPin, Check, X, ClipboardCheck, Users, Link2, MessageSquareWarning, PhoneForwarded, Inbox } from 'lucide-react'
+import { PhoneIncoming, CalendarDays, GripVertical, Search, Wallet, Clock, MapPin, Check, X, ClipboardCheck, Users, Link2, MessageSquareWarning, PhoneForwarded, Inbox } from 'lucide-react'
 import { useDataSource, useSampleLeads, useSampleLead, useSampleBilling, useSampleActions, useSampleSettings } from '../data'
 import { Avatar, Chip, Seg, Drawer, Empty, useNote } from '../kit'
 import { stageChip, OutcomeDrawer, OutcomePrompt, NoShowUndo } from '../LeadOutcome'
@@ -10,6 +10,8 @@ import { LANES, laneOf } from '../stages'
 import { agentCallTask, confirmedByText, atLabel, clockNow } from '../leadLifecycle'
 import { agentStatusOf, agentStatus, leadMessages, notInterestedLine, closedReason, needsResult, resultsFor, canMove, isLiveCall, liveCalls, RESULT_LABEL, RESULT_STATUS } from '../agentView'
 import { LiveCalls } from '../LiveCall'
+import { useResultDrag } from '../ResultDrag'
+import { canDrag, DRAG_REFUSED } from '../leadDrag'
 import { dailyTotal, openSlotsPerWeek, spendOk, planOf, bandOf } from '../spendPlan'
 import { usd } from '../motion'
 import { FeedbackDrawer } from '../Talk'
@@ -48,13 +50,17 @@ const tagOf = l => {
   return null
 }
 
-function LeadCard({ l, i, onResult }) {
+function LeadCard({ l, i, onResult, onGrab }) {
   const live = l.kind === 'live_call'
   const tone = laneOf(l).tone
   const tag = tagOf(l)
   const result = l.stage !== 'ringing' && needsResult(l, clockNow())
+  // P978: only a lead waiting for its result can be picked up, and only onto a column its Mark result menu offers.
+  const drag = canDrag(l)
   return (
-    <article className={`fx-card fx-lcard is-${tone}`} style={{ '--i': i }} data-stage={l.stage}>
+    <article className={`fx-card fx-lcard is-${tone}${drag ? ' ldg-can' : ''}`} style={{ '--i': i }} data-stage={l.stage} data-drag={drag ? 'yes' : undefined}
+      onPointerDown={drag ? e => onGrab(e, l) : undefined} onDragStart={drag ? e => e.preventDefault() : undefined}>
+      {drag && <span className="ldg-grip" aria-hidden="true"><GripVertical size={14} /></span>}
       <Link to={paths.lead(l.id)} className="fx-cover" aria-label={`Open ${l.first_name} ${l.last_name}`} />
       <div className="fx-lcard-top"><span className="fx-kind">{live ? <PhoneIncoming size={13} aria-hidden="true" /> : <CalendarDays size={13} aria-hidden="true" />}{live ? 'Live call' : 'Appointment'}</span>{tag && <span className="fx-tag">{tag[1]}</span>}</div>
       <h3>{l.first_name} {l.last_name}</h3>
@@ -207,6 +213,13 @@ export default function Leads() {
   const result = l => navigate(`${paths.lead(l.id)}?outcome=1`)
   const lanes = laneKey === 'all' ? ALL : ALL.filter(l => l.key === laneKey)
   const money = usd()
+  // P978: a drop opens the same result prompt the Mark result button opens, started on that result (Sold: the submit
+  // step; Follow up: the day; No show: the rebook text with its Undo; Not interested: one tap). A refused drop says so.
+  const note = useNote()
+  const [asked, setAsked] = useState(null)
+  const { ui: dragUi, grab } = useResultDrag({ onDrop: (l, r) => setAsked({ id: l.id, start: r }), onRefuse: () => note(DRAG_REFUSED) })
+  const askedLead = asked && leads.find(x => x.id === asked.id)
+  const undoing = leads.filter(l => l.undo && l.id !== id)
   let card = 0
   return (
     <div className="tp-page fx-page fx-leads">
@@ -218,21 +231,21 @@ export default function Leads() {
 
       {/* P910: live calls pinned on top, ringing first, each with Sold · Follow up · Not interested. P917: the board
           keeps its full size below them and the page scrolls (useLiveRoom) */}
-      <div ref={liveRef} className="lc-live"><LiveCalls calls={live} /></div>
+      <div ref={liveRef} className="lc-live"><LiveCalls calls={live} onGrab={grab} /></div>
 
       {/* P893: each status pill in its own colour with its count, like the Clients page; the picked one goes darker */}
       <FilterPills label="Status" value={laneKey} onChange={setLane} items={[{ key: 'all', label: 'All', count: shown.filter(x => ALL.some(l => inLane(l, x))).length }, ...ALL.map(l => ({ key: l.key, label: l.label, tone: l.tone, count: shown.filter(x => inLane(l, x)).length }))]} />
       {laneKey !== 'all' && <p className="lc-explain">{ALL.find(l => l.key === laneKey).explain}</p>}
 
       {leads.length === 0 && <FirstRun icon={Inbox} title="Your leads show here" sub="Each lead lands here the moment it comes in. Our team calls it right away, books it on your calendar or rings you live, and you see every step." />}
-      <div className={`fx-board lc-board${lanes.length === 1 ? ' is-one' : ''}`} style={{ '--lanes': lanes.length }} role="region" aria-label="Leads by stage">
+      <div className={`fx-board lc-board${lanes.length === 1 ? ' is-one' : ''}${dragUi ? ' is-dragging' : ''}`} style={{ '--lanes': lanes.length }} role="region" aria-label="Leads by stage">
         {lanes.map((lane, li) => {
           const rows = shown.filter(l => inLane(lane, l))
           return (
-            <section key={lane.key} className={`fx-lane is-${lane.tone}`} style={{ '--i': li }} aria-label={`${lane.label}, ${rows.length}`}>
+            <section key={lane.key} data-lane={lane.key} className={`fx-lane is-${lane.tone}${dragUi ? (dragUi.lanes.includes(lane.key) ? ' is-target' : ' is-nodrop') : ''}${dragUi?.over === lane.key ? ' is-over' : ''}`} style={{ '--i': li }} aria-label={`${lane.label}, ${rows.length}`}>
               <header className="fx-lane-h"><i aria-hidden="true" /><b>{lane.label}</b><span>{rows.length}</span></header>
               <div className="fx-lane-b">
-                {rows.map(l => <LeadCard key={l.id} l={l} i={card++} onResult={result} />)}
+                {rows.map(l => <LeadCard key={l.id} l={l} i={card++} onResult={result} onGrab={grab} />)}
                 {rows.length === 0 && <Empty title="Nothing here" sub={n ? 'No lead matches that search.' : lane.empty} />}
               </div>
             </section>
@@ -240,6 +253,8 @@ export default function Leads() {
         })}
       </div>
 
+      {askedLead && <OutcomePrompt lead={askedLead} start={asked.start} onClose={() => setAsked(null)} />}
+      {undoing.length > 0 && <div className="ldg-undo">{undoing.map(l => <NoShowUndo key={l.id} lead={l} />)}</div>}
       {id && (source === 'sample' || leads.some(l => l.id === id)) && <LeadDrawer id={id} onClose={() => navigate(paths.leads())} />}
       <SpendDrawer open={spend} onClose={() => setSpend(false)} />
     </div>
