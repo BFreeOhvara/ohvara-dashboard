@@ -60,8 +60,12 @@
 [data-theme="light"] .tp-rail { background: color-mix(in srgb, var(--bg-sidebar) 86%, transparent); }
 
 /* Motion: icon wiggle on click, a slight pull toward the pointer, press-in on buttons ---------------------- */
-.tp-wig { transform: translate(var(--tp-px, 0px), var(--tp-py, 0px)); transition: transform .35s cubic-bezier(.2, .8, .2, 1), background-color .2s ease, border-color .2s ease; }
-.tp-wig:active { transform: translate(var(--tp-px, 0px), var(--tp-py, 0px)) scale(.9); transition-duration: .08s; }
+.tp-wig { transition: transform .35s cubic-bezier(.2, .8, .2, 1), background-color .2s ease, border-color .2s ease; }
+.tp-wig:active { transform: scale(.9); transition-duration: .08s; }
+/* P968: the lean toward the pointer moves the icon (or the avatar when it has no icon), never the button's own box. */
+.tp-wig > svg { transform: translate(var(--tp-px, 0px), var(--tp-py, 0px)); transition: transform .5s cubic-bezier(.34, 1.56, .64, 1); will-change: transform; }
+.tp-wig:not(:has(> svg)) { transform: translate(var(--tp-px, 0px), var(--tp-py, 0px)); transition: transform .5s cubic-bezier(.34, 1.56, .64, 1), background-color .2s ease, border-color .2s ease; }
+.tp-wig:not(:has(> svg)):active { transform: translate(var(--tp-px, 0px), var(--tp-py, 0px)) scale(.9); transition-duration: .08s; }
 .tp-wig.is-wig > svg, .tp-wig.is-wig:not(:has(svg)) { animation: tp-wig .62s cubic-bezier(.34, 1.56, .64, 1); }
 .tp-wig.is-bell.is-wig > svg { transform-origin: 50% 10%; animation-name: tp-ring; animation-duration: .8s; }
 @keyframes tp-wig {
@@ -363,6 +367,6 @@
 @media (prefers-reduced-motion: reduce) {
   .tp-sky i { animation: none; }
   .tp-app *, .tp-layer * { animation: none !important; transition: none !important; }
-  .tp-wig, .tp-wig:active { transform: none !important; }
+  .tp-wig, .tp-wig:active, .tp-wig > svg { transform: none !important; }
   .tp-app :active { transform: none !important; }
 }

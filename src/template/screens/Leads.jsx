@@ -173,7 +173,7 @@ export function LeadDrawer({ id, onClose, extra = null }) {
   )
 }
 
-// P917: the status columns never shrink for the live-call cards. On a desktop the Leads page holds still at the window's
+// P917 (P968: now every block above the status pills): the status columns never shrink for the live-call cards. On a desktop the Leads page holds still at the window's
 // height and the lanes scroll inside; this hands the cards' height to the page (--lc-live-h on <html>, leads873.css) so
 // the window grows by exactly that much and scrolls, like Clients. When the cards go away the board keeps its size.
 function useLiveRoom() {
@@ -231,13 +231,16 @@ export default function Leads() {
         {has('leads') && <button type="button" className="fx-pillbtn" aria-label="Change your daily lead spend" onClick={() => setSpend(true)}><Wallet size={15} aria-hidden="true" /><b className="tp-money">{money(dailyTotal(billing.spend))}</b><small>a day</small></button>}
       </div>
 
-      <ReactivationCards />
-      <AddLeadsCard compact />
-      <AddServicingCard leads={leads} />
-
-      {/* P910: live calls pinned on top, ringing first, each with Sold · Follow up · Not interested. P917: the board
-          keeps its full size below them and the page scrolls (useLiveRoom) */}
-      <div ref={liveRef} className="lc-live"><LiveCalls calls={live} /></div>
+      {/* P968: everything above the status pills (imported lists, Add cards, live calls) sits in one block whose height is
+          handed to the page (useLiveRoom), so the stage columns below keep their full height and the window scrolls */}
+      <div ref={liveRef} className="lc-above">
+        <ReactivationCards />
+        <AddLeadsCard compact />
+        <AddServicingCard leads={leads} />
+        {/* P910: live calls pinned on top, ringing first, each with Sold · Follow up · Not interested. P917: the board
+            keeps its full size below them and the page scrolls */}
+        <div className="lc-live"><LiveCalls calls={live} /></div>
+      </div>
 
       {/* P893: each status pill in its own colour with its count, like the Clients page; the picked one goes darker */}
       <FilterPills label="Status" value={laneKey} onChange={setLane} items={[{ key: 'all', label: 'All', count: shown.filter(x => ALL.some(l => inLane(l, x))).length }, ...ALL.map(l => ({ key: l.key, label: l.label, tone: l.tone, count: shown.filter(x => inLane(l, x)).length }))]} />

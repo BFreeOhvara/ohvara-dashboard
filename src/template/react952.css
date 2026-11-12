@@ -22,17 +22,27 @@
 .rx-done svg { color: var(--ov-up); }
 .rx-done p { margin: 0; font-size: 13.5px; color: var(--ov-mid); }
 
-/* The list cards: one row above the board, scrolls sideways when there are more than fit. */
-.fx-leads > .rx-cards { flex: none; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(260px, 340px); gap: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
-.fx-leads > .rx-cards::-webkit-scrollbar { display: none; }
-.rx-card { display: flex; flex-direction: column; gap: 8px; padding: 10px 14px; min-width: 0; }
-.rx-card > header { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--ov-mid); }
-.rx-card > header b { flex: 1; min-width: 0; font-size: 13.5px; color: var(--ov-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The list cards: one row above the board, scrolls sideways when there are more than fit. P968: a real glass tile (the page's
+   own .fx-tile fill, edge and radius; the old .fx-card took its fill from colour variables this card never sets, so it
+   had no frame): title row, the numbers, then the progress bar. */
+.fx-leads .rx-cards { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(300px, 380px); gap: 12px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 4px; margin: -2px; }
+.fx-leads .rx-cards::-webkit-scrollbar { display: none; }
+.fx-tile.rx-card { gap: 14px; padding: 16px; animation: none; }
+.rx-card > header { display: flex; align-items: center; gap: 10px; min-width: 0; padding-bottom: 12px; border-bottom: 1px solid var(--ov-line); color: var(--ov-mid); }
+.rx-ic { flex: none; width: 30px; height: 30px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; color: var(--ov-hi); background: var(--ov-stub); }
+.rx-card > header b { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; color: var(--ov-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rx-n { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin: 0; }
 .rx-n div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rx-card .rx-n { gap: 6px; }
+.rx-card .rx-n div { gap: 3px; }
+.rx-card .rx-n dt { order: 2; font-size: 11px; color: var(--ov-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rx-n dt { font-size: 10.5px; color: var(--ov-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rx-n dd { margin: 0; font-size: 14px; font-weight: 600; color: var(--ov-hi); }
-.rx-bar { height: 4px; border-radius: 999px; background: var(--fx-fill); overflow: hidden; }
+.rx-card .rx-n dd { font-size: 18px; line-height: 1.1; }
+.rx-prog { display: flex; align-items: center; gap: 10px; }
+.rx-prog .rx-bar { flex: 1; min-width: 0; }
+.rx-prog small { flex: none; font-size: 12px; font-weight: 600; color: var(--ov-mute); }
+.rx-bar { height: 6px; border-radius: 999px; background: var(--ov-stub); overflow: hidden; }
 .rx-bar i { display: block; height: 100%; border-radius: inherit; background: var(--ov-up); transition: width .4s var(--fx-ease); }
 .rx-unpaid { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--ov-mid); }
 .rx-acts { display: inline-flex; gap: 6px; }

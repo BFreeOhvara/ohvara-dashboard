@@ -226,8 +226,8 @@ function ListCard({ l, rx }) {
   const drop = async () => { setBusy(true); try { await rx.discard(l.id) } catch (e) { note(e.message) } finally { setBusy(false) } }
   const N = [['Worked', p.worked], ['Reached', p.reached], ['Booked', p.booked], ['Transferred', p.transferred], ['Remaining', p.remaining]]
   return (
-    <article className="fx-card rx-card">
-      <header title={HOVER[cardPaused ? 'card' : l.status] || undefined}><RotateCcw size={14} aria-hidden="true" /><b title={l.name}>{l.name}</b><Chip tone={tone}>{word}</Chip></header>
+    <article className="fx-tile rx-card">
+      <header title={HOVER[cardPaused ? 'card' : l.status] || undefined}><span className="rx-ic" aria-hidden="true"><RotateCcw size={15} /></span><b title={l.name}>{l.name}</b><Chip tone={tone}>{word}</Chip></header>
       {cardPaused && <p className="rx-note" role="status">{HOVER.card}</p>}
       {unstarted && isNativeApp() ? <p className="rx-note">{l.callable} people · {NATIVE_BILLING_TEXT} Start this list there.</p>
       : unstarted ? (
@@ -240,7 +240,7 @@ function ListCard({ l, rx }) {
         </div>
       ) : <>
         <dl className="rx-n">{N.map(([k, v]) => <div key={k}><dt>{k}</dt><dd className="tp-money">{(v || 0).toLocaleString('en-US')}</dd></div>)}</dl>
-        <div className="rx-bar" role="progressbar" aria-label={`${pct}% worked`} aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${pct}%` }} /></div>
+        <div className="rx-prog"><div className="rx-bar" role="progressbar" aria-label={`${pct}% worked`} aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${pct}%` }} /></div><small className="tp-num">{pct}% worked</small></div>
         {l.delivered > 0 && <small className="rx-fine">{l.delivered} delivered · <span className="tp-money">{usd0(l.charged_cents || 0)}</span> charged</small>}
       </>}
     </article>

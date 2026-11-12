@@ -17,8 +17,9 @@
 
 /* P917: live-call cards sit above the board without shrinking it. The page holds still at the window's height on a
    desktop (flow.css); with cards it grows by their height (--lc-live-h, Leads.jsx useLiveRoom) and the window scrolls. */
-.fx-leads > .lc-live { flex: none; }
-.fx-leads > .lc-live:empty { display: none; }
+.fx-leads > .lc-above { flex: none; display: flex; flex-direction: column; gap: inherit; min-width: 0; }
+.fx-leads > .lc-above:not(:has(> :not(:empty))), .lc-above > .lc-live:empty { display: none; } /* nothing to show: no block, no gap */
+.lc-above > * { flex: none; }
 @media (min-width: 1000px) and (min-height: 620px) {
   html .fx.tp-app.is-leads { height: calc(100vh + var(--lc-live-h, 0px)); } /* beats flow.css whatever the load order */
 }
