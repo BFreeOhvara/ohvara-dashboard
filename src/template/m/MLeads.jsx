@@ -17,6 +17,10 @@ import { SpendSheet } from './MMore'
 import { mp } from './mpaths'
 import { targetOf } from '../../lib/deedstoneCall'
 import { DeedstoneCallButton } from '../DeedstoneCall'
+import { isNativeApp } from '../../lib/native'
+import { ReactivateDrawer } from '../Reactivate'
+import { AddLeadsCard, AddServicingCard } from '../Products955'
+import { useProducts } from '../useProducts'
 
 // P908 — Leads on a phone: one status at a time. Swipe sideways (or tap a status) to move between Booked, No show,
 // Follow up, Not interested and Sold, each with its count (P924: no Closed). Cards are full width with Call in thumb reach;
@@ -24,11 +28,11 @@ import { DeedstoneCallButton } from '../DeedstoneCall'
 const LANE_ALL = LANES
 const RESULT_TONE = Object.fromEntries(Object.entries(RESULT_STATUS).map(([k, st]) => [k, agentStatus(st).tone])) // P929: the board's colours
 const whenOf = l => (l.stage === 'ringing' ? 'Ringing now' : isLiveCall(l) ? 'Live call' : l.stage === 'follow_up' && l.follow ? `Call back ${l.follow}` : l.appt || `Came in ${l.assigned_at}`)
-const tagOf = l => {
+const tagOf = (l, serve = true) => {
   if (l.stage === 'ringing') return 'Ringing'
   if (needsResult(l, clockNow())) return 'Mark result'
   if (agentCallTask(l)) return 'Call them back'
-  if (l.stage === 'sold' && !l.submitted) return 'Finish details'
+  if (serve && l.stage === 'sold' && !l.submitted) return 'Finish details'
   if (confirmedByText(l)) return 'Confirmed'
   return null
 }
@@ -58,7 +62,8 @@ export function LiveStrip({ leads, compact = false }) {
 
 function LeadCard({ l }) {
   const tone = laneOf(l).tone
-  const tag = tagOf(l)
+  const { serve } = useProducts()
+  const tag = tagOf(l, serve)
   const result = l.stage !== 'ringing' && needsResult(l, clockNow())
   const closed = agentStatusOf(l) === 'closed'
   return (
@@ -98,6 +103,7 @@ export function StatusPicker({ lead, open, onClose }) {
 const ASK_WHY = ['I can’t reach them', 'They want a different time', 'Check their details', 'Something else']
 function LeadSheet({ id, onClose }) {
   const { data: lead } = useSampleLead(id)
+  const { serve } = useProducts()
   const { addLeadNote, askTeamToCall, sendBookingLink, callBack, rebookLead } = useSampleActions()
   const source = useDataSource()
   const [fb, setFb] = useState(false)
@@ -109,7 +115,7 @@ function LeadSheet({ id, onClose }) {
   useEffect(() => { if (params.get('outcome')) setParams({}, { replace: true }) }, [params, setParams])
   const name = nameOf(lead)
   const lane = laneOf(lead)
-  const chip = stageChip(lead.stage, lead)
+  const chip = stageChip(lead.stage, lead, { noServicing: !serve })
   const closed = lane.key === 'closed'
   const task = agentCallTask(lead)
   const canPick = resultsFor(lead).length > 0
@@ -128,7 +134,7 @@ function LeadSheet({ id, onClose }) {
       </div>
       <NoShowUndo lead={lead} />
       {task && <DeedstoneCallButton target={targetOf('lead', lead)} className="mx-nudge is-warn" onCall={() => callBack(lead.id)}><PhoneForwarded size={18} aria-hidden="true" /><span className="tp-grow"><b>{lead.first_name} asked you to call</b><small>“{lead.reply.text}”</small></span><ChevronRight size={18} aria-hidden="true" /></DeedstoneCallButton>}
-      {lead.stage === 'sold' && !lead.submitted && <Link to={paths.submit(lead.id)} className="mx-nudge is-green"><span className="tp-grow"><b>Finish the servicing details</b><small>The team takes it from there</small></span><ChevronRight size={18} aria-hidden="true" /></Link>}
+      {serve && lead.stage === 'sold' && !lead.submitted && <Link to={paths.submit(lead.id)} className="mx-nudge is-green"><span className="tp-grow"><b>Finish the servicing details</b><small>The team takes it from there</small></span><ChevronRight size={18} aria-hidden="true" /></Link>}
       {closed && <p className="mx-note"><b>{closedReason(lead)}.</b> No more calls or texts. A reply from them brings them back as a new lead.</p>}
       {agentStatusOf(lead) === 'team' && <p className="mx-note">Our team is calling {lead.first_name}. Nothing for you to do yet: they land on Booked.</p>}
       {agentStatusOf(lead) === 'no_show' && !lead.undo && (
@@ -177,6 +183,10 @@ export default function MLeads() {
   const [q, setQ] = useState('')
   const [find, setFind] = useState(false)
   const [spend, setSpend] = useState(false)
+  // P955: Billing → Start a reactivation list lands here with ?react=1. Without Leads, no daily spend pill.
+  const [react, setReact] = useState(() => params.get('react') === '1')
+  const { has } = useProducts()
+  const closeReact = () => { setReact(false); setParams(prev => { const p = new URLSearchParams(prev); p.delete('react'); return p }, { replace: true }) }
   const laneKey = LANE_ALL.some(l => l.key === params.get('lane')) ? params.get('lane') : 'booked'
   const idx = LANE_ALL.findIndex(l => l.key === laneKey)
   const n = q.trim().toLowerCase()
@@ -211,13 +221,15 @@ export default function MLeads() {
         {find
           ? <label className="mx-find"><Search size={18} aria-hidden="true" /><input autoFocus aria-label="Find a lead" placeholder="Name, city or phone" value={q} onChange={e => setQ(e.target.value)} /><button type="button" className="mx-ib" aria-label="Close search" onClick={() => { setQ(''); setFind(false) }}><X size={18} aria-hidden="true" /></button></label>
           : <>
-            <button type="button" className="mx-pill" onClick={() => setSpend(true)} aria-label="Change your daily lead spend"><Wallet size={17} aria-hidden="true" /><b className="tp-money">{money(dailyTotal(billing.spend))}</b><small>a day</small><ChevronRight size={16} aria-hidden="true" /></button>
+            {has('leads') && <button type="button" className="mx-pill" onClick={() => setSpend(true)} disabled={isNativeApp()} aria-label={isNativeApp() ? 'Daily lead spend, changed on the Ohvara website' : 'Change your daily lead spend'}><Wallet size={17} aria-hidden="true" /><b className="tp-money">{money(dailyTotal(billing.spend))}</b><small>a day</small><ChevronRight size={16} aria-hidden="true" /></button>}
             <span className="tp-grow" />
             <button type="button" className="mx-ib is-soft" aria-label="Find a lead" onClick={() => setFind(true)}><Search size={20} aria-hidden="true" /></button>
           </>}
       </div>
 
       <LiveStrip leads={shown} compact />
+      <AddLeadsCard compact className="mx-suggest" />
+      <AddServicingCard leads={leads} className="mx-suggest" />
 
       <div className="mx-stabs" role="tablist" aria-label="Status" ref={tabs}>
         {LANE_ALL.map(l => (
@@ -243,6 +255,7 @@ export default function MLeads() {
 
       {id && (source === 'sample' || leads.some(l => l.id === id)) && <LeadSheet key={id} id={id} onClose={() => (window.history.state?.idx > 0 ? navigate(-1) : navigate(mp.leads(laneKey)))} />}
       <SpendSheet open={spend} onClose={() => setSpend(false)} />
+      <ReactivateDrawer open={react} onClose={closeReact} />
     </div>
   )
 }

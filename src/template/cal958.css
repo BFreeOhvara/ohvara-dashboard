@@ -1,0 +1,49 @@
+/* P958 — every week calendar (agent Calendar, VA Calendar, admin Fulfillment), loaded by CalEv.jsx. Tokens only.
+   A call box is two lines across its full width: "time · name" over "type · client time". Each line stays on one line
+   and ends in "…" when the box is narrow; a box is never shorter than both lines (cal958.js EV_MIN_PX), so a line is
+   never cut in half. */
+.fx-week .tp-tgrid-b .tp-tcol .tp-ev.ev958 {
+  display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 0;
+  box-sizing: border-box; min-height: 0; padding: 5px 9px; border-radius: 10px; overflow: hidden; text-align: left;
+  line-height: 16px; text-decoration: none;
+}
+.fx-week .tp-tgrid-b .tp-tcol .tp-ev.ev958.is-lane { padding-left: 6px; padding-right: 6px; }
+.fx-week .tp-tgrid-b .tp-tcol .tp-ev.ev958 > .ev958-l1,
+.fx-week .tp-tgrid-b .tp-tcol .tp-ev.ev958 > .ev958-l2 {
+  display: block; flex: none; min-width: 0; max-width: 100%; margin: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 16px;
+}
+.fx-week .tp-tgrid-b .tp-tcol .tp-ev.ev958 > .ev958-l1 { font-size: 12.5px; font-weight: 650; color: var(--ci, var(--ov-hi)); }
+.fx-week .tp-tgrid-b .tp-tcol .tp-ev.ev958 > .ev958-l2 { font-size: 11.5px; font-weight: 500; color: var(--ci, var(--ov-hi)); opacity: .78; }
+.fx-week .tp-tgrid-b .tp-tcol .tp-ev.ev958.has-mark > .ev958-l1 { padding-right: 12px; }
+.fx-week .tp-tgrid-b .tp-tcol .tp-ev.ev958 > .ev958-l1::before, .fx-week .tp-tgrid-b .tp-tcol .tp-ev.ev958 > .ev958-l2::before { content: none; }
+
+/* Colour = the call's status (the shell's fills, the same as the Leads and Clients cards). */
+.fx-week .tp-ev.ev958.is-blue { --cf: var(--sh-cf-sky); --ci: var(--sh-ci); }
+.fx-week .tp-ev.ev958.is-teal { --cf: var(--sh-cf-butter); --ci: var(--sh-ci); }
+.fx-week .tp-ev.ev958.is-green { --cf: var(--sh-cf-sage); --ci: var(--sh-ci); }
+.fx-week .tp-ev.ev958.is-warn { --cf: var(--sh-cf-apricot); --ci: var(--sh-ci); }
+.fx-week .tp-ev.ev958.is-mute { --cf: var(--sh-cf-stone); --ci: var(--sh-ci); }
+.fx-week .tp-ev.ev958.is-rose { --cf: var(--sh-cf-coral); --ci: var(--sh-ci); }
+.fx-week .tp-ev.ev958.is-violet { --cf: var(--sh-cf-lilac); --ci: var(--sh-ci); }
+
+/* A call that has passed with a result: its result's colour, dimmed so it reads as done. Hover brings it up a little. */
+/* P966: a passed call comes in already dimmed: its entrance ends at the dimmed look, so it never shows at full colour and
+   then fades once the entrance is over. Only calls still to come end at full colour (fx-pop, flow.css). */
+@keyframes fx-pop-past { 0% { transform: scale(.6); opacity: 0; } 100% { transform: scale(1); opacity: .6; } }
+.fx-week .tp-tgrid-b .tp-tcol .tp-ev.ev958.is-past { opacity: .6; animation-name: fx-pop-past; }
+.fx-week.is-settled .tp-tgrid-b .tp-tcol .tp-ev.ev958.is-past { animation: none; }
+.fx-week .tp-tgrid-b .tp-tcol .tp-ev.ev958.is-past:hover { opacity: .85; }
+/* Passed with no result yet: its own colour and a small dot ("Mark result"). */
+.ev958-mark {
+  position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent, var(--ov-data-a)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--bg-surface) 70%, transparent);
+  pointer-events: none;
+}
+
+/* The day list rows take the same colours (agent and admin rows show the result too). */
+.fx-daybox .fx-row.is-past { opacity: .72; }
+
+/* Nothing re-animates: once the page's first entrance is over (CalEv useSettled), the grid and its boxes never play an
+   entrance again: not when the day opens or closes, not when details open or close, not when a box mounts later. */
+.fx-week.is-settled, .fx-week.is-settled .tp-ev { animation: none; }

@@ -82,6 +82,15 @@
   background: color-mix(in srgb, var(--ci) 12%, transparent); }
 .ov946-tag.is-next { color: var(--cf); background: var(--ci); }
 
+/* P947: the training card in the side column, above Today's calls: icon and title on one line, then the line, the
+   bar and a full-width button, so it never makes the page scroll. */
+.fs-ov-side .ov946-train { flex: none; flex-wrap: wrap; gap: 10px 12px; padding: 14px 16px; }
+.fs-ov-side .ov946-train-ic { width: 38px; height: 38px; border-radius: 12px; }
+.fs-ov-side .ov946-train > .tp-grow { flex: 1 1 200px; min-width: 0; }
+.fs-ov-side .ov946-train h2 { font-size: 15.5px; }
+.fs-ov-side .ov946-train p { margin: 2px 0 6px; font-size: 12px; }
+.fs-ov-side .ov946-train .tp-primary { width: 100%; justify-content: center; min-height: 38px; }
+
 /* A narrower window: one column in reading order (the next call, training, today's calls, the three tiles) */
 @media (max-width: 999.98px) {
   .ov946 .ov946-hero { order: 2; } .ov946 .ov946-train { order: 3; } .ov946 .ov946-today { order: 4; } .ov946 .ov946-trio { order: 5; }

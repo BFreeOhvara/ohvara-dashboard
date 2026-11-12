@@ -61,13 +61,16 @@ const store: Store = {
   async call(id) { const { data } = await admin.from('ai_calls').select(callCols).eq('id', id).maybeSingle(); return data },
   async callByProvider(pid) { if (!pid) return null; const { data } = await admin.from('ai_calls').select(callCols).eq('provider_call_id', pid).maybeSingle(); return data },
   async lead(id) {
-    const { data: l } = await admin.from('leads').select('id, contact_name, phone, state, qualifier_answers, inbound_product, is_sample').eq('id', id).maybeSingle()
+    const { data: l } = await admin.from('leads').select('id, contact_name, phone, state, qualifier_answers, inbound_product, is_sample, reactivation_id').eq('id', id).maybeSingle()
     if (!l) return null
     const qa = (l.qualifier_answers ?? {}) as Record<string, unknown>
     // P926: only a sample lead can carry a test (admin test calls); a real lead never does.
     const test = l.is_sample && qa.test && typeof qa.test === 'object' ? qa.test as { check?: 'yes' | 'no' | 'none'; transferTo?: string } : null
+    // P952: a reactivation person: their own opener, and a voicemail only the first time.
+    const rc = l.reactivation_id ? (await admin.from('reactivation_contacts').select('voicemail_left').eq('id', l.reactivation_id).maybeSingle()).data : null
     return { id: l.id, first: String(l.contact_name ?? '').split(' ')[0] || 'there', phone: l.phone, state: l.state, tz: (qa.tz as string) ?? null,
       need: (l.inbound_product as string) ?? 'Mortgage protection', age: (qa.age_band as string) ?? null, test,
+      reactivation: l.reactivation_id ? { voicemailLeft: !!rc?.voicemail_left } : null,
       homeowner: typeof qa.homeowner === 'boolean' ? qa.homeowner : null, mortgage: (qa.mortgage_balance_band as string) ?? null }
   },
   async agent(id) {
@@ -119,9 +122,16 @@ const store: Store = {
   // P916: the agent's Deedstone number (Retell dials from_number; Vapi needs that number's id on Vapi).
   async deedstoneFrom(agentId, callId) {
     const { data, error } = await admin.rpc('deedstone_from', { p_agent: agentId, p_kind: 'ai_call', p_ref: callId })
-    if (error || !data?.phone) return null
-    return { phone: data.phone, providerId: data.provider_number_id ?? null }
+    if (error || !data) return null
+    if (!data.phone) return data.pool === 'reactivation' ? { phone: '', providerId: null, pool: 'reactivation' } : null
+    return { phone: data.phone, providerId: data.provider_number_id ?? null, pool: data.pool ?? 'main' }
   },
+  // P957: a reactivation transfer's connected seconds (under 30 s is free) and the yes/no to booking texts.
+  async transferSecs(id, secs) {
+    const { error } = await admin.rpc('reactivation_transfer_secs', { p_call: id, p_secs: Math.max(0, Math.round(secs)) })
+    if (error && !/no_delivery/.test(error.message)) console.error('ai-caller transferSecs', id, error.message)
+  },
+  async textOk(id, yes) { return rpc('reactivation_text_consent', { p_call: id, p_yes: yes }) },
   async clearCheck(c, agentId, why) {
     if (!agentId) return
     try {

@@ -1,6 +1,7 @@
-import { lazy, Suspense, useLayoutEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useSearchParams } from 'react-router-dom'
-import { CircleCheck, Landmark, ArrowUpRight, CreditCard, MessageSquare, RotateCw, Wallet, Megaphone, Headset, Receipt, BadgeDollarSign, PiggyBank, Lock, Bot } from 'lucide-react'
+import { Check, CircleCheck, Landmark, ArrowUpRight, CreditCard, MessageSquare, RotateCw, Wallet, Megaphone, Headset, Receipt, BadgeDollarSign, PiggyBank, Lock, Bot } from 'lucide-react'
 import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, useAdmSettings, useAdmSource, useAdmAgentResults, useAdmRevTrend, ownerOf, OWNERS, PLANS, PERIODS, SETUP_FEE, CARD_FEE, AI_RATE } from '../data'
 import { PRICES } from '../../lib/priceBook.js'
 import { deskAdminLabel } from '../../lib/bookingDesk'
@@ -9,10 +10,13 @@ import { Avatar, Chip, Drawer, PillTabs, SampleTag, Seg, Switch, useNote } from 
 import { CountUp, usd } from '../../template/motion'
 import { Tile } from '../kit'
 import RevenueStock from '../RevenueStock'
+import ProductSplit from '../ProductSplit'
 import { ap } from '../paths'
 import { BILL_WORD, BANK_WORD } from '../words'
 import { OWNER_LIMIT } from '../p879'
+import { planLineOf, planPriceOf } from '../products955'
 import '../p879.css'
+import '../p964.css'
 import { useAuth } from '../../hooks/useAuth'
 import { invokeConnect, usePayoutAccounts, useRefreshPayouts } from '../../hooks/useFulfillmentPayouts'
 import { bankText } from '../../lib/adminPayouts'
@@ -116,7 +120,7 @@ const Line = ({ icon: Icon, label, sub, n, extra, neg }) => (
 function Split({ p }) {
   const sum = p.split.reduce((t, o) => t + o.amount, 0)
   return (
-    <Tile className="adm-split" i={3} title="Profit split" sub={`${p.split.map(o => `${o.name} ${o.pct}%`).join(' · ')} · adds up to ${money(sum)}`}
+    <Tile className="adm-split" i={1} title="Profit split" sub={`${p.split.map(o => `${o.name} ${o.pct}%`).join(' · ')} · adds up to ${money(sum)}`}
       aside={<Chip tone="blue">Split 50 / 50</Chip>}>
       <ul className="tp-list adm-owners">{p.split.map(o => (
         <li key={o.id} className="adm-owner">
@@ -163,7 +167,8 @@ function Headline({ p, label }) {
 }
 
 // P913 — the breakdown, last: where revenue came from, what it cost, the profit, and the owners' split.
-function Breakdown({ p }) {
+// P955: plus the split by product (Leads · Servicing · Reactivation · Setup) beside where revenue came from.
+function Breakdown({ p, period }) {
   return (
     <div className="adm-rev-break">
       <Tile i={2} title="Revenue" sub="What Ohvara earned">
@@ -174,6 +179,7 @@ function Breakdown({ p }) {
           <li className="is-total"><BadgeDollarSign size={14} aria-hidden="true" /><span className="tp-grow">Revenue</span><b className="tp-money">{money(p.inTotal)}</b></li>
         </ul>
       </Tile>
+      <ProductSplit period={period} i={3} />
       <Tile i={3} title="Costs and profit" sub="Revenue minus VA pay, AI minutes and card fees">
         <ul className="adm-sum">
           <Line icon={Headset} label="VA pay" sub={p.runs.length ? `${p.runs.length} pay ${p.runs.length === 1 ? 'run' : 'runs'} paid` : 'No run paid yet'} n={p.vaPay} neg />
@@ -182,9 +188,25 @@ function Breakdown({ p }) {
           <li className="is-total"><Wallet size={14} aria-hidden="true" /><span className="tp-grow">Profit</span><b className="tp-money">{money(p.profit)}</b></li>
         </ul>
       </Tile>
-      <Split p={p} />
     </div>
   )
+}
+
+// P966: the blue Raise button lifts an agent's max daily lead spend $50 a click. No lowering: agents change their own spend.
+const CAP_STEP = 50
+function UndoToast({ toast, onGone }) {
+  useEffect(() => {
+    if (!toast) return undefined
+    const t = setTimeout(onGone, 6000)
+    return () => clearTimeout(t)
+  }, [toast, onGone])
+  if (!toast) return null
+  return createPortal(
+    <div className="tp tp-note-toast adm-undo-toast" role="status" key={toast.k}>
+      <Check size={16} aria-hidden="true" />{toast.text}
+      <span aria-hidden="true">·</span>
+      <button type="button" className="adm-undo" onClick={() => { toast.undo(); onGone() }}>Undo</button>
+    </div>, document.body)
 }
 
 function AgentBills() {
@@ -192,8 +214,20 @@ function AgentBills() {
   const { data: m } = useAdmMoney()
   const { data: st } = useAdmSettings()
   const { setMaxDaily } = useAdmActions()
+  const real = useAdmSource() === 'real'
   const note = useNote()
-  const max = id => st.billing.maxOverride[id] ?? st.billing.maxDaily
+  const [toast, setToast] = useState(null)
+  const toasts = useRef(0)
+  const clearToast = () => setToast(null)
+  const base = st.billing.maxDaily
+  const max = id => st.billing.maxOverride[id] ?? base
+  const set = (a, value, word) => {
+    const before = st.billing.maxOverride[a.id] ?? null
+    setMaxDaily(a.id, value)
+    if (real) return // real data: the setter says on its own whether it is wired yet
+    setToast({ k: ++toasts.current, text: `Max ${word} to ${money(value ?? base)}`, undo: () => setMaxDaily(a.id, before) })
+  }
+  const raise = a => set(a, max(a.id) + CAP_STEP, 'raised')
   return (
     <div className="adm-stack">
       {m.failed.length > 0 && (
@@ -206,34 +240,41 @@ function AgentBills() {
           ))}</ul>
         </Tile>
       )}
+      {/* P964: columns Agent · Plan · Status · Next · Lead spend (last). P966: the blue Raise button sits at the right end of the row, Reset to its left. */}
       <section className="fx-tile adm-table adm-bills" style={{ '--i': 1 }} aria-label="Agent bills">
-        <div className="adm-tr adm-th" aria-hidden="true"><span>Agent</span><span>Plan</span><span>Lead spend</span><span>Status</span><span>Next</span></div>
+        <div className="adm-tr adm-th" aria-hidden="true"><span>Agent</span><span>Plan</span><span>Status</span><span>Next</span><span>Lead spend</span></div>
         {agents.map((a, i) => {
           const [word, tone] = BILL_WORD[a.billing.status]
+          const cap = max(a.id)
+          const custom = st.billing.maxOverride[a.id] != null
+          const first = a.name.split(' ')[0]
+          const floor = `Can't go below ${money(a.spend)}, what ${first} spends a day now`
           return (
             <div key={a.id} className="adm-tr" style={{ '--i': i }}>
               <Link to={ap('agents', a.id)} className="adm-who"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>{a.billing.method}</small></span></Link>
-              <span className="adm-cell"><b>{PLANS[a.plan].label}</b><small>{money(PLANS[a.plan].price)} a month</small></span>
-              <span className="adm-cell"><b className="tp-money">{money(a.spend)} a day</b>
-                <small>Max {money(max(a.id))}{st.billing.maxOverride[a.id] ? ' (raised)' : ''}{' '}
-                  <button type="button" className="fx-pillbtn" onClick={() => {
-                    if (st.billing.maxOverride[a.id]) { setMaxDaily(a.id, null); note(`${a.name}: back to ${money(st.billing.maxDaily)} a day`) }
-                    else { setMaxDaily(a.id, 750); note(`${a.name} can spend up to ${money(750)} a day (sample)`) }
-                  }}>{st.billing.maxOverride[a.id] ? 'Reset' : 'Raise'}</button></small></span>
+              <span className="adm-cell"><b>{planLineOf(a, PLANS).label}</b><small>{planPriceOf(a, PLANS) ? `${money(planPriceOf(a, PLANS))} a month` : 'Pays per list'}</small></span>
               <span className="adm-cell"><Chip tone={tone}>{word}</Chip></span>
               <span className="adm-cell"><small>{a.billing.next}</small></span>
+              <span className="adm-cell adm-spendcell">
+                <span className="adm-spend-txt"><b className="tp-money">{money(a.spend)} a day</b><small>· Max {money(cap)}</small></span>
+                <span className="adm-capact">
+                  {custom && <button type="button" className="adm-reset" aria-disabled={base < a.spend} title={base < a.spend ? floor : undefined} onClick={() => { if (base >= a.spend) set(a, null, 'reset') }}>Reset</button>}
+                  <button type="button" className="fx-pillbtn adm-raise" aria-label={`Raise ${a.name}'s max by ${money(CAP_STEP)}`} onClick={() => raise(a)}>Raise</button>
+                </span>
+              </span>
             </div>
           )
         })}
       </section>
+      <UndoToast toast={toast} onGone={clearToast} />
     </div>
   )
 }
 
 // P945 — Your payouts: each admin sees only their own. Connect the bank their share goes to through Stripe Connect
 // Express (Stripe's own form holds the bank details and identity checks; Ohvara stores nothing), the next payout (their
-// 50% of this week's profit, in Monday's pay run) and their payout history. Nothing is paid until Brayden turns on
-// Owner payouts in Settings › Go live.
+// 50% of this week's profit, in Monday's pay run) and their payout history. Nothing is paid until Ohvara turns on
+// Owner payouts with Brayden's yes (P950: no switch in the portal).
 function YourPayouts() {
   const src = useAdmSource()
   const { profile } = useAuth()
@@ -267,7 +308,7 @@ function YourPayouts() {
           {src === 'real'
             ? <RealBank />
             : <li><Landmark size={14} aria-hidden="true" /><span className="tp-grow">Your bank<small>Chase •••• 7781 · through Stripe</small></span><button type="button" className="fx-pillbtn" onClick={() => note("Opens Stripe's own form (test mode) once you sign in for real")}>Change</button></li>}
-          <li><Lock size={14} aria-hidden="true" /><span className="tp-grow">Owner payouts<small>{live ? 'On: paid in every Monday run' : 'Off: nothing is paid until Brayden turns it on in Settings › Go live'}</small></span>
+          <li><Lock size={14} aria-hidden="true" /><span className="tp-grow">Owner payouts<small>{live ? 'On: paid in every Monday run' : 'Off: nothing is paid until Ohvara turns it on with Brayden’s yes'}</small></span>
             <Chip tone={live ? 'green' : 'mute'}>{live ? 'On' : 'Off'}</Chip></li>
         </ul>
       </div>
@@ -358,6 +399,8 @@ export default function Billing() {
         <small className="tp-sub">{span[2]} · {src === 'real' ? 'from billing' : 'sample numbers'}</small>
       </div>
       <Headline p={p} label={span[1]} />
+      {/* P964: the profit split sits right under the revenue numbers, above the By week / Agent results box. */}
+      <Split p={p} />
       <section className="fx-tile adm-rev-stage" style={{ '--i': 1 }} aria-label="Revenue views">
         <PillTabs label="Revenue details" className="fx-ptabs adm-pagetabs" itemClass="fx-ptab" value={tab} onChange={t => put('tab', t, 'revenue')}
           items={VIEWS.map(([k, label]) => ({ key: k, label, count: k === 'agents' && m.failed.length ? m.failed.length : undefined }))} />
@@ -371,7 +414,7 @@ export default function Billing() {
           </div>
         </Grow>
       </section>
-      <Breakdown p={p} />
+      <Breakdown p={p} period={period} />
     </div>
   )
 }

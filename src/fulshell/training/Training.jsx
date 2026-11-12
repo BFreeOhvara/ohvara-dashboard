@@ -12,6 +12,9 @@ import { useLessons, useTraining } from './store.js'
 import SHOTS from './shots.json'
 import VideoPlayer from './VideoPlayer.jsx'
 import { hasVideo, videoFor, fmtTime } from './videoModel.js'
+import { hasTour, tourOf } from './tours.js'
+import { FUL } from '../../template/ful/paths'
+import { writePractice, practiceUrl } from '../../lib/practice.js'
 import { useWatchedMap } from './videoStore.js'
 import './training.css'
 
@@ -21,6 +24,32 @@ import './training.css'
 // progress in this browser until P852. P924: no draft markers on screen; the words to approve are in admin Settings › Wording to approve.
 
 const pctText = n => `${Math.round(n * 100)}%`
+
+// P948 — "Show me how": open the practice copy of the portal (lib/practice.js) on the tour's first page. A lesson that
+// ends in Try it comes back to the Training list ticked; one that ends in a check comes back to its lesson.
+const onPreview = () => window.location.pathname.startsWith('/template/')
+function practise(lesson, who, phase) {
+  const pre = onPreview() ? '/template' : ''
+  const back = endsInQuiz(lesson) ? `${pre}${fp('training', lesson.id)}` : `${pre}${fp('training')}?lesson=${lesson.id}`
+  writePractice({ lesson: lesson.id, name: who, back, phase })
+  window.location.assign(practiceUrl(FUL[tourOf(lesson.id).start] || FUL.overview))
+}
+
+// Back from the practice copy: a short note at the top of the page.
+function PractisedNote({ lessons }) {
+  const [sp, setSp] = useSearchParams()
+  const how = sp.get('practised')
+  if (!how) return null
+  const l = lessons.find(x => x.id === sp.get('lesson'))
+  const clear = () => { const n = new URLSearchParams(sp); n.delete('practised'); n.delete('lesson'); setSp(n, { replace: true }) }
+  return (
+    <p className={`fx-calm tr-practised${how === 'done' ? ' is-done' : ''}`} role="status">
+      {how === 'done' ? <CircleCheck size={16} aria-hidden="true" /> : <Hand size={16} aria-hidden="true" />}
+      <span className="tp-grow">{how === 'done' ? (l ? `Nice, you’ve got it. ${l.title} is done.` : 'Nice, you’ve got it.') : 'You left the practice copy. Nothing there was real.'}</span>
+      <button type="button" className="tr-practised-x" onClick={clear} aria-label="Dismiss"><X size={14} /></button>
+    </p>
+  )
+}
 
 function Ring({ value, size = 64 }) {
   const r = (size - 8) / 2
@@ -79,19 +108,20 @@ function Home({ lessons, t, who }) {
   return (
     <div className="tp-page fx-page fx-ovl tr-home">
       <div className="fx-ovl-main">
+        <PractisedNote lessons={lessons} />
         <section className={`fx-tile is-hero tr-hero${t.sum.complete ? ' is-done' : ''}`} style={{ '--i': 0 }} aria-label="Your training">
           <Ring value={t.sum.pct} size={76} />
           <span className="tp-grow">
             <h2>{t.sum.complete ? 'Training complete' : 'Finish your training'}</h2>
             <p>{t.sum.complete
               ? `All ${t.sum.total} lessons passed. Come back any time: use How do I…? or the ? on any task.`
-              : `${t.sum.passed} of ${t.sum.total} lessons done. Watch each video, then pass its check or try it once on sample data to open the next.`}</p>
+              : `${t.sum.passed} of ${t.sum.total} lessons done, in the order of your day. Watch each video, then pass its check or do it once in the practice copy to open the next.`}</p>
           </span>
           {next && <Link to={fp('training', next.id)} className="tp-primary fx-accent">{t.sum.passed ? 'Next lesson' : 'Start lesson 1'}<ArrowRight size={16} /></Link>}
         </section>
 
         <section className="fx-tile tr-path" style={{ '--i': 1 }} aria-label="Lessons">
-          <header className="fx-tile-h"><span className="tp-grow"><h2>Your lessons</h2><p>One per job, in the order you need them</p></span></header>
+          <header className="fx-tile-h"><span className="tp-grow"><h2>Your lessons</h2><p>In the order of your day: start of shift first, what to steer clear of last</p></span></header>
           <ol className="tr-list">
             {lessons.map((l, i) => {
               const s = byId[l.id]
@@ -103,7 +133,7 @@ function Home({ lessons, t, who }) {
                   {s.assigned && <i className="fx-delta is-warn">Assigned</i>}
                   {s.stale && <i className="fx-delta is-blue">Updated</i>}
                   {s.score && <small className="tp-num tr-score">{s.score.correct}/{s.score.total}</small>}
-                  <small className={`tr-end${endsInQuiz(l) ? ' is-quiz' : ''}`}>{endsInQuiz(l) ? 'Check' : 'Try it'}</small>
+                  <small className={`tr-end${endsInQuiz(l) ? ' is-quiz' : ''}`}>{endsInQuiz(l) ? 'Check' : hasTour(l.id) ? 'Show me how' : 'Try it'}</small>
                   {hasVideo(l.id)
                     ? <small className={`tr-min tr-hasvid${seen[l.id]?.watched ? ' is-seen' : ''}`} title={seen[l.id]?.watched ? 'Video watched' : 'Has a video'}><PlayCircle size={12} aria-hidden="true" />{fmtTime(videoFor(l.id).duration)}</small>
                     : <small className="tr-min"><Clock3 size={12} aria-hidden="true" />{l.minutes} min</small>}
@@ -141,7 +171,8 @@ function Home({ lessons, t, who }) {
           <header className="fx-tile-h"><span className="tp-grow"><h2>How it works</h2></span></header>
           <ul className="tr-bul">
             <li><PlayCircle size={15} aria-hidden="true" />Every lesson has a short video. Watching about 90% counts as watched.</li>
-            <li><ListOrdered size={15} aria-hidden="true" />Lessons open in order. Where a mistake costs money or breaks a rule, pass a check ({pctText(PASS_MARK)} or better). Everywhere else, try it once on sample data.</li>
+            <li><ListOrdered size={15} aria-hidden="true" />Lessons open in order. Where a mistake costs money or breaks a rule, pass a check ({pctText(PASS_MARK)} or better). Everywhere else, do it once in the practice copy.</li>
+            <li><Hand size={15} aria-hidden="true" />Show me how plays a task in a practice copy of the portal, then you do it yourself. Nothing there is real: no calls, no texts.</li>
             <li><MousePointerClick size={15} aria-hidden="true" />Every task in the portal has a ? that opens its lesson.</li>
           </ul>
         </section>
@@ -252,9 +283,11 @@ function Lesson({ lesson, lessons, t, who }) {
   }
   const quiz = endsInQuiz(lesson)
   const vid = hasVideo(lesson.id)
+  const tour = hasTour(lesson.id)
   return (
     <div className="tp-page fx-page fx-ovl tr-lesson">
       <div className="fx-ovl-main">
+        <PractisedNote lessons={lessons} />
         <nav className="tr-crumb" aria-label="Training">
           <Link to={fp('training')}><ArrowLeft size={15} aria-hidden="true" />All lessons</Link>
           <span className="tp-num">Lesson {i + 1} of {lessons.length}</span>
@@ -320,6 +353,15 @@ function Lesson({ lesson, lessons, t, who }) {
                 <p>Lessons open in order. You can watch and read this one now; its {quiz ? 'check' : 'Try it'} opens after you finish “{blocker?.title || 'the lessons before it'}”.</p>
                 {blocker && <Link to={fp('training', blocker.id)} className="tp-btn ov-ghost">Go to {blocker.title}<ArrowRight size={15} /></Link>}
               </>
+            ) : !quiz && tour ? (
+              <>
+                <span className="tr-cta-ic" aria-hidden="true"><MousePointerClick size={18} /></span>
+                <h2>{st.state === 'passed' ? 'Done. Practise again?' : 'Now you try it'}</h2>
+                <p>{lesson.tryIt.do}</p>
+                <p className="fx-calm tr-practice-why">Show me how plays it in a practice copy of the portal, then it’s your turn. Nothing real changes: no calls, no texts.</p>
+                <button type="button" className="tp-primary fx-accent" onClick={() => practise(lesson, who, 'show')}><PlayCircle size={16} />Show me how</button>
+                <button type="button" className="tp-btn ov-ghost" onClick={() => practise(lesson, who, 'turn')}>I’ll do it myself<ArrowRight size={15} /></button>
+              </>
             ) : !quiz ? (
               <>
                 <span className="tr-cta-ic" aria-hidden="true"><Hand size={18} /></span>
@@ -337,6 +379,14 @@ function Lesson({ lesson, lessons, t, who }) {
                 <button type="button" className="tp-primary fx-accent" onClick={() => { setMode('check'); window.scrollTo({ top: 0 }) }}>{st.state === 'passed' ? 'Retake the check' : 'Take the check'}<ArrowRight size={16} /></button>
               </>
             )}
+          </section>
+        )}
+        {mode === 'read' && quiz && tour && (
+          <section className="fx-tile tr-cta tr-see" style={{ '--i': 2 }} aria-label="See it in the portal">
+            <span className="tr-cta-ic" aria-hidden="true"><MousePointerClick size={18} /></span>
+            <h2>See it in the portal</h2>
+            <p>Show me how plays it in a practice copy of the portal, then you try it. Nothing real changes.</p>
+            <button type="button" className="tp-btn ov-ghost" onClick={() => practise(lesson, who, 'show')}><PlayCircle size={16} />Show me how</button>
           </section>
         )}
         {!vid && <>

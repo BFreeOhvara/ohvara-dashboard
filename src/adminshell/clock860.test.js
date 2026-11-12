@@ -28,19 +28,22 @@ test('the clock css: 22px date and AM/PM, time digits 1.7x, medium weight, tabul
   assert.match(css, /max-width: 999\.98px\) \{\s*\.fx \.fx-head \.fx-clock \{ --clk: 18px; order: 1;[^}]*\}\s*\.fx \.fx-head \.fx-kpis \{ order: 2; \}/)
 })
 
-test('all three frames show it in the page head on Overview only, not the top bar; admin lost its own pill', () => {
+test('agent and VA frames show it in the page head on Overview only, not the top bar; P964: admin shows it on the Live status line', () => {
   const agent = src('../template/TemplateFrame.jsx')
   const sampleVa = src('../template/ful/FulFrame.jsx')
   const va = src('../fulshell/FulfillFrame.jsx')
   const admin = src('./AdminFrame.jsx')
-  for (const [name, s] of [['agent', agent], ['sample VA', sampleVa], ['admin', admin]]) {
+  for (const [name, s] of [['agent', agent], ['sample VA', sampleVa]]) {
     assert.match(s, /layout === 'overview' && <LiveClock tz=/, name)
   }
   assert.match(va, /layout === 'today' && <LiveClock tz=\{d\.tz\} \/>/)
   // it sits inside the .fx-head block, after the title (before the main column opens)
-  for (const s of [agent, sampleVa, va, admin]) {
+  for (const s of [agent, sampleVa, va]) {
     assert.ok(s.indexOf('<LiveClock') > s.indexOf('<RollTitle') && s.indexOf('<LiveClock') < s.indexOf('<main'))
   }
+  // P964: admin's clock moved out of the head onto the Overview's Live status line, right-aligned
+  assert.doesNotMatch(admin, /<LiveClock/)
+  assert.match(src('./screens/Overview.jsx'), /<div className="adm-ov-statusrow"><LiveStatus \/><LiveClock tz=\{settings\.tz\} \/><\/div>/)
   const top = admin.search(/<header className=\{?[`"]tp-top/) // P914: the class is a template (is-menu while the avatar menu is open)
   const bar = admin.slice(top, admin.indexOf('</header>', top))
   assert.ok(bar.length > 100 && !bar.includes('LiveClock'))

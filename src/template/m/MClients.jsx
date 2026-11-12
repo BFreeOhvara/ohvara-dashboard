@@ -5,7 +5,7 @@ import { useDataSource, useSampleClients, useSampleClient, useSampleThreads, use
 import { Chip, Money, useNote } from '../kit'
 import { agentOpensSaveCall } from '../ful/data'
 import { useCheckSettings, todayFor } from '../checkSettings'
-import { CLIENT_STATUS, STATUS_ORDER, clientStatusOf, clientStatus, requestTag, workingWhy, dueCheck, nextCheck, checkLists, answerList, shortDate, ordinal } from '../../lib/clientCheck.js'
+import { CLIENT_STATUS, STATUS_ORDER, clientStatusOf, clientStatus, requestTag, workingWhy, dueCheck, nextCheck, checkLists, mergeLists, draftRange, answerList, shortDate, ordinal } from '../../lib/clientCheck.js'
 import { stagesOf, dateWord } from '../../lib/clientStages.js'
 import { StageBlock } from '../Stages911'
 import { Sheet, ActionSheet, ActRow } from './Sheet'
@@ -21,7 +21,7 @@ const fullName = c => `${c.client_first_name} ${c.client_last_name}`
 const where = c => [c.carrier_name, [c.city, c.state].filter(Boolean).join(', ')].filter(Boolean).join(' · ')
 const standOf = (c, st) => (st === 'working' ? (stagesOf(c).current?.label || workingWhy(c)) : st === 'needs_attention' ? 'Still on the books?' : st === 'closed' ? (c.track?.closed || 'Closed') : 'Nothing needed')
 
-function useAnswer() {
+export function useAnswer() {
   const { answerChecks } = useSampleActions()
   const note = useNote()
   return (clients, draft, fellOff = []) => {
@@ -32,29 +32,32 @@ function useAnswer() {
   }
 }
 
-// One draft date's check: a row per client with Yes / No (44 px), and one button for all of them.
-function CheckCard({ list }) {
+// P949: every unanswered draft date in ONE card ("Drafted Oct 27 – Nov 1"): a row per client with Yes / No (44 px),
+// and one button for all of them.
+export function CheckCard({ m }) {
   const answer = useAnswer()
+  const n = m.rows.length
+  const all = () => m.drafts.forEach(d => { const cs = m.rows.filter(r => r.draft === d).map(r => r.c); if (cs.length) answer(cs, d) })
   return (
-    <section className="mx-card mx-check">
-      <header className="mx-check-h"><span className="mx-row-ic is-warn"><CalendarCheck size={18} aria-hidden="true" /></span><span className="tp-grow"><b>Still on the books?</b><small>Drafted {shortDate(list.draft)} · {list.clients.length} {list.clients.length === 1 ? 'policy' : 'policies'}</small></span></header>
+    <section className="mx-card mx-check" data-check-box>
+      <header className="mx-check-h"><span className="mx-row-ic is-warn"><CalendarCheck size={18} aria-hidden="true" /></span><span className="tp-grow"><b>Still on the books?</b><small>Drafted {draftRange(m.from, m.to)} · {n} {n === 1 ? 'policy' : 'policies'}</small></span></header>
       <ul className="mx-check-rows">
-        {list.clients.map(c => (
+        {m.rows.map(({ c, draft }) => (
           <li key={c.id}>
-            <span className="tp-grow"><b>{fullName(c)}</b><small>{c.carrier_name || 'Carrier not given'}</small></span>
-            <button type="button" className="mx-yn is-yes" aria-label={`${fullName(c)}: still on the books`} onClick={() => answer([c], list.draft)}><Check size={18} aria-hidden="true" />Yes</button>
-            <button type="button" className="mx-yn" aria-label={`${fullName(c)}: fell off`} onClick={() => answer([c], list.draft, [c.id])}>No</button>
+            <span className="tp-grow"><b>{fullName(c)}</b><small>{`Drafted ${shortDate(draft)} · ${c.carrier_name || 'Carrier not given'}`}</small></span>
+            <button type="button" className="mx-yn is-yes" aria-label={`${fullName(c)}: still on the books`} onClick={() => answer([c], draft)}><Check size={18} aria-hidden="true" />Yes</button>
+            <button type="button" className="mx-yn" aria-label={`${fullName(c)}: fell off`} onClick={() => answer([c], draft, [c.id])}>No</button>
           </li>
         ))}
       </ul>
-      {list.clients.length > 1 && <button type="button" className="mx-btn is-primary is-wide" onClick={() => answer(list.clients, list.draft)}><Check size={18} aria-hidden="true" />All {list.clients.length} still on the books</button>}
+      {n > 1 && <button type="button" className="mx-btn is-primary is-wide" onClick={all}><Check size={18} aria-hidden="true" />All {n} still on the books</button>}
       <p className="mx-sub">A No sends our team to save it. Nothing else for you to do.</p>
     </section>
   )
 }
 
 // Send app link: their own Deedstone page. Texted for you once texting is live; today, share it from your phone.
-function AppLinkSheet({ c, open, onClose }) {
+export function AppLinkSheet({ c, open, onClose }) {
   const note = useNote()
   const link = `${window.location.origin}/template/d/client?c=${c.id}`
   const share = async () => {
@@ -72,7 +75,7 @@ function AppLinkSheet({ c, open, onClose }) {
   )
 }
 
-function ClientSheet({ id, onClose, today, settings, onLapsed }) {
+export function ClientSheet({ id, onClose, today, settings, onLapsed }) {
   const { data: c } = useSampleClient(id)
   const { data: threads } = useSampleThreads()
   const { sendMessage } = useSampleActions()
@@ -139,6 +142,7 @@ export default function MClients() {
   const [lapsing, setLapsing] = useState(null)
   const statusOf = useMemo(() => new Map(clients.map(c => [c.id, clientStatusOf(c, today, settings)])), [clients, today, settings])
   const lists = useMemo(() => checkLists(clients, today, settings), [clients, today, settings])
+  const merged = useMemo(() => mergeLists(lists), [lists])
   const keys = [...STATUS_ORDER, 'closed']
   const count = k => (k === 'all' ? clients.filter(c => statusOf.get(c.id) !== 'closed').length : clients.filter(c => statusOf.get(c.id) === k).length)
   const n = q.trim().toLowerCase()
@@ -161,7 +165,7 @@ export default function MClients() {
         })}
       </div>
 
-      {showLists && lists.map(l => <CheckCard key={l.draft} list={l} />)}
+      {showLists && <CheckCard key={merged.drafts.join()} m={merged} />}
 
       <Sec title={stage === 'all' ? 'Your book' : CLIENT_STATUS[stage].label}>
         {rows.length

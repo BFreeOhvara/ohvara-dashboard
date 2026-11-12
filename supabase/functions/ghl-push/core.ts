@@ -35,6 +35,9 @@ export type Settings = {
   workflow_no_show: string | null
   workflow_opt_out: string | null
   workflow_no_answer?: string | null // P902
+  // P954: recovery_config.sms_live. GoHighLevel's workflows are what send the lead texts, so while
+  // texts are off nobody is added to one (contact, tags and fields still go). Missing = off.
+  texts_live?: boolean
 }
 
 export type OutboxRow = {
@@ -137,7 +140,7 @@ export async function pushRow(row: OutboxRow, s: Settings, api: GhlClient): Prom
   if (row.event === 'flow_stop' && s.workflow_no_answer) await api.removeFromWorkflow(contactId, s.workflow_no_answer)
   const key = workflowFor(row)
   const workflowId = key ? (s[key] as string | null) : null
-  if (workflowId) await api.addToWorkflow(contactId, workflowId)
+  if (workflowId && s.texts_live === true) await api.addToWorkflow(contactId, workflowId)
   return contactId
 }
 

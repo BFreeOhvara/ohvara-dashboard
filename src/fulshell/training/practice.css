@@ -1,0 +1,60 @@
+/* P948 — the practice copy's walkthrough (./practiceRun.js): the bar on top, the pointer, the highlight's caption
+   (driver.js, restyled with the shell's tokens) and the end cards. No new colours. */
+
+/* The practice bar: always clickable, above the highlight */
+/* Bottom right, so it never covers the top tabs or a centred pop-up's buttons a walkthrough points at. */
+.pr-bar { position: fixed; z-index: 1000000002; right: 16px; bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  width: max-content; max-width: min(560px, calc(100vw - 32px)); display: flex; align-items: center; gap: 10px 12px; padding: 8px 10px 8px 14px;
+  border-radius: 16px; font-size: 13.5px; color: var(--ov-hi); background: var(--ov-card-solid, var(--sh-base)); backdrop-filter: blur(14px);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 50%, transparent), 0 12px 32px rgb(0 0 0 / .35); }
+.pr-bar, .pr-bar * { pointer-events: auto !important; }
+.pr-bar.is-top { bottom: auto; top: calc(76px + env(safe-area-inset-top, 0px)); }
+.pr-bar-t { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 8px; min-width: 0; }
+.pr-tag { color: var(--accent); }
+.pr-what { font-weight: 600; }
+.pr-safe { color: var(--ov-mid); font-size: 12.5px; }
+.pr-bar .tp-btn, .pr-bar .tp-primary { min-height: 32px; padding: 0 12px; font-size: 13px; flex: none; }
+@media (max-width: 560px) {
+  .pr-bar { left: 16px; right: 16px; top: calc(8px + env(safe-area-inset-top, 0px)); bottom: auto; width: auto; max-width: none; padding: 6px 8px 6px 12px; font-size: 12.5px; }
+  .pr-safe { display: none; }
+}
+
+/* The pointer (watch phase) */
+.pr-ptr { position: fixed; z-index: 1000000003; left: 0; top: 0; pointer-events: none !important; transition: transform .75s cubic-bezier(0.65, 0, 0.35, 1); will-change: transform; }
+.pr-ptr svg { display: block; fill: var(--ov-hi); stroke: var(--bg-base, #000); stroke-width: 1.4; filter: drop-shadow(0 3px 6px rgb(0 0 0 / .45)); }
+.pr-ptr i { position: absolute; left: -14px; top: -14px; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; }
+.pr-ptr.is-press svg { animation: pr-press .32s ease; }
+.pr-ptr.is-press i { animation: pr-ring .55s ease-out; }
+@keyframes pr-press { 50% { transform: scale(.82); } }
+@keyframes pr-ring { from { opacity: .9; transform: scale(.4); } to { opacity: 0; transform: scale(1.6); } }
+@media (prefers-reduced-motion: reduce) { .pr-ptr { transition: none; } .pr-ptr.is-press svg, .pr-ptr.is-press i { animation: none; } }
+
+/* The caption next to the highlight (driver.js popover) */
+.driver-popover.pr-pop { z-index: 1000000004; min-width: 220px; max-width: min(340px, calc(100vw - 32px)); padding: 14px 16px; border-radius: 14px; color: var(--ov-hi);
+  background: var(--ov-card-solid, var(--sh-base)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 14px 36px rgb(0 0 0 / .4); }
+.driver-popover.pr-pop .driver-popover-title { font-family: var(--font-mono); font-size: 11.5px; font-weight: 600; letter-spacing: .04em; color: var(--accent); }
+.driver-popover.pr-pop .driver-popover-description { margin-top: 4px; font-size: 14.5px; line-height: 1.45; color: var(--ov-hi); }
+.driver-popover.pr-pop .driver-popover-footer { margin-top: 12px; }
+.driver-popover.pr-pop .driver-popover-progress-text { display: none; }
+.driver-popover.pr-pop .driver-popover-next-btn { all: unset; cursor: pointer; display: inline-flex; align-items: center; min-height: 34px; padding: 0 14px; border-radius: 999px;
+  font-size: 13.5px; font-weight: 600; color: var(--sh-on-accent, #fff); background: var(--accent); }
+.driver-popover.pr-pop .driver-popover-next-btn:focus-visible { outline: 2px solid var(--ov-hi); outline-offset: 2px; }
+.driver-popover.pr-pop .driver-popover-arrow-side-bottom { border-bottom-color: var(--ov-card-solid, var(--sh-base)); }
+.driver-popover.pr-pop .driver-popover-arrow-side-top { border-top-color: var(--ov-card-solid, var(--sh-base)); }
+.driver-popover.pr-pop .driver-popover-arrow-side-left { border-left-color: var(--ov-card-solid, var(--sh-base)); }
+.driver-popover.pr-pop .driver-popover-arrow-side-right { border-right-color: var(--ov-card-solid, var(--sh-base)); }
+.driver-active .driver-active-element { box-shadow: 0 0 0 3px var(--accent) !important; border-radius: 10px; }
+
+/* The end cards: Your turn, Nice, you've got it, That spot moved */
+.pr-card-wrap { position: fixed; inset: 0; z-index: 1000000001; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: color-mix(in srgb, var(--bg-base, #000) 55%, transparent); backdrop-filter: blur(3px); }
+.pr-card-wrap, .pr-card-wrap * { pointer-events: auto !important; }
+.fx-tile.pr-card { width: min(420px, 100%); align-items: center; text-align: center; gap: 10px; padding: 26px 24px 22px; animation: pr-in .28s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.pr-card h2 { margin: 0; font-family: var(--font-display); font-size: 21px; font-weight: 600; color: var(--ov-hi); }
+.pr-card p { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--ov-mid); }
+.pr-card-ic { width: 52px; height: 52px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.pr-card-ic.is-done { color: var(--ov-up, var(--accent)); background: color-mix(in srgb, var(--ov-up, var(--accent)) 16%, transparent); }
+.pr-card-acts { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 6px; }
+@keyframes pr-in { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+@media (prefers-reduced-motion: reduce) { .fx-tile.pr-card { animation: none; } }

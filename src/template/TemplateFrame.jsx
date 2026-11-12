@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Link, NavLink, useLocation, useOutlet } from 'react-router-dom'
 import {
   Home, PhoneIncoming, CalendarDays, Users, History, CreditCard, Settings, Search, Bell, Plus, Sun, Moon, MessageSquare,
-  PhoneCall, Radio, ChevronRight, LogOut, ShieldCheck, Ellipsis, FileUp, TriangleAlert, Wallet, CalendarCheck, Clock3,
+  PhoneCall, Radio, ChevronRight, LogOut, ShieldCheck, FileUp, TriangleAlert, Wallet, CalendarCheck, Clock3,
   Smartphone, CircleHelp, StickyNote, Mail, Keyboard, Bug,
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
@@ -11,6 +11,7 @@ import {
   useSampleActivity, useSampleClients, useSampleLeads, useSampleThreads, useSampleBilling, useSampleAppointments, useSampleSettings, useSampleActions, useSampleNeeds, useDataStatus, useDataSource,
 } from './data'
 import { NeedRows, FyiList, NoticeRows } from './NeedsNow'
+import { useNavKeys, useProducts } from './useProducts'
 import { liveCalls } from './agentView'
 import { useNeedAction } from './needAction'
 import { useClientStatusOf } from './checkSettings'
@@ -39,9 +40,10 @@ import { OhvaraMark } from '../components/ui/OhvaraMark'
 import { isSearchKey } from '../lib/searchKey'
 import { needsResult } from './agentView'
 import { appLink, loadAppConfig } from '../lib/appConfig'
-import { openExternal } from '../lib/native'
+import { openExternal, isNativeApp } from '../lib/native'
+import { label as productsLabel } from '../lib/products.js'
 import { STORES, STORES_SOON, appQr } from '../lib/appStores'
-import { dailyTotal, rangeWords, tierOf } from './spendPlan'
+import { dailyTotal, rangeWords, tierOf, planOf } from './spendPlan'
 import { TalkDrawer, TalkStatus } from './Talk'
 import { SUPPORT_EMAIL } from '../components/auth/authUtils'
 import './glass.css'
@@ -52,6 +54,7 @@ import './palette.css'
 import './fit867.css'
 import './p893.css'
 import './shell914.css'
+import './p969.css'
 import MoreBelow from './MoreBelow'
 import '@fontsource/urbanist/500.css'
 import '@fontsource/urbanist/600.css'
@@ -67,7 +70,7 @@ const TABS = [
   { to: paths.activity, key: 'activity', label: 'Activity', icon: History },
   { to: paths.billing, key: 'billing', label: 'Billing', icon: CreditCard },
 ]
-const PAGES = [...TABS, { to: paths.messages, label: 'Messages' }, { to: paths.submit, label: 'Submit a policy' }, { to: paths.settings, label: 'Settings' }, { to: paths.more, label: 'More' }]
+const PAGES = [...TABS, { to: paths.messages, label: 'Messages' }, { to: paths.submit, label: 'Submit a policy' }, { to: paths.settings, label: 'Settings' }]
 
 // P873: the bell leads with Your to-dos (P910; each with its one action), any billing notice (Fix card), then the
 // quiet FYI list, then the latest activity.
@@ -271,9 +274,11 @@ function CreateMenu({ open, onClose, at, pick }) {
 }
 
 // The avatar menu: account pages, the Active switch, theme, sign out.
-function AccountMenu({ open, onClose, theme, setTheme }) {
+function AccountMenu({ open, onClose, theme, setTheme, onApp }) {
   const account = useAccount()
   const note = useNote()
+  const { data: b } = useSampleBilling()
+  const { picked, has } = useProducts()
   useEffect(() => {
     if (!open) return undefined
     const onKey = e => { if (e.key === 'Escape') onClose() }
@@ -283,16 +288,23 @@ function AccountMenu({ open, onClose, theme, setTheme }) {
   // P843: the menu plays its way out (fx-menu-out) instead of vanishing
   const [shown, leaving] = useExit(open, 200)
   if (!shown) return null
-  const links = [[paths.billing, 'Billing', CreditCard], [paths.settings, 'Settings', Settings], [paths.more, 'More', Ellipsis]]
+  // P969: the desktop More page is gone; what lived there is here. The plan line opens Billing.
+  const money = v => `$${Number(v).toLocaleString('en-US')}`
+  const planLine = has('leads')
+    ? `${planOf(b).label} plan · ${money(dailyTotal(b.spend))} a day${b.nextBill ? ` · next bill ${b.nextBill}` : ''}`
+    : `${productsLabel(picked)}${has('servicing') && b.nextBill ? ` · next bill ${b.nextBill}` : ''}`
+  const links = [[paths.billing, 'Billing', CreditCard], [paths.settings, 'Settings', Settings], [paths.activity, 'Activity', History], [paths.messages, 'Help', CircleHelp]]
   if (isTemplateAddress()) links.push([paths.signup, 'Sign-up preview', ShieldCheck], [paths.welcome, 'Welcome preview', Home])
   return (
     <div className={`tp fx-layer fx-menu-layer${leaving ? ' is-leaving' : ''}`} role="presentation">
       <button type="button" className="fx-scrim is-clear tp-bare" aria-label="Close menu" tabIndex={-1} onClick={onClose} />
       <section className="fx-menu" role="dialog" aria-label="Your account">
         <header className="fx-menu-h"><span className="fx-av">{initials(account.name).toUpperCase()}</span><span className="tp-grow"><b>{account.name}</b><small>Agent</small></span></header>
+        <Link to={paths.billing()} className="fx-mplan" data-row="plan" onClick={onClose}><span className="tp-grow">{planLine}</span><ChevronRight size={14} aria-hidden="true" /></Link>
         <button type="button" className="fx-mrow" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}<b className="tp-grow">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</b></button>
         <i className="fx-mline" />
         {links.map(([to, label, Icon]) => <Link key={label} to={to()} className="fx-mrow" onClick={onClose}><Icon size={17} aria-hidden="true" /><b className="tp-grow">{label}</b><ChevronRight size={15} aria-hidden="true" /></Link>)}
+        {!isNativeApp() && <button type="button" className="fx-mrow" onClick={() => { onClose(); onApp() }}><Smartphone size={17} aria-hidden="true" /><b className="tp-grow">Get the phone app</b><ChevronRight size={15} aria-hidden="true" /></button>}
         <i className="fx-mline" />
         <button type="button" className="fx-mrow is-danger" onClick={() => (account.live ? account.signOut() : note('Sign out works once you sign in for real'))}><LogOut size={17} aria-hidden="true" /><b className="tp-grow">Sign out</b></button>
       </section>
@@ -347,6 +359,8 @@ export default function TemplateFrame() {
   const { data: threads } = useSampleThreads()
   const { data: settings } = useSampleSettings()
   const { data: billing } = useSampleBilling()
+  // P955: tabs for what they bought (lib/products.js navFor); Overview, Calendar, Activity and Billing always.
+  const navKeys = useNavKeys()
   const stats = useHeadStats(layout)
   // P911/P914: the top-right Messages icon shows selected while Messages is open; a second click goes back to Overview
   // with the same page swap as a nav tab.
@@ -421,7 +435,7 @@ export default function TemplateFrame() {
       <header className={`tp-top fx-top${menuOn ? ' is-menu' : ''}`}>
         <span className="fx-top-gap" aria-hidden="true" />
         <PillTabs as="nav" label="Pages" className="tp-tabs fx-tabs" itemClass="tp-tab fx-tab" value={active} persistKey="tpl-tabs"
-          items={TABS.map(t => ({ key: t.key, to: t.to(), label: t.label, extra: t.key === 'leads' && needs > 0 ? <span className="fx-tb is-circle" aria-label={`${needs} waiting on you`}>{needs}</span> : null }))} />
+          items={TABS.filter(t => navKeys.has(t.key)).map(t => ({ key: t.key, to: t.to(), label: t.label, extra: t.key === 'leads' && needs > 0 ? <span className="fx-tb is-circle" aria-label={`${needs} waiting on you`}>{needs}</span> : null }))} />
         <div className="fx-tr">
           {msgLink}
           <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} />{bell > 0 && <span className="fx-badge">{bell}</span>}</button>
@@ -482,7 +496,7 @@ export default function TemplateFrame() {
         <Link to={paths.settings()} className="fx-btab"><Settings size={20} aria-hidden="true" />Settings</Link>
       </nav>
 
-      {panel === 'search' && <Palette onClose={close} pages={PAGES} />}
+      {panel === 'search' && <Palette onClose={close} pages={PAGES.filter(x => !x.key || navKeys.has(x.key))} />}
       <BellDrawer open={panel === 'bell'} onClose={close} />
       <BookCall open={panel === 'book'} onClose={close} />
       <CreateMenu open={panel === 'create'} onClose={close} at={menuAt} pick={setPanel} />
@@ -491,7 +505,7 @@ export default function TemplateFrame() {
       <Help open={panel === 'help'} onClose={close} onBug={() => setPanel('bug')} onTalk={() => setPanel('talk')} />
       <TalkDrawer open={panel === 'talk'} onClose={close} />
       <ReportBug open={panel === 'bug'} onClose={close} role="Agent" />
-      <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} />
+      <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} onApp={() => setPanel('app')} />
       <MoreBelow page={layout} />
     </div>
   )

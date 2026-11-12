@@ -104,7 +104,7 @@ test('"How do I…?" search finds the right lesson first', () => {
   assert.equal(searchLessons('someone says stop')[0].id, 'optout')
   assert.equal(searchLessons('cancel old policy')[0].id, 'carrier') // P931: the cancel call (was 'carrier confirms')
   assert.equal(searchLessons('merge the client')[0].id, 'carrier')
-  assert.equal(searchLessons('day off')[0].id, 'desk')
+  assert.equal(searchLessons('day off')[0].id, 'timeoff') // P948: days off are their own lesson
   assert.deepEqual(searchLessons('how do I'), [])
   assert.deepEqual(searchLessons('zebra'), [])
 })

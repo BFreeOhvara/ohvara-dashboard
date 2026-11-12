@@ -2,7 +2,8 @@ import { useSyncExternalStore, createContext, useContext, createElement } from '
 import { sampleTrend } from '../template/leadTrend.js'
 import { addDays, buildDays, isoFromText, rolling, sampleHistory, spreadWeek } from './revTrend.js'
 import { useSampleBugs, setSampleBugStatus } from '../template/bugReport.js'
-import { SETUP_STEPS, setupOf, isPaid } from './setup.js'
+import { SETUP_STEPS, setupOf, hasTicket } from './setup.js'
+import { hasLeads, planPriceOf, planLineOf, NO_PLAN, sampleSplit } from './products955.js'
 import { PRICES, SETTINGS, bandText, nightlyCharge } from '../lib/priceBook.js'
 import { tierOf } from '../template/spendPlan.js'
 import { TIMESHEET, HOURLY, sheetTotals } from './p879.js'
@@ -48,7 +49,7 @@ export const LEAD_PRICE = { appointment: 45, live: 65 }
 const mkBill = o => ({
   status: 'current', next: 'Tonight, 8:00 PM', method: 'Visa •••• 4242', failed: null, card: 'Visa •••• 4242',
   last: { when: 'Wed, Nov 4, 8:00 PM', result: 'approved' }, paidAhead: 1, credit: 0,
-  setup: { paid: 'Sep 14', amount: PRICES.setupFee }, founding: { until: 'Sep 14, 2027' }, ...o,
+  setup: { paid: 'Sep 14', amount: PRICES.setupFee }, ...o,
 })
 // P913: the Meta campaign ID saved on the agent when GoHighLevel creates their campaign (one campaign per agent).
 const metaId = id => `12021${String([...id].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 1e10, 7)).padStart(10, '0')}`
@@ -59,27 +60,36 @@ const mkAgent = (id, name, o) => ({
   plan: planFor({ spend: 100, ...o }),
 })
 const seedAgents = [
-  mkAgent('ag-dana', 'Dana Walker', { city: 'Austin', state: 'TX', phone: '(512) 555-0143', spend: 120, onDuty: true, states: ['TX', 'OK'], joined: 'Aug 30',
+  mkAgent('ag-dana', 'Dana Walker', { city: 'Austin', state: 'TX', phone: '(512) 555-0143', spend: 120, onDuty: true, states: ['TX', 'OK'], joined: 'Aug 30', picked: ['leads', 'reactivation'],
     planNext: { key: 'starter', on: 'Tue, Dec 1' },
-    billing: { credit: 14, setup: { paid: 'Aug 30', amount: PRICES.setupFee }, founding: { until: 'Aug 30, 2027' } } }),
+    billing: { credit: 14, setup: { paid: 'Aug 30', amount: PRICES.setupFee } } }),
   mkAgent('ag-marcus', 'Marcus Reed', { city: 'Phoenix', state: 'AZ', phone: '(602) 555-0118', spend: 60, active: false, states: ['AZ', 'NV'], lastOn: 'Wed',
     billing: { method: 'Visa •••• 1881', card: 'Visa •••• 1881' } }),
   mkAgent('ag-priya', 'Priya Shah', { city: 'Tampa', state: 'FL', phone: '(813) 555-0170', spend: 600, onDuty: false, paused: { since: 'Wed, Nov 4', until: 'Mon, Nov 16' }, states: ['FL', 'GA'], joined: 'Aug 30',
-    billing: { next: 'Paused to Mon, Nov 16', method: 'Amex •••• 3005', card: 'Amex •••• 3005', paidAhead: 0, last: { when: 'Tue, Nov 3, 8:00 PM', result: 'approved' }, setup: { paid: 'Aug 30', amount: PRICES.setupFee }, founding: { until: 'Aug 30, 2027' } } }),
+    billing: { next: 'Paused to Mon, Nov 16', method: 'Amex •••• 3005', card: 'Amex •••• 3005', paidAhead: 0, last: { when: 'Tue, Nov 3, 8:00 PM', result: 'approved' }, setup: { paid: 'Aug 30', amount: PRICES.setupFee } } }),
   mkAgent('ag-elena', 'Elena Torres', { city: 'San Antonio', state: 'TX', phone: '(210) 555-0191', spend: 50, servicing: false, states: ['TX'], joined: 'Oct 12',
     billing: { next: 'Retry Fri, 8:00 AM', method: 'Visa •••• 7310', card: 'Visa •••• 7310', paidAhead: 0, last: { when: 'Thu, Nov 5, 8:00 PM', result: 'declined', why: 'Card declined' },
-      failed: { what: 'Nightly lead charge', when: 'Thu, Nov 5', why: 'Card declined', amount: 56 }, setup: { paid: 'Oct 12', amount: PRICES.setupFee }, founding: { until: 'Oct 12, 2027' } } }),
-  mkAgent('ag-james', 'James Okafor', { city: 'Atlanta', state: 'GA', phone: '(404) 555-0126', spend: 85, onDuty: true, states: ['GA', 'SC'], joined: 'Sep 28',
+      failed: { what: 'Nightly lead charge', when: 'Thu, Nov 5', why: 'Card declined', amount: 56 }, setup: { paid: 'Oct 12', amount: PRICES.setupFee } } }),
+  mkAgent('ag-james', 'James Okafor', { city: 'Atlanta', state: 'GA', phone: '(404) 555-0126', spend: 85, onDuty: true, states: ['GA', 'SC'], joined: 'Sep 28', picked: ['leads', 'reactivation'],
     lastUpgrade: { from: 'starter', to: 'growth', on: 'Mon, Nov 2', amount: 773.33, days: 29 },
-    billing: { method: 'Mastercard •••• 6022', card: 'Mastercard •••• 6022', setup: { paid: 'Sep 28', amount: PRICES.setupFee }, founding: { until: 'Sep 28, 2027' } } }),
+    billing: { method: 'Mastercard •••• 6022', card: 'Mastercard •••• 6022', setup: { paid: 'Sep 28', amount: PRICES.setupFee } } }),
   mkAgent('ag-grace', 'Grace Kim', { city: 'Denver', state: 'CO', phone: '(303) 555-0164', spend: 65, active: false, comped: true, states: ['CO'], lastOn: 'Tue',
-    billing: { status: 'comped', next: 'Comped to Dec 1', method: 'None needed', card: null, last: null, paidAhead: 0, setup: null, founding: null } }),
+    billing: { status: 'comped', next: 'Comped to Dec 1', method: 'None needed', card: null, last: null, paidAhead: 0, setup: null } }),
   mkAgent('ag-ben', 'Ben Carter', { city: 'Charlotte', state: 'NC', phone: '(704) 555-0137', spend: 50, active: false, states: ['NC'], joined: 'Oct 19', lastOn: 'Mon',
     billing: { status: 'past_due', next: 'Locks Fri, Nov 6, 9:00 AM', method: 'Visa •••• 0094', card: 'Visa •••• 0094', paidAhead: 0, last: { when: 'Wed, Nov 4, 8:00 PM', result: 'declined', why: 'Card declined' },
-      failed: { what: 'Monthly plan', when: 'Wed, Nov 4', why: 'Card declined', amount: 699 }, setup: { paid: 'Oct 19', amount: PRICES.setupFee }, founding: { until: 'Oct 19, 2027' } } }),
+      failed: { what: 'Monthly plan', when: 'Wed, Nov 4', why: 'Card declined', amount: 699 }, setup: { paid: 'Oct 19', amount: PRICES.setupFee } } }),
+  // P955: agents without Leads. No lead spend, no band plan, no transfers, never a Setup ticket. Tasha's Servicing ends
+  // at her next bill date (a removal waiting); Marcus Webb only buys Reactivation lists (no monthly plan, no setup fee).
+  mkAgent('ag-sofia', 'Sofia Alvarez', { city: 'Houston', state: 'TX', phone: '(713) 555-0149', spend: 0, plan: 'servicing', picked: ['servicing'], active: false, states: ['TX'], joined: 'Oct 5',
+    billing: { next: 'Renews Dec 5', method: 'Visa •••• 2218', card: 'Visa •••• 2218', paidAhead: 0, last: { when: 'Mon, Oct 5', result: 'approved' }, setup: { paid: 'Oct 5', amount: PRICES.setupFee } } }),
+  mkAgent('ag-tasha', 'Tasha Greene', { city: 'Mobile', state: 'AL', phone: '(251) 555-0176', spend: 0, plan: 'servicing', picked: ['servicing', 'reactivation'], pickedNext: ['reactivation'], pickedNextFrom: '2026-12-09',
+    active: false, states: ['AL'], joined: 'Sep 9', lastOn: 'Wed',
+    billing: { next: 'Renews Dec 9', method: 'Mastercard •••• 4410', card: 'Mastercard •••• 4410', paidAhead: 0, last: { when: 'Mon, Nov 9', result: 'approved' }, setup: { paid: 'Sep 9', amount: PRICES.setupFee } } }),
+  mkAgent('ag-webb', 'Marcus Webb', { city: 'Little Rock', state: 'AR', phone: '(501) 555-0133', spend: 0, plan: null, picked: ['reactivation'], active: false, states: ['AR'], joined: 'Oct 26', lastOn: 'Mon',
+    billing: { next: 'Pays per list', method: 'Visa •••• 9035', card: 'Visa •••• 9035', paidAhead: 0, last: { when: 'Wed, Oct 28', result: 'approved' }, setup: null } }),
 ]
 // Tonight's charge for an agent: tomorrow's spend minus credit, plus 12% (nothing while paused or comped).
-export const chargeFor = a => (a.comped || a.paused ? null : nightlyCharge({ daily: a.spend, credit: a.billing?.credit || 0 }))
+export const chargeFor = a => (a.comped || a.paused || !hasLeads(a) ? null : nightlyCharge({ daily: a.spend, credit: a.billing?.credit || 0 }))
 
 const mkVa = (id, name, o) => ({
   id, name, role: 'fulfillment', email: `${name.split(' ')[0].toLowerCase()}@example.com`, phone: '(555) 555-0150', hours: '9:00 AM to 5:00 PM',
@@ -120,7 +130,7 @@ const signupFor = (o, plan) => {
 const mkNew = (id, name, o) => {
   const plan = o.spend ? planFor(o) : null
   return {
-    id, name, city: '', state: '', states: [], lead: 'appointment', spend: 0, done: [], since: 'Mon, Nov 2', campaignReq: null,
+    id, name, city: '', state: '', states: [], lead: 'appointment', spend: 0, done: [], since: 'Mon, Nov 2', campaignReq: null, picked: ['leads'],
     agentRef: `DS-${id.slice(3, 7).toUpperCase()}`, ...o, plan, signup: signupFor(o, plan),
   }
 }
@@ -133,6 +143,12 @@ const launchOk = (ref, o = {}) => ({
 })
 const seedOnboard = [
   mkNew('ob-nadia', 'Nadia Brooks', { city: 'Dallas', state: 'TX', states: ['TX'], spend: 75, since: 'Wed, Nov 4' }),
+  // P955: paid, but no Leads: Servicing only and Reactivation only never get a Setup ticket.
+  mkNew('ob-keith', 'Keith Lam', { city: 'Fresno', state: 'CA', states: ['CA'], picked: ['servicing'], done: ['paid'], paid: { on: 'Wed, Nov 4', short: 'Nov 4', days: 0 }, since: 'Wed, Nov 4' }),
+  mkNew('ob-joan', 'Joan Pierce', { city: 'Boise', state: 'ID', states: ['ID'], picked: ['reactivation'], done: ['paid'], since: 'Tue, Nov 3' }),
+  // Signed up for Servicing, then added Leads in Billing: the ticket opens once that charge is paid (its 'paid' step).
+  mkNew('ob-tom', 'Tom Alvarez', { city: 'Lubbock', state: 'TX', states: ['TX', 'NM', 'OK'], spend: 70, picked: ['leads', 'servicing'], done: ['paid'], paid: { on: 'Wed, Nov 4', short: 'Nov 4', days: 2 },
+    leadsAdded: { on: 'Nov 4' }, since: 'Wed, Nov 4', launch: { licence: true, hours: '9:00 AM to 5:00 PM', tz: 'Central', card: 'Visa •••• 6650' } }),
   mkNew('ob-monique', 'Monique Price', { city: 'Orlando', state: 'FL', states: ['FL'], spend: 100, since: 'Tue, Nov 3' }),
   mkNew('ob-carl', 'Carl Jensen', { city: 'Mesa', state: 'AZ', states: ['AZ', 'NM'], spend: 60, note: 'Card declined on the setup fee', since: 'Mon, Nov 2' }),
   mkNew('ob-rachel', 'Rachel Nguyen', { city: 'Houston', state: 'TX', states: ['LA', 'OK', 'TX'], spend: 65, done: ['paid'], paid: { on: 'Today, 9:12 AM', short: 'Nov 10', days: 2 }, since: 'Thu, Nov 5',
@@ -162,6 +178,7 @@ export const paidFor = c => {
 // Each ticket's history, newest first (the drawer's audit lines).
 const seedSetupLog = {
   'ob-rachel': [{ at: 'Today, 9:12 AM', who: 'Stripe', what: 'Signed up and paid: setup, first month and 2 days of leads' }],
+  'ob-tom': [{ at: 'Wed, Nov 4', who: 'Stripe', what: 'Added Leads in Billing and paid: setup, first month and 2 days of leads' }],
   'ob-luis': [{ at: 'Wed, Nov 4', who: 'Stripe', what: 'Signed up and paid: setup, first month and 2 days of leads' }],
   'ob-hannah': [{ at: 'Today, 9:05 AM', who: 'Sam Ellis', what: 'Sent Create campaign to GoHighLevel' }, { at: 'Tue, Nov 3', who: 'Stripe', what: 'Signed up and paid: setup, first month and 2 days of leads' }],
   'ob-owen': [{ at: 'Wed, Nov 4', who: 'GoHighLevel', what: 'Campaign created: Deedstone · Owen Fisher · DS-OWEN' }],
@@ -336,6 +353,7 @@ const seedSetupFees = [
   { id: 'su-3', agent: 'Owen Fisher', paid: 'Mon, Nov 2', period: 'now', day: 2 },
   { id: 'su-4', agent: 'Hannah Wright', paid: 'Tue, Nov 3', period: 'now', day: 3 },
   { id: 'su-5', agent: 'Luis Ortega', paid: 'Wed, Nov 4', period: 'now', day: 4 },
+  { id: 'su-7', agent: 'Tom Alvarez', paid: 'Wed, Nov 4', period: 'now', day: 4 }, // P955: Leads added in Billing
   { id: 'su-6', agent: 'Rachel Nguyen', paid: 'Today', period: 'now', day: 5 },
 ]
 // Owner draws: paid out of a month's profit. October was paid in two draws; November is not paid yet.
@@ -390,19 +408,6 @@ const seedFeed = [
   { id: 'f5', who: 'Jordan Hale', text: 'Saved the GoHighLevel location', at: 'Tue', kind: 'connect' },
 ]
 
-export const SWITCHES = [
-  { key: 'sms_live', label: 'Texting live', sub: 'Off means no text is sent by any flow. Stays off until the A2P campaign is approved.', group: 'Calling and texting' },
-  { key: 'voice_live', label: 'Calling in the portal', sub: 'Off opens the portal phone as a preview.', group: 'Calling and texting' },
-  { key: 'ai_caller_live', label: 'AI calls new form leads', sub: 'On: the AI calls every new form lead and books it, transfers it or marks No answer. Settings › AI caller has the rest.', group: 'Calling and texting' },
-  { key: 'recording_live', label: 'Record calls', sub: 'Records cancellation calls and plays the notice first.', group: 'Calling and texting' },
-  { key: 'invite_sms_live', label: 'Invite by text', sub: 'Lets Add someone send the invite as a text.', group: 'Calling and texting' },
-  { key: 'payouts_live', label: 'Payouts send real money', sub: 'On means the Monday run pays VAs through Stripe.', group: 'Money' },
-  { key: 'owner_payouts_live', label: 'Owner payouts', sub: "On means the Monday run also pays each owner their 50% of the profit, to the bank they connected.", group: 'Money' },
-  { key: 'billing_enforced', label: 'Lock unpaid agents', sub: 'Lead spend stops when a payment fails; after 3 days past due the account is on hold.', group: 'Money' },
-  { key: 'submit_live', label: 'Submit page live', sub: 'Opens the new Submit page to every agent.', group: 'Agents' },
-  { key: 'carrier_lookup_live', label: 'Live carrier lookup', sub: 'Agents can look up carrier hours themselves.', group: 'Agents' },
-  { key: 'signup_open', label: 'Sign-up open', sub: 'Lets new agents sign up without an invite.', group: 'Agents' },
-]
 const seedSettings = {
   daysOffPerMonth: 3, // P913/P945: days off a month per VA (they book their own; no approvals)
   profile: { name: ME.name, email: ME.email, phone: ME.phone },
@@ -541,7 +546,7 @@ export function useAdmAgents() {
   const s = useS()
   return okS(s, s.agents.map(a => {
     const mine = s.leads.filter(l => l.agent_id === a.id)
-    return { ...a, week: funnel(mine), clients: s.clients.filter(c => c.agent_id === a.id).length, planInfo: PLANS[a.plan] }
+    return { ...a, week: funnel(mine), clients: s.clients.filter(c => c.agent_id === a.id).length, planInfo: PLANS[a.plan] || NO_PLAN }
   }))
 }
 export function useAdmVas() {
@@ -602,8 +607,9 @@ export function useAdmBugs() { const s = useS(); const sent = useSampleBugs(); r
 export function useAdmAudit() { const s = useS(); return okS(s, s.audit) }
 export function useAdmConnect() { const s = useS(); return okS(s, s.connect) }
 // P906 — Setup: one ticket per agent who has paid (setup fee + first days of spend). Unpaid sign-ups aren't here.
+// P955: only agents with Leads (a Servicing-only or Reactivation-only agent never gets a ticket; see products955.js).
 export function pipelineOf(s) {
-  return s.onboard.filter(isPaid).map(c => ({ ...c, ...setupOf(c), log: s.setupLog[c.id] || [] }))
+  return s.onboard.filter(hasTicket).map(c => ({ ...c, ...setupOf(c), log: s.setupLog[c.id] || [] }))
 }
 export function useAdmSetup() { const s = useS(); return okS(s, pipelineOf(s)) }
 
@@ -611,7 +617,7 @@ export function useAdmSetup() { const s = useS(); return okS(s, pipelineOf(s)) }
 export function useAdmMoney() {
   const s = useS()
   const rate = s.settings.payRules.hourly
-  const plans = weekShare(s.agents.filter(a => !a.comped && a.billing.status !== 'past_due').reduce((t, a) => t + PLANS[a.plan].price, 0))
+  const plans = weekShare(s.agents.filter(a => !a.comped && a.billing.status !== 'past_due').reduce((t, a) => t + planPriceOf(a, PLANS), 0))
   const leadsCharged = s.leads.filter(l => l.agent_id).reduce((t, l) => t + (LEAD_PRICE[l.kind] ?? LEAD_PRICE.appointment), 0)
   const leadFee = Math.round(leadsCharged * PRICES.leadFee)
   // P913: revenue = plan fees + the 12% fee + setup fees. Lead spend (leads) rides along only to show it apart.
@@ -671,7 +677,7 @@ export function revTrendOf(s, m) {
     const paying = s.agents.filter(a => !a.comped && a.billing.status !== 'past_due')
     before = (s.spendTrend || []).filter(r => r.date < weekStart).map(r => {
       const leadSpend = (r.appointment || 0) * LEAD_PRICE.appointment + (r.live || 0) * LEAD_PRICE.live
-      const plans = paying.filter(a => !a.joinedIso || a.joinedIso <= r.date).reduce((t, a) => t + PLANS[a.plan].price, 0)
+      const plans = paying.filter(a => !a.joinedIso || a.joinedIso <= r.date).reduce((t, a) => t + planPriceOf(a, PLANS), 0)
       return { date: r.date, plans: weekShare(plans) / 7, leadSpend, fee: leadSpend * feeRate }
     })
     runs = (s.runs || []).map(r => ({ date: r.payIso, amount: r.amount }))
@@ -696,7 +702,7 @@ export function revTrendOf(s, m) {
 // P864 — Money for one period ('week' | 'month' | 'last'): brought in, costs, profit and the owners' split. Every number
 // comes from the same sample as the rest of admin (agents' plans, leads charged, Connect's ad spend, past pay runs).
 export function moneyFor(s, period) {
-  const monthPlans = s.agents.filter(a => !a.comped && a.billing.status !== 'past_due').reduce((t, a) => t + PLANS[a.plan].price, 0)
+  const monthPlans = s.agents.filter(a => !a.comped && a.billing.status !== 'past_due').reduce((t, a) => t + planPriceOf(a, PLANS), 0)
   const weekPlans = weekShare(monthPlans)
   const weekLeads = s.leads.filter(l => l.agent_id).reduce((t, l) => t + (LEAD_PRICE[l.kind] ?? LEAD_PRICE.appointment), 0)
   const oct = s.revenue.filter(w => w.wk.startsWith('Oct'))
@@ -746,7 +752,7 @@ export function moneyFor(s, period) {
 export function agentResults(s, period) {
   const p = moneyFor(s, period)
   const cur = period === 'last' ? 'last' : 'now'
-  const planOf = a => (a.comped || a.billing.status === 'past_due' ? 0 : PLANS[a.plan].price)
+  const planOf = a => (a.comped || a.billing.status === 'past_due' ? 0 : planPriceOf(a, PLANS))
   const planAll = s.agents.reduce((t, a) => t + planOf(a), 0) || 1
   const spendOf = a => s.leads.filter(l => l.agent_id === a.id).reduce((t, l) => t + (LEAD_PRICE[l.kind] ?? LEAD_PRICE.appointment), 0)
   const spendAll = s.agents.reduce((t, a) => t + spendOf(a), 0) || 1
@@ -762,7 +768,7 @@ export function agentResults(s, period) {
     const ai = Math.round(p.ai * wk)
     const fees = Math.round((paid + leadSpend) * CARD_FEE)
     const kept = paid - va - ai - fees
-    return { id: a.id, name: a.name, plan: PLANS[a.plan].label, comped: !!a.comped, paid, leadSpend, va, ai, fees, kept, vaPct: paid > 0 ? Math.round((va / paid) * 100) : null }
+    return { id: a.id, name: a.name, plan: planLineOf(a, PLANS).label, comped: !!a.comped, paid, leadSpend, va, ai, fees, kept, vaPct: paid > 0 ? Math.round((va / paid) * 100) : null }
   })
   // Agents still in Setup who paid their setup fee this period aren't on the agent list yet: one row each, so the
   // Paid column adds up to the Revenue page.
@@ -779,6 +785,22 @@ export function agentResults(s, period) {
 }
 export function useAdmAgentResults(period = 'week') { const s = useS(); return okS(s, agentResults(s, period)) }
 export function useAdmPeriod(period = 'week') { const s = useS(); return okS(s, moneyFor(s, period)) }
+
+// P955 — Revenue by product (sample): Leads (lead plan fees + the booking desk), Servicing (its plan fees), Reactivation
+// (lists paid in the period, the same lists as the Reactivation page's sample) and Setup, with how many agents have
+// each. Leads + Servicing + Setup = the period's revenue (moneyFor.inTotal); Reactivation lists are on top of it. Real
+// numbers come from admin_billing_revenue (by_product, counts) in ProductSplit.jsx.
+const seedReactPaid = [
+  { agent: 'Tasha Greene', paid: 'Sun, Nov 1', amount: 402, period: 'month' },
+  { agent: 'Marcus Webb', paid: 'Wed, Oct 28', amount: 960, period: 'last' },
+]
+export const reactivationFor = (period, rows = seedReactPaid) => rows
+  .filter(r => (period === 'last' ? r.period === 'last' : period === 'month' ? r.period !== 'last' : r.period === 'week'))
+  .reduce((t, r) => t + r.amount, 0)
+export function productSplitFor(s, period) {
+  return sampleSplit({ p: moneyFor(s, period), agents: s.agents, plans: PLANS, reactivation: s.real ? 0 : reactivationFor(period) })
+}
+export function useAdmProductSplit(period = 'week') { const s = useS(); return okS(s, productSplitFor(s, period)) }
 export function useAdmDraws() {
   const s = useS()
   return okS(s, OWNERS.map(o => ({ ...o, draws: s.draws.filter(d => d.owner === o.id), total: s.draws.filter(d => d.owner === o.id).reduce((t, d) => t + d.amount, 0) })))
@@ -940,15 +962,15 @@ const SAMPLE_ACTIONS = {
     // P890: no per-cancel decisions (VA pay is hourly). The Monday run can still be paused.
     // P934: no split setter. The owners' profit split is fixed at 50/50 (OWNER_SPLIT); changing it is a code and migration change.
     setPaused: on => set(s => ({ settings: { ...s.settings, payoutsPaused: on }, ...audit(s, on ? 'Paused payouts' : 'Resumed payouts', 'Monday pay run') })),
-    // Settings
-    setSwitch: (key, on) => set(s => ({ settings: { ...s.settings, switches: { ...s.settings.switches, [key]: on } }, ...audit(s, `${on ? 'Turned on' : 'Turned off'} ${SWITCHES.find(x => x.key === key).label}`, 'Sample only') })),
+    // Settings (P950: no live-switch setter. Live flags are changed only by Ohvara's server role, with Brayden's yes)
     savePayRules: payRules => set(s => ({ settings: { ...s.settings, payRules }, ...audit(s, 'Changed pay rules', `$${payRules.hourly} an hour`) })),
     saveBilling: billing => set(s => ({ settings: { ...s.settings, billing: { ...s.settings.billing, ...billing } },
-      ...audit(s, 'Changed lead billing', `Max $${billing.maxDaily} a day · charge ${billing.chargeHour}:00 · founding ${billing.foundingCount} for ${billing.foundingMonths} months`) })),
+      ...audit(s, 'Changed lead billing', `Max $${billing.maxDaily} a day · charge ${billing.chargeHour}:00`) })),
     setMaxDaily: (id, dollars) => set(s => {
       const o = { ...s.settings.billing.maxOverride }
+      const before = o[id] ?? s.settings.billing.maxDaily // P964: the stepper lowers it too, so the log says which
       if (dollars == null) delete o[id]; else o[id] = dollars
-      return { settings: { ...s.settings, billing: { ...s.settings.billing, maxOverride: o } }, ...audit(s, dollars == null ? 'Reset a max daily spend' : 'Raised a max daily spend', `${nameOf(s, id)}${dollars == null ? '' : `: $${dollars} a day`}`) }
+      return { settings: { ...s.settings, billing: { ...s.settings.billing, maxOverride: o } }, ...audit(s, dollars == null ? 'Reset a max daily spend' : dollars < before ? 'Lowered a max daily spend' : 'Raised a max daily spend', `${nameOf(s, id)}${dollars == null ? '' : `: $${dollars} a day`}`) }
     }),
     saveSettings: patch => set(s => ({ settings: { ...s.settings, ...patch } })),
     setTz: tz => set(s => ({ settings: { ...s.settings, tz } })),

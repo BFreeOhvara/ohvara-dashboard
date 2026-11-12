@@ -16,7 +16,7 @@ import More from './screens/More'
 import Signup from './screens/Signup'
 import Welcome from './screens/Welcome'
 import Deedstone from './client/Deedstone'
-import FulFrame from './ful/FulFrame'
+import { VaShellFrame } from './m/va/VaFrame'
 import { fulRoutes } from './ful/routes'
 import { ME } from './ful/data'
 import { DeedstoneCallProvider } from './DeedstoneCall'
@@ -65,7 +65,7 @@ export default function TemplateApp() {
             <Route path="more" element={<Pick d={More} m={MMore} />} />
           </Route>
           {/* P845: the Fulfillment (VA) side's preview at /template/fulfillment */}
-          <Route element={<AccountProvider value={VA}><FulFrame /></AccountProvider>}>{fulRoutes({ preview: true })}</Route>
+          <Route element={<AccountProvider value={VA}><VaShellFrame /></AccountProvider>}>{fulRoutes({ preview: true })}</Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </DeedstoneCallProvider>

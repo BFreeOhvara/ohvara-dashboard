@@ -27,7 +27,8 @@ export const RETELL_VOICE_DEFAULTS = {
 export const REPLY_RULES = [
   'Every function returns JSON. If it has "say", say those words naturally, then follow the rest of it.',
   'If it has "slots": "spoken" has the same times in plain words. If "say" already offers two times, just wait for their pick. Otherwise offer two, slowly, with a small pause between them ("I can do 3:30 this afternoon... or 5 this evening. Do either of those work for you?"). Never mention time zones. Say each time exactly as written in "spoken", with its own day words (never move a time to another day). If they asked for a day, offer the times on that day; if there is only one, offer it and the next one, exactly as written. If neither works, offer the next two. Then call book with the one they pick as "at", copied exactly from slots (same position as in spoken).',
-  'If it has "booked_for": say the close from step 5 ("Perfect, you’re all set for <spoken>. Any last-minute questions for me?"), answer briefly, then the goodbye, hang_up_pause, end_call.',
+  'If it has "ask_text": first say "Perfect, you’re all set for <spoken>.", then ask exactly the "ask_text" words, wait for their answer, and call text_ok with answer yes or no. Then continue the close from step 5 ("Any last-minute questions for me?", the goodbye, hang_up_pause, end_call). Never send or promise a text if they say no.',
+  'If it has "booked_for" and no "ask_text": say the close from step 5 ("Perfect, you’re all set for <spoken>. Any last-minute questions for me?"), answer briefly, then the goodbye, hang_up_pause, end_call.',
   'If it has "next": "check_status", call check_status again after about wait_secs seconds, and keep talking in between (see below).',
   'If it has "transfer_to": say the "say" words, then call transfer_call. Do not speak after that. Never say the "whisper" aloud: it is a private note for the specialist only.',
   'If it has "end": true, give a warm one-line goodbye and call end_call.',
@@ -140,6 +141,7 @@ export function retellTools(url) {
     fn('transfer_failed', 'You are back with the caller after a transfer that was not answered.'),
     fn('slots', 'More open times with a licensed specialist.'),
     fn('book', 'Book one of the times from slots.', obj({ at: str('The time exactly as given by slots.') }, ['at'])),
+    fn('text_ok', 'Only after book returned ask_text: their answer to "Can I text you the confirmation?".', obj({ answer: { type: 'string', enum: ['yes', 'no'] } }, ['answer'])),
     fn('hang_up_pause', 'Right after the final goodbye: waits about 3 seconds for them to hang up. Then call end_call without speaking.', obj({}), { speak_after_execution: true }),
     fn('outcome', 'Not now (no time booked), not interested, or wrong number.', obj({ result: { type: 'string', enum: SAID_OUTCOMES }, at: str('A better time, ISO 8601 with offset, if they gave one.'), summary: str('One line.') }, ['result'])),
     fn('stop', 'They asked not to be called again.'),

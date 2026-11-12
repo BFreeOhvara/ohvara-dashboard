@@ -1,0 +1,4 @@
+/* P969 — the plan line in the profile pop-up (opens Billing). Tokens only. */
+.fx-mplan { display: flex; align-items: center; gap: 8px; margin: 0 4px 6px; padding: 8px 10px; border-radius: 10px; background: var(--fx-fill); font-size: 12.5px; line-height: 1.4; color: var(--ov-mid); text-decoration: none; }
+.fx-mplan:hover { color: var(--ov-hi); }
+.fx-mplan:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

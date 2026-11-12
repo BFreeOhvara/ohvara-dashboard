@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { PhoneIncoming, CalendarDays, GripVertical, Search, Wallet, Clock, MapPin, Check, X, ClipboardCheck, Users, Link2, MessageSquareWarning, PhoneForwarded, Inbox } from 'lucide-react'
+import { PhoneIncoming, CalendarDays, GripVertical, Search, Wallet, RotateCcw, Clock, MapPin, Check, X, ClipboardCheck, Users, Link2, MessageSquareWarning, PhoneForwarded, Inbox } from 'lucide-react'
 import { useDataSource, useSampleLeads, useSampleLead, useSampleBilling, useSampleActions, useSampleSettings } from '../data'
 import { Avatar, Chip, Seg, Drawer, Empty, useNote } from '../kit'
 import { stageChip, OutcomeDrawer, OutcomePrompt, NoShowUndo } from '../LeadOutcome'
@@ -21,6 +21,9 @@ import { FirstRun } from '../DataState'
 import '../leads873.css'
 import '../p878.css'
 import { FilterPills } from '../FilterPills'
+import { ReactivateDrawer, ReactivationCards } from '../Reactivate'
+import { AddLeadsCard, AddServicingCard } from '../Products955'
+import { useProducts } from '../useProducts'
 
 // P898: Leads as a board of the agent's five statuses (agentView.js), left to right: Booked, No show, Follow up, Not
 // interested, Sold. P924: no Closed: a lead that never reached the agent (couldn't reach, opted out, wrong number)
@@ -29,23 +32,25 @@ import { FilterPills } from '../FilterPills'
 // aren't on the board. A lead that needs the agent says so on its card ("Mark
 // result"). Never call attempts, the text sequence or where a lead came from. A card opens the lead in a drawer at its
 // own URL (paths.lead); the board stays put behind it. On a desktop each lane scrolls inside itself.
-const shortWhen = l => {
+const shortWhen = (l, serve = true) => {
   const st = agentStatusOf(l)
   if (st === 'closed') return 'Closed'
   if (l.stage === 'ringing') return 'Now'
   if (isLiveCall(l)) return 'Live call'
   if (st === 'no_show') return 'Rebook link sent'
   if (st === 'not_interested') return notInterestedLine(l)
-  if (l.stage === 'sold') return l.submitted ? 'Submitted' : 'Add details'
+  if (l.stage === 'sold') return l.submitted ? 'Submitted' : serve ? 'Add details' : 'Sold'
   if (l.stage === 'follow_up' && l.follow) return `Call ${l.follow.split(',')[0]}`
   return l.appt ? l.appt.replace(/, Nov \d+,/, '') : 'No time'
 }
 const whenOf = l => (l.stage === 'ringing' ? 'Ringing now' : l.stage === 'showed' && !l.apptAt ? 'Live call' : l.stage === 'follow_up' && l.follow ? `Call back ${l.follow}` : l.appt || `Came in ${l.assigned_at}`)
-const tagOf = l => {
+const tagOf = (l, serve = true) => {
   if (l.stage === 'ringing') return ['warn', 'Ringing']
   if (needsResult(l, clockNow())) return ['violet', 'Mark result']
   if (agentCallTask(l)) return ['warn', 'Call them back']
-  if (l.stage === 'sold' && !l.submitted) return ['warn', 'Finish details']
+  if (serve && l.stage === 'sold' && !l.submitted) return ['warn', 'Finish details']
+  // P952: booked or transferred from one of the agent's old-lead lists.
+  if (l.reactivated) return ['green', 'Your own lead']
   if (confirmedByText(l)) return ['blue', 'Confirmed']
   return null
 }
@@ -53,7 +58,8 @@ const tagOf = l => {
 function LeadCard({ l, i, onResult, onGrab }) {
   const live = l.kind === 'live_call'
   const tone = laneOf(l).tone
-  const tag = tagOf(l)
+  const { serve } = useProducts()
+  const tag = tagOf(l, serve)
   const result = l.stage !== 'ringing' && needsResult(l, clockNow())
   // P978: only a lead waiting for its result can be picked up, and only onto a column its Mark result menu offers.
   const drag = canDrag(l)
@@ -66,7 +72,7 @@ function LeadCard({ l, i, onResult, onGrab }) {
       <h3>{l.first_name} {l.last_name}</h3>
       <p>{l.city}, {l.state} · {l.age_band}</p>
       <div className="fx-lcard-bot">
-        <span className="fx-big">{shortWhen(l)}</span>
+        <span className="fx-big">{shortWhen(l, serve)}</span>
         {result
           ? <button type="button" className="tp-primary sm fx-accent fx-over" onClick={() => onResult(l)}><ClipboardCheck size={14} />Mark result</button>
           : <Avatar name={`${l.first_name} ${l.last_name}`} tone={tone} />}
@@ -99,8 +105,10 @@ function Row({ e, lead, last }) {
   )
 }
 
-function LeadDrawer({ id, onClose }) {
+// P949: also the pop-up a booking opens on Calendar (`extra` = the calendar's own buttons, e.g. Can't make it).
+export function LeadDrawer({ id, onClose, extra = null }) {
   const { data: lead } = useSampleLead(id)
+  const { serve } = useProducts()
   const { moveLead, addLeadNote, askTeamToCall, sendBookingLink, rebookLead } = useSampleActions()
   const source = useDataSource()
   const note = useNote()
@@ -116,7 +124,7 @@ function LeadDrawer({ id, onClose }) {
   const lane = laneOf(lead)
   // P894: the drawer's buttons are the results this lead's status allows, nothing else.
   const steps = resultsFor(lead).map(k => ({ key: k, label: RESULT_LABEL[k], tone: agentStatus(RESULT_STATUS[k]).tone })) // P929: board colours
-  const chip = stageChip(lead.stage, lead)
+  const chip = stageChip(lead.stage, lead, { noServicing: !serve })
   const asks = [['Mortgage balance', lead.mortgage_balance_band], ['Age', lead.age_band], ['Homeowner', lead.homeowner ? 'Yes' : 'No'], ['Smoker', lead.smoker ? 'Yes' : 'No'], ['Best time', lead.best_time], ['Phone', lead.phone]]
   const pick = k => (k === 'booked' ? (moveLead(lead.id, 'booked'), note(`${name} moved to Booked`)) : setOutcome(k))
   const status = agentStatusOf(lead)
@@ -136,6 +144,7 @@ function LeadDrawer({ id, onClose }) {
         <CallOrCopy lead={lead} closed={closed} />
         <button type="button" className="tp-btn ov-ghost" disabled={closed} onClick={() => setPanel('team')}><Users size={14} />Ask our team to call</button>
         {lead.stage === 'follow_up' && <button type="button" className="tp-btn ov-ghost" disabled={lead.linkSent} onClick={() => { sendBookingLink(lead.id); note(`Booking link sent. ${lead.first_name} picks a time on your calendar`) }}><Link2 size={14} />{lead.linkSent ? 'Link sent' : 'Send booking link'}</button>}
+        {extra}
         <span className="tp-grow" />
         {canMove(lead, 'sold') && <button type="button" className={`tp-btn is-res is-${agentStatus('sold').tone}`} onClick={() => setOutcome('sold')}><Check size={14} />Sold</button>}
         {canMove(lead, 'not_interested') && <button type="button" className={`tp-btn is-res is-${agentStatus('not_interested').tone}`} onClick={() => setOutcome('not_interested')}><X size={14} />Not interested</button>}
@@ -143,7 +152,7 @@ function LeadDrawer({ id, onClose }) {
       <NoShowUndo lead={lead} />
       {task && <div className="lc-nudge is-static"><PhoneForwarded size={16} aria-hidden="true" /><span className="tp-grow"><b>{lead.first_name} asked you to call</b><small>{'“'}{lead.reply.text}{'”'} We told them someone calls shortly.</small></span><span className="lc-nudge-go">Call from your phone</span></div>}
       {needsResult(lead, clockNow()) && <button type="button" className="lc-nudge" onClick={() => setPrompt(true)}><ClipboardCheck size={16} aria-hidden="true" /><span className="tp-grow"><b>How did it go?</b><small>{isLiveCall(lead) ? 'You took the live call. Pick the result' : `The appointment at ${lead.appt} has passed`}</small></span><span className="lc-nudge-go">Mark result</span></button>}
-      {lead.stage === 'sold' && !lead.submitted && <Link to={paths.submit(lead.id)} className="fx-nudge">Finish the servicing details. The team takes it from there.</Link>}
+      {serve && lead.stage === 'sold' && !lead.submitted && <Link to={paths.submit(lead.id)} className="fx-nudge">Finish the servicing details. The team takes it from there.</Link>}
       {closed && <p className="lc-closed"><b>{closedReason(lead)}.</b> {lead.stage === 'opted_out' ? 'All calls and texts stopped.' : 'No more calls or texts.'} A reply from them brings them back as a new lead.</p>}
       {status === 'team' && <p className="lc-closed">Our team is calling {lead.first_name}. Nothing for you to do yet: they land on Booked.</p>}
       {status === 'no_show' && !lead.undo && <div className="lc-closed"><p><b>No show{lead.appt ? ` at ${lead.appt}` : ''}.</b> We sent {lead.first_name} a one-tap link to rebook. If they haven’t picked a time, our AI caller calls them to book again. When they rebook, they go back to Booked on your calendar.</p>
@@ -170,7 +179,7 @@ function LeadDrawer({ id, onClose }) {
   )
 }
 
-// P917: the status columns never shrink for the live-call cards. On a desktop the Leads page holds still at the window's
+// P917 (P968: now every block above the status pills): the status columns never shrink for the live-call cards. On a desktop the Leads page holds still at the window's
 // height and the lanes scroll inside; this hands the cards' height to the page (--lc-live-h on <html>, leads873.css) so
 // the window grows by exactly that much and scrolls, like Clients. When the cards go away the board keeps its size.
 function useLiveRoom() {
@@ -201,6 +210,10 @@ export default function Leads() {
   const [q, setQ] = useState('')
   const [spend, setSpend] = useState(false)
   const [params, setParams] = useSearchParams()
+  // P955: ?react=1 (Billing → Start a reactivation list) opens Import leads. Without Leads, no daily spend here.
+  const [react, setReact] = useState(() => params.get('react') === '1')
+  const { has } = useProducts()
+  const closeReact = () => { setReact(false); if (params.get('react')) { const p = new URLSearchParams(params); p.delete('react'); setParams(p, { replace: true }) } }
   // P924: no Closed on Leads. A lead that never reached the agent is never on their side (useSampleLeads).
   const ALL = LANES
   const laneKey = ALL.some(l => l.key === params.get('lane')) ? params.get('lane') : 'all'
@@ -226,12 +239,21 @@ export default function Leads() {
       <div className="fx-tools">
         <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a lead" placeholder="Find by name, city or phone" value={q} onChange={e => setQ(e.target.value)} /></label>
         <span className="tp-grow" />
-        <button type="button" className="fx-pillbtn" aria-label="Change your daily lead spend" onClick={() => setSpend(true)}><Wallet size={15} aria-hidden="true" /><b className="tp-money">{money(dailyTotal(billing.spend))}</b><small>a day</small></button>
+        {/* P952: bring a list of old leads; our AI calls them (Reactivate.jsx) */}
+        <button type="button" className="fx-pillbtn" onClick={() => setReact(true)}><RotateCcw size={15} aria-hidden="true" />Import leads</button>
+        {has('leads') && <button type="button" className="fx-pillbtn" aria-label="Change your daily lead spend" onClick={() => setSpend(true)}><Wallet size={15} aria-hidden="true" /><b className="tp-money">{money(dailyTotal(billing.spend))}</b><small>a day</small></button>}
       </div>
 
-      {/* P910: live calls pinned on top, ringing first, each with Sold · Follow up · Not interested. P917: the board
-          keeps its full size below them and the page scrolls (useLiveRoom) */}
-      <div ref={liveRef} className="lc-live"><LiveCalls calls={live} onGrab={grab} /></div>
+      {/* P968: everything above the status pills (imported lists, Add cards, live calls) sits in one block whose height is
+          handed to the page (useLiveRoom), so the stage columns below keep their full height and the window scrolls */}
+      <div ref={liveRef} className="lc-above">
+        <ReactivationCards />
+        <AddLeadsCard compact />
+        <AddServicingCard leads={leads} />
+        {/* P910: live calls pinned on top, ringing first, each with Sold · Follow up · Not interested. P917: the board
+            keeps its full size below them and the page scrolls */}
+        <div className="lc-live"><LiveCalls calls={live} onGrab={grab} /></div>
+      </div>
 
       {/* P893: each status pill in its own colour with its count, like the Clients page; the picked one goes darker */}
       <FilterPills label="Status" value={laneKey} onChange={setLane} items={[{ key: 'all', label: 'All', count: shown.filter(x => ALL.some(l => inLane(l, x))).length }, ...ALL.map(l => ({ key: l.key, label: l.label, tone: l.tone, count: shown.filter(x => inLane(l, x)).length }))]} />
@@ -257,6 +279,7 @@ export default function Leads() {
       {undoing.length > 0 && <div className="ldg-undo">{undoing.map(l => <NoShowUndo key={l.id} lead={l} />)}</div>}
       {id && (source === 'sample' || leads.some(l => l.id === id)) && <LeadDrawer id={id} onClose={() => navigate(paths.leads())} />}
       <SpendDrawer open={spend} onClose={() => setSpend(false)} />
+      <ReactivateDrawer open={react} onClose={closeReact} />
     </div>
   )
 }

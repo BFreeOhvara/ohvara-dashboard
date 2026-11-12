@@ -47,6 +47,7 @@
     "@tanstack/react-query": "^5.101.0",
     "@twilio/voice-sdk": "^2.18.3",
     "clsx": "^2.1.1",
+    "driver.js": "1.10.2",
     "jotai": "^2.20.2",
     "lucide-react": "^1.17.0",
     "qrcode": "^1.5.4",

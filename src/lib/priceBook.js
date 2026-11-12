@@ -66,7 +66,7 @@ export const BOOK = {
 
 // The admin billing settings (billing_settings, one row) as the migration seeds them.
 export const BILLING_SETTINGS = {
-  charge_mode: 'nightly', max_daily_cents: 50000, charge_hour: 20, retry_hour: 8, founding_count: 20, founding_months: 12,
+  charge_mode: 'nightly', max_daily_cents: 50000, charge_hour: 20, retry_hour: 8,
 }
 
 const dollars = c => (c == null ? null : c / 100)
@@ -96,7 +96,6 @@ export const pricesOf = (book = BOOK) => ({
 
 export const settingsOf = (st = BILLING_SETTINGS) => ({
   maxDaily: st.max_daily_cents / 100, chargeHour: st.charge_hour, retryHour: st.retry_hour,
-  foundingCount: st.founding_count, foundingMonths: st.founding_months,
 })
 export const SETTINGS = settingsOf(BILLING_SETTINGS)
 

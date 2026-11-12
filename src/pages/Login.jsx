@@ -7,6 +7,7 @@ import { isNativeApp, webUrl } from '../lib/native'
 import { CodeBoxes } from '../components/agent/AgentUI'
 import { AuField, PasswordField, AuCheck, AuAlert } from '../components/auth/AuthShell'
 import { OhvaraMark } from '../components/ui/OhvaraMark'
+import { LIMIT_KEYS, limitNote, safeReturnPath } from '../lib/sessionLimits'
 import { keepSubmitVisible, EMAIL_RE, SUPPORT_EMAIL } from '../components/auth/authUtils'
 import '@fontsource/urbanist/500.css'
 import '@fontsource/urbanist/600.css'
@@ -30,6 +31,11 @@ import './login.css'
 
 const WRONG = 'That email and password don’t match. Check them and try again.'
 const SITE = 'https://ohvara.com'
+
+// P970 — the page an agent was on when the portal signed them out (read here, cleared when they get there).
+function peekReturnPath() {
+  try { return safeReturnPath(sessionStorage.getItem(LIMIT_KEYS.back)) } catch { return null }
+}
 
 // DRAFT copy (P895) — for Brayden to OK or reword.
 function Story() {
@@ -100,6 +106,11 @@ export default function Login() {
   const [deleted] = useState(() => {
     try { const v = sessionStorage.getItem('ohvara-deleted') === '1'; sessionStorage.removeItem('ohvara-deleted'); return v } catch { return false }
   })
+  // P970 — an agent signed out for being away: the note shows once, and the page they were on is kept for after login.
+  const [limitText] = useState(() => {
+    try { const v = sessionStorage.getItem(LIMIT_KEYS.note); sessionStorage.removeItem(LIMIT_KEYS.note); return limitNote(v) } catch { return '' }
+  })
+  const [backTo] = useState(peekReturnPath)
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [keep, setKeep] = useState(() => keepSignedIn())
@@ -126,9 +137,12 @@ export default function Login() {
   useEffect(() => {
     if (loading || !profile || mfaRequired) return
     if (profile.role === 'admin')            navigate('/admin',               { replace: true })
-    else if (profile.role === 'agent')      navigate('/agent',   { replace: true })
+    else if (profile.role === 'agent') {
+      try { sessionStorage.removeItem(LIMIT_KEYS.back) } catch { /* storage blocked */ }
+      navigate(backTo || '/agent', { replace: true })
+    }
     else if (profile.role === 'fulfillment') navigate('/fulfillment',         { replace: true })
-  }, [profile, loading, mfaRequired, navigate])
+  }, [profile, loading, mfaRequired, navigate, backTo])
 
   useEffect(() => {
     if (!loading && session && !profile && !submitting && !mfaRequired) {
@@ -268,6 +282,7 @@ export default function Login() {
             <h2>Welcome back</h2>
             <p className="sx-card-sub">Sign in to your Ohvara account.</p>
             {deleted && <div className="sx-note" role="status">Your account was deleted. Thanks for working with Ohvara.</div>}
+            {limitText && <div className="sx-note" role="status">{limitText}</div>}
             {error && <AuAlert>{error}</AuAlert>}
             <AuField first label="Email" icon={Mail} type="text" inputMode="email" name="email" autoComplete="username"
               autoCapitalize="none" autoCorrect="off" spellCheck={false} value={identifier}

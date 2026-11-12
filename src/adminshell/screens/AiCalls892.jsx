@@ -46,9 +46,9 @@ export function AiCallerSettings() {
   return (
     <>
       <header className="fx-form-h"><h2>AI caller</h2><p>An AI calls every new form lead within {AI_RULES.firstCallSecs} seconds, says it{'’'}s Deedstone{'’'}s virtual assistant, then books it or checks the agent for a transfer. It never hands a new lead to a VA; calls people make to us still ring a VA.</p></header>
-      {/* P934: the on/off switch lives in Settings › Go live only; this section is how it calls. Two columns, no scroll:
+      {/* P950: no on/off switch in the portal (Ohvara turns it on with Brayden's yes); this section is how it calls. Two columns, no scroll:
           the wording and the call rules open in a slide-in. */}
-      <div className="tp-row tp-wrap"><AiSlot provider={d.provider} /><SampleTag>Sample</SampleTag><span className="ai-golive"><Power size={14} aria-hidden="true" />The AI caller is {live ? 'on' : 'off'}. Turn it on or off in Go live.</span></div>
+      <div className="tp-row tp-wrap"><AiSlot provider={d.provider} /><SampleTag>Sample</SampleTag><span className="ai-golive"><Power size={14} aria-hidden="true" />The AI caller is {live ? 'on' : 'off'}. Ohvara turns it on with Brayden{'’'}s yes.</span></div>
       <div className="adm-set-two">
       <div>
       <div className="adm-warn ai-stops" role="note"><ShieldAlert size={15} aria-hidden="true" /><div><b>Before it goes on (Brayden{'’'}s yes)</b>

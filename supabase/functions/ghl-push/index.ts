@@ -39,9 +39,15 @@ Deno.serve(req => handle(req, {
     await res.text().catch(() => '')
     return { ok: res.ok, status: res.status }
   },
-  settings: () => supabase.from('ghl_settings')
-    .select('enabled, location_id, workflow_new_inbound, workflow_appointment_reminder, workflow_no_show, workflow_opt_out, workflow_no_answer')
-    .eq('id', true).maybeSingle() as PromiseLike<{ data: Settings | null; error: { message: string } | null }>,
+  settings: async () => {
+    const r = await supabase.from('ghl_settings')
+      .select('enabled, location_id, workflow_new_inbound, workflow_appointment_reminder, workflow_no_show, workflow_opt_out, workflow_no_answer')
+      .eq('id', true).maybeSingle() as { data: Settings | null; error: { message: string } | null }
+    if (r.error || !r.data) return r
+    // P954: texts off (or unreadable) = nobody is added to a texting workflow.
+    const rc = await supabase.from('recovery_config').select('sms_live').limit(1).maybeSingle()
+    return { data: { ...r.data, texts_live: rc.data?.sms_live === true }, error: null }
+  },
   rpc: (fn, args) => supabase.rpc(fn, args),
   log: msg => console.error(msg),
 }))

@@ -1,0 +1,307 @@
+// P952 — Reactivate old leads: the rules in one place. Plain JS, no imports, so the portal (agent import, admin view),
+// the edge functions (Deno) and node --test run the same code. The database repeats the cleaning and the money
+// (migration 267_reactivation.sql) and is the one that counts; this file is what the agent sees before they pay.
+//
+// How it works (brain/ohvara/Reactivation.md): an agent uploads or pastes an aged-lead list on Leads → we clean it
+// (duplicates, people already theirs, states they aren't licensed in, bad numbers, our do-not-call list) → they tick
+// the responsibility line → a card check ($1 hold, released) starts it free → the national Do Not Call + litigator
+// scrub runs → our AI calls each person from the separate reactivation numbers, day 1, 2, 4, 7 and 14, 8 AM–8 PM
+// their time → each booked appointment or live call (30 s+) is charged $20, and only then does that person land on
+// the Leads board tagged Reactivated (P957, migration 269). No cold texts: only someone who booked AND said yes to
+// "Can I text you the confirmation?" gets the booking texts.
+
+export const REACT_DEFAULTS = {
+  deliveredCents: 2000,     // P957: per booked appointment or live call (admin setting). Upload is free.
+  transferMinSecs: 30,      // a live call counts once the agent was connected this long
+  newUntilPaid: 3,          // new accounts: limits until this many appointments are paid (admin settings)
+  newMaxCallable: 300,      // new accounts: callable people across their lists
+  newDailyCalls: 100,       // new accounts: AI calls a day
+  maxRows: 5000,            // per upload
+  cadenceDays: [0, 1, 3, 6, 13], // day 1, 2, 4, 7, 14 (days after the list starts)
+  maxAttempts: 5,           // admin setting, 1 to 5
+  callStart: '08:00',       // in the lead's own time zone, every zone of their state
+  callEnd: '20:00',
+  pauseStopRate: 0.05,      // stop/complaint share of people reached that pauses a list
+  pauseMinReached: 20,      // reached people before the rate counts
+}
+
+// The responsibility line the agent ticks before paying (wording is Brayden's; ship note).
+export const REACT_ATTEST = 'These people asked to be contacted about life insurance, and I have the right to have them contacted by phone. I’m responsible for this list.'
+export const REACT_ATTEST_VERSION = 'p957-v1'
+
+// P957: the one price line, everywhere (site, sign-up, Billing, the upload screen).
+export const REACT_PRICE_LINE = 'Free to upload. $20 per appointment or live call we deliver.'
+export const reactPriceLine = (cents = REACT_DEFAULTS.deliveredCents) =>
+  cents === 2000 ? REACT_PRICE_LINE : `Free to upload. ${usd0(cents)} per appointment or live call we deliver.`
+// What the AI asks after booking (ai-caller/reactivation.js says the same). Only a yes sends the booking texts.
+export const TEXT_ASK = 'Can I text you the confirmation?'
+
+// The AI's first words on a reactivation call (P940 script otherwise unchanged; {first} = first name).
+export const REACT_OPENER = 'Hey {first}, this is Max with Deedstone Insurance. A while back you’d asked about mortgage protection, I’m just following up to see if that’s still something you’re looking into.'
+export const reactOpener = first => REACT_OPENER.replace('{first}', String(first || '').trim() || 'there')
+
+// ── CSV / paste ─────────────────────────────────────────────────────────────────────────────────────────────────
+// Comma, tab or semicolon separated (a paste from a spreadsheet is tab separated); quotes, "" inside quotes, CRLF.
+export function sniffDelimiter(text) {
+  const first = String(text || '').split(/\r?\n/).find(l => l.trim()) || ''
+  const count = ch => first.split(ch).length - 1
+  const tabs = count('\t'), commas = count(','), semis = count(';')
+  if (tabs >= commas && tabs >= semis && tabs > 0) return '\t'
+  if (semis > commas) return ';'
+  return ','
+}
+
+export function parseCsv(text, delim = sniffDelimiter(text)) {
+  const s = String(text || '').replace(/^\uFEFF/, '')
+  const rows = []
+  let row = [], cell = '', q = false
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i]
+    if (q) {
+      if (ch === '"') { if (s[i + 1] === '"') { cell += '"'; i++ } else q = false }
+      else cell += ch
+    } else if (ch === '"' && cell === '') q = true
+    else if (ch === delim) { row.push(cell); cell = '' }
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && s[i + 1] === '\n') i++
+      row.push(cell); cell = ''
+      if (row.some(c => c.trim() !== '')) rows.push(row)
+      row = []
+    } else cell += ch
+  }
+  row.push(cell)
+  if (row.some(c => c.trim() !== '')) rows.push(row)
+  return rows.map(r => r.map(c => c.trim()))
+}
+
+// Columns an upload can map to. name OR first (+ last), phone and state are required.
+export const REACT_FIELDS = [
+  { key: 'name', label: 'Full name', hint: /^(full ?name|name|contact|lead ?name|client)$/i },
+  { key: 'first', label: 'First name', hint: /^(first|first ?name|fname|given)/i },
+  { key: 'last', label: 'Last name', hint: /^(last|last ?name|lname|surname|family)/i },
+  { key: 'phone', label: 'Phone', hint: /(phone|mobile|cell|number|tel)/i },
+  { key: 'state', label: 'State', hint: /^(state|st|province|region)$/i },
+  { key: 'age', label: 'Age', hint: /^(age|dob|birth)/i },
+  { key: 'mortgage', label: 'Mortgage amount', hint: /(mortgage|loan|balance)/i },
+  { key: 'lead_date', label: 'Lead date', hint: /(lead ?date|date|created|submitted)/i },
+  { key: 'source', label: 'Source', hint: /(source|vendor|company|campaign)/i },
+]
+export const REACT_REQUIRED = ['phone', 'state']
+
+// Best guess of which column holds what, from the header row. { field: columnIndex }.
+export function guessMapping(header = []) {
+  const map = {}
+  const used = new Set()
+  for (const f of REACT_FIELDS) {
+    const i = header.findIndex((h, j) => !used.has(j) && f.hint.test(String(h || '').trim()))
+    if (i >= 0) { map[f.key] = i; used.add(i) }
+  }
+  if (map.name != null && map.first != null) delete map.name // first/last win over a single name column
+  return map
+}
+
+// Is the first row a header? (no cell in it is a phone number)
+export const looksLikeHeader = row => Array.isArray(row) && row.length > 0 && !row.some(c => normalizePhone(c))
+
+export function mappingMissing(map = {}) {
+  const miss = REACT_REQUIRED.filter(k => map[k] == null)
+  if (map.name == null && map.first == null) miss.unshift('name')
+  return miss
+}
+
+// ── Values ──────────────────────────────────────────────────────────────────────────────────────────────────────
+// A dialable US number as +1XXXXXXXXXX, or null: 10 digits (or 11 with a leading 1), area code and exchange 2–9,
+// not 555-01xx (fiction), not N11 area codes, not all one digit.
+export function normalizePhone(raw) {
+  let d = String(raw ?? '').replace(/\D/g, '')
+  if (d.length === 11 && d[0] === '1') d = d.slice(1)
+  if (d.length !== 10) return null
+  if (!/^[2-9]\d{2}[2-9]\d{6}$/.test(d)) return null
+  if (/^(\d)\1{9}$/.test(d)) return null
+  if (d[1] === '1' && d[2] === '1') return null               // 211, 311 … 911
+  if (d.slice(3, 6) === '555' && d.slice(6, 8) === '01') return null
+  return `+1${d}`
+}
+
+const STATE_NAMES = {
+  alabama: 'AL', alaska: 'AK', arizona: 'AZ', arkansas: 'AR', california: 'CA', colorado: 'CO', connecticut: 'CT', delaware: 'DE',
+  'district of columbia': 'DC', florida: 'FL', georgia: 'GA', hawaii: 'HI', idaho: 'ID', illinois: 'IL', indiana: 'IN', iowa: 'IA',
+  kansas: 'KS', kentucky: 'KY', louisiana: 'LA', maine: 'ME', maryland: 'MD', massachusetts: 'MA', michigan: 'MI', minnesota: 'MN',
+  mississippi: 'MS', missouri: 'MO', montana: 'MT', nebraska: 'NE', nevada: 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ',
+  'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND', ohio: 'OH', oklahoma: 'OK', oregon: 'OR',
+  pennsylvania: 'PA', 'rhode island': 'RI', 'south carolina': 'SC', 'south dakota': 'SD', tennessee: 'TN', texas: 'TX', utah: 'UT',
+  vermont: 'VT', virginia: 'VA', washington: 'WA', 'west virginia': 'WV', wisconsin: 'WI', wyoming: 'WY',
+}
+const STATE_CODES = new Set(Object.values(STATE_NAMES))
+export function normalizeState(raw) {
+  const s = String(raw ?? '').trim()
+  if (!s) return null
+  const up = s.toUpperCase().replace(/\./g, '')
+  if (up.length === 2 && STATE_CODES.has(up)) return up
+  return STATE_NAMES[s.toLowerCase().replace(/\s+/g, ' ')] || null
+}
+
+const clip = (v, n) => { const s = String(v ?? '').trim(); return s ? s.slice(0, n) : null }
+
+// One row → a contact, or null fields where the row didn't have them.
+export function rowToContact(row, map) {
+  const at = k => (map[k] == null ? '' : row[map[k]] ?? '')
+  let first = clip(at('first'), 60), last = clip(at('last'), 60)
+  if (!first && map.name != null) {
+    const parts = String(at('name')).trim().split(/\s+/).filter(Boolean)
+    first = clip(parts[0], 60); last = clip(parts.slice(1).join(' '), 60)
+  }
+  const ageN = Number(String(at('age')).replace(/[^\d.]/g, ''))
+  const mort = Number(String(at('mortgage')).replace(/[^\d.]/g, ''))
+  return {
+    first, last,
+    phone: normalizePhone(at('phone')), rawPhone: clip(at('phone'), 40),
+    state: normalizeState(at('state')), rawState: clip(at('state'), 40),
+    age: ageN >= 18 && ageN <= 110 ? Math.round(ageN) : null,
+    mortgage_cents: mort > 0 && mort < 100000000 ? Math.round(mort * 100) : null,
+    lead_date: clip(at('lead_date'), 40),
+    source: clip(at('source'), 80),
+  }
+}
+
+// ── Cleaning ────────────────────────────────────────────────────────────────────────────────────────────────────
+// The reasons a row is taken off, in the order they're checked. Removed rows are never charged.
+export const REMOVED_ORDER = ['bad_number', 'duplicate', 'existing', 'unlicensed', 'dnc']
+export const REMOVED_LABEL = {
+  bad_number: 'Bad or missing numbers',
+  duplicate: 'Duplicates in the list',
+  existing: 'Already your leads or clients',
+  unlicensed: 'States you’re not licensed in',
+  dnc: 'On our do-not-call list',
+  national_dnc: 'On the national Do Not Call list',
+  litigator: 'Known TCPA litigators',
+  over_limit: 'Past your limit for now (kept off, not called)',
+}
+
+// rows: parsed rows WITHOUT the header. ctx: { licensed: ['TX', …], existing: Set|array of +1 phones,
+// dnc: Set|array of +1 phones (our internal list + people who opted out) }.
+export function cleanList(rows, map, ctx = {}) {
+  const licensed = new Set((ctx.licensed || []).map(s => String(s).toUpperCase()))
+  const existing = ctx.existing instanceof Set ? ctx.existing : new Set(ctx.existing || [])
+  const dnc = ctx.dnc instanceof Set ? ctx.dnc : new Set(ctx.dnc || [])
+  const seen = new Set()
+  const kept = [], removed = []
+  const counts = Object.fromEntries(REMOVED_ORDER.map(k => [k, 0]))
+  for (const row of rows) {
+    const c = rowToContact(row, map)
+    let why = null
+    if (!c.phone) why = 'bad_number'
+    else if (seen.has(c.phone)) why = 'duplicate'
+    else if (existing.has(c.phone)) why = 'existing'
+    else if (!c.state || !licensed.has(c.state)) why = 'unlicensed'
+    else if (dnc.has(c.phone)) why = 'dnc'
+    if (c.phone) seen.add(c.phone)
+    if (why) { counts[why]++; removed.push({ ...c, why }) } else kept.push(c)
+  }
+  return { total: rows.length, kept, removed, counts, callable: kept.length }
+}
+
+// ── Money ───────────────────────────────────────────────────────────────────────────────────────────────────────
+// P957: nothing is charged for a list. limits = reactivation_limits() ({ room, max_callable, is_new, … }); people past
+// the room are kept off the list (over_limit) and never called.
+export function listFit(callable, limits = null) {
+  const n = Math.max(0, Math.floor(callable || 0))
+  const room = limits && limits.room != null && Number.isFinite(Number(limits.room)) ? Math.max(0, Number(limits.room)) : Infinity
+  const fits = Math.min(n, room)
+  return { n, fits, over: n - fits, empty: fits === 0 }
+}
+export const usd0 = c => `$${(Math.round(c) / 100).toLocaleString('en-US', { minimumFractionDigits: (c % 100) ? 2 : 0, maximumFractionDigits: 2 })}`
+// Billing lines. A delivery: "Reactivation · appointment booked · $20" / "· live call · $20" (+ "· paid back" when a
+// live call turned out under 30 s). Old P952 per-list charges keep their own line.
+export const deliveryLine = d => `Your own leads · ${d.kind === 'transferred' ? 'live call' : 'appointment booked'} · ${usd0(d.amount_cents ?? REACT_DEFAULTS.deliveredCents)}${d.refunded_cents ? ' · paid back' : ''}`
+export const billingLine = l => (l.kind === 'booked' || l.kind === 'transferred' ? deliveryLine(l)
+  : `Your own leads · ${l.callable ?? l.n} leads · ${usd0(l.amount_cents ?? l.cents)}${l.refunded_cents ? ` · ${usd0(l.refunded_cents)} back` : ''}`)
+// The limits in words for a new account.
+export const limitsLine = (lim = {}) => (lim.is_new
+  ? `New accounts: up to ${lim.max_callable ?? REACT_DEFAULTS.newMaxCallable} people and ${lim.daily_calls ?? REACT_DEFAULTS.newDailyCalls} calls a day until ${lim.until_paid ?? REACT_DEFAULTS.newUntilPaid} appointments are paid.`
+  : '')
+// The card check's refusals, in words (lead-spend reactivation_start codes).
+export const CARD_WORDS = {
+  prepaid: 'Prepaid and gift cards can’t be used. Add a credit or debit card.',
+  shared_card: 'This card is already on another Ohvara account. Use a different card, or contact us.',
+  declined: 'Your card was declined. Try another card.',
+  no_card: 'Add a card first.',
+  needs_action: 'Your bank wants you to confirm the card.',
+  card_owed: 'A charge on your card failed. Update your card in Billing and your lists start again.',
+  over_limit: 'You’ve reached your limit for now. It goes up once 3 appointments are paid.',
+  reactivation_off: 'Importing opens soon. Nothing was charged.',
+}
+
+// ── Calling ─────────────────────────────────────────────────────────────────────────────────────────────────────
+// When attempt k (1-based) is due, from the list's start. Past the last attempt → null (stop).
+export function attemptDueAt(startIso, k, s = REACT_DEFAULTS) {
+  const days = s.cadenceDays || REACT_DEFAULTS.cadenceDays
+  const max = Math.min(s.maxAttempts ?? REACT_DEFAULTS.maxAttempts, days.length)
+  if (k < 1 || k > max) return null
+  return new Date(new Date(startIso).getTime() + days[k - 1] * 86400000).toISOString()
+}
+
+// What a call's result does to the person (the database's reactivation_after_call does the same).
+//   done: no more calls · dnc: on our do-not-call list for good · board: lands on the agent's Leads board
+export function afterCall(outcome, attempt, s = REACT_DEFAULTS) {
+  const max = Math.min(s.maxAttempts ?? REACT_DEFAULTS.maxAttempts, (s.cadenceDays || REACT_DEFAULTS.cadenceDays).length)
+  switch (outcome) {
+    case 'booked': return { status: 'booked', done: true, board: true }
+    case 'transferred': return { status: 'transferred', done: true, board: true }
+    case 'hard_no': return { status: 'not_interested', done: true, dnc: true }
+    case 'opt_out': return { status: 'stop', done: true, dnc: true }
+    case 'wrong_number': return { status: 'wrong_number', done: true }
+    case 'not_now': return attempt >= max ? { status: 'not_now', done: true, reached: true } : { status: 'queued', reached: true }
+    default: return attempt >= max ? { status: 'no_answer', done: true } : { status: 'queued' }
+  }
+}
+
+// Inside 8 AM–8 PM (and the state's own stricter hours) in the given zone? hours = { start:'08:00', end:'20:00' }.
+export function inWindow(localHHMM, hours = { start: REACT_DEFAULTS.callStart, end: REACT_DEFAULTS.callEnd }) {
+  return localHHMM >= hours.start && localHHMM < hours.end
+}
+
+// ── Progress and quality ────────────────────────────────────────────────────────────────────────────────────────
+// people: [{ status, attempts }]. worked = called at least once; reached = someone answered (booked, transferred,
+// not now, not interested, stop); remaining = still to be called.
+export function listProgress(people = []) {
+  const p = { total: people.length, worked: 0, reached: 0, booked: 0, transferred: 0, stop: 0, wrong: 0, remaining: 0 }
+  for (const x of people) {
+    if ((x.attempts || 0) > 0) p.worked++
+    if (['booked', 'transferred', 'not_now', 'not_interested', 'stop'].includes(x.status) || x.reached) p.reached++
+    if (x.status === 'booked') p.booked++
+    if (x.status === 'transferred') p.transferred++
+    if (x.status === 'stop' || x.complaint) p.stop++
+    if (x.status === 'wrong_number') p.wrong++
+    if (['queued', 'calling', 'waiting_scrub'].includes(x.status)) p.remaining++
+  }
+  return p
+}
+
+const pct = (a, b) => (b > 0 ? a / b : 0)
+// Contact rate (reached ÷ worked), booked rate (booked + transferred ÷ reached), stop rate (stop ÷ reached).
+// A list pauses itself once enough people were reached and the stop rate is over the limit.
+export function listQuality(p, s = REACT_DEFAULTS) {
+  const contact = pct(p.reached, p.worked)
+  const booked = pct(p.booked + p.transferred, p.reached)
+  const stop = pct(p.stop, p.reached)
+  const minR = s.pauseMinReached ?? REACT_DEFAULTS.pauseMinReached
+  const lim = s.pauseStopRate ?? REACT_DEFAULTS.pauseStopRate
+  return { contact, booked, stop, pause: p.reached >= minR && stop > lim }
+}
+export const pctText = r => `${Math.round(r * 100)}%`
+
+// List statuses in words (agent and admin).
+// statusOf(list): the [tone, word] for a list, card pauses included.
+export const statusOf = l => (l?.status === 'paused' && l?.pause_kind === 'card' ? LIST_STATUS.card : LIST_STATUS[l?.status] || ['mute', l?.status])
+export const LIST_STATUS = {
+  draft: ['mute', 'Not started'],
+  waiting_payment: ['warn', 'Paying'],     // P952 lists only
+  payment_failed: ['rose', 'Card declined'],
+  waiting_scrub: ['blue', 'Checking the list'],
+  working: ['green', 'Calling'],
+  paused: ['warn', 'Paused'],
+  card: ['rose', 'Paused: card declined'], // P957: pause_kind 'card'
+  done: ['mute', 'Finished'],
+  cancelled: ['mute', 'Cancelled'],
+}

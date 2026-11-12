@@ -89,12 +89,11 @@ test('P945: correction requests are gone everywhere; pay is scheduled hours minu
   assert.match(src('./adminshell/screens/Team879.jsx'), /scheduled hours minus days off/)
 })
 
-test('P945: owner payouts: own card, Stripe bank, off until the Go live switch; migration 265 holds the server side', () => {
+test('P945: owner payouts: own card, Stripe bank, off until Ohvara turns it on (P950: no switch); migration 265 holds the server side', () => {
   const b = src('./adminshell/screens/Billing.jsx')
   assert.match(b, /function YourPayouts\(\)/)
   assert.match(b, /ownerOf\(profile\?\.full_name\)/)
-  assert.match(src('./adminshell/screens/Launch906.jsx'), /key: 'owner_payouts_live'/)
-  assert.match(src('./lib/admReal.js'), /owner_payouts_live: \['recovery_config', 'owner_payouts_live'\]/)
+  assert.match(src('./lib/admReal.js'), /owner_payouts_live: !!rc\.owner_payouts_live/)
   const m = src('../supabase/migrations/265_admin_last_pass.sql')
   assert.match(m, /owner_payouts_live boolean not null default false/)
   assert.match(m, /function public\.booked_call_escalation_sweep\(\)/)

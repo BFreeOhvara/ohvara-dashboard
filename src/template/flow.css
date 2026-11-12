@@ -422,8 +422,8 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
 /* Phone: tabs scroll in a strip, the rail becomes the bottom bar, drawers are full-height sheets ------------------ */
 @media (max-width: 999.98px) {
   .fx-rec-layer .fx-scrim { display: none; } /* the sheet covers the whole screen */
-  .fx.tp-app { padding: 0 0 100px; }
-  .fx .fx-ptop { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 16px; border-radius: 0; border-width: 0 0 1px; box-shadow: none; }
+  .fx.tp-app { padding: 0 0 calc(100px + env(safe-area-inset-bottom, 0px)); }
+  .fx .fx-ptop { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 8px; margin: 0; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px; border-radius: 0; border-width: 0 0 1px; box-shadow: none; }
   .fx .fx-ptop .fx-me { width: 36px; height: 36px; }
   .fx .fx-ptop .fx-ib { width: 36px; height: 36px; box-shadow: none; }
   .fx .fx-top { display: block; position: static; margin: 12px 0 0; padding: 0 16px; }
@@ -459,7 +459,7 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
   .fx-hist { grid-template-columns: minmax(0, 1fr); }
   .fx-feed-r time { display: none; }
 
-  .fx .fx-bar { position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 40; height: 64px; padding: 6px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; border-radius: 24px; }
+  .fx .fx-bar { position: fixed; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 40; height: 64px; padding: 6px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; border-radius: 24px; }
   .fx-btab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 50px; border-radius: 16px; font-size: 10.5px; font-weight: 500; color: var(--ov-mid); text-align: center; }
   .fx-btab:active { transform: scale(.92); }
   .fx-btab.is-plus { color: var(--ov-hi); }

@@ -215,12 +215,6 @@ export function switchesOf(app = {}, rc = {}) {
     submit_live: !!app.submit_live, carrier_lookup_live: !!app.carrier_lookup_live, signup_open: !!app.self_signup_open,
   }
 }
-// Where each switch is stored, for the real setSwitch.
-export const SWITCH_HOME = {
-  sms_live: ['recovery_config', 'sms_live'], voice_live: ['recovery_config', 'voice_live'], recording_live: ['recovery_config', 'recording_live'],
-  payouts_live: ['recovery_config', 'payouts_live'], owner_payouts_live: ['recovery_config', 'owner_payouts_live'], billing_enforced: ['app_settings', 'agent_billing_enforced'], submit_live: ['app_settings', 'submit_live'],
-  carrier_lookup_live: ['app_settings', 'carrier_lookup_live'], signup_open: ['app_settings', 'self_signup_open'],
-}
 // Connect on real data: GoHighLevel isn't connected until the bridge is on, so every engine piece reads empty.
 export function connectOf(ghl, keySaved, campaigns = []) {
   return {

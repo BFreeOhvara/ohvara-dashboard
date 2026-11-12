@@ -27,10 +27,10 @@ export function isFulShellPath(pathname) {
   return PATHS.includes(p) || RECORD.test(p)
 }
 
-// A Fulfillment rep on the web gets the shell. Admin keeps today's pages (they redirect to /admin),
-// and the phone app keeps today's pages, the same rule as the agent shell.
-export function showFulShell({ role, pathname, native }) {
-  return role === 'fulfillment' && isFulShellPath(pathname) && !native
+// A Fulfillment rep gets the shell, on the web and in the phone app alike (P956). Admin keeps today's pages (they
+// redirect to /admin).
+export function showFulShell({ role, pathname }) {
+  return role === 'fulfillment' && isFulShellPath(pathname)
 }
 
 // The top tabs, in order. Messages and Settings live on the rail and the top right, as on the agent side.

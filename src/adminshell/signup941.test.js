@@ -118,5 +118,5 @@ test('the checkout asks for the details before a lead plan is paid, and saves th
   const ui = src('../components/agent/SignupCheckout.jsx')
   assert.match(ui, /missing\.length === 0/)
   assert.match(ui, /if \(lead\) await saveSignupDetails\(supabase, details\)\s*\n\s*const r = await signupPay/)
-  assert.match(ui, /\{lead && <SignupDetails /)
+  assert.match(ui, /\{lead && <>[\s\S]*?<SignupDetails /) // P955: inside the Leads block of "What do you need?"
 })

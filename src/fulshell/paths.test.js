@@ -7,11 +7,11 @@ test('a Fulfillment rep on the web gets the shell at every Fulfillment address',
   assert.ok(showFulShell({ role: 'fulfillment', pathname: '/fulfillment/', native: false }))
 })
 
-test('nobody else, and not in the phone app', () => {
+test('nobody else; the phone app gets it too (P956)', () => {
   assert.equal(showFulShell({ role: 'admin', pathname: '/fulfillment', native: false }), false)
   assert.equal(showFulShell({ role: 'agent', pathname: '/messages', native: false }), false)
   assert.equal(showFulShell({ role: undefined, pathname: '/fulfillment', native: false }), false)
-  assert.equal(showFulShell({ role: 'fulfillment', pathname: '/fulfillment', native: true }), false)
+  assert.equal(showFulShell({ role: 'fulfillment', pathname: '/fulfillment', native: true }), true)
   assert.equal(isFulShellPath('/fulfillment/getting-paid'), false)
   assert.equal(isFulShellPath('/agent'), false)
 })

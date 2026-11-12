@@ -63,12 +63,14 @@ test('P934: the split is fixed at 50/50 (no admin can change it), and each owner
   assert.match(b, /Agent lead spend \(passed to Meta\)/) // P913: shown apart, in no total
 })
 
-test('the clock shows on Overview only in all three portals', () => {
-  for (const p of ['../template/TemplateFrame.jsx', '../template/ful/FulFrame.jsx', './AdminFrame.jsx']) {
+test('the clock shows on Overview only in all three portals (P964: admin on the Live status line)', () => {
+  for (const p of ['../template/TemplateFrame.jsx', '../template/ful/FulFrame.jsx']) {
     const s = src(p)
     assert.match(s, /layout === 'overview' && <LiveClock tz=/, p)
     assert.equal(s.match(/<LiveClock/g).length, 1, p)
   }
+  assert.equal(src('./screens/Overview.jsx').match(/<LiveClock/g).length, 1)
+  assert.doesNotMatch(src('./AdminFrame.jsx'), /<LiveClock/)
 })
 
 test('Get the app is on the agent rail and the VA rail, same icon, next to Help', () => {

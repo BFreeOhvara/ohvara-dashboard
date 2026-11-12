@@ -1,0 +1,32 @@
+/* P949 — Your states (agent Billing): the state grid, the change line, the history; and Billing's Booking desk card. */
+.st-now { display: flex; flex-direction: column; gap: 10px; }
+.st-now-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.st-now-h svg { align-self: center; color: var(--ov-mid); }
+.st-now-h b { font-size: 15px; color: var(--ov-hi); }
+.st-now-h small { font-size: 12.5px; color: var(--ov-mid); }
+.st-grid .wz-state { min-width: 44px; }
+.st-grid .wz-state.is-new { border-style: dashed; }
+.st-diff { display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-radius: 16px; background: var(--sh-cf-sky); color: var(--sh-ci); }
+.st-diff b { font-size: 14px; }
+.st-diff small { font-size: 12.5px; opacity: .85; }
+.st-why { flex-basis: 100%; font-size: 12px; color: var(--ov-mid); }
+.st-hist-box h3 { margin: 6px 0 8px; font-size: 13px; font-weight: 700; color: var(--ov-hi); }
+.st-hist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.st-hist li { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 14px; border: 1px solid var(--ov-line); }
+.st-hist li > .tp-grow { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.st-hist b { font-size: 13.5px; color: var(--ov-hi); font-family: 'JetBrains Mono', ui-monospace, monospace; }
+.st-hist small { font-size: 12px; color: var(--ov-mid); }
+
+/* Billing: Paid ahead and the Booking desk card share the right column beside Charges. */
+.bl910 .bl-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.bl910 .bl-side > .fx-tile { margin: 0; }
+.bl910 .bl-side > .bl-paid { flex: none; }
+.bl910 .bl-desk { flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px; }
+.bl-desk p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ov-hi); }
+.bl-desk .bl-desk-pct { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+.bl-desk-nums { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: auto 0 0; }
+.bl-desk-nums > div { min-width: 0; padding: 12px 14px; border-radius: 16px; background: var(--sh-cf-sky); color: var(--sh-ci); }
+.bl-desk-nums dt { font-size: 12px; opacity: .8; }
+.bl-desk-nums dd { margin: 2px 0 0; display: flex; flex-direction: column; gap: 2px; }
+.bl-desk-nums dd b { font-size: 22px; font-weight: 600; }
+.bl-desk-nums dd small { font-size: 12px; opacity: .8; }

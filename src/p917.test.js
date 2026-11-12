@@ -31,7 +31,7 @@ test('Leads keeps full-size columns under the live cards (the page grows by thei
 
 test('Billing looks like billing: plan with Change plan, the card (brand, last 4, expiry), next charge, charges, lock', () => {
   const b = read('./template/screens/Billing.jsx')
-  for (const s of ['aria-label="Your plan"', 'Change plan', 'aria-label="Payment method"', 'Update card', 'Next charge', 'aria-label="Charges"', 'Founding price lock']) assert.ok(b.includes(s), s)
+  for (const s of ['aria-label="Your plan"', 'Change plan', 'aria-label="Payment method"', 'Update card', 'Next charge', 'aria-label="Charges"']) assert.ok(b.includes(s), s)
   assert.deepEqual(cardOf({ label: 'Visa ending 4242', onFile: true }), { brand: 'Visa', last4: '4242', exp: null })
   assert.deepEqual(cardOf({ label: 'Visa ending 4242', brand: 'Visa', last4: '4242', exp: '08/28', onFile: true }), { brand: 'Visa', last4: '4242', exp: '08/28' })
   assert.equal(cardOf({ onFile: false }), null)

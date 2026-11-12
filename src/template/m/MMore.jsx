@@ -15,6 +15,11 @@ import { TalkDrawer } from '../Talk'
 import { ReportBug } from '../ReportBug'
 import { Sheet } from './Sheet'
 import { mp } from './mpaths'
+import { isNativeApp } from '../../lib/native'
+import { NATIVE_BILLING_TEXT } from '../../components/native/NativeBillingNote'
+import { useProducts } from '../useProducts'
+import { AppAbout } from '../../components/native/AppAbout'
+import { label as productsLabel } from '../../lib/products.js'
 
 // P908 — More on a phone: you, live-transfer status, then stacked rows for Billing, Activity and Settings (their full
 // pages, with a back arrow), Messages, Submit, the app, help, sign out and delete. Rows 64 px.
@@ -27,6 +32,7 @@ function MoreRow({ to, icon: Icon, label, sub, right, onClick, danger }) {
 
 export default function MMore() {
   const account = useAccount()
+  const native = isNativeApp()
   const [theme, setTheme] = useTheme()
   const { data: b } = useSampleBilling()
   const { data: s } = useSampleSettings()
@@ -40,29 +46,32 @@ export default function MMore() {
   const duty = b.take?.mode === 'both' && inLiveHours(b.take.hours, b.take.tz)
   const unread = threads.reduce((n, t) => n + t.unread, 0)
   const days = s.hours?.days?.length
+  // P955: without Leads there's no plan by spend, nightly charge or live transfers to show here.
+  const { picked, has } = useProducts()
+  const leads = has('leads')
   return (
     <div className="mx-page">
       <section className="mx-card mx-me-card">
         <span className={`mx-me is-big av-${avatarHue(account.name)}`} aria-hidden="true">{initials(account.name).toUpperCase()}</span>
-        <span className="tp-grow"><b>{account.name}</b><small>Agent · {planOf(b).label} plan</small></span>
+        <span className="tp-grow"><b>{account.name}</b><small>Agent · {leads ? `${planOf(b).label} plan` : productsLabel(picked)}</small></span>
         <button type="button" className="mx-ib is-soft" aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'} onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={20} aria-hidden="true" /> : <Moon size={20} aria-hidden="true" />}</button>
       </section>
 
-      <Link to={`${mp.settings()}?tab=calls`} className={`mx-duty${duty ? ' is-on' : ''}`}>
+      {leads && <Link to={`${mp.settings()}?tab=calls`} className={`mx-duty${duty ? ' is-on' : ''}`}>
         <Radio size={18} aria-hidden="true" />
         <span className="tp-grow"><b>{duty ? 'Live transfers ring you now' : 'Live transfers off now'}</b><small>{duty ? 'Inside your hours' : 'Outside your hours: we book callers'}</small></span>
         <ChevronRight size={18} aria-hidden="true" />
-      </Link>
+      </Link>}
 
       <ul className="mx-stack">
-        <MoreRow to={mp.billing()} icon={CreditCard} label="Billing" sub={`${money(dailyTotal(b.spend))} a day · next charge ${money(b.nightNow.tonight.total)} ${b.nightly.at.toLowerCase()}`} />
+        <MoreRow to={mp.billing()} icon={CreditCard} label="Billing" sub={native ? NATIVE_BILLING_TEXT : leads ? `${money(dailyTotal(b.spend))} a day · next charge ${money(b.nightNow.tonight.total)} ${b.nightly.at.toLowerCase()}` : `Your products: ${productsLabel(picked)}`} />
         <MoreRow to={mp.activity()} icon={History} label="Activity" sub={act[0] ? `${act[0].who}: ${act[0].text}` : 'Everything our team did for you'} />
         <MoreRow to={mp.settings()} icon={Settings} label="Settings" sub={s.hours ? `${s.hours.start} to ${s.hours.end}${days ? ` · ${days} days` : ''}` : 'Your hours, alerts and account'} />
       </ul>
       <ul className="mx-stack">
         <MoreRow to={paths.messages()} icon={MessageSquare} label="Messages" sub="You and our team" right={unread > 0 ? <span className="mx-count">{unread}</span> : null} />
         <MoreRow to={paths.submit()} icon={FileUp} label="Submit a policy" sub="A sale for servicing" />
-        <MoreRow icon={Smartphone} label="Get the phone app" sub="Alerts the moment a lead comes in" onClick={() => setPanel('app')} />
+        {!native && <MoreRow icon={Smartphone} label="Get the phone app" sub="Alerts the moment a lead comes in" onClick={() => setPanel('app')} />}
         <MoreRow icon={CircleHelp} label="Help and support" sub="Talk to someone, or report a bug" onClick={() => setPanel('help')} />
       </ul>
       {isTemplateAddress() && (
@@ -76,6 +85,8 @@ export default function MMore() {
         <MoreRow icon={LogOut} label="Sign out" onClick={() => (account.live ? account.signOut() : note('Sign out works once you sign in for real'))} />
         <MoreRow icon={Trash2} label="Delete my account" danger onClick={() => (DeleteDialog ? setPanel('delete') : note('Delete my account works once you sign in for real'))} />
       </ul>
+
+      <AppAbout style={{ margin: '4px 8px 12px' }} />
 
       <GetApp open={panel === 'app'} onClose={close} />
       <Help open={panel === 'help'} onClose={close} onBug={() => setPanel('bug')} onTalk={() => setPanel('talk')} />

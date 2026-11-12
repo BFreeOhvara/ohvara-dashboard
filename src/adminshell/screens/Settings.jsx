@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import {
-  User, Users, Power, Wallet, History, SlidersHorizontal, LogOut, Mail, UserPlus, ArrowUpRight, Search, ShieldCheck,
-  ShieldOff, Lock, Bot, CreditCard, Hand,
+  User, Users, Wallet, History, SlidersHorizontal, LogOut, Mail, UserPlus, ArrowUpRight, Search, ShieldCheck,
+  ShieldOff, Lock, Bot, CreditCard, Hand, Smartphone,
 } from 'lucide-react'
 import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmAudit, useAdmDay, useAdmSource, ME } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
@@ -15,12 +15,14 @@ import { AddSomeone } from '../AdminFrame'
 import { ap } from '../paths'
 import { PhoneInput } from '../../template/PhoneInput'
 import { ZONES } from '../words'
-import { GoLive, BookingGap } from './Launch906'
+import { BookingGap } from './Launch906'
 import { BookCheck } from './BookCheck899'
 import { WelcomeLoad } from './WelcomeLoad891'
 import { AiCallerSettings } from './AiCalls892'
 import { StripeBilling } from './Billing933'
 import { useCallOpenMin, saveCallOpenMin } from '../../hooks/useCallOpen'
+import { AppAbout } from '../../components/native/AppAbout'
+import { AppReviewLogins } from './AppReview962'
 
 // P849 — admin Settings on the agent page's shape: the profile card and Sign out on the left, one panel whose stretch
 // tabs switch sections. Sections: Profile, People & access (everyone with a login, as Users does today), Switches,
@@ -29,12 +31,12 @@ import { useCallOpenMin, saveCallOpenMin } from '../../hooks/useCallOpen'
 // P934 (Brayden, Nov 10): the tabs fit one row at 1440 wide. Settings holds only what is set: the working pages (Bug
 // reports, Deedstone numbers and VA pods (with the P932 hold line), Carrier playbook, Wording to approve, Training,
 // Compliance) are their own rail pages
-// (screens/Work934.jsx); Lead split and the Call ads switch are gone; Switches is one small Go live card; Stripe's
+// (screens/Work934.jsx); Lead split and the Call ads switch are gone; there is no Go live card (P950: CC turns live things on with Brayden's yes); Stripe's
 // setup checks are their own tab so no section scrolls. Old ?tab= links land where the section went (MOVED).
-const TABS = [['profile', 'Profile', User], ['people', 'People', Users], ['golive', 'Go live', Power], ['pay', 'Pay', Wallet], ['stripe', 'Stripe', CreditCard],
-  ['servicing', 'Servicing', Hand], ['ai', 'AI caller', Bot], ['audit', 'Audit log', History], ['prefs', 'Preferences', SlidersHorizontal]]
+const TABS = [['profile', 'Profile', User], ['people', 'People', Users], ['pay', 'Pay', Wallet], ['stripe', 'Stripe', CreditCard],
+  ['servicing', 'Servicing', Hand], ['ai', 'AI caller', Bot], ['audit', 'Audit log', History], ['review', 'Review', Smartphone], ['prefs', 'Preferences', SlidersHorizontal]]
 const MOVED = { bugs: 'bugs', numbers: 'numbers', compliance: 'compliance', hold: 'numbers' } // P936: wording, training, playbook gone
-const RENAMED = { switches: 'golive', billing: 'stripe', split: 'golive' }
+const RENAMED = { switches: 'profile', golive: 'profile', billing: 'stripe', split: 'profile' } // P950: Go live is gone; old links land on Profile
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
 
 function FormFoot({ dirty, onDiscard, onSave, label = 'Save changes' }) {
@@ -137,7 +139,7 @@ function PayRules() {
   const [d, setD] = useState(s.payRules)
   const [b, setB] = useState(s.billing)
   const bnum = (k, lo, hi) => e => setB({ ...b, [k]: Math.min(hi, Math.max(lo, Number(e.target.value.replace(/[^0-9]/g, '')) || lo)) })
-  const bsame = ['maxDaily', 'chargeHour', 'retryHour', 'foundingCount', 'foundingMonths'].every(k => b[k] === s.billing[k])
+  const bsame = ['maxDaily', 'chargeHour', 'retryHour'].every(k => b[k] === s.billing[k])
   const num = k => e => setD({ ...d, [k]: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, '')) || 0) })
   return (
     <>
@@ -156,8 +158,6 @@ function PayRules() {
         <Field label="Max daily lead spend ($)" hint="Per agent. Raise one agent on Revenue › Agent billing"><input className="tp-money" inputMode="numeric" value={b.maxDaily} onChange={bnum('maxDaily', 50, 1000)} /></Field>
         <Field label="Nightly charge (hour, Central)" hint={`24-hour clock · ${b.chargeHour > 12 ? b.chargeHour - 12 : b.chargeHour} ${b.chargeHour >= 12 ? 'PM' : 'AM'}`}><input className="tp-num" inputMode="numeric" value={b.chargeHour} onChange={bnum('chargeHour', 12, 23)} /></Field>
         <Field label="Morning retry (hour, Central)" hint={`${b.retryHour} AM`}><input className="tp-num" inputMode="numeric" value={b.retryHour} onChange={bnum('retryHour', 5, 11)} /></Field>
-        <Field label="Founding agents" hint="The first paying agents keep today's prices"><input className="tp-num" inputMode="numeric" value={b.foundingCount} onChange={bnum('foundingCount', 0, 500)} /></Field>
-        <Field label="Founding lock (months)"><input className="tp-num" inputMode="numeric" value={b.foundingMonths} onChange={bnum('foundingMonths', 1, 60)} /></Field>
       </div>
       <FormFoot dirty={!bsame} onDiscard={() => setB(s.billing)} onSave={() => { saveBilling(b); note('Lead billing saved (sample)') }} />
       </div></div>
@@ -235,6 +235,7 @@ export default function Settings() {
       <div className="fx-set-side">
         <ProfileCard name={name} email={s.profile.email} />
         <button type="button" className="fx-tile fx-signout" onClick={signOut}><LogOut size={16} aria-hidden="true" />Sign out</button>
+        <AppAbout />
       </div>
       <section className="fx-tile fx-panel" aria-label="Settings">
         <PillTabs label="Settings sections" className="fx-ptabs adm-settabs" itemClass="fx-ptab" value={tab} onChange={setTab} items={TABS.map(([key, label, icon]) => ({ key, label, icon }))} />
@@ -252,10 +253,6 @@ export default function Settings() {
             <FormFoot dirty={!same(p, s.profile)} onDiscard={() => setP(s.profile)} onSave={() => { saveSettings({ profile: p }); note('Profile saved') }} />
           </>}
           {tab === 'people' && <People />}
-          {tab === 'golive' && <>
-            <Head title="Go live" sub="The switches that turn real things on. Everything else is set, not switched." />
-            <GoLive live={account.live} />
-          </>}
           {tab === 'pay' && <PayRules />}
           {tab === 'stripe' && <StripeBilling />}
           {tab === 'servicing' && <>
@@ -265,6 +262,7 @@ export default function Settings() {
           </>}
           {tab === 'ai' && <AiCallerSettings />}
           {tab === 'audit' && <Audit />}
+          {tab === 'review' && <AppReviewLogins />}
           {tab === 'prefs' && <Prefs />}
         </div>
       </section>

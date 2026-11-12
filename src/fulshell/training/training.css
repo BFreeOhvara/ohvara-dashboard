@@ -153,18 +153,14 @@
   .adm-tr-lessons .tp-grow { flex-basis: calc(100% - 40px); }
 }
 
-/* P877 — the lesson video (./VideoPlayer.jsx): video on top, captions drawn over it, a bar for kind, watched, speed and
+/* P877 — the lesson video (./VideoPlayer.jsx): video on top, its caption track, a bar for kind, watched, speed and
    captions, then the chapters. Shell tokens only. */
 .fx-tile.tr-video { gap: 12px; }
 .tr-vid { position: relative; border-radius: 14px; overflow: hidden; background: #000; aspect-ratio: 16 / 9; border: 1px solid var(--fx-edge, var(--ov-line)); }
 .tr-vid video { display: block; width: 100%; height: 100%; object-fit: contain; background: #000; }
-.tr-cc { position: absolute; left: 50%; bottom: 13%; transform: translateX(-50%); width: max-content; max-width: 88%; margin: 0; padding: 6px 14px; border-radius: 10px; text-align: center;
-  background: rgb(0 0 0 / .72); color: #fff; font-family: var(--font-display); font-weight: 600; font-size: clamp(13px, 2.3cqw, 26px); line-height: 1.3; pointer-events: none; text-wrap: balance; }
-.tr-vid { container-type: inline-size; }
-@container (max-width: 560px) { .tr-cc { bottom: 40%; font-size: 13px; padding: 4px 10px; } }
-.tr-cc span { opacity: .78; transition: opacity .12s, color .12s; }
-.tr-cc span.is-said { opacity: 1; }
-.tr-cc span.is-now { opacity: 1; color: var(--accent); }
+/* P960: the captions are the video's own text track (one source, same in the page, fullscreen and on phones). */
+.tr-vid video::cue { background: rgb(0 0 0 / .72); color: rgb(255 255 255 / .74); font-family: var(--font-display); font-weight: 600; line-height: 1.3; }
+.tr-vid video::cue(:past) { color: #fff; }
 .tr-vid-resume { position: absolute; left: 12px; top: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: #fff; background: rgb(0 0 0 / .62); pointer-events: none; }
 .tr-vbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; }
 .tr-vkind { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ov-mid); }
@@ -215,3 +211,12 @@
 .tr-tile-mid small { display: block; margin-top: 2px; font-size: 12.5px; color: var(--ov-mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tr-tile-mid .tp-grow { min-width: 0; }
 .tr-tile-go { align-self: flex-start; margin-top: auto; }
+
+/* P948 — Show me how: the note when they come back from the practice copy, and the lesson's practice box */
+.tr-practised { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 10px 12px; border-radius: 14px; color: var(--ov-hi);
+  background: color-mix(in srgb, var(--accent) 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
+.tr-practised.is-done svg:first-child { color: var(--ov-up, var(--accent)); }
+.tr-practised-x { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 0; border-radius: 50%; color: var(--ov-mid); background: transparent; cursor: pointer; }
+.tr-practised-x:hover { color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 8%, transparent); }
+.tr-practice-why { font-size: 13px; }
+.tr-cta .tp-btn.ov-ghost + .tp-btn, .tr-cta .tp-primary + .tp-btn { margin-top: -2px; }

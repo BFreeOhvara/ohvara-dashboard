@@ -31,7 +31,8 @@ test('lead statuses are the five (P913), and a lead with no agent is an alert, n
 })
 
 test('the plan panel: plan from the spend band, tonight = spend + 12%, every sample plan covered', () => {
-  const agents = admSnapshot().agents
+  // P955: the band plan is for agents with Leads; Servicing-only and Reactivation-only agents have no lead spend.
+  const agents = admSnapshot().agents.filter(a => (a.picked || ['leads']).includes('leads'))
   for (const a of agents) assert.equal(a.plan, tierOf(a.spend).key, a.name)
   const plans = new Set(agents.map(a => a.plan))
   for (const k of Object.keys(PLANS).filter(k => k !== 'servicing')) assert.ok(plans.has(k), `no sample agent on ${k}`)
@@ -41,7 +42,7 @@ test('the plan panel: plan from the spend band, tonight = spend + 12%, every sam
   assert.equal(chargeFor(agents.find(a => a.paused)), null)
   assert.equal(chargeFor(agents.find(a => a.comped)), null)
   const panel = src('./screens/Agents.jsx')
-  for (const w of ['Paid ahead', 'Card on file', 'Last charge', 'Next charge', 'Setup fee', 'Founding lock', 'Pause']) assert.ok(panel.includes(w), w)
+  for (const w of ['Paid ahead', 'Card on file', 'Last charge', 'Next charge', 'Setup fee', 'Pause']) assert.ok(panel.includes(w), w)
 })
 
 test('client statuses are P899: Working · Needs attention · Protected, Closed behind a switch', () => {
@@ -52,11 +53,13 @@ test('client statuses are P899: Working · Needs attention · Protected, Closed 
   assert.match(src('./screens/Clients.jsx'), /Show closed/)
 })
 
-test('P934: Settings › Go live holds only the go-live switches, each with what it turns on', () => {
+test('P950: no Go live card or live switch in admin Settings; the booking gap is still a setting', () => {
   const l = src('./screens/Launch906.jsx')
-  for (const w of ['sms_live', 'voice_live', 'ai_caller_live', '<LiveChargingRow />', '<SampleSwitch live={live} bare />']) assert.ok(l.includes(w), w)
+  for (const w of ['GoLive', 'LiveChargingRow', 'SampleSwitch', 'setSwitch', '<Switch']) assert.ok(!l.includes(w), w)
   for (const w of ['Call ads (Google)', 'setCallAdsOn', 'Nightly charge time', 'Max daily spend', 'Founding lock']) assert.ok(!l.includes(w), w)
-  assert.match(src('./screens/Settings.jsx'), /<GoLive live=\{account\.live\} \/>/)
+  assert.ok(l.includes('export function BookingGap'))
+  const st = src('./screens/Settings.jsx')
+  assert.doesNotMatch(st, /<GoLive|'golive', 'Go live'/)
 })
 
 test('no AI → VA hand-off shown on admin', () => {

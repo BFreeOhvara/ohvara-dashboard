@@ -65,9 +65,10 @@ export function FulfillmentPayAdminPanel() {
 
       {settings && (
         <div style={{ marginBottom: 14 }}>
-          <SwitchRow title={`Payouts ${settings.payouts_live ? 'on' : 'off'}`}
-            text={settings.payouts_live ? 'Monday runs send real money.' : "Off: nothing moves. Turn on once the accountant confirms contractor vs employee."}
-            checked={!!settings.payouts_live} disabled={save.isPending} onChange={v => save.mutate({ payouts_live: v })} />
+          {/* P950: payouts_live has no switch in the portal; Ohvara turns it on with Brayden's yes (after the accountant's OK). */}
+          <p className="ov-box" style={{ margin: '0 0 8px', padding: '12px 14px', borderRadius: 14, fontSize: 13.5, color: 'var(--ov-soft)' }}>
+            <b>Payouts {settings.payouts_live ? 'on' : 'off'}.</b> {settings.payouts_live ? 'Monday runs send real money.' : 'Nothing moves until Ohvara turns them on, after the accountant confirms contractor vs employee.'}
+          </p>
           <SwitchRow title="Pause payouts"
             text={settings.payouts_paused ? 'Paused: Monday runs are skipped until you turn this off.' : 'Skips Monday runs while it’s on. Nothing is lost; it pays on the next run.'}
             checked={!!settings.payouts_paused} disabled={save.isPending} onChange={v => save.mutate({ payouts_paused: v })} />

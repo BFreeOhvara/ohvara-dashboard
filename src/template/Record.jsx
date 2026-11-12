@@ -8,6 +8,7 @@ import { still } from './motion'
 // puts the URL back. On a phone it is a full-height sheet.
 // P946: `inline` draws the same record inside a page box (the VA Calendar's day slide-in) instead of a drawer: no
 // layer, no scrim, the page stays usable. Esc (when no pop-up is open over it) or the box's X/back calls onClose.
+// P947: `center` pops the same drawer up in the middle of the screen (cal947.css), the VA Calendar's call details.
 export function RecordDrawer(props) {
   return props.inline ? <RecordInline {...props} /> : <RecordModal {...props} />
 }
@@ -37,7 +38,7 @@ function RecordInline({ label, kicker, hero, stepper, children, actions, onClose
   )
 }
 
-function RecordModal({ label, kicker, hero, stepper, children, actions, onClose, tone = 'blue' }) {
+function RecordModal({ label, kicker, hero, stepper, children, actions, onClose, tone = 'blue', center = false }) {
   const [leaving, setLeaving] = useState(false)
   const panel = useRef(null)
   const close = useCallback(() => {
@@ -60,7 +61,7 @@ function RecordModal({ label, kicker, hero, stepper, children, actions, onClose,
   return createPortal(
     <div className={`tp fx-layer fx-rec-layer${leaving ? ' is-leaving' : ''}`} role="presentation">
       <button type="button" className="fx-scrim tp-bare" aria-label="Close" tabIndex={-1} onClick={close} />
-      <section ref={panel} tabIndex={-1} className={`fx-rec is-${tone}`} role="dialog" aria-modal="true" aria-label={label}>
+      <section ref={panel} tabIndex={-1} className={`fx-rec is-${tone}${center ? ' is-center' : ''}`} role="dialog" aria-modal="true" aria-label={label}>
         <header className="fx-rec-h">
           <span className="fx-rec-k">{kicker}</span>
           <button type="button" className="fx-x" aria-label="Close" onClick={close}><X size={18} /></button>

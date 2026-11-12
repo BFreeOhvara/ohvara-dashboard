@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Link, NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom'
+import { Link, NavLink, useLocation, useOutlet } from 'react-router-dom'
 import {
   Home, Users, Headset, PhoneIncoming, BookUser, Landmark, Plug, Settings, Search, Bell, Sun, Moon, MessageSquare, ChevronRight, LogOut,
-  Ellipsis, CircleHelp, Mail, Keyboard, UserPlus, Shuffle, Hand, Bug, History, TriangleAlert, Wallet, CalendarDays, CalendarOff,
+  Ellipsis, CircleHelp, Mail, Keyboard, UserPlus, Shuffle, Bug, History, TriangleAlert, Wallet, CalendarDays, CalendarOff,
   ShieldCheck, PhoneForwarded, CircleDollarSign, CheckCircle2, Radio, Link2, Copy, Plus, Rocket, BadgeCheck, Hourglass,
   PhoneCall, Scale,
 } from 'lucide-react'
@@ -25,7 +25,6 @@ import {
 } from './data'
 import { useGhlRow } from './useGhlRow'
 import { syncFailed } from './engine'
-import { LiveClock } from '../template/Clock'
 import MoreBelow from '../template/MoreBelow'
 import { ap, ADM_TABS, ADM_LABELS, admPageOf, admTitleOf } from './paths'
 import { STAGE_WORD } from './words'
@@ -93,25 +92,6 @@ export function AddSomeone({ open, onClose }) {
       </div>
       {via !== 'link' && <Field label={via === 'email' ? 'Email' : 'Mobile number'}><input type={via === 'email' ? 'email' : 'tel'} value={to} onChange={e => setTo(e.target.value)} placeholder={via === 'email' ? 'name@example.com' : '(555) 555-0100'} /></Field>}
       <p className="tp-sub">Agents sign up and pay on their own; they show on Setup once they've paid. Admins are added by another admin outside the portal.</p>
-    </Drawer>
-  )
-}
-
-// Give a call: the desk's calls not started yet. P945: they move on by themselves at 10 minutes; this gives one now.
-function GiveCall({ open, onClose }) {
-  const { data: day } = useAdmDay()
-  const navigate = useNavigate()
-  const keep = useKeep(open)
-  if (!keep) return null
-  return (
-    <Drawer open={open} center onClose={onClose} title="Give a call" sub={day.late.length ? 'Not started yet. They move to the next free VA by themselves at 10 minutes; pick one to give it now.' : 'Every call has started or is still ahead. Missed ones move on by themselves.'}>
-      <ul className="tp-list">
-        {day.late.map(c => (
-          <li key={c.id}><button type="button" className="fx-mrow" onClick={() => { onClose(); navigate(`${ap('team')}?call=${c.id}`) }}>
-            <Avatar name={c.client} tone="warn" /><span className="tp-grow"><b>{c.client}</b><small>{c.time} · {c.old_carrier}</small></span><Hand size={15} aria-hidden="true" />
-          </button></li>
-        ))}
-      </ul>
     </Drawer>
   )
 }
@@ -188,12 +168,12 @@ function useHeadStats(page) {
     clients: [S(BookUser, clients.length, 'clients'), S(TriangleAlert, att, 'need attention', { chip: att ? ['See who', 'warn'] : null }), S(CalendarDays, clients.reduce((n, c) => n + c.steps.length, 0), 'servicing steps open')],
     billing: [S(CircleDollarSign, wk.inTotal, 'brought in this week', { fmt: money }), S(Wallet, wk.profit, 'profit this week', { fmt: money, chip: [`${wk.split[0].pct}/${wk.split[1].pct} split`, 'blue'] }), S(TriangleAlert, m.failed.length, 'failed payments', { chip: m.failed.length ? ['Follow up', 'warn'] : null })],
     connect: [S(Link2, linked, 'of 5 plugged in'), S(PhoneForwarded, connect.ads.length, 'ad accounts'), S(Plug, connect.sources.forms.filter(f => f.on).length, 'forms on')],
-    settings: [S(Users, agents.length + vas.length, 'people with a login'), S(Radio, ['sms_live', 'voice_live', 'ai_caller_live', 'owner_payouts_live'].filter(k => settings.switches?.[k]).length, 'of 4 go-live switches on', { chip: ['Sample', 'blue'] }), S(Bug, day.openBugs, 'open bug reports')],
+    settings: [S(Users, agents.length + vas.length, 'people with a login'), S(Bug, day.openBugs, 'open bug reports')],
   }[page] || []
 }
 
 export default function AdminFrame() {
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const outlet = useOutlet()
   const source = useAdmSource()
   const isTest = useIsTestAccount() // P929: no sample line on test accounts
@@ -210,7 +190,6 @@ export default function AdminFrame() {
   const { data: vas } = useAdmVas()
   const { data: leads } = useAdmLeads()
   const { data: clients } = useAdmClients()
-  const { data: settings } = useAdmSettings()
   const ghlRow = useGhlRow()
   const close = useCallback(() => setPanel(null), [])
   const open = which => e => { wig.onClick(e); setPanel(which) }
@@ -222,6 +201,8 @@ export default function AdminFrame() {
   const msg = useMessagesToggle(active === 'messages', ap('overview'))
   const flipTheme = e => { wig.onClick(e); setTheme(theme === 'dark' ? 'light' : 'dark') }
   const tabs = ADM_TABS
+  const calTo = `${ap('team')}?tab=calendar`
+  const calOn = active === 'team' && /[?&]tab=calendar/.test(search)
   const tabCount = { leads: day.unassigned.length, billing: day.failed.length }
 
   const rows = useMemo(() => ({
@@ -290,7 +271,8 @@ export default function AdminFrame() {
         <i className="fx-hair" />
         <button type="button" className="fx-ri tp-wig" aria-label="Add a VA" data-tip="Add a VA" {...wig} onClick={open('add')}><UserPlus size={18} /></button>
         {/* P934: no Route a lead here; a real unmatched lead is routed from its notification (RouteLeadDrawer). */}
-        <button type="button" className="fx-ri tp-wig" aria-label="Give a call" data-tip={day.late.length ? `${day.late.length} not started yet` : 'Give a call'} {...wig} onClick={open('give')}><Hand size={18} /></button>
+        {/* P964: the calendar shortcut (in the old hand button's slot): the same calendar the To-dos Calendar button opens. */}
+        <Link to={calTo} className={`fx-ri tp-wig${calOn ? ' active' : ''}`} aria-label="Calendar" data-tip="Calendar" {...wig}><CalendarDays size={18} /></Link>
         <i className="fx-hair" />
         <NavLink to={ap('messages')} className="fx-ri tp-wig" aria-label="Messages" data-tip="Messages" {...wig}><MessageSquare size={18} />{day.unread > 0 && <span className="fx-badge">{day.unread}</span>}</NavLink>
         <NavLink to={ap('connect')} className="fx-ri tp-wig" aria-label="Connect" data-tip={syncFailed(ghlRow) ? 'Connect · the last sync failed' : 'Connect'} {...wig}><Plug size={18} />{syncFailed(ghlRow) && <span className="adm-warndot" aria-label="The last sync failed" />}</NavLink>
@@ -321,8 +303,7 @@ export default function AdminFrame() {
               ))}
             </ul>
           )}
-          {/* P860 + P864: the live clock, one line on the title row, on Overview only */}
-          {layout === 'overview' && <LiveClock tz={settings.tz} />}
+          {/* P964: the live clock moved down to the Overview's Live status line (screens/Overview.jsx) */}
         </div>
 
         <main className={`tp-main fx-main adm-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>
@@ -342,7 +323,6 @@ export default function AdminFrame() {
       <BellDrawer open={panel === 'bell'} onClose={close} onRoute={() => setPanel('route')} />
       <AddSomeone open={panel === 'add'} onClose={close} />
       <RouteLeadDrawer open={panel === 'route'} onClose={close} />
-      <GiveCall open={panel === 'give'} onClose={close} />
       <Help open={panel === 'help'} onClose={close} onBug={() => setPanel('bug')} />
       <ReportBug open={panel === 'bug'} onClose={close} role="Admin" />
       <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} />

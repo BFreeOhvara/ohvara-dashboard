@@ -10,6 +10,9 @@ import { ap } from './paths'
 import { ME, PLANS, admSnapshot, AdmDataProvider, useAdmMeta } from './data'
 import { useAdmRealState, useAdmRealActions } from '../hooks/admRealData'
 import { useDataMode } from '../hooks/useDataMode'
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '../lib/supabase'
+import { withProducts } from './products955'
 
 // P849 — the Admin portal: the rebuilt admin pages (src/adminshell) on sample info, the same as the agent and VA
 // shells until the backend step. Two mounts: the real admin URLs (ShellSwap passes the real name, the real sign-out
@@ -51,8 +54,20 @@ function Page({ children, preview }) {
 
 // P858: the real store and actions for the pages, keyed on the mode by the caller so nothing swaps mid-mount.
 const BASE = { settings: admSnapshot().settings, plans: PLANS }
+// P955: what each agent bought (agent_billing_plans.picked, a removal waiting, the Leads setup paid), merged onto the
+// real store's agents and Setup tickets. Not migrated yet / not readable = nothing merged (everyone reads as Leads).
+const PRODUCT_COLS = 'agent_id, picked, picked_next, picked_next_from, signed_up_at, setup_paid_at, leads_setup_at'
+function useAgentProducts() {
+  const q = useQuery({
+    queryKey: ['p955', 'admin', 'products'], refetchInterval: 60000,
+    queryFn: async () => { const { data, error } = await supabase.from('agent_billing_plans').select(PRODUCT_COLS); return error ? null : data || [] },
+  })
+  return q.data ?? null
+}
 function RealData({ children }) {
-  const state = useAdmRealState(BASE)
+  const raw = useAdmRealState(BASE)
+  const products = useAgentProducts()
+  const state = useMemo(() => withProducts(raw, products), [raw, products])
   const actions = useAdmRealActions()
   const value = useMemo(() => ({ state, actions }), [state, actions])
   return <AdmDataProvider value={value}>{children}</AdmDataProvider>

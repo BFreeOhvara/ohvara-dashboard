@@ -2,6 +2,7 @@ import { useCallback, useMemo, useSyncExternalStore } from 'react'
 import { LESSONS } from './lessons.js'
 import { fp } from '../../template/ful/paths.js'
 import { emptyProgress, lessonStates, summary, scoreCheck, recordAttempt, recordTry, matchesTry, endsInQuiz, assignLesson, resetLesson } from './model.js'
+import { practiceOn } from '../../lib/practice.js'
 
 // P872 — training progress and lesson edits, sample only (this browser). One store, so the rail badge, the Overview
 // nudge, the Training page and admin Settings → Training all agree. P852 swaps this for the database: progress per
@@ -61,7 +62,7 @@ function paintBar() {
   let bar = document.getElementById('tr-tryit')
   const id = state.trying?.id || state.justTried
   const l = id && LESSONS.find(x => x.id === id)
-  if (!l || !window.location.pathname.includes('/fulfillment')) { bar?.remove(); return }
+  if (!l || !window.location.pathname.includes('/fulfillment') || practiceOn()) { bar?.remove(); return }
   if (!bar) {
     bar = document.createElement('div')
     bar.id = 'tr-tryit'
@@ -102,6 +103,11 @@ const subscribe = f => { subs.add(f); return () => subs.delete(f) }
 const snap = () => state
 const progressOf = name => state.people[name] || SEED[name] || emptyProgress
 const putProgress = (name, p) => set({ ...state, people: { ...state.people, [name]: p } })
+
+// P948: "Show me how" finished in the practice copy (./practiceRun.js): the lesson counts as done, like a Try it.
+export const markPracticed = (name, id) => putProgress(name, recordTry(progressOf(name), id))
+// The practice copy's player loads only while a practice is on, so driver.js stays out of every other page.
+if (typeof window !== 'undefined' && practiceOn()) import('./practiceRun.js').then(m => m.boot()).catch(e => console.warn('[practice] could not start', e))
 
 // Lessons with the admin's edits on top (title, job, why, steps). Edits are sample until P852.
 export function mergeEdits(edits) {

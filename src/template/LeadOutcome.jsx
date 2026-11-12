@@ -5,6 +5,7 @@ import { Drawer, Field, useNote } from './kit'
 import { Select } from './Select'
 import { useSampleActions, useSampleBilling, useSampleAppointments, useSampleSettings } from './data'
 import { paths } from './paths'
+import { useProducts } from './useProducts'
 import { agentChip, agentStatus, agentStatusOf, followDays, followUpPick, isLiveCall, needsResult, resultsFor, RESULT_LABEL, RESULT_MEANING, RESULT_STATUS } from './agentView'
 import { whenLabel, timeLabel, followReminders, clockNow } from './leadLifecycle'
 import { clocksBetween } from '../lib/callSlots'
@@ -14,7 +15,7 @@ import './result898.css'
 
 // The status chip ([tone, words]) for the cards, the drawer, the palette and the Overview: the agent's five statuses
 // (agentView.js), never call attempts. With only a stage, the status that stage sits in.
-export const stageChip = (stage, lead) => (lead ? agentChip(lead) : [laneOf(stage).tone, laneOf(stage).label])
+export const stageChip = (stage, lead, opts) => (lead ? agentChip(lead, opts) : [laneOf(stage).tone, laneOf(stage).label])
 
 // P878 (N-C-45): a no-show gets a short Undo before its rebook text sends. Shown on the lead while it counts down.
 const UNDO_SECONDS = 10
@@ -56,6 +57,7 @@ export function OutcomePrompt({ lead, start = null, onClose }) {
   const { data: appts } = useSampleAppointments()
   const { data: settings } = useSampleSettings()
   const note = useNote()
+  const { serve } = useProducts()
   const allowed = lead ? resultsFor(lead) : []
   const [how, setHow] = useState(allowed.includes(start) ? start : allowed.length === 1 ? allowed[0] : null)
   const [day, setDay] = useState(null)
@@ -83,6 +85,19 @@ export function OutcomePrompt({ lead, start = null, onClose }) {
     if (how === 'sold') { setSold(true); note(`${name} marked sold`); return }
     note(how === 'follow_up' ? `Follow up on your calendar: ${whenLabel(slot.at)}. ${lead.first_name} gets a reminder the day before and that morning` : `${name} marked not interested`)
     onClose()
+  }
+
+  if (sold && !serve) {
+    // P959: Your own leads only: no Submit. The lead stays on the Leads board under Sold.
+    return (
+      <Drawer open center onClose={onClose} title="Marked sold" sub={name}
+        footer={<button type="button" className="tp-primary fx-accent" onClick={onClose}>Done</button>}>
+        <div className="rs" data-sheet="result">
+          <p className="tp-mid">Nice work.</p>
+          <p className="tp-sub">{lead.first_name} stays on your Leads board under Sold. Want us to keep these on the books? <Link to={`${paths.billing()}?add=servicing`} className="tp-link" onClick={onClose}>Add Servicing</Link></p>
+        </div>
+      </Drawer>
+    )
   }
 
   if (sold) {

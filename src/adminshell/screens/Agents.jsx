@@ -11,12 +11,36 @@ import { Dropdown, DField, EngineSlot } from '../kit'
 import { ap } from '../paths'
 import { BILL_WORD, STAGE_WORD, stageTone } from '../words'
 import { CampaignBlock } from './Campaign879'
+import { productChips, chipsText, endingLines, hasLeads, planLineOf } from '../products955'
+import '../p955.css'
 
 // P849 — Agents: every agent, their plan and weekly lead budget, whether they take live transfers, this week's results
 // and billing. A row opens the agent in a drawer at its own address (/admin/agents/:id) with every admin control the
 // Users page has today (transfers, Servicing, access, role) plus plan, budget and comp. Sample only.
 const money = usd()
 const cents = usd(true)
+// P955: an agent's products as small chips (Leads · Servicing · Reactivation); a product ending at the next bill date
+// says so on its chip's title and, in the pop-up, in words ("Servicing ends Dec 9").
+function ProductChips({ a }) {
+  const list = productChips(a)
+  return (
+    <span className="adm-prod" role="list" aria-label={`Products: ${chipsText(a)}`} data-testid="adm-products">
+      {list.map(c => <span key={c.key} role="listitem" className={c.ends ? 'is-ending' : undefined} title={c.ends ? `${c.label} ends ${c.ends}` : undefined}><Chip tone={c.tone}>{c.label}</Chip></span>)}
+    </span>
+  )
+}
+function ProductsBlock({ a }) {
+  const ending = endingLines(a)
+  const line = planLineOf(a, PLANS)
+  return (
+    <Block title="Products" sub={a.real ? 'What they bought. They add or remove products in their Billing.' : 'Sample. They add or remove products in their Billing.'}>
+      <ProductChips a={a} />
+      {ending.map(t => <p key={t} className="adm-prod-end" data-testid="adm-product-ending">{t}</p>)}
+      {!line.leads && <p className="tp-sub adm-prod-sub">{line.label}{line.sub ? ` · ${line.sub}` : ''}. No lead spend, no campaign, no Setup ticket.</p>}
+    </Block>
+  )
+}
+
 const SORTS = [{ value: 'sold', label: 'Most sold' }, { value: 'in', label: 'Most leads' }, { value: 'name', label: 'Name' }, { value: 'spend', label: 'Biggest budget' }]
 
 function Funnel({ w }) {
@@ -68,7 +92,7 @@ function PlanBudget({ a }) {
   }
   const last = b.last
   return (
-    <Block title="Plan and budget" sub={a.real ? undefined : 'Sample'} aside={b.founding ? <Chip tone="teal">Founding to {b.founding.until}</Chip> : null}>
+    <Block title="Plan and budget" sub={a.real ? undefined : 'Sample'}>
       <div className="adm-plan-top">
         <b className="fx-hero-big">{a.comped ? 'Comped' : plan.label}</b>
         <span className="tp-sub">{a.comped ? 'No plan charge' : `${money(plan.price)} a month · ${plan.sub}`}</span>
@@ -88,7 +112,6 @@ function PlanBudget({ a }) {
         ['Last charge', last ? <span className={last.result === 'declined' ? 'adm-declined' : undefined}>{last.result === 'declined' ? `Declined${last.why ? `: ${last.why.toLowerCase()}` : ''}` : 'Approved'} · {last.when}</span> : '–'],
         ['Next charge', b.next],
         ['Setup fee', b.setup ? `${money(b.setup.amount)} paid ${b.setup.paid}` : a.comped ? 'Comped' : 'Not paid'],
-        ['Founding lock', b.founding ? `Prices locked to ${b.founding.until}` : 'Not founding'],
         ['Plan change', a.planNext ? <span data-pending="down">Moves down to {PLANS[a.planNext.key].label} on {a.planNext.on}</span>
           : a.lastUpgrade ? `Moved up to ${PLANS[a.lastUpgrade.to].label} ${a.lastUpgrade.on}, ${cents(a.lastUpgrade.amount)} for ${a.lastUpgrade.days} days` : 'None scheduled'],
       ].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
@@ -121,10 +144,11 @@ function AgentDrawer({ id, onClose }) {
   const [billWord, billTone] = BILL_WORD[a.billing.status]
   const mine = leads.filter(l => l.agent_id === a.id).slice(-6).reverse()
   const tone = a.billing.status === 'past_due' ? 'warn' : a.active ? 'green' : 'blue'
+  const withLeads = hasLeads(a)
   return (
     <RecordDrawer label={a.name} kicker={`Agent · joined ${a.joined}`} tone={tone} onClose={onClose}
       hero={<>
-        <div className="fx-hero-top"><span className="fx-when"><Radio size={13} aria-hidden="true" />{a.active ? (a.onDuty ? 'On duty for live transfers' : 'Takes transfers, off duty now') : 'Appointments only'}</span><Chip tone={billTone}>{billWord}</Chip>{a.paused && <Chip tone="warn">Leads paused</Chip>}</div>
+        <div className="fx-hero-top"><span className="fx-when"><Radio size={13} aria-hidden="true" />{!withLeads ? 'No Leads' : a.active ? (a.onDuty ? 'On duty for live transfers' : 'Takes transfers, off duty now') : 'Appointments only'}</span><Chip tone={billTone}>{billWord}</Chip>{a.paused && <Chip tone="warn">Leads paused</Chip>}</div>
         <h2>{a.name}</h2>
         <p><MapPin size={13} aria-hidden="true" />{a.city}, {a.state} · licensed in {a.states.join(', ')}</p>
         <div className="fx-hero-bot"><b className="fx-hero-big tp-num">{a.phone}</b><Avatar name={a.name} tone={tone} /></div>
@@ -134,13 +158,14 @@ function AgentDrawer({ id, onClose }) {
         <Link to={`${ap('leads')}?agent=${a.id}`} className="tp-btn ov-ghost"><PhoneIncoming size={15} />Their leads</Link>
         <Link to={`${ap('clients')}?agent=${a.id}`} className="tp-btn ov-ghost"><BookUser size={15} />Their clients</Link>
       </>}>
-      <Block title="Live transfers" sub="On means live calls can ring this agent while they are on duty.">
+      {withLeads && <Block title="Live transfers" sub="On means live calls can ring this agent while they are on duty.">
         <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>{a.active ? 'Active for transfers' : 'Booking only'}</b><p className="tp-sub">{a.onDuty ? 'On duty right now' : 'Not on duty right now'}</p></div>
           <Switch on={a.active} label="Active for transfers" onChange={v => { setAgentActive(a.id, v); note(v ? `${a.name} takes live transfers` : `${a.name} is booking only`) }} /></div>
-      </Block>
-      <PlanBudget key={`pb-${a.id}-${a.spend}`} a={a} />
+      </Block>}
+      <ProductsBlock a={a} />
+      {withLeads && <PlanBudget key={`pb-${a.id}-${a.spend}`} a={a} />}
       {/* P934: no Lead split block: Meta form ads only, the split is a constant in code (splitStore). */}
-      <CampaignBlock agent={a} />
+      {withLeads && <CampaignBlock agent={a} />}
       <Block title="This week"><Funnel w={a.week} /><AgentCosts id={a.id} /></Block>
       <Block title="Access">
         <div className="fx-form-row fx-form-sw"><div className="tp-grow"><b>Servicing</b><p className="tp-sub">{a.servicing ? 'Leads and Servicing' : 'Leads only'}</p></div><Switch on={a.servicing} label="Servicing" onChange={v => { setServicing(a.id, v); note(v ? 'Servicing on' : 'Servicing off: leads only') }} /></div>
@@ -180,7 +205,7 @@ export default function Agents() {
   const [show, setShow] = useState('all')
   const [sort, setSort] = useState('sold')
   const n = q.trim().toLowerCase()
-  const keep = a => (show === 'all' || (show === 'duty' && a.active) || (show === 'booking' && !a.active) || (show === 'due' && a.billing.status === 'past_due') || (show === 'paused' && a.paused))
+  const keep = a => (show === 'all' || (show === 'duty' && a.active) || (show === 'booking' && hasLeads(a) && !a.active) || (show === 'due' && a.billing.status === 'past_due') || (show === 'paused' && a.paused))
   const list = agents.filter(a => keep(a) && (!n || `${a.name} ${a.email} ${a.phone} ${a.city}`.toLowerCase().includes(n)))
     .sort((x, y) => (sort === 'name' ? x.name.localeCompare(y.name) : sort === 'spend' ? y.spend - x.spend : (y.week[sort] - x.week[sort]) || x.name.localeCompare(y.name)))
   const out = invites.filter(i => i.role === 'agent')
@@ -191,7 +216,7 @@ export default function Agents() {
         <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find an agent" placeholder="Find by name, email, phone or city" value={q} onChange={e => setQ(e.target.value)} /></label>
         <Seg label="Show" value={show} onChange={setShow} options={[
           { key: 'all', label: 'All', count: agents.length }, { key: 'duty', label: 'Take transfers', count: agents.filter(a => a.active).length },
-          { key: 'booking', label: 'Booking only', count: agents.filter(a => !a.active).length }, { key: 'due', label: 'Past due', count: agents.filter(a => a.billing.status === 'past_due').length },
+          { key: 'booking', label: 'Booking only', count: agents.filter(a => hasLeads(a) && !a.active).length }, { key: 'due', label: 'Past due', count: agents.filter(a => a.billing.status === 'past_due').length },
           { key: 'paused', label: 'Leads paused', count: agents.filter(a => a.paused).length },
         ]} />
         <span className="tp-grow" />
@@ -202,12 +227,17 @@ export default function Agents() {
         <div className="adm-tr adm-th" aria-hidden="true"><span>Agent</span><span>Plan and budget</span><span>Transfers</span><span>This week</span><span>Billing</span></div>
         {list.map((a, i) => {
           const [word, tone] = BILL_WORD[a.billing.status]
+          const line = planLineOf(a, PLANS)
           return (
             // P945: the whole row opens the agent (hover highlights it); the switch and links inside still do their own job.
             <div key={a.id} className="adm-tr is-click" style={{ '--i': i }} onClick={e => { if (!e.target.closest('a, button, input, label, [role="switch"]')) openAgent(a.id) }}>
-              <Link to={ap('agents', a.id)} className="adm-who"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>{a.city}, {a.state} · {a.paused ? `leads paused${a.paused.until ? ` until ${a.paused.until}` : ''}` : a.access ? `on ${a.lastOn}` : 'access off'}</small></span></Link>
-              <span className="adm-cell"><b>{a.comped ? 'Comped' : PLANS[a.plan].label}</b><small>{money(a.spend)} a day + {feeWords}{a.paused ? ' · paused' : ''}{a.planNext ? ` · ${PLANS[a.planNext.key].label} from ${a.planNext.on.replace(/^\w+, /, '')}` : ''}</small></span>
-              <span className="adm-cell adm-sw"><Switch on={a.active} label={`${a.name} takes live transfers`} onChange={v => { setAgentActive(a.id, v); note(v ? `${a.name} takes live transfers` : `${a.name} is booking only`) }} /><small>{a.active ? (a.onDuty ? 'On duty' : 'Off duty') : 'Booking only'}</small></span>
+              <Link to={ap('agents', a.id)} className="adm-who"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>{a.city}, {a.state} · {a.paused ? `leads paused${a.paused.until ? ` until ${a.paused.until}` : ''}` : a.access ? `on ${a.lastOn}` : 'access off'}</small><ProductChips a={a} /></span></Link>
+              {line.leads
+                ? <span className="adm-cell"><b>{a.comped ? 'Comped' : line.label}</b><small>{money(a.spend)} a day + {feeWords}{a.paused ? ' · paused' : ''}{a.planNext ? ` · ${PLANS[a.planNext.key].label} from ${a.planNext.on.replace(/^\w+, /, '')}` : ''}</small></span>
+                : <span className="adm-cell"><b>{a.comped ? 'Comped' : line.label}</b><small>{line.sub}</small></span>}
+              {line.leads
+                ? <span className="adm-cell adm-sw"><Switch on={a.active} label={`${a.name} takes live transfers`} onChange={v => { setAgentActive(a.id, v); note(v ? `${a.name} takes live transfers` : `${a.name} is booking only`) }} /><small>{a.active ? (a.onDuty ? 'On duty' : 'Off duty') : 'Booking only'}</small></span>
+                : <span className="adm-cell"><small>No Leads</small></span>}
               <span className="adm-cell"><Funnel w={a.week} /></span>
               <span className="adm-cell"><Chip tone={tone}>{word}</Chip><small>{a.billing.next}</small></span>
             </div>

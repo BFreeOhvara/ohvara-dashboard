@@ -1,13 +1,14 @@
-import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, Check, Clock, CalendarDays } from 'lucide-react'
 import { rangeWords, deliveredRange, deliveredOf } from '../spendPlan'
 import { countByStatus } from '../agentView'
-import { useDataSource, useNow, useSampleOverview, useSampleClients, useSampleBilling, useSampleLeads, useSampleAppointments, useSampleNeeds } from '../data'
+import { useDataSource, useSampleOverview, useSampleClients, useSampleBilling, useSampleLeads, useSampleAppointments, useSampleNeeds } from '../data'
 import { Avatar, Empty } from '../kit'
 import { CountUp } from '../motion'
 import { SetupProgress } from '../SetupProgress'
 import { useLaunchView } from '../launchView'
+import { AddLeadsCard } from '../Products955'
+import { useProducts } from '../useProducts'
 import { NeedCard } from '../NeedsNow'
 import { useNeedAction } from '../needAction'
 import { laneOf, LANES } from '../stages'
@@ -15,9 +16,7 @@ import { clientStatusOf, clientStatus } from '../../lib/clientCheck.js'
 import { useCheckSettings, todayFor } from '../checkSettings'
 import { paths } from '../paths'
 import '../p893.css'
-import AreaTrend from '../AreaTrend'
-import { dailyCounts, sampleTrend, mondayOf, addDays } from '../leadTrend'
-import '../areatrend942.css'
+import Chart from '../Chart'
 
 // P841: a little more page. Next up is the second colour-filled tile (the Booked blue); under the pair, a This week
 // strip of the working week's calls (leads blue, clients yellow, as on Calendar); under Needs you, a Lead mix tile
@@ -42,26 +41,25 @@ function Tile({ className = '', i, title, sub, to, label, children, ...rest }) {
   )
 }
 
-// P942 — the Delivered chart is shadcn/ui's "Area Chart - Interactive" (../AreaTrend.jsx, same as the admin Overview):
-// Delivered (light, behind) and Sold (dark, front) per day, range This week · Last 30 days · Last 3 months, each lead
-// counted on the day it reached the agent. It takes all the height left in the box.
-const DL_SERIES = [{ key: 'delivered', label: 'Delivered', color: 'var(--ox-1)' }, { key: 'sold', label: 'Sold', color: 'var(--ox-sold)' }]
-const isSold = l => l.stage === 'sold' || !!l.submitted
-function useDeliveredTrend(leads, source, isNew, weekTotal) {
-  const now = useNow()
-  const todayIso = String(now || '').slice(0, 10)
-  const rows = useMemo(() => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(todayIso)) return []
-    // a missed live call never reached the agent, so it isn't Delivered (P923's rule)
-    const real = dailyCounts(todayIso, { delivered: leads.filter(l => l.stage !== 'missed').map(l => l.came), sold: leads.filter(isSold).map(l => l.came) })
-    if (source === 'real') return real
-    // Sample: a steady history before this week (none for an agent in their first two weeks); this week's Delivered is
-    // the hero's number (the sample billing counters), on today.
-    const mon = mondayOf(todayIso)
-    const hist = sampleTrend(todayIso, { base: 1.7, ratio: { sold: 0.3 }, seed: 3 }).map(r => ({ ...r, delivered: r.in }))
-    return real.map((r, i) => (r.date >= mon ? { ...r, delivered: r.date === todayIso ? weekTotal : 0 } : isNew ? r : { ...r, delivered: hist[i].delivered, sold: hist[i].sold }))
-  }, [leads, source, isNew, todayIso, weekTotal])
-  return { rows, todayIso, empty: !rows.some(r => r.delivered > 0 && r.date >= addDays(todayIso, -90)) }
+// P844: the chart follows how long the agent has been on Ohvara (see data/index.js bookedChart). Weeks: a smooth area
+// over the expected range band (dashed edges). Days (first 2 weeks): one rounded bar per day this week.
+// P936: drawn by the one chart (../Chart.jsx); days still to come are a faint label, never an empty bar.
+// P949: back to this (Brayden: the P942 area chart is for the admin Overview only).
+const DL_SERIES = [{ key: 'v', label: 'Delivered', color: 'var(--ox-1)' }]
+function BookedChart({ chart, lo, hi }) {
+  const { points, mode } = chart
+  const days = mode === 'days'
+  const lastIdx = days ? points.findIndex(p => p[2]) - 1 : points.length - 1
+  const nowAt = days ? (lastIdx < 0 ? points.length - 1 : lastIdx) : points.length - 1
+  const data = points.map(([w, v, later], i) => ({
+    name: !days && i === points.length - 1 ? 'This week' : days && i === nowAt ? 'Today' : w,
+    full: days ? w : `Week of ${w}`, later: !!later, today: i === nowAt, v,
+  }))
+  return (
+    <Chart kind={days ? 'bar' : 'area'} data={data} series={DL_SERIES} legend={false} height={168} className="fx-dchart is-stretch"
+      band={days ? null : { lo, hi }}
+      label={`Delivered per ${days ? 'day' : 'week'}: ${points.filter(p => !p[2]).map(([w, v]) => `${w} ${v}`).join(', ')}.${days ? '' : ` Expected at your spend ${lo} to ${hi}.`}`} />
+  )
 }
 
 // The protected share of the book as a ring.
@@ -157,7 +155,6 @@ export default function Overview() {
   const nBy = k => clients.filter(c => stOf(c) === k).length
   const prot = nBy('protected')
   const chart = o.bookedChart
-  const trend = useDeliveredTrend(leads, source, chart.mode === 'days', dl.total)
   const prev = chart.prev
   const status = dl.total < wk.low ? ['Below range so far', 'mute'] : dl.total > wk.high ? ['Above range', 'up'] : ['In range', 'up']
   // P910: Your to-dos (calls to mark, the monthly check), each with its action; live calls pinned above them.
@@ -167,22 +164,28 @@ export default function Overview() {
   const weekCalls = workWeek(appts, today).reduce((n, d) => n + appts.filter(a => inDay(a, d)).length, 0)
   // P941: until their leads are live, the setup steps (the admin's Setup ticket, in the same words) lead the page.
   const setup = useLaunchView()
+  // P955: the setup steps are the Leads setup: only with Leads. Without it, one small Add Leads card.
+  const { has } = useProducts()
 
   return (
     <div className="tp-page fx-page fx-ovl">
       <div className="fx-ovl-main">
-        {setup && !setup.live && <section className="fx-tile fx-ovl-setup" style={{ '--i': 0 }} aria-label="Getting your leads live"><SetupProgress view={setup} compact /></section>}
+        {has('leads') && setup && !setup.live && <section className="fx-tile fx-ovl-setup" style={{ '--i': 0 }} aria-label="Getting your leads live"><SetupProgress view={setup} compact /></section>}
         {/* P867: the hero fills the window (data-fold) so the Your book / Next up / Lead mix row peeks a third */}
         <Tile className="fx-ovl-hero" i={0} data-fold data-fold-next=".fx-ovl-book" title="Delivered this week" sub={`Your lead spend delivers about ${rangeWords(wk)} a week: booked calls and live calls`} to={paths.calendar()} label="Open Calendar">
           {/* P843: the number is the hero; the range already sits in the subtitle, so the side line only says what it is */}
           <div className="fx-chart-head fx-bk-head">
             <b className="tp-num fx-bk-num" aria-label={`${dl.total} delivered: ${dl.booked} booked, ${dl.live} live calls`}><CountUp value={dl.total} /></b>
-            <span className="fx-bk-side"><b>delivered</b><small className="fx-dl-split"><span className="tp-num">{dl.booked}</span> booked · <span className="tp-num">{dl.live}</span> live call{dl.live === 1 ? '' : 's'}</small>{prev != null && <small>{prev} last week</small>}<i className={`fx-delta is-${status[1]}`}>{status[0]}</i></span>
+            <span className="fx-bk-side"><b>Delivered</b><small className="fx-dl-split"><span className="tp-num">{dl.booked}</span> booked · <span className="tp-num">{dl.live}</span> live call{dl.live === 1 ? '' : 's'}</small>{prev != null && <small>{prev} last week</small>}<i className={`fx-delta is-${status[1]}`}>{status[0]}</i></span>
           </div>
-          {trend.empty && chart.empty
+          <div className="fx-key">
+            <span><i className="is-line" />{chart.mode === 'days' ? 'Delivered per day' : 'Delivered per week'}</span>
+            {chart.mode === 'weeks' && <span><i className="is-dash" />Expected at your spend</span>}
+            <span className="fx-key-range">{chart.range}</span>
+          </div>
+          {chart.empty
             ? <Empty title="Nothing delivered yet" sub="Your first booked calls and live calls show up here as soon as they reach you." />
-            : <AreaTrend rows={trend.rows} series={DL_SERIES} todayIso={trend.todayIso} label="Delivered" className="fx-ovl-trend"
-              head={<p className="fx-trend-what">{chart.mode === 'days' ? 'Delivered and sold since you joined' : 'Delivered and sold, day by day'}</p>} />}
+            : <BookedChart chart={chart} lo={wk.low} hi={wk.high} />}
         </Tile>
 
         <div className="fx-ovl-pair">
@@ -212,6 +215,7 @@ export default function Overview() {
       </div>
 
       <div className="fx-ovl-side">
+        <AddLeadsCard />
         {/* P917: no live-call cards here; a live call waiting for its result is a to-do (and pinned on Leads) */}
         <section className="fx-tile is-deep fx-ovl-needs" style={{ '--i': 4 }} aria-label="Your to-dos">
           <div className="fx-ovl-needs-in">

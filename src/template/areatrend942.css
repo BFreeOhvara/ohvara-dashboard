@@ -16,7 +16,4 @@
 .ox-trend-key li b { margin-left: 2px; color: var(--ov-hi); font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; font-weight: 600; }
 .ox-trend-key li.is-range { margin-left: auto; background: transparent; padding: 0 2px; font-weight: 500; }
 @media (max-width: 640px) { .fx-sel.ox-trend-range { width: 136px; } .ox-trend-bar { flex-wrap: wrap; } }
-/* Agent Overview: the chart fills the rest of the Delivered this week box. */
-.fx-ovl-hero { display: flex; flex-direction: column; }
-.fx-ovl-hero > .fx-ovl-trend { flex: 1 1 auto; min-height: 220px; }
-.fx-trend-what { margin: 8px 0 0; font-size: 12.5px; font-weight: 600; color: var(--ov-mid); }
+/* P949: the agent Overview went back to its P936 chart; this area chart is the admin Overview's only. */

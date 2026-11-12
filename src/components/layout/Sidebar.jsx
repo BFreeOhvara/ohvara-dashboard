@@ -191,7 +191,7 @@ export function Sidebar({ open = false, onClose, collapsed, onToggleCollapse }) 
           {expanded && selfLocked && (
             <div className="ov-sb-usage">
               <span className="ov-sb-usage-title">Not active yet</span>
-              <div className="ov-sb-usage-note">Pick a plan to open your portal.</div>
+              <div className="ov-sb-usage-note">Pick what you need to open your portal.</div>
             </div>
           )}
 

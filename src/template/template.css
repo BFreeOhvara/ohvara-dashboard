@@ -276,7 +276,7 @@
   .tp-sheet { width: 100%; border-radius: 24px 24px 0 0; height: auto; max-height: 92vh; align-self: flex-end; }
   .tp-layer { align-items: flex-end; }
   .tp-bar {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; height: 86px; padding: 8px 10px 22px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; height: calc(64px + max(22px, env(safe-area-inset-bottom, 0px))); padding: 8px 10px max(22px, env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center;
     background: var(--ph-bar-bg); border-top: 1px solid var(--ph-bar-line); box-shadow: var(--ph-bar-shadow);
   }
   .tp-btab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 52px; color: var(--ph-tab); font-size: 11px; font-weight: 600; text-align: center; }

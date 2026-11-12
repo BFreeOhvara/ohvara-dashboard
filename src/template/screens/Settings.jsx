@@ -18,6 +18,8 @@ import { HoursEditor } from '../Hours'
 import { LicenceCard } from '../Licence'
 import { PaymentIntakeCard } from '../PaymentIntake'
 import { DeedstonePhone } from '../DeedstonePhone'
+import { useProducts } from '../useProducts'
+import { AppAbout } from '../../components/native/AppAbout'
 
 // P929: Settings back to the pre-P924 layout (profile card on the left, tabs on the right). Notifications is only the
 // switches; the carrier-email forwarding address that sat under it has its own Email tab, so no section is long.
@@ -85,7 +87,10 @@ export default function Settings() {
   const account = useAccount()
   // P916: ?tab=calls opens Hours and calls (the call sheet's "Connect your phone" link).
   const loc = useLocation()
-  const [tab, setTab] = useState(() => { const t = new URLSearchParams(loc.search).get('tab'); return TABS.some(([k]) => k === t) ? t : 'profile' })
+  // P955: Your setup (the Leads setup steps) only with Leads.
+  const { has } = useProducts()
+  const tabs = TABS.filter(([k]) => k !== 'setup' || has('leads'))
+  const [tab, setTab] = useState(() => { const t = new URLSearchParams(loc.search).get('tab'); return tabs.some(([k]) => k === t) ? t : 'profile' })
   const [panel, setPanel] = useState(null)
 
   // Saved values and the drafts the forms edit
@@ -120,10 +125,11 @@ export default function Settings() {
       <div className="fx-set-side">
         <ProfileCard profile={profile} />
         <button type="button" className="fx-tile fx-signout" onClick={signOut}><LogOut size={16} aria-hidden="true" />Sign out</button>
+        <AppAbout />
       </div>
 
       <section className="fx-tile fx-panel" aria-label="Settings">
-        <PillTabs label="Settings sections" className="fx-ptabs" itemClass="fx-ptab" value={tab} onChange={setTab} items={TABS.map(([key, label, icon]) => ({ key, label, icon }))} />
+        <PillTabs label="Settings sections" className="fx-ptabs" itemClass="fx-ptab" value={tab} onChange={setTab} items={tabs.map(([key, label, icon]) => ({ key, label, icon }))} />
 
         <div className="fx-form" key={tab} role="tabpanel" aria-label={TABS.find(t => t[0] === tab)[1]}>
           {tab === 'setup' && <>

@@ -38,8 +38,8 @@ export const CLIENT_ORDER = ['needs_attention', 'working', 'protected']
 // The desk: a cancellation call's status.
 // P945: late = its time came and it hasn't started (it moves on by itself at 10 minutes); rebook = nobody was free, the
 // AI front desk is rebooking it with the client.
-export const CALL_WORD = { cancelled: 'Cancelled', no_answer: 'No answer', live: 'On a call', booked: 'To call', late: 'Not started', rebook: 'AI rebooking' }
-export const CALL_TONE = { cancelled: 'green', no_answer: 'warn', live: 'teal', booked: 'blue', late: 'warn', rebook: 'violet' }
+export const CALL_WORD = { cancelled: 'Cancelled', no_answer: 'No answer', live: 'On a call', booked: 'To call', late: 'Not started', rebook: 'AI rebooking', failed: 'Failed' }
+export const CALL_TONE = { cancelled: 'green', no_answer: 'warn', live: 'teal', booked: 'blue', late: 'warn', rebook: 'violet', failed: 'rose' }
 
 // Billing.
 export const BILL_WORD = { current: ['Paid up', 'green'], past_due: ['Past due', 'warn'], comped: ['Comped', 'teal'] }
