@@ -13,27 +13,45 @@ import { telOf } from '../phoneMask'
 import { paths } from '../paths'
 import { useProducts } from '../useProducts'
 import { RESULT, RESULT_ORDER, initialsOf } from './appModel'
+import { useSheetDrag } from './useBackSwipe'
 
 // P967 — the pieces every screen of the phone app shares. The frame (MobileFrame) provides the app's navigation
 // through AppCtx: open a page or a small sub-screen over the current tab, go back, switch tabs.
 export const AppCtx = createContext(null)
 export const useApp = () => useContext(AppCtx)
 
-// A sub-screen (P971): a header pinned at the top under the status bar (back button, title, a line under it, buttons
-// on the right) on a blurred backdrop, the page scrolling under it (never over it, never under the status bar), and
-// its own buttons pinned at the bottom. Notifications passes `close` for its close button on the right instead.
-export function SubPage({ title, line, foot, children, className = '', right, close }) {
+// A sub-screen (P971, P972): a header pinned at the top (back, title, a line, buttons on the right) that is clear at
+// rest and only blurs once the page scrolls under it, so the page's backdrop runs to the very top of the screen. The
+// page scrolls under the header and the status bar. `big` (Search, Notifications, the Account screens) is the iOS
+// large title: a plain back arrow on top, the big title in the page that scrolls away, and a small title that fades
+// into the header once it has. Notifications passes `close` for its arrow on the right instead of Back.
+export function SubPage({ title, line, foot, children, className = '', right, close, big = false, left }) {
   const app = useApp()
+  const head = useRef(null)
+  const onScroll = e => {
+    const h = head.current
+    if (!h) return
+    const y = e.currentTarget.scrollTop
+    h.classList.toggle('is-scrolled', y > 2)
+    if (big) h.classList.toggle('is-titled', y > 44)
+  }
+  const arrow = (label, flip) => big
+    ? <button type="button" className="ma-back ma-press" aria-label={label} onClick={app.back}><ChevronLeft size={30} strokeWidth={2.1} aria-hidden="true" style={flip ? { transform: 'scaleX(-1)' } : undefined} /></button>
+    : <button type="button" className="ma-round ma-press" aria-label={label} onClick={app.back}><ChevronLeft size={22} aria-hidden="true" style={flip ? { transform: 'scaleX(-1)' } : undefined} /></button>
   return (
-    <div className={`ma-subpage ${className}`}>
-      <div className="ma-scroll ma-sub-scroll" data-ma-scroll>
-        <div className="ma-sub-b">{children}</div>
+    <div className={`ma-subpage${big ? ' is-big' : ''} ${className}`}>
+      <div className="ma-scroll ma-sub-scroll" data-ma-scroll onScroll={onScroll}>
+        <div className="ma-sub-b">
+          {big && <div className="ma-bigt"><h1>{title}</h1>{line && <small>{line}</small>}</div>}
+          {children}
+        </div>
       </div>
-      <header className="ma-sub-h">
-        {!close && <button type="button" className="ma-round ma-press" aria-label="Back" onClick={app.back}><ChevronLeft size={22} aria-hidden="true" /></button>}
-        <span className="ma-sub-t"><b>{title}</b>{line && <small>{line}</small>}</span>
+      <header className="ma-sub-h" ref={head}>
+        {left}
+        {!close && arrow('Back')}
+        <span className="ma-sub-t" aria-hidden={big || undefined}><b>{title}</b>{line && !big && <small>{line}</small>}</span>
         {right}
-        {close && <button type="button" className="ma-round ma-press" aria-label={close} onClick={app.back}><ChevronLeft size={22} aria-hidden="true" style={{ transform: 'scaleX(-1)' }} /></button>}
+        {close && arrow(close, true)}
       </header>
       {foot && <div className="ma-foot">{foot}</div>}
     </div>
@@ -80,15 +98,19 @@ function useEsc(open, onClose) {
   }, [open, onClose])
 }
 
-// A sheet that slides up from the bottom over a dimmed page (the result sheet, a calendar day).
+// A sheet that slides up from the bottom over a dimmed page (the result sheet, a calendar day). P972: pull it down
+// by the handle or the body (when scrolled to its top) to close it; it springs back if the pull is short.
 export function BottomSheet({ open, onClose, label, children, tall = false }) {
   const [shown, leaving] = useExit(open)
+  const sheet = useRef(null)
+  const scrim = useRef(null)
   useEsc(open, onClose)
+  useSheetDrag({ sheetRef: sheet, scrimRef: scrim, onClose, on: shown && !leaving })
   if (!shown) return null
   return createPortal(
     <div className={`tp fx ma-layer${leaving ? ' is-leaving' : ''}`} role="presentation">
-      <button type="button" className="ma-scrim" aria-label="Close" onClick={onClose} />
-      <section className={`ma-sheet${tall ? ' is-tall' : ''}`} role="dialog" aria-modal="true" aria-label={label}>
+      <button type="button" className="ma-scrim" aria-label="Close" onClick={onClose} ref={scrim} />
+      <section className={`ma-sheet${tall ? ' is-tall' : ''}`} role="dialog" aria-modal="true" aria-label={label} ref={sheet}>
         <i className="ma-grab" aria-hidden="true" />
         {children}
       </section>

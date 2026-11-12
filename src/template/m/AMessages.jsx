@@ -1,10 +1,12 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { ArrowUp } from 'lucide-react'
 import { useSampleThreads, useSampleActions, useDataSource } from '../data'
 import { useAuth } from '../../hooks/useAuth'
 import { useDmMessages, useSendDm } from '../../hooks/useDirectMessages'
 import { isSupport, emptySupport } from '../support911'
 import { useApp, SubPage, Ini, rise } from './AppKit'
+import { runsOf } from './appModel'
+import { subscribeLocal, getLocal, sendLocal, shortAt } from './threadStore'
 
 // P967 — Messages: you and the Ohvara team. Threads sit straight on the page with hairlines between them (no box, no
 // pencil). A thread opens as its own screen: the team on the left with who wrote, you on the right in dark, and the
@@ -29,17 +31,18 @@ export function SupportProvider({ children }) {
 export function useThreadList() {
   const { data: rows } = useSampleThreads()
   const real = useContext(SupportCtx)
+  const local = useSyncExternalStore(subscribeLocal, getLocal)
   const hasSup = rows.some(isSupport)
   const threads = useMemo(() => {
     const all = real.thread && !hasSup ? [real.thread, ...rows] : rows
-    return [...all.filter(isSupport), ...all.filter(t => !isSupport(t))]
-  }, [rows, real.thread, hasSup])
-  return { threads, realSupportId: !hasSup && real.thread ? real.thread.id : null, sendReal: real.send }
+    const extra = local.filter(t => t.messages.length && !all.some(x => x.client_id && x.client_id === t.client_id))
+    return [...all.filter(isSupport), ...extra, ...all.filter(t => !isSupport(t))]
+  }, [rows, real.thread, hasSup, local])
+  return { threads, local, realSupportId: !hasSup && real.thread ? real.thread.id : null, sendReal: real.send }
 }
 
 const toneOf = t => (isSupport(t) ? 'stone' : t.client_id ? 'sage' : 'sky')
 const lastOf = t => t.messages?.[t.messages.length - 1]
-const shortAt = at => String(at || '').replace(/^Today, /, '').replace(/, \d{4}/, '')
 const whoOf = (t, m) => (m.from === 'me' ? 'You' : m.who || (isSupport(t) ? 'Ohvara Support' : 'Our team'))
 
 export default function AMessages() {
@@ -69,47 +72,94 @@ export default function AMessages() {
   )
 }
 
+// P972: the keyboard. Dragging down on the conversation or tapping anywhere off the field drops it (the web side of
+// iOS's interactive dismiss; the native drag-along needs keyboardDismissMode in the next app build), and the typing
+// bar rides on top of it (--ma-kb: how much of the screen the keyboard covers when the page isn't resized for it).
+function useKeyboard(rootRef, inputRef) {
+  useEffect(() => {
+    const root = rootRef.current
+    const scroller = root?.querySelector('.ma-sub-scroll')
+    if (!root || !scroller) return undefined
+    let y0 = null
+    const typing = () => document.activeElement === inputRef.current
+    const onStart = e => { y0 = e.touches?.[0]?.clientY ?? null }
+    const onMove = e => {
+      if (y0 === null || !typing()) return
+      if ((e.touches?.[0]?.clientY ?? y0) - y0 > 14) { inputRef.current.blur(); y0 = null }
+    }
+    const onDown = e => { if (typing() && !e.target.closest('.ma-compose')) inputRef.current.blur() }
+    scroller.addEventListener('touchstart', onStart, { passive: true })
+    scroller.addEventListener('touchmove', onMove, { passive: true })
+    root.addEventListener('pointerdown', onDown)
+    const vv = window.visualViewport
+    const fit = () => {
+      const kb = vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0
+      root.style.setProperty('--ma-kb', `${kb}px`)
+      root.classList.toggle('has-kb', kb > 40)
+    }
+    vv?.addEventListener('resize', fit)
+    vv?.addEventListener('scroll', fit)
+    fit()
+    return () => {
+      scroller.removeEventListener('touchstart', onStart)
+      scroller.removeEventListener('touchmove', onMove)
+      root.removeEventListener('pointerdown', onDown)
+      vv?.removeEventListener('resize', fit)
+      vv?.removeEventListener('scroll', fit)
+    }
+  }, [rootRef, inputRef])
+}
+
 export function AThread({ id }) {
-  const { threads, realSupportId, sendReal } = useThreadList()
+  const { threads, local, realSupportId, sendReal } = useThreadList()
   const { sendMessage, readThread } = useSampleActions()
   const [text, setText] = useState('')
   const end = useRef(null)
-  const t = threads.find(x => x.id === id)
+  const root = useRef(null)
+  const input = useRef(null)
+  const t = threads.find(x => x.id === id) || local.find(x => x.id === id)
   const real = t && t.id === realSupportId
-  useEffect(() => { if (t && !real && t.unread > 0) readThread(t.id) }, [t?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (t && !real && !t.local && t.unread > 0) readThread(t.id) }, [t?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { end.current?.scrollIntoView({ block: 'end' }) }, [t?.messages?.length])
+  useKeyboard(root, input)
   if (!t) return <SubPage title="Messages"><p className="ma-empty">This chat isn’t here any more.</p></SubPage>
   const send = e => {
     e.preventDefault()
     const v = text.trim()
     if (!v) return
-    if (real) sendReal(v); else sendMessage(t.id, v)
+    if (real) sendReal(v)
+    else if (t.local) sendLocal(t.id, v, new Date().toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))
+    else sendMessage(t.id, v)
     setText('')
   }
   const msgs = t.messages || []
+  const runs = runsOf(msgs, m => whoOf(t, m))
   const foot = (
     <form className="ma-compose" onSubmit={send}>
-      <input type="text" aria-label="Message the team" placeholder="Message the team" value={text} onChange={e => setText(e.target.value)} enterKeyHint="send" />
+      <input ref={input} type="text" aria-label="Message the team" placeholder="Message the team" value={text} onChange={e => setText(e.target.value)} enterKeyHint="send"
+        onFocus={() => setTimeout(() => end.current?.scrollIntoView({ block: 'end', behavior: 'smooth' }), 260)} />
       <button type="submit" className={`ma-send ma-press${text.trim() ? ' is-ready' : ''}`} aria-label="Send" disabled={!text.trim()}><ArrowUp size={19} aria-hidden="true" /></button>
     </form>
   )
   return (
-    <SubPage title={t.name} line="with the Ohvara team" foot={foot} className="is-chat">
-      <div className="ma-chat">
-        {msgs.map((m, i) => {
-          const me = m.from === 'me'
-          const showWho = !me && (i === 0 || msgs[i - 1].from === 'me' || whoOf(t, msgs[i - 1]) !== whoOf(t, m))
-          return (
-            <div key={m.id || i} className={`ma-msg${me ? ' is-me' : ''}`}>
-              {showWho && <small className="ma-msg-who">{whoOf(t, m)}</small>}
-              <div className="ma-bub">{m.text}</div>
-              <small className="ma-msg-at">{m.at}</small>
-            </div>
-          )
-        })}
-        {!msgs.length && <p className="ma-empty">Write the team anything about {isSupport(t) ? 'your account' : t.name.split(' ')[0]}.</p>}
-        <span ref={end} />
-      </div>
-    </SubPage>
+    <div className="ma-chatwrap" ref={root}>
+      <SubPage title={t.name} line="with the Ohvara team" foot={foot} className="is-chat">
+        <div className="ma-chat">
+          {msgs.map((m, i) => {
+            const me = m.from === 'me'
+            const r = runs[i]
+            return (
+              <div key={m.id || i} className={`ma-msg${me ? ' is-me' : ''}${r.first ? ' is-first' : ''}${r.last ? ' is-last' : ''}`}>
+                {r.first && !me && <small className="ma-msg-who">{whoOf(t, m)}</small>}
+                <div className={`ma-bub${r.last ? ' has-tail' : ''}`}>{m.text}</div>
+                {r.last && <small className="ma-msg-at">{m.at}</small>}
+              </div>
+            )
+          })}
+          {!msgs.length && <p className="ma-empty">Write the team anything about {isSupport(t) ? 'your account' : t.name.split(' ')[0]}.</p>}
+          <span ref={end} />
+        </div>
+      </SubPage>
+    </div>
   )
 }

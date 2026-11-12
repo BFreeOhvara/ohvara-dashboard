@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useState } from 'react'
 import { Search, X, FileUp, CalendarDays } from 'lucide-react'
-import { useSampleLeads, useSampleClients, useSampleOverview, useSampleNeeds, useSampleActivity } from '../data'
+import { useSampleLeads, useSampleClients, useSampleOverview } from '../data'
 import { useClientStatusOf } from '../checkSettings'
 import { clockNow } from '../leadLifecycle'
 import { paths } from '../paths'
 import { ReactivateDrawer, ReactivationCards } from '../Reactivate'
 import { useApp, SubPage, Ini, rise } from './AppKit'
 import { NeedCard, useNeedItems, useNow } from './AHome'
-import { stageOf, TONE, TAG, minutesOf, unseenCount, markSeen } from './appModel'
+import { stageOf, TONE, TAG, minutesOf } from './appModel'
 
-// P967 — the sub-screens that open over a tab: Search (All / Leads / Clients), Needs you (every card), Today's calls,
+// P967 — the sub-screens that open over a tab: Search (All / Leads / Clients; P972: a normal page with a big title
+// that scrolls away, no bottom bar, and the keyboard only once the field is tapped), Needs you (every card), Today's calls,
 // Import your leads (the P957/P959 flow, unchanged), and Notifications (slides in from the left; new ones dotted, the
 // bell's badge clears once it's opened).
 const leadName = l => `${l.first_name} ${l.last_name}`
@@ -31,8 +32,8 @@ export function ASearch() {
   const ls = f === 'clients' ? [] : leads.filter(l => stageOf(l, now) !== null && hit(leadName(l), l.phone, l.city || ''))
   const cs = f === 'leads' ? [] : clients.filter(c => hit(clientName(c), c.client_phone, c.carrier_name || ''))
   return (
-    <SubPage title="Search" line="Leads and clients">
-      <label className="ma-search"><Search size={19} aria-hidden="true" /><input type="search" autoFocus aria-label="Search leads and clients" placeholder="Name, phone, city or carrier" value={q} onChange={e => setQ(e.target.value)} />{q && <button type="button" className="ma-ib" aria-label="Clear" onClick={() => setQ('')}><X size={18} aria-hidden="true" /></button>}</label>
+    <SubPage big title="Search" line="Leads and clients" className="is-search">
+      <label className="ma-search"><Search size={19} aria-hidden="true" /><input type="search" aria-label="Search leads and clients" placeholder="Name, phone, city or carrier" value={q} onChange={e => setQ(e.target.value)} />{q && <button type="button" className="ma-ib" aria-label="Clear" onClick={() => setQ('')}><X size={18} aria-hidden="true" /></button>}</label>
       <div className="ma-chips" role="tablist" aria-label="Search in">
         {[['all', 'All'], ['leads', 'Leads'], ['clients', 'Clients']].map(([k, w]) => <button key={k} type="button" role="tab" aria-selected={f === k} className={`ma-fchip ma-press${f === k ? ' is-on' : ''}`} onClick={() => setF(k)}>{w}</button>)}
       </div>
@@ -130,63 +131,4 @@ export function AImport() {
   )
 }
 
-// Notifications: Today = billing notices, to-dos and FYIs; Earlier = the activity log. Seen ids live on this device.
-const SEEN_KEY = 'ohv-ma-seen'
-const readSeen = () => { try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '[]') } catch { return [] } }
-const writeSeen = ids => { try { localStorage.setItem(SEEN_KEY, JSON.stringify(ids)) } catch { /* private window: fine */ } }
-// A tiny store, so the bell's count (in the frame) updates the moment the panel marks everything seen.
-const seenListeners = new Set()
-let seenCache = readSeen()
-const subscribeSeen = f => { seenListeners.add(f); return () => { seenListeners.delete(f) } }
-const getSeen = () => seenCache
-
-export function useNotifItems() {
-  const { data: needs } = useSampleNeeds()
-  return useMemo(() => [
-    ...(needs.notices || []).map(n => ({ id: `bill-${n.key}`, title: n.title || n.name, what: n.what, tone: 'coral' })),
-    ...needs.now.map(n => ({ id: n.id, title: n.name, what: n.what, ref: n.kind === 'lead' ? n.ref : null, tone: 'apricot' })),
-    ...(needs.fyi || []).map(n => ({ id: n.id, title: n.name, what: `${n.title}. ${n.what}`, ref: n.ref, tone: 'sky' })),
-  ], [needs])
-}
-
-export function useUnseen() {
-  const items = useNotifItems()
-  const seen = useSyncExternalStore(subscribeSeen, getSeen)
-  return unseenCount(items.map(i => i.id), seen)
-}
-
-export function ANotif() {
-  const app = useApp()
-  const items = useNotifItems()
-  const { data: act } = useSampleActivity()
-  const [was] = useState(getSeen)
-  useEffect(() => {
-    seenCache = markSeen(items.map(i => i.id), seenCache)
-    writeSeen(seenCache)
-    seenListeners.forEach(f => f())
-  }, [items])
-  const go = it => { if (it.ref) app.open(paths.lead(it.ref)) }
-  return (
-    <SubPage className="is-notif" title="Notifications" line={items.length ? `${items.length} today` : 'Nothing new'} close="Close notifications">
-      <p className="ma-cap is-out">Today</p>
-      <div className="ma-threads">
-        {items.map((it, i) => (
-          <button key={it.id} type="button" className={`ma-notif ma-rise${was.includes(it.id) ? '' : ' is-new'}`} style={rise(i)} onClick={() => go(it)} disabled={!it.ref}>
-            <i className={`ma-notif-dot is-${it.tone}`} aria-hidden="true" />
-            <span className="ma-grow"><b>{it.title}</b><small>{it.what}</small></span>
-            {!was.includes(it.id) && <span className="ma-new-dot" aria-label="New" />}
-          </button>
-        ))}
-        {!items.length && <p className="ma-empty">Nothing new today.</p>}
-      </div>
-      {act.length > 0 && <>
-        <p className="ma-cap is-out">Earlier</p>
-        <div className="ma-threads">
-          {act.slice(0, 12).map(a => (
-            <div key={a.id} className="ma-notif is-old"><i className="ma-notif-dot is-stone" aria-hidden="true" /><span className="ma-grow"><b>{a.who}</b><small>{a.text}{a.at ? ` · ${a.at}` : ''}</small></span></div>
-          ))}
-        </div>
-      </>}
-    </SubPage>
-  )
-}
+// Notifications and Activity moved to ANotes.jsx (P972).

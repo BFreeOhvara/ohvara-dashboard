@@ -7,9 +7,9 @@ import { layoutOf } from '../paths.js'
 
 export const TABS = ['home', 'leads', 'calendar', 'messages', 'account']
 // Sub-screens with their own buttons at the bottom: the tab bar slides away on these.
-export const OWN_BAR = ['lead', 'thread', 'submit', 'import']
+export const OWN_BAR = ['lead', 'thread', 'submit', 'import', 'search']
 // The small sub-screens that live in ?s= (no page of their own).
-export const QUERY_SUBS = ['search', 'needs', 'today', 'import', 'thread', 'notif']
+export const QUERY_SUBS = ['search', 'needs', 'today', 'import', 'thread', 'notif', 'help']
 
 const TAB_OF = { overview: 'home', leads: 'leads', calendar: 'calendar', messages: 'messages', more: 'account' }
 const PAGE_SUBS = ['billing', 'activity', 'settings', 'submit']
@@ -29,12 +29,12 @@ export function routeOf(pathname, search = '') {
   else if (TAB_OF[layout]) out = { tab: TAB_OF[layout], sub: null, id: null }
   else if (PAGE_SUBS.includes(layout)) out = { tab: null, sub: layout, id: null }
   // A ?s= sub-screen sits over whatever the address shows (a tab, or a page sub-screen like Clients).
-  if (s && QUERY_SUBS.includes(s)) return { ...out, tab: out.tab, over: out.sub, sub: s, id: s === 'thread' ? q.get('t') : out.id }
-  return { ...out, over: null }
+  if (s && QUERY_SUBS.includes(s)) return { ...out, tab: out.tab, over: out.sub, overId: out.id, sub: s, id: s === 'thread' ? q.get('t') : out.id }
+  return { ...out, over: null, overId: null }
 }
 
 // The tab under a sub-screen: the one it was opened from (history state), else its home tab.
-const HOME_TAB = { lead: 'leads', import: 'leads', thread: 'messages', search: 'home', needs: 'home', today: 'home', notif: 'home' }
+const HOME_TAB = { lead: 'leads', import: 'leads', thread: 'messages', search: 'home', needs: 'home', today: 'home', notif: 'home', help: 'account' }
 export const baseTab = (route, fromTab) => route.tab || (TABS.includes(fromTab) ? fromTab : HOME_TAB[route.sub] || 'account')
 
 // The tab the swipe lands on: one over, never past the ends.
@@ -162,3 +162,81 @@ export function weekWords(week) {
   const ends = new Set(on.map(d => week[d].end))
   return starts.size === 1 && ends.size === 1 ? `${days}, ${shortTime(on.map(d => week[d].start)[0])} to ${shortTime(on.map(d => week[d].end)[0])}` : days
 }
+
+// ── P972: the layer stack, swipe back, sheets, notifications, chat runs ───────────────────────────────────────
+// A screen one level in (a setting, the full Billing or Submit page, one client) and a ?s= screen over a page
+// sub-screen have a parent: it sits under the top layer (the peek while swiping back) and Back lands on it.
+const NESTED = { settings: 'set', billing: 'full', submit: 'full' }
+export function nestedOf(route, search = '') {
+  const k = NESTED[route.sub]
+  const v = k ? new URLSearchParams(search).get(k) : null
+  return k === 'full' ? (v === '1' ? 'full' : '') : v || ''
+}
+export function parentOf(route, search = '') {
+  if (route.over) return { sub: route.over, id: route.overId || null, nested: '' }
+  if (route.sub === 'clients' && route.id) return { sub: 'clients', id: null, nested: '' }
+  if (nestedOf(route, search)) return { sub: route.sub, id: null, nested: '' }
+  return null
+}
+// One key per screen, the same whether it's on top or under, so the parent keeps its scroll when it comes back up.
+export const screenKey = (sub, id, nested = '') => `${sub}:${id || ''}:${nested || ''}`
+
+// Where a released swipe-back lands: a flick the way it came from (≥ 0.35 px/ms) or a drag past 35 % closes it,
+// anything less springs back. d and v are signed in the closing direction (positive = closing).
+export const backCloses = (d, v, width) => (v >= 0.35 && d >= 12) || d >= width * 0.35
+// A bottom sheet pulled down: a flick down (≥ 0.5 px/ms) or past a quarter of its height (at most 140 px) closes it.
+export const sheetCloses = (dy, v, height) => (v >= 0.5 && dy >= 10) || dy >= Math.min(140, height * 0.25)
+
+// Notifications and Activity: what kind of thing happened (its icon and colour) and which day group it falls in.
+export const NOTE_KIND = {
+  booking: { tone: 'sky', label: 'New booking' },
+  live: { tone: 'apricot', label: 'Live call' },
+  packet: { tone: 'butter', label: 'Packet in' },
+  payment: { tone: 'coral', label: 'Payment' },
+  risk: { tone: 'coral', label: 'Client at risk' },
+  message: { tone: 'stone', label: 'Team message' },
+  protected: { tone: 'sage', label: 'Protected' },
+  moved: { tone: 'butter', label: 'Moved' },
+  sold: { tone: 'sage', label: 'Sold' },
+  todo: { tone: 'apricot', label: 'To do' },
+}
+// An activity row's kind, from what it says (the log has a coarse kind: lead, client, moved, call, text).
+export function kindOfActivity(a) {
+  const t = String(a?.text || '')
+  if (/chargeback|lapsed|didn.t go through|at risk|save call/i.test(t)) return 'risk'
+  if (/packet/i.test(t)) return 'packet'
+  if (/live call|transfer/i.test(t)) return 'live'
+  if (/charged|payment|card|receipt/i.test(t)) return 'payment'
+  if (/(^|[^a-z])sold(?![a-z])/i.test(t) && !/not sold/i.test(t)) return 'sold'
+  if (/protected/i.test(t)) return 'protected'
+  if (/booked|appointment|new lead/i.test(t)) return 'booking'
+  if (a?.kind === 'text') return 'message'
+  if (a?.kind === 'call') return 'live'
+  if (a?.kind === 'client') return 'protected'
+  return 'moved'
+}
+// "Today, 9:40 AM" → today, "Yesterday, 11:02 AM" → yesterday, anything else → earlier; plus the time on its own.
+export function dayOf(at) {
+  const s = String(at || '')
+  const time = (/(\d{1,2}:\d{2}\s*(?:AM|PM))\s*$/i.exec(s) || [])[1] || ''
+  if (/^today(?![a-z])/i.test(s)) return { group: 'today', time, day: 'Today' }
+  if (/^yesterday(?![a-z])/i.test(s)) return { group: 'yesterday', time, day: 'Yesterday' }
+  const day = s.replace(/,?\s*\d{1,2}:\d{2}\s*(?:AM|PM)\s*$/i, '').trim()
+  return { group: 'earlier', time, day: day || 'Earlier' }
+}
+export const GROUPS = [['today', 'Today'], ['yesterday', 'Yesterday'], ['earlier', 'Earlier']]
+// Splits items into Today / Yesterday / Earlier (in that order, empty groups dropped), keeping their order inside.
+export const groupByDay = items => GROUPS.map(([k, label]) => ({ key: k, label, items: items.filter(i => i.group === k) })).filter(g => g.items.length)
+
+// Chat: consecutive messages from the same sender are one run. The name shows over the first bubble of a team
+// run; the tail and the time only on the last.
+export function runsOf(msgs, whoOf) {
+  return msgs.map((m, i) => {
+    const key = x => (x.from === 'me' ? 'me' : `t:${whoOf(x)}`)
+    const prev = msgs[i - 1]
+    const next = msgs[i + 1]
+    return { first: !prev || key(prev) !== key(m), last: !next || key(next) !== key(m) }
+  })
+}
+// The policy number's last four ("•• 1001"), never the whole number.
+export const last4 = n => { const d = String(n || '').replace(/[^0-9A-Za-z]/g, ''); return d ? `•• ${d.slice(-4)}` : '' }

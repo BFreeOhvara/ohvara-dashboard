@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown, X } from 'lucide-react'
 import { useExit, still } from '../motion'
+import { useSheetDrag } from './useBackSwipe'
 
 // P908 — phone sheets. Sheet: a full-screen page that slides up (what a desktop drawer becomes on a phone), with a
 // close at the top-left, the title in the middle and its buttons pinned at the bottom above the home bar.
@@ -39,11 +40,14 @@ function useShut(open, onClose) {
 export function Sheet({ open, onClose, title, kicker, tone, footer, children }) {
   const [shown, leaving] = useExit(open)
   const [shut, shutting, gone] = useShut(open, onClose)
+  const sheet = useRef(null)
   useEsc(open, shut)
+  // P972: pull it down (from the header, or the body scrolled to its top) to close it.
+  useSheetDrag({ sheetRef: sheet, onClose, on: shown && !leaving && !shutting && !(gone && !open) })
   if (!shown || (gone && !open)) return null
   return createPortal(
     <div className={`tp fx mx-layer${leaving || shutting ? ' is-leaving' : ''}`} role="presentation">
-      <section className={`mx-sheet${tone ? ` is-${tone}` : ''}`} role="dialog" aria-modal="true" aria-label={title}>
+      <section className={`mx-sheet${tone ? ` is-${tone}` : ''}`} role="dialog" aria-modal="true" aria-label={title} ref={sheet}>
         <header className="mx-sheet-h">
           <button type="button" className="mx-ib" aria-label="Close" onClick={shut}><ChevronDown size={24} aria-hidden="true" /></button>
           <span className="mx-sheet-t">{kicker && <small>{kicker}</small>}<b>{title}</b></span>
@@ -59,12 +63,15 @@ export function Sheet({ open, onClose, title, kicker, tone, footer, children }) 
 
 export function ActionSheet({ open, onClose, title, sub, children }) {
   const [shown, leaving] = useExit(open)
+  const sheet = useRef(null)
+  const scrim = useRef(null)
   useEsc(open, onClose)
+  useSheetDrag({ sheetRef: sheet, scrimRef: scrim, onClose, on: shown && !leaving })
   if (!shown) return null
   return createPortal(
     <div className={`tp fx mx-layer is-short${leaving ? ' is-leaving' : ''}`} role="presentation">
-      <button type="button" className="mx-scrim" aria-label="Close" onClick={onClose} />
-      <section className="mx-act" role="dialog" aria-modal="true" aria-label={title}>
+      <button type="button" className="mx-scrim" aria-label="Close" onClick={onClose} ref={scrim} />
+      <section className="mx-act" role="dialog" aria-modal="true" aria-label={title} ref={sheet}>
         <i className="mx-grab" aria-hidden="true" />
         <header className="mx-act-h"><span className="tp-grow"><b>{title}</b>{sub && <small>{sub}</small>}</span><button type="button" className="mx-ib" aria-label="Close" onClick={onClose}><X size={20} aria-hidden="true" /></button></header>
         <div className="mx-act-b">{children}</div>

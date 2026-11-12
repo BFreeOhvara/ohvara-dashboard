@@ -41,9 +41,9 @@ const TITLE = {
 }
 const zoneWord = tz => String(tz || '').split(/[/]/).pop().replace(/_/g, ' ') || 'Not set'
 
-export default function ASettings() {
+export default function ASettings({ root = false }) {
   const [params] = useSearchParams()
-  const set = params.get('set')
+  const set = root ? null : params.get('set')
   if (set && TITLE[set]) return <SubPage title={TITLE[set]} line="Settings"><Section k={set} /></SubPage>
   return <SettingsList />
 }
@@ -74,7 +74,7 @@ function SettingsList() {
   const leads = has('leads')
   const card = b.card?.onFile === false ? 'No card' : `${b.card?.brand || ''} ${b.card?.last4 || ''}`.trim()
   return (
-    <SubPage title="Settings" line="Everything from the portal’s Settings">
+    <SubPage big title="Settings" line="Everything from the portal’s Settings">
       <Group title="You">
         <Row onClick={() => go('profile')} title="Name and contact" right={<Val>{s.profile?.name}</Val>} />
         <Row onClick={() => go('zone')} title="Time zone" right={<Val>{zoneWord(s.timeZone)}</Val>} />

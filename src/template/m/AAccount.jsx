@@ -1,27 +1,24 @@
 import { useMemo, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { Plus, Wallet, Search, X, UserPlus, StickyNote, ShieldAlert } from 'lucide-react'
-import { useSampleBilling, useSampleSettings, useSampleClients, useSampleActivity, useSampleActions, useDataSource } from '../data'
-import { useAccount, useNote } from '../kit'
+import { useLocation } from 'react-router-dom'
+import { Plus, Wallet, Search, X, UserPlus, StickyNote } from 'lucide-react'
+import { useSampleBilling, useSampleSettings, useSampleClients, useSampleActivity, useDataSource } from '../data'
+import { useAccount } from '../kit'
 import { useCheckSettings, todayFor } from '../checkSettings'
 import { clientStatusOf, clientStatus, checkLists, mergeLists, workingWhy, ordinal } from '../../lib/clientCheck.js'
 import { stagesOf } from '../../lib/clientStages.js'
-import { agentOpensSaveCall } from '../ful/data'
 import { asPick } from '../licenceModel'
 import { dailyTotal, deliveredOf, planOf } from '../spendPlan'
 import { usd } from '../motion'
 import { paths, isTemplateAddress } from '../paths'
-import { GetApp, Help, AddNote } from '../TemplateFrame'
+import { GetApp, AddNote } from '../TemplateFrame'
 import { AddClients } from '../AddClients891'
-import { TalkDrawer } from '../Talk'
-import { ReportBug } from '../ReportBug'
 import { isNativeApp } from '../../lib/native'
 import { NATIVE_BILLING_TEXT } from '../../components/native/NativeBillingNote'
 import { AppAbout } from '../../components/native/AppAbout'
 import { useProducts, useNavKeys } from '../useProducts'
 import { label as productsLabel } from '../../lib/products.js'
-import { useApp, SubPage, Row, Ini, BottomSheet, rise } from './AppKit'
-import { CheckCard, ClientSheet } from './MClients'
+import { useApp, SubPage, Row, Ini, rise } from './AppKit'
+import { CheckCard } from './MClients'
 import { chargeStat } from './appModel'
 import { useClientStatusOf } from '../checkSettings'
 
@@ -97,7 +94,7 @@ export default function AAccount() {
         <Row onClick={() => app.open(paths.activity())} lead={<span className="ma-sym is-sky">↻</span>} title="Activity" sub={act[0] ? `${act[0].who}: ${act[0].text}` : 'Everything that happened'} />
         <Row onClick={() => app.open(paths.billing())} lead={<span className="ma-sym is-butter">$</span>} title="Billing" sub={native ? NATIVE_BILLING_TEXT : 'Plan, card and receipts'} />
         <Row onClick={() => app.open(paths.settings())} lead={<span className="ma-sym is-stone">⚙</span>} title="Settings" sub="Hours, alerts, account" />
-        <Row onClick={() => setPanel('help')} lead={<span className="ma-sym is-stone">?</span>} title="Help" sub="Message the team any time" />
+        <Row onClick={() => app.openSub('help')} lead={<span className="ma-sym is-stone">?</span>} title="Help" sub="Message the team any time" />
         {!native && <Row onClick={() => setPanel('app')} lead={<span className="ma-sym is-sky">↓</span>} title="Get the phone app" sub="Alerts the moment a lead comes in" />}
       </div>
 
@@ -111,9 +108,6 @@ export default function AAccount() {
       <AppAbout style={{ margin: '4px 12px 12px' }} />
 
       <GetApp open={panel === 'app'} onClose={close} />
-      <Help open={panel === 'help'} onClose={close} onBug={() => setPanel('bug')} onTalk={() => setPanel('talk')} />
-      <TalkDrawer open={panel === 'talk'} onClose={close} />
-      <ReportBug open={panel === 'bug'} onClose={close} role="Agent" />
     </div>
   )
 }
@@ -130,35 +124,24 @@ const lineOf = (c, st) => {
   return where || 'Nothing needed'
 }
 
-export function AClients({ id }) {
+export function AClients() {
+  const app = useApp()
   const loc = useLocation()
-  const navigate = useNavigate()
   const { data: clients } = useSampleClients()
-  const { markLapsed } = useSampleActions()
   const source = useDataSource()
   const settings = useCheckSettings()
   const today = todayFor(source)
-  const note = useNote()
   const [f, setF] = useState(loc.state?.cf === 'need' ? 'needs_attention' : 'all')
   const [q, setQ] = useState('')
   const [panel, setPanel] = useState(null)
-  const [lapsing, setLapsing] = useState(null)
   const statusOf = useMemo(() => new Map(clients.map(c => [c.id, clientStatusOf(c, today, settings)])), [clients, today, settings])
   const merged = useMemo(() => mergeLists(checkLists(clients, today, settings)), [clients, today, settings])
   const count = k => (k === 'all' ? clients.filter(c => statusOf.get(c.id) !== 'closed').length : clients.filter(c => statusOf.get(c.id) === k).length)
   const n = q.trim().toLowerCase()
   const rows = clients.filter(c => (f === 'all' ? statusOf.get(c.id) !== 'closed' : statusOf.get(c.id) === f) && (!n || `${fullName(c)} ${c.client_phone} ${c.carrier_name || ''}`.toLowerCase().includes(n)))
   const filters = FILTERS.filter(([k]) => k === 'all' || k === f || count(k) > 0)
-  const lapse = () => {
-    const c = lapsing
-    markLapsed?.(c.id, today)
-    agentOpensSaveCall({ who: fullName(c), why: 'lapsed', state: c.state, city: c.city })
-    note(`${fullName(c)} marked lapsed. Our team is calling to get it back on`)
-    setLapsing(null)
-  }
-  const closeClient = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate(paths.clients(), { replace: true }))
   return (
-    <SubPage title="Clients" line={`${clients.length} client${clients.length === 1 ? '' : 's'}`}
+    <SubPage big title="Clients" line={`${clients.length} client${clients.length === 1 ? '' : 's'} · our team works them`}
       right={<span className="ma-sub-acts"><button type="button" className="ma-round is-soft ma-press" aria-label="Add clients" onClick={() => setPanel('add')}><UserPlus size={19} aria-hidden="true" /></button><button type="button" className="ma-round is-soft ma-press" aria-label="Add a note to a client" onClick={() => setPanel('note')}><StickyNote size={19} aria-hidden="true" /></button></span>}>
       <div className="ma-chips" role="tablist" aria-label="Client status">
         {filters.map(([k, label]) => <button key={k} type="button" role="tab" aria-selected={f === k} className={`ma-fchip ma-press${f === k ? ' is-on' : ''}`} onClick={() => setF(k)}>{label} {count(k)}</button>)}
@@ -171,7 +154,7 @@ export function AClients({ id }) {
           const st = statusOf.get(c.id)
           return (
             <li key={c.id} className={`ma-lead is-${TONE_OF[st] || 'sage'} is-client`}>
-              <button type="button" className="ma-lead-open" onClick={() => navigate(paths.client(c.id), { state: loc.state })}>
+              <button type="button" className="ma-lead-open" onClick={() => app.open(paths.client(c.id))}>
                 <Ini name={fullName(c)} size={44} />
                 <span className="ma-grow"><b>{fullName(c)}</b><small>{lineOf(c, st)}</small></span>
               </button>
@@ -181,46 +164,10 @@ export function AClients({ id }) {
         })}
       </ul>
       {!rows.length && <p className="ma-empty">{f === 'needs_attention' ? 'Nothing to check. Every policy is confirmed on the books.' : 'No clients match.'}</p>}
-      {id && (source === 'sample' || clients.some(c => c.id === id)) && <ClientSheet key={id} id={id} today={today} settings={settings} onLapsed={setLapsing} onClose={closeClient} />}
-      <BottomSheet open={!!lapsing} onClose={() => setLapsing(null)} label="Mark lapsed?">
-        {lapsing && <>
-          <p className="ma-sheet-t">Mark lapsed?</p>
-          <p className="ma-sheet-s">{fullName(lapsing)} moves to Working and our team calls to get it back on.</p>
-          <div className="ma-two"><button type="button" className="ma-btn is-soft ma-press" onClick={() => setLapsing(null)}>Cancel</button><button type="button" className="ma-btn is-solid ma-press" onClick={lapse}><ShieldAlert size={17} aria-hidden="true" />Yes, it lapsed</button></div>
-        </>}
-      </BottomSheet>
       <AddClients open={panel === 'add'} onClose={() => setPanel(null)} />
       <AddNote open={panel === 'note'} onClose={() => setPanel(null)} />
     </SubPage>
   )
 }
 
-// ── Activity, grouped by day ──────────────────────────────────────────────────────────────────────────────────
-const KIND_TONE = { lead: 'sky', client: 'sage', moved: 'butter', call: 'apricot', text: 'stone' }
-const splitAt = at => { const m = /^(.*?),?\s*(\d{1,2}:\d{2}\s*(?:AM|PM))$/i.exec(String(at || '')); return m ? [m[1] || 'Today', m[2]] : [String(at || 'Earlier'), ''] }
-export function AActivity() {
-  const { data: items } = useSampleActivity()
-  const groups = useMemo(() => {
-    const out = []
-    items.forEach(a => {
-      const [day, time] = splitAt(a.at)
-      let g = out.find(x => x.day === day)
-      if (!g) { g = { day, items: [] }; out.push(g) }
-      g.items.push({ ...a, time })
-    })
-    return out
-  }, [items])
-  return (
-    <SubPage title="Activity" line="Everything that happened">
-      {groups.map(g => (
-        <section key={g.day}>
-          <p className="ma-cap is-out">{g.day}</p>
-          <div className="ma-glass ma-pad is-tight">
-            <ol className="ma-tl is-flat">{g.items.map(a => <li key={a.id}><i aria-hidden="true" className={`is-${KIND_TONE[a.kind] || 'stone'}`} /><span><b>{a.who}: {a.text}</b>{a.time && <small>{a.time}</small>}</span></li>)}</ol>
-          </div>
-        </section>
-      ))}
-      {!groups.length && <p className="ma-empty">Nothing has happened yet. Everything our team does for you shows here.</p>}
-    </SubPage>
-  )
-}
+// Activity moved to ANotes.jsx (P972: icons, tap-through).

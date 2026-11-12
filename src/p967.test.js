@@ -9,18 +9,18 @@ const read = f => readFileSync(new URL(f, import.meta.url), 'utf8')
 
 test('five tabs in order; the bar hides on a lead, a chat, Submit and Import', () => {
   assert.deepEqual(TABS, ['home', 'leads', 'calendar', 'messages', 'account'])
-  assert.deepEqual(OWN_BAR, ['lead', 'thread', 'submit', 'import'])
+  assert.deepEqual(OWN_BAR, ['lead', 'thread', 'submit', 'import', 'search']) // P972: Search hides the bar too
 })
 
 test('routes: the portal addresses on both the real and the template paths', () => {
-  assert.deepEqual(routeOf('/agent'), { tab: 'home', sub: null, id: null, over: null })
+  assert.deepEqual(routeOf('/agent'), { tab: 'home', sub: null, id: null, over: null, overId: null })
   assert.equal(routeOf('/agent/leads').tab, 'leads')
-  assert.deepEqual(routeOf('/agent/inbounds/abc'), { tab: null, sub: 'lead', id: 'abc', over: null })
-  assert.deepEqual(routeOf('/leads/abc'), { tab: null, sub: 'lead', id: 'abc', over: null })
+  assert.deepEqual(routeOf('/agent/inbounds/abc'), { tab: null, sub: 'lead', id: 'abc', over: null, overId: null })
+  assert.deepEqual(routeOf('/leads/abc'), { tab: null, sub: 'lead', id: 'abc', over: null, overId: null })
   assert.equal(routeOf('/messages').tab, 'messages')
   assert.equal(routeOf('/agent/more').tab, 'account')
   assert.equal(routeOf('/settings').sub, 'settings')
-  assert.deepEqual(routeOf('/agent/clients/c1'), { tab: null, sub: 'clients', id: 'c1', over: null })
+  assert.deepEqual(routeOf('/agent/clients/c1'), { tab: null, sub: 'clients', id: 'c1', over: null, overId: null })
   assert.equal(routeOf('/agent/request-service').sub, 'clients')
   assert.equal(routeOf('/agent/billing').sub, 'billing')
   assert.equal(routeOf('/agent/submit', '?lead=l1').sub, 'submit')

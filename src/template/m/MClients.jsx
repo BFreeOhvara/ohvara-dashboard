@@ -57,7 +57,7 @@ export function CheckCard({ m }) {
 }
 
 // Send app link: their own Deedstone page. Texted for you once texting is live; today, share it from your phone.
-function AppLinkSheet({ c, open, onClose }) {
+export function AppLinkSheet({ c, open, onClose }) {
   const note = useNote()
   const link = `${window.location.origin}/template/d/client?c=${c.id}`
   const share = async () => {

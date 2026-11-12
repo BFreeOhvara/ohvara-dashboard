@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { Home, Inbox, CalendarDays, MessageCircle } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { useIsTestAccount } from '../../hooks/useIsTestAccount'
@@ -16,13 +16,18 @@ import AHome from './AHome'
 import ALeads, { ALead } from './ALeads'
 import ACalendar from './ACalendar'
 import AMessages from './AMessages'
-import AAccount, { AClients, AActivity } from './AAccount'
+import AAccount, { AClients } from './AAccount'
+import { AClient } from './AClient'
+import { AHelp } from './AHelp'
+import { ANotif, AActivity } from './ANotes'
+import { useUnseen } from './useNotes'
 import ABilling from './ABilling'
 import ASettings from './ASettings'
 import ASubmit from './ASubmit'
-import { ASearch, ANeeds, AToday, AImport, ANotif, useUnseen } from './ASubs'
-import { TABS, OWN_BAR, routeOf, baseTab, stageOf } from './appModel'
+import { ASearch, ANeeds, AToday, AImport } from './ASubs'
+import { TABS, OWN_BAR, routeOf, baseTab, stageOf, parentOf, nestedOf, screenKey } from './appModel'
 import { useTabSwipe } from './useTabSwipe'
+import { useBackSwipe } from './useBackSwipe'
 import '../glass.css'
 import '../flow.css'
 import '../palette.css'
@@ -37,8 +42,8 @@ import '@fontsource/urbanist/800.css'
 
 // P967 — the agent app on a phone (below 768 px, and the native app), rebuilt from Brayden's approved mockup
 // (media/app-mockup/agent-app-mockup.dc.html). Five tabs side by side you swipe between (Home · Leads · Calendar ·
-// Messages · Account), each its own scroller; sub-screens slide in from the right (Back, or swipe from the left
-// edge); Notifications slide in from the left. A floating glass tab bar, icons only, hides on a lead, a chat,
+// Messages · Account), each its own scroller; sub-screens slide in from the right and Notifications from the left;
+// P972: each swipes away the way it came (from anywhere on it), with the screen under it peeking in. A floating glass tab bar, icons only, hides on a lead, a chat,
 // Submit and Import. Every screen reads the same data hooks as the portal; the addresses are the portal's own.
 const TAB_PATH = { home: () => paths.home(), leads: () => paths.leads(), calendar: () => paths.calendar(), messages: () => paths.messages(), account: () => paths.more() }
 const TAB_PAGE = { home: AHome, leads: ALeads, calendar: ACalendar, messages: AMessages, account: AAccount }
@@ -46,18 +51,19 @@ const TAB_ICON = { home: Home, leads: Inbox, calendar: CalendarDays, messages: M
 const TAB_LABEL = { home: 'Home', leads: 'Leads', calendar: 'Calendar', messages: 'Messages', account: 'Account' }
 const LEAVE_MS = 260
 
-function SubScreen({ route }) {
+function SubScreen({ route, root = false }) {
   switch (route.sub) {
     case 'lead': return <ALead id={route.id} />
-    case 'clients': return <AClients id={route.id} />
-    case 'billing': return <ABilling />
+    case 'clients': return route.id ? <AClient id={route.id} /> : <AClients />
+    case 'billing': return <ABilling root={root} />
     case 'activity': return <AActivity />
-    case 'settings': return <ASettings />
-    case 'submit': return <ASubmit />
+    case 'settings': return <ASettings root={root} />
+    case 'submit': return <ASubmit root={root} />
     case 'search': return <ASearch />
     case 'needs': return <ANeeds />
     case 'today': return <AToday />
     case 'import': return <AImport />
+    case 'help': return <AHelp />
     case 'thread': return <AThread id={route.id} />
     default: return null
   }
@@ -70,6 +76,7 @@ export default function MobileFrame() {
 function Frame() {
   const loc = useLocation()
   const navigate = useNavigate()
+  const navType = useNavigationType()
   useTheme() // applies the saved theme
   const still = useStill()
   const account = useAccount()
@@ -83,8 +90,15 @@ function Frame() {
   const tab = tabs.includes(baseTab(route, fromTab)) ? baseTab(route, fromTab) : 'home'
   const idx = Math.max(0, tabs.indexOf(tab))
   const notif = route.sub === 'notif'
-  const subKey = route.sub && !notif ? `${route.sub}:${route.id || ''}:${route.sub === 'settings' || route.sub === 'billing' || route.sub === 'submit' ? loc.search : ''}` : null
-  const under = route.over ? { sub: route.over, id: route.sub === 'thread' ? null : route.id } : null
+
+  // P972 — the layer stack. The screen on top, and under it the screen Back lands on (a setting's Settings, a
+  // client's Clients, the client under its chat): it shows while the top one is swiped away, and keeps its place
+  // (same key) when it comes back up. A screen that came back with Back doesn't slide in again.
+  const parent = route.sub ? parentOf(route, loc.search) : null
+  const layers = []
+  if (parent) layers.push({ key: screenKey(parent.sub, parent.id), route: { sub: parent.sub, id: parent.id }, top: notif })
+  if (route.sub && !notif) layers.push({ key: screenKey(route.sub, route.id, nestedOf(route, loc.search)), route, top: true })
+  const enter = navType !== 'POP'
 
   // Badges: leads to mark (Leads), unread messages (Messages), new notifications (the bell, on Home).
   const { data: leads } = useSampleLeads()
@@ -101,24 +115,24 @@ function Frame() {
   const [undoId, setUndoId] = useState(null)
   const undoLead = undoId ? leads.find(l => l.id === undoId) : null
 
-  // Leaving a sub-screen: slide it out, then go back (one step when there is history, else to its tab).
+  // Leaving a screen: slide it out, then go back one step (with no history: to its parent, else its tab).
   const [leaving, setLeaving] = useState(false)
-  const [edge, setEdge] = useState(0)
   const leaveT = useRef(null)
   const doBack = useCallback(() => {
-    if (window.history.state?.idx > 0) navigate(-1)
-    else navigate(TAB_PATH[tab](), { replace: true, state: { tab } })
-  }, [navigate, tab])
+    if (window.history.state?.idx > 0) { navigate(-1); return }
+    const up = !parent ? TAB_PATH[tab]() : route.over || nestedOf(route, loc.search) ? loc.pathname : paths.clients()
+    navigate(up, { replace: true, state: { tab } })
+  }, [navigate, tab, parent, route, loc.pathname, loc.search])
   const back = useCallback(() => {
     if (still || !route.sub) { doBack(); return }
     setLeaving(true)
     clearTimeout(leaveT.current)
-    leaveT.current = setTimeout(() => { setLeaving(false); setEdge(0); doBack() }, LEAVE_MS)
+    leaveT.current = setTimeout(() => { setLeaving(false); doBack() }, LEAVE_MS)
   }, [still, route.sub, doBack])
   useEffect(() => () => clearTimeout(leaveT.current), [])
   // A new address: the layer that was leaving is gone, so reset (during render, not in an effect).
   const [atKey, setAtKey] = useState(loc.key)
-  if (atKey !== loc.key) { setAtKey(loc.key); setLeaving(false); setEdge(0) }
+  if (atKey !== loc.key) { setAtKey(loc.key); setLeaving(false) }
 
   const goTab = useCallback(key => {
     if (!tabs.includes(key)) return
@@ -137,54 +151,47 @@ function Frame() {
   }), [tab, back, open, openSub, goTab, unseen])
 
   // Swipe between tabs (P971, useTabSwipe): the track follows the finger and snaps with its speed.
+  const frameRef = useRef(null)
   const viewRef = useRef(null)
   const trackRef = useRef(null)
   const barRef = useRef(null)
   const onSwitch = useCallback(n => goTab(tabs[n]), [goTab, tabs])
 
-  // Edge swipe back on a sub-screen (from the left edge), and swipe Notifications away to the left.
-  const edgeRef = useRef(null)
-  const onEdgeDown = e => {
-    const fromEdge = notif ? true : e.clientX <= 28
-    if (!fromEdge || e.target.closest('input[type="range"], [data-no-swipe]')) return
-    edgeRef.current = { x: e.clientX, y: e.clientY, on: false }
-  }
-  const onEdgeMove = e => {
-    const s = edgeRef.current
-    if (!s) return
-    const ddx = e.clientX - s.x
-    const ddy = e.clientY - s.y
-    if (!s.on) {
-      if (Math.abs(ddy) > 12 && Math.abs(ddy) > Math.abs(ddx)) { edgeRef.current = null; return }
-      if (Math.abs(ddx) > 10 && (notif ? ddx < 0 : ddx > 0)) { s.on = true; e.currentTarget.setPointerCapture?.(e.pointerId) } else return
-    }
-    setEdge(notif ? Math.min(0, ddx) : Math.max(0, ddx))
-  }
-  const onEdgeUp = e => {
-    const s = edgeRef.current
-    edgeRef.current = null
-    if (!s || !s.on) return
-    const ddx = e.clientX - s.x
-    if (Math.abs(ddx) > Math.min(110, window.innerWidth * 0.3)) back()
-    else setEdge(0)
-  }
-  const edgeHandlers = { onPointerDown: onEdgeDown, onPointerMove: onEdgeMove, onPointerUp: onEdgeUp, onPointerCancel: () => { edgeRef.current = null; setEdge(0) } }
+  // Swipe back (P972, useBackSwipe): the top screen follows the finger the way it came, the one under it peeks in.
+  const topRef = useRef(null)
+  const notifRef = useRef(null)
+  const scrimRef = useRef(null)
+  const underR = useCallback(() => frameRef.current?.querySelector('.ma-layer-r.is-under') || viewRef.current, [])
+  const underL = useCallback(() => frameRef.current?.querySelector('.ma-layer-r') || viewRef.current, [])
+  const topId = layers.length ? layers[layers.length - 1].key : ''
+  const swipeR = useBackSwipe({ layerRef: topRef, underOf: underR, dir: 1, on: !!topId && !notif, onClose: doBack, key: topId })
+  const swipeL = useBackSwipe({ layerRef: notifRef, underOf: underL, scrimRef, dir: -1, on: notif, onClose: doBack })
 
-  const hideBar = OWN_BAR.includes(route.sub) || notif
+  // The status bar: clear over a tab page at rest; a soft blur once the page scrolls under it (P972).
+  const onPageScroll = e => {
+    const el = e.target
+    if (!el.classList?.contains('ma-page') || !el.classList.contains('is-on')) return
+    frameRef.current?.classList.toggle('is-scrolled', el.scrollTop > 4)
+  }
+  useEffect(() => {
+    const page = frameRef.current?.querySelector(`[data-ma-tab="${tab}"]`)
+    frameRef.current?.classList.toggle('is-scrolled', (page?.scrollTop || 0) > 4)
+  }, [tab])
+
+  const hideBar = OWN_BAR.includes(route.sub) || notif || (route.sub === 'clients' && !!route.id) // P972: a client has its own button at the bottom
   const body = status.error ? <DataError onRetry={status.retry} /> : status.loading ? <DataLoading /> : null
   const { onClickCapture } = useTabSwipe({ viewRef, trackRef, barRef, idx, count: tabs.length, onSwitch, on: !body })
   const trackStyle = { transform: `translate3d(calc(${-idx * 100}% + 0px), 0, 0)`, transition: still ? 'none' : undefined }
-  const layerStyle = edge ? { transform: `translate3d(${edge}px, 0, 0)`, transition: 'none' } : undefined
 
   return (
     <AppCtx.Provider value={app}>
-      <div className={`tp fx ma${still ? ' is-still' : ''}${route.sub ? ' has-sub' : ''}`}>
+      <div className={`tp fx ma${still ? ' is-still' : ''}${route.sub ? ' has-sub' : ''}`} ref={frameRef}>
         <div className="tp-sky" aria-hidden="true" />
         <div className="ma-statusbar" aria-hidden="true" />
         {body
           ? <main className="ma-solo">{body}</main>
           : (
-            <div className="ma-viewport" ref={viewRef} onClickCapture={onClickCapture} onDragStart={e => e.preventDefault()}>
+            <div className="ma-viewport" ref={viewRef} onClickCapture={onClickCapture} onDragStart={e => e.preventDefault()} onScrollCapture={onPageScroll}>
               <div className="ma-track" ref={trackRef} style={trackStyle}>
                 {tabs.map((k, i) => {
                   const Page = TAB_PAGE[k]
@@ -200,20 +207,21 @@ function Frame() {
             </div>
           )}
 
-        {!body && under && (
-          <div className="ma-layer-r is-under" aria-hidden="true">
-            <SubScreen route={under} />
-          </div>
-        )}
-        {!body && subKey && (
-          <div key={subKey} className={`ma-layer-r${leaving ? ' is-leaving' : ''}`} style={layerStyle} {...edgeHandlers}>
-            <SubScreen route={route} />
-          </div>
-        )}
+        {!body && layers.map((L, i) => {
+          const top = L.top && !notif && i === layers.length - 1
+          return (
+            <div key={L.key} ref={top ? topRef : undefined}
+              className={`ma-layer-r${top ? '' : ' is-under'}${top && enter ? ' is-enter' : ''}${top && leaving ? ' is-leaving' : ''}`}
+              aria-hidden={!top && !notif ? true : undefined} inert={!top && !notif ? '' : undefined}
+              onClickCapture={top ? swipeR.onClickCapture : undefined}>
+              <SubScreen route={L.route} root={!top} />
+            </div>
+          )
+        })}
         {!body && notif && (
           <>
-            <button type="button" className={`ma-notif-scrim${leaving ? ' is-leaving' : ''}`} aria-label="Close notifications" onClick={back} />
-            <div className={`ma-layer-l${leaving ? ' is-leaving' : ''}`} style={layerStyle} {...edgeHandlers} role="dialog" aria-label="Notifications">
+            <button type="button" ref={scrimRef} className={`ma-notif-scrim${leaving ? ' is-leaving' : ''}`} aria-label="Close notifications" onClick={back} />
+            <div ref={notifRef} className={`ma-layer-l${enter ? ' is-enter' : ''}${leaving ? ' is-leaving' : ''}`} role="dialog" aria-label="Notifications" onClickCapture={swipeL.onClickCapture}>
               <ANotif />
             </div>
           </>

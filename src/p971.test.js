@@ -39,14 +39,15 @@ test('the swipe moves the track and the bar highlight directly, and locks direct
   assert.match(css, /\.ma-tabbar\.is-drag \.ma-tab-hl \{ transition: none; \}/)
 })
 
-test('slide-in screens: header pinned outside the scroller, scroller starts below the status bar', () => {
+// P972 changed this: the scroller now runs from the very top (no band) and the header is clear until the page
+// scrolls under it; see p972.test.js. Still true: the header sits outside the scroller, Notifications is full width.
+test('slide-in screens: header pinned outside the scroller, Notifications full width', () => {
   const k = read('./template/m/AppKit.jsx')
-  assert.ok(k.indexOf('<header className="ma-sub-h">') > k.indexOf('</div>\n      <header'), 'header sits outside the scroller')
+  assert.ok(k.indexOf('<header className="ma-sub-h"') > k.indexOf('<div className="ma-scroll ma-sub-scroll"'), 'header sits outside the scroller')
   const css = read('./template/m/app.css')
-  assert.match(css, /\.ma-subpage \.ma-sub-scroll \{[^}]*top: var\(--ma-top\)/)
   assert.match(css, /\.ma-sub-h \{[^}]*position: absolute; top: 0/)
   assert.match(css, /\.ma-layer-l \{ left: 0; right: 0;/) // Notifications covers the full width
-  assert.match(read('./template/m/ASubs.jsx'), /<SubPage className="is-notif"/)
+  assert.match(read('./template/m/ANotes.jsx'), /<SubPage className="is-notif"/)
 })
 
 test('pages end just above the bar; Home has no "This week" caption', () => {
