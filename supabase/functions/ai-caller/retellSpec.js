@@ -23,6 +23,25 @@ export const RETELL_VOICE_DEFAULTS = {
   fallback_voice_ids: ['cartesia-Max'],
 }
 
+// P976 — the caller's voice split (Brayden picked by ear, Nov 12): two Retell agents on ONE LLM (same prompt, same
+// settings), only the voice differs, alternated on outgoing calls so booked-call rates can be compared per voice.
+// Mirrors ohvara-reels/voice-config.json `caller`. eleven: the ElevenLabs library voice (added to Retell as a community
+// voice by retell_split); name: who the AI says it is ({{ai_name}}); fallback: a Retell voice of the same gender for
+// when ElevenLabs hiccups (P940 call 6). The old single agent (RETELL_AGENT_ID, 11labs-Max) is used only when the
+// split is not set up.
+export const CALLER_VOICES = {
+  hope: { eleven: 'OYTbf65OHHFELVut7v2H', label: 'Hope', name: 'Hope', fallback: 'cartesia-Grace' },
+  mark: { eleven: 'UgBBYS2sOqTuMpoF3BR0', label: 'Mark', name: 'Max', fallback: 'cartesia-Max' },
+}
+export const CALLER_SPLIT = ['hope', 'mark']
+export const DEFAULT_AI_NAME = 'Max'
+export const aiNameOf = voice => CALLER_VOICES[voice]?.name ?? DEFAULT_AI_NAME
+// 50/50: the voice with the fewest first calls so far; a tie goes to the first in the split. From {0,0} that is
+// strict alternation (hope, mark, hope, ...) and it heals itself if a call is lost. A lead's second try keeps its voice.
+export function pickVoice(counts = {}, split = CALLER_SPLIT) {
+  return split.reduce((best, k) => ((counts[k] ?? 0) < (counts[best] ?? 0) ? k : best), split[0])
+}
+
 // How the LLM uses our replies. Every custom function returns JSON; these keys mean the same thing everywhere.
 export const REPLY_RULES = [
   'Every function returns JSON. If it has "say", say those words naturally, then follow the rest of it.',
@@ -38,11 +57,11 @@ export const REPLY_RULES = [
 
 // P940 — call screeners (iPhone "Ask Reason for Calling", Google/Pixel Call Screen, Samsung Bixby) and voicemail
 // (Brayden's words, Nov 10). {{first_name}} and {{callback_number}} come from core.ts start().
-export const SCREEN_LINE = 'Hi, this is Max with Deedstone Insurance, calling for {{first_name}} about the mortgage protection information they requested.'
+export const SCREEN_LINE = 'Hi, this is {{ai_name}} with Deedstone Insurance, calling for {{first_name}} about the mortgage protection information they requested.'
 export const SCREEN_GOODBYE = 'Sorry I missed you, we’ll try again soon. Goodbye.'
 export const SCREEN_WAIT_SECS = 20
-export const VOICEMAIL_LINE = 'Hi {{first_name}}, this is Max with Deedstone Insurance, calling about the mortgage protection information you requested. You can call us back at {{callback_number}}. Thanks, and have a great day.'
-export const SCREEN_OPTION = { agent_identity: 'Max with Deedstone Insurance', call_purpose: 'calling for {{first_name}} about the mortgage protection information they requested' }
+export const VOICEMAIL_LINE = 'Hi {{first_name}}, this is {{ai_name}} with Deedstone Insurance, calling about the mortgage protection information you requested. You can call us back at {{callback_number}}. Thanks, and have a great day.'
+export const SCREEN_OPTION = { agent_identity: '{{ai_name}} with Deedstone Insurance', call_purpose: 'calling for {{first_name}} about the mortgage protection information they requested' }
 export const VOICEMAIL_DETECTION = 'A voicemail greeting or an "at the tone, leave a message" prompt. A call screening assistant that asks who is calling or why (iPhone, Google Call Screen, Samsung Bixby) is NOT voicemail.'
 
 // P940 — the conversation (Brayden, Nov 10, final round after test call 6). The exact lines live here and in
@@ -51,7 +70,7 @@ export const VOICEMAIL_DETECTION = 'A voicemail greeting or an "at the tone, lea
 export const SPECIALIST = 'a licensed specialist'
 export const SCRIPT = {
   // Confident: assume it's them. "the virtual assistant" stays in: the AI says what it is (P926/P940 rule).
-  open: 'Hey {{first_name}}, this is Max, the virtual assistant with Deedstone Insurance. I’m calling about the mortgage protection form you filled out.',
+  open: 'Hey {{first_name}}, this is {{ai_name}}, the virtual assistant with Deedstone Insurance. I’m calling about the mortgage protection form you filled out.',
   why: 'So what made right now the time to look into it?',
   whyAlt: 'What’s got this on your radar right now?',
   bridge: 'That makes a lot of sense. Let me just confirm a couple quick things from your form so we get you to the right person.',
@@ -67,7 +86,7 @@ export const ACKS = ['Got it.', 'Okay.', 'Great.', 'Mm-hmm.', 'Perfect.']
 export function retellPrompt() {
   return [
     '## Who you are',
-    'You are Max, the virtual assistant with Deedstone Insurance. You are calling someone who filled out our mortgage protection form a moment ago, so they asked for this call. Your one job: get them to a licensed specialist, live right now or on a booked time.',
+    'You are {{ai_name}}, the virtual assistant with Deedstone Insurance. You are calling someone who filled out our mortgage protection form a moment ago, so they asked for this call. Your one job: get them to a licensed specialist, live right now or on a booked time.',
     '## How you sound',
     'Calm, confident and friendly, like a real person who does this every day. Natural, flowing, grammatical sentences. No forced enthusiasm. Short, but never rushed. When a line is given in quotes below, say those words.',
     `Vary yourself like a person would. Acknowledge what they said before you move on, but mix the words and the tone (${ACKS.map(a => `"${a}"`).join(', ')}) and never use the same one twice in a row. Don’t end every question the same way: mix "right?", a plain question, and a statement with a rising tone.`,
@@ -105,7 +124,7 @@ export function retellPrompt() {
     '- I already have coverage: "That’s good to hear. Is that through work, or does it cover the full mortgage?" Then: "It’s worth a quick look to make sure there’s no gap. Are you free right now, or is later better?"',
     '- I need to talk to my spouse: "That makes sense. Let’s find a time when you can both be on. Would later today or tomorrow work better?"',
     '- Are you a robot / is this a real person: "I’m the virtual assistant with Deedstone, and I help get you to a licensed specialist quickly. Are you free right now, or would later be better?"',
-    '- Who is this / who are you with: "This is Max with Deedstone Insurance. You filled out our mortgage protection form, and I’m getting you over to a specialist."',
+    '- Who is this / who are you with: "This is {{ai_name}} with Deedstone Insurance. You filled out our mortgage protection form, and I’m getting you over to a specialist."',
     `- They ask for a person, or ask detailed coverage questions: call ask_agent with reason ${Object.keys(ASK_AGENT_REASONS).join(' or ')} and follow what it returns.`,
     `- Not interested: "No problem at all. Can I ask what you were hoping to find when you filled it out?" If still no, call outcome with result hard_no. Not them or never asked: outcome with result wrong_number. Results: ${SAID_OUTCOMES.join(', ')}.`,
     '- Stop calling, do not call, take me off your list: say "Understood, we won’t call again." and call stop.',
@@ -158,17 +177,21 @@ export function retellLlm({ prompt, url }) {
   return {
     // P940: wait for the other side to speak (a screener or "Hello?"); the prompt says what to answer.
     general_prompt: prompt, begin_message: '', start_speaker: 'user',
+    // P976: who the AI says it is comes per call ({{ai_name}}, from the voice); Max when a call doesn't say.
+    default_dynamic_variables: { ai_name: DEFAULT_AI_NAME },
     // No backup model: Retell bills a backup for the whole call (call 3: GPT-4.1 +4.5¢/min) even when it never speaks.
     model_config: { type: 'cascading', primary: { model: RETELL_MODEL, tier: 'standard' }, backup: null, temperature: 0.4 },
     general_tools: retellTools(url),
   }
 }
 
-export function retellAgent({ llmId, voiceId, webhookUrl, maxSecs = AI_RULES.maxCallSecs, voice = {} }) {
+export function retellAgent({ llmId, voiceId, webhookUrl, maxSecs = AI_RULES.maxCallSecs, voice = {}, split = null }) {
+  // P976: split = a CALLER_VOICES key; the same body for every agent except the name, voice and its fallback.
+  const v = split ? CALLER_VOICES[split] : null
   return {
-    agent_name: 'Deedstone virtual assistant (new leads)',
+    agent_name: v ? `Deedstone virtual assistant (new leads) · ${v.label}` : 'Deedstone virtual assistant (new leads)',
     response_engine: { type: 'retell-llm', llm_id: llmId },
-    voice_id: voiceId, ...RETELL_VOICE_DEFAULTS, ...voice,
+    voice_id: voiceId, ...RETELL_VOICE_DEFAULTS, ...(v ? { fallback_voice_ids: [v.fallback] } : {}), ...voice,
     language: 'en-US', webhook_url: webhookUrl, webhook_events: ['call_started', 'call_ended', 'call_analyzed'],
     // Silence after our speech ends the call at 20 s: also the hard stop while waiting on a screener (P940).
     end_call_after_silence_ms: SCREEN_WAIT_SECS * 1000, max_call_duration_ms: Math.min(Math.max(maxSecs, 60), 900) * 1000, ring_duration_ms: 30000,

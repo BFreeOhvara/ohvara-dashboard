@@ -11,7 +11,7 @@ import { noProvider } from '../supabase/functions/ai-caller/providers.ts'
 const HOOK = 'https://x.supabase.co/functions/v1/ai-caller?k=secret'
 
 test('screening line is Brayden’s words, with the lead’s first name', () => {
-  assert.equal(SCREEN_LINE, 'Hi, this is Max with Deedstone Insurance, calling for {{first_name}} about the mortgage protection information they requested.')
+  assert.equal(SCREEN_LINE, 'Hi, this is {{ai_name}} with Deedstone Insurance, calling for {{first_name}} about the mortgage protection information they requested.')
 })
 
 test('prompt: screener is not a hang-up, says the line, waits ~20 s, polite goodbye, no outcome', () => {

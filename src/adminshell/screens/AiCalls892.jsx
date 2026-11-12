@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Bot, Clock3, ShieldAlert, PhoneOff, MessageSquareText, ChevronRight, Power, Play, PhoneCall, Timer, Target, CheckCircle2, Wallet, MapPin } from 'lucide-react'
+import { Bot, Clock3, ShieldAlert, PhoneOff, MessageSquareText, ChevronRight, Power, Play, PhoneCall, Timer, Target, CheckCircle2, Wallet, MapPin, AudioLines } from 'lucide-react'
 import { Chip, Switch, SampleTag, Empty, Drawer, useNote } from '../../template/kit'
 import { Dropdown, DField } from '../kit'
 import { useAdmSettings, useAdmAgents, useAdmSource } from '../data'
@@ -7,7 +7,7 @@ import { supabase } from '../../lib/supabase'
 import { usd } from '../../template/motion'
 import {
   AI_RULES, PROVIDERS, providerOf, DRAFT_WORDS, SAMPLE_AI_CALLS, SAMPLE_AI_SETTINGS, SAMPLE_CENTS_PER_MIN, OUTCOME_WORD,
-  SAMPLE_BAD_LEADS, aiStats, beatsOf,
+  SAMPLE_BAD_LEADS, aiStats, beatsOf, voiceStats, voiceStatsFromView, CALLER_VOICES,
 } from '../../lib/aiCaller'
 import { FIRST_CALL_OUTCOMES, OUTCOME_LABEL, flowFor, planFlow, fillWords } from '../../lib/leadFlows'
 import '../../template/ai892.css'
@@ -96,7 +96,7 @@ const when = iso => { try { return new Date(iso).toLocaleString('en-US', { weekd
 const fromView = r => ({
   iso: r.at || null, summary: r.summary || '',
   id: r.id, lead_id: r.lead_id, name: r.name || 'Lead', state: r.state || '', agent: r.agent || '', at: when(r.at), attempt: r.attempt || 1,
-  secs: r.secs ?? '–', duration: r.duration || 0, outcome: r.outcome, test: !!r.test, costCents: r.cost_cents == null ? null : Number(r.cost_cents),
+  secs: r.secs ?? '–', duration: r.duration || 0, outcome: r.outcome, test: !!r.test, voice: r.voice || null, costCents: r.cost_cents == null ? null : Number(r.cost_cents),
   note: [r.summary, r.booked_for ? `Booked ${when(r.booked_for)}` : null, r.callback_at ? `Callback ${when(r.callback_at)}` : null].filter(Boolean).join(' · '),
 })
 function useRealAiCalls(on) {
@@ -143,6 +143,31 @@ function CallSheet({ c, real, onClose }) {
   )
 }
 
+// P976 — the voice split: Hope and Mark alternate on outgoing calls; one card per voice with its booked rate (booked of
+// answered), calls, answered, booked, minutes and cost. Real leads only (tests left out). The higher rate is marked
+// once both voices have 10+ answered calls.
+const VOICE_TONE = { hope: 'lilac', mark: 'sage' }
+function VoiceSplit({ rows, real }) {
+  const fair = rows.length > 1 && rows.every(v => v.answered >= 10)
+  const best = fair ? Math.max(...rows.map(v => v.rate)) : null
+  return (
+    <section className="ai976" aria-label="Booked rate by voice">
+      <div className="tp-row tp-wrap ai-view-h"><h2 className="fx-h3"><AudioLines size={17} aria-hidden="true" />By voice</h2><span className="tp-grow" />
+        <small className="tp-sub">Hope and Mark take turns on every new call. Booked rate = booked of answered.</small></div>
+      {rows.length === 0 ? <p className="tp-sub">No calls on the voice split yet{real ? ' (tests are left out).' : '.'}</p> : (
+        <ul className="ai976-voices">{rows.map((v, i) => (
+          <li key={v.voice} className={`is-${VOICE_TONE[v.voice] || 'stone'}`} style={{ '--i': i }}>
+            <div className="ai976-top"><b>{v.label}</b><small>ElevenLabs</small>{best != null && v.rate === best ? <Chip tone="outline">Ahead</Chip> : null}</div>
+            <p className="ai976-rate"><b className="tp-num">{v.rate}%</b><span>booked rate</span></p>
+            <dl className="ai942-facts ai976-facts">{[['Calls', v.calls], ['Answered', v.answered], ['Booked', v.booked + (v.transferred ? ` +${v.transferred} live` : '')], ['Minutes', v.minutes],
+              ['Cost', v.costCents == null ? '–' : money(v.costCents / 100)]].map(([k, val]) => <div key={k}><dt>{k}</dt><dd className={k === 'Cost' ? 'tp-money' : 'tp-num'}>{val}</dd></div>)}</dl>
+          </li>
+        ))}</ul>
+      )}
+    </section>
+  )
+}
+
 export function AiCallsView() {
   const real = useAdmSource() === 'real'
   const r = useRealAiCalls(real)
@@ -168,13 +193,14 @@ export function AiCallsView() {
       <ul className="ai942-stats" aria-label="AI call numbers">{tiles.map(([tone, Icon, k, v, sub], i) => (
         <li key={k} className={`is-${tone}`} style={{ '--i': i }}><span className="ai942-ic" aria-hidden="true"><Icon size={16} /></span><small>{k}</small><b className="tp-num">{v}</b><span>{sub}</span></li>
       ))}</ul>
+      <VoiceSplit rows={real ? voiceStatsFromView(r.data?.by_voice || []) : voiceStats(calls, SAMPLE_CENTS_PER_MIN)} real={real} />
       {real && r.loading ? <p className="tp-sub">Loading…</p> : calls.length === 0 ? <Empty title="No AI calls yet" sub="They show here once the AI caller is on." /> : (
         <ul className="ai942-calls">{calls.map((c, i) => {
           const g = GROUP[c.outcome] || 'no_answer'
           const cost = c.costCents != null ? money(c.costCents / 100) : real ? null : money(costOf(c, SAMPLE_CENTS_PER_MIN) / 100)
           return (
             <li key={c.id} className={`ai942-call is-${g}`} style={{ '--i': i }}>
-              <div className="ai942-call-top"><span className="ai942-out">{GROUP_WORD[g]}</span><small>{OUTCOME_WORD[c.outcome]}{c.attempt > 1 ? ` · try ${c.attempt}` : ''}</small>{c.test ? <Chip tone="outline">Test</Chip> : null}</div>
+              <div className="ai942-call-top"><span className="ai942-out">{GROUP_WORD[g]}</span><small>{OUTCOME_WORD[c.outcome]}{c.attempt > 1 ? ` · try ${c.attempt}` : ''}{c.voice ? ` · ${CALLER_VOICES[c.voice]?.label || c.voice}` : ''}</small>{c.test ? <Chip tone="outline">Test</Chip> : null}</div>
               <h3>{c.name}</h3>
               <p className="ai942-where"><MapPin size={12} aria-hidden="true" />{[c.state, c.agent].filter(Boolean).join(' · ')}</p>
               <dl className="ai942-facts">{[['When', String(c.at).replace('Today, ', '')], ['Length', c.duration ? length(c.duration) : 'No answer'], ['Cost', cost ?? '–']].map(([k, v]) => <div key={k}><dt>{k}</dt><dd className={k === 'Cost' ? 'tp-money' : 'tp-num'}>{v}</dd></div>)}</dl>

@@ -19,7 +19,7 @@ import { noProvider, retell, vapi, ghl, type Provider } from './providers.ts'
 import { isCron } from '../_shared/cronAuth.ts'
 import { sendersFromEnv } from '../notify-push/senders.ts'
 import { checkPush, clearPush, sendAll } from '../notify-push/transfer.ts'
-import { retellVoices, retellSetup, retellNumber, retellNumbers, retellCall, retellChat } from './retellAdmin.ts'
+import { retellVoices, retellSetup, retellNumber, retellNumbers, retellCall, retellChat, retellSplit, retellSplitCheck } from './retellAdmin.ts'
 import { retellPrompt } from './retellSpec.js'
 
 const env = (k: string) => Deno.env.get(k) ?? ''
@@ -51,6 +51,24 @@ const rpc = async <T>(fn: string, args: Record<string, unknown>): Promise<T> => 
 const callCols = 'id, lead_id, agent_id, attempt, status, provider_call_id, control_url, check_id, routed, summary, booked_for'
 
 const store: Store = {
+  // P976: the voice split (migration 271). Agents live in ai_caller_settings.voice_agents (written by retell_split).
+  async voiceAgents() {
+    const { data } = await admin.from('ai_caller_settings').select('voice_agents').eq('id', true).maybeSingle()
+    return (data?.voice_agents as Record<string, { agent_id: string }> | null) ?? null
+  },
+  async voiceCounts(tests) {
+    const { data, error } = await admin.rpc('ai_caller_voice_counts', { p_tests: tests })
+    if (error) throw error
+    return Object.fromEntries(((data ?? []) as { voice: string; n: number }[]).map(r => [r.voice, Number(r.n)]))
+  },
+  async leadVoice(leadId, callId) {
+    const { data } = await admin.from('ai_calls').select('voice').eq('lead_id', leadId).neq('id', callId).not('voice', 'is', null).order('created_at', { ascending: false }).limit(1).maybeSingle()
+    return data?.voice ?? null
+  },
+  async setVoice(callId, voice) {
+    const { error } = await admin.from('ai_calls').update({ voice }).eq('id', callId)
+    if (error) console.error('ai-caller setVoice', callId, error.message)
+  },
   async live() {
     const [{ data: rc }, { data: s }] = await Promise.all([
       admin.from('recovery_config').select('ai_caller_live').limit(1).maybeSingle(),
@@ -65,7 +83,7 @@ const store: Store = {
     if (!l) return null
     const qa = (l.qualifier_answers ?? {}) as Record<string, unknown>
     // P926: only a sample lead can carry a test (admin test calls); a real lead never does.
-    const test = l.is_sample && qa.test && typeof qa.test === 'object' ? qa.test as { check?: 'yes' | 'no' | 'none'; transferTo?: string } : null
+    const test = l.is_sample && qa.test && typeof qa.test === 'object' ? qa.test as { check?: 'yes' | 'no' | 'none'; transferTo?: string; voice?: string | null } : null
     // P952: a reactivation person: their own opener, and a voicemail only the first time.
     const rc = l.reactivation_id ? (await admin.from('reactivation_contacts').select('voicemail_left').eq('id', l.reactivation_id).maybeSingle()).data : null
     return { id: l.id, first: String(l.contact_name ?? '').split(' ')[0] || 'there', phone: l.phone, state: l.state, tz: (qa.tz as string) ?? null,
@@ -157,6 +175,20 @@ async function retellAction(action: string, body: any, d: { store: Store; provid
       return retellSetup(f, key, hook, { prompt: String(body?.prompt || retellPrompt()) /* P940: our prompt from retellSpec.js when none is sent */, voice_id: String(body?.voice_id ?? ''), voice: body?.voice ?? {}, max_secs: s?.max_call_secs ?? 300,
         llm_id: env('RETELL_LLM_ID') || null, agent_id: env('RETELL_AGENT_ID') || null })
     }
+    case 'retell_split': {
+      // P976: add Hope and Mark (ElevenLabs library) to Retell if needed, then create/update one agent per voice on the
+      // shared LLM, and save their ids. Run again after any agent-setting change so both agents stay identical.
+      if (!env('AI_WEBHOOK_SECRET')) throw Object.assign(new Error('AI_WEBHOOK_SECRET not set'), { status: 400 })
+      const { data: s } = await admin.from('ai_caller_settings').select('max_call_secs, voice_agents').eq('id', true).maybeSingle()
+      const agents = await retellSplit(f, key, hook, { llmId: env('RETELL_LLM_ID'), maxSecs: s?.max_call_secs ?? 300, saved: s?.voice_agents ?? null })
+      const { error } = await admin.from('ai_caller_settings').update({ voice_agents: agents, updated_at: new Date().toISOString() }).eq('id', true)
+      if (error) throw error
+      return { agents, check: await retellSplitCheck(f, key, agents, env('RETELL_LLM_ID')) }
+    }
+    case 'retell_split_check': {
+      const { data: s } = await admin.from('ai_caller_settings').select('voice_agents').eq('id', true).maybeSingle()
+      return { agents: s?.voice_agents ?? null, check: await retellSplitCheck(f, key, s?.voice_agents ?? null, env('RETELL_LLM_ID')) }
+    }
     case 'retell_number': {
       if (!env('RETELL_AGENT_ID')) throw Object.assign(new Error('set up the agent first'), { status: 400 })
       return retellNumber(f, key, env('RETELL_AGENT_ID'), Number(body?.area_code) || 512)
@@ -173,7 +205,9 @@ async function retellAction(action: string, body: any, d: { store: Store; provid
       const { data: ag } = await admin.from('profiles').select('id').eq('full_name', 'Test Agent').eq('is_test', true).maybeSingle()
       if (!ag) throw Object.assign(new Error('no Test Agent'), { status: 400 })
       // The same answers the Deedstone form (submit-mp-lead) collects, so the AI confirms them (P940).
-      const qa = { tz: 'America/Chicago', age_band: '45-54', homeowner: true, mortgage_balance_band: '200-300k', smoker: false, test: { check: SCENARIOS[scenario], transferTo, scenario } }
+      // P976: voice hope | mark picks the voice; none = the next in the split.
+      const voice = ['hope', 'mark'].includes(String(body?.voice)) ? String(body.voice) : null
+      const qa = { tz: 'America/Chicago', age_band: '45-54', homeowner: true, mortgage_balance_band: '200-300k', smoker: false, test: { check: SCENARIOS[scenario], transferTo, scenario, voice } }
       // No phone on insert, so the new-lead router never queues it for a VA; the phone goes on right after.
       const { data: lead, error: le } = await admin.from('leads').insert({ business_name: 'P926 test call', contact_name: `Brayden (test ${scenario.replace('_', ' ')})`,
         lead_type: 'mortgage_protection', is_sample: true, assigned_rep_id: ag.id, state: 'TX', qualifier_answers: qa }).select('id').single()

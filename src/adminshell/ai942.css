@@ -49,3 +49,21 @@
 @media (max-width: 1100px) { .ai942-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .ai942-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ai942-stats b { font-size: 26px; } }
 @media (prefers-reduced-motion: reduce) { .ai942-stats li, .ai942-call { animation: none; } }
+
+/* P976 — By voice: one card per caller voice (Hope lilac, Mark sage), the booked rate big, the counts underneath. */
+.ai976 { margin-top: 4px; }
+.ai976 .is-lilac { --tf: var(--sh-f-lilac); --ti: var(--sh-fi-lilac); }
+.ai976 .is-sage { --tf: var(--sh-f-sage); --ti: var(--sh-fi-sage); }
+.ai976 .is-stone { --tf: var(--sh-f-stone); --ti: var(--sh-fi-stone); }
+.ai976-voices { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.ai976-voices > li { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 14px 14px 12px; border-radius: 18px;
+  background: var(--sh-surface, var(--bg-surface)); border: 1px solid var(--ov-line); box-shadow: inset 4px 0 0 var(--tf);
+  animation: fx-up .5s var(--fx-ease, ease) both; animation-delay: calc(var(--i, 0) * 40ms); }
+.ai976-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ai976-top b { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 13px; background: var(--tf); color: var(--ti); }
+.ai976-top small { font-size: 12px; color: var(--ov-mid); }
+.ai976-rate { display: flex; align-items: baseline; gap: 8px; margin: 2px 0 0; color: var(--ov-hi); }
+.ai976-rate b { font-size: 30px; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
+.ai976-rate span { font-size: 12.5px; color: var(--ov-mid); }
+.ai976-facts { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (max-width: 520px) { .ai976-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

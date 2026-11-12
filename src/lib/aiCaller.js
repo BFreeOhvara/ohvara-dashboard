@@ -4,6 +4,7 @@
 import { AI_RULES, ASK_AGENT_REASONS, SAID_OUTCOMES, TRANSFER_WORDS, WAIT_QUESTIONS, WAIT_RULE, transferBeats } from '../../supabase/functions/ai-caller/rules.js'
 import { OUTCOME_LABEL } from '../../supabase/functions/_shared/leadFlows.js'
 import { SCRIPTS } from '../template/ful/p879.js'
+import { CALLER_VOICES as CALLER_VOICES_LOCAL, CALLER_SPLIT as CALLER_SPLIT_LOCAL } from '../../supabase/functions/ai-caller/retellSpec.js'
 export * from '../../supabase/functions/ai-caller/rules.js'
 
 // DRAFT wording, for Brayden and a lawyer. Nothing here is said to a lead until he approves it and switches the AI on.
@@ -37,25 +38,51 @@ export const SAMPLE_CENTS_PER_MIN = 13
 // P903: transfer calls carry `transfer` (rules.js transferBeats) so the admin timeline shows each branch beat by beat.
 export const SAMPLE_AI_CALLS = [
   // P902: Joyce asked for a person: "Your agent will go over that with you", Priya said No, the AI booked her.
-  { id: 'ai-12', lead_id: 'l-12', name: 'Joyce Bell', state: 'GA', agent: 'Priya Shah', at: 'Today, 2:32 PM', attempt: 1, secs: 7, duration: 158, outcome: 'booked', note: 'Asked for a person · Priya said No · booked Fri 9:30 AM ET',
+  { id: 'ai-12', lead_id: 'l-12', name: 'Joyce Bell', state: 'GA', agent: 'Priya Shah', at: 'Today, 2:32 PM', attempt: 1, voice: 'mark', secs: 7, duration: 158, outcome: 'booked', note: 'Asked for a person · Priya said No · booked Fri 9:30 AM ET',
     transfer: { agent: 'Priya', check: 'no', answerSecs: 6, bookedFor: 'Fri 9:30 AM ET' } },
-  { id: 'ai-11', lead_id: 'l-11', name: 'Walter Kim', state: 'TX', agent: 'Dana Walker', at: 'Today, 2:05 PM', attempt: 1, secs: 9, duration: 262, outcome: 'booked', note: 'Dana said Yes, phone not answered: booked Thu 2:30 PM CT',
+  { id: 'ai-11', lead_id: 'l-11', name: 'Walter Kim', state: 'TX', agent: 'Dana Walker', at: 'Today, 2:05 PM', attempt: 1, voice: 'hope', secs: 9, duration: 262, outcome: 'booked', note: 'Dana said Yes, phone not answered: booked Thu 2:30 PM CT',
     transfer: { agent: 'Dana', check: 'yes', answerSecs: 9, phone: 'no_answer', bookedFor: 'Thu 2:30 PM CT' } },
-  { id: 'ai-10', lead_id: 'l-10', name: 'Carol Burke', state: 'FL', agent: 'Priya Shah', at: 'Today, 1:40 PM', attempt: 1, secs: 8, duration: 236, outcome: 'booked', note: 'No answer to the check: booked Thu 11:00 AM ET',
+  { id: 'ai-10', lead_id: 'l-10', name: 'Carol Burke', state: 'FL', agent: 'Priya Shah', at: 'Today, 1:40 PM', attempt: 1, voice: 'mark', secs: 8, duration: 236, outcome: 'booked', note: 'No answer to the check: booked Thu 11:00 AM ET',
     transfer: { agent: 'Priya', check: 'none', bookedFor: 'Thu 11:00 AM ET' } },
-  { id: 'ai-1', lead_id: 'l-1', name: 'Shirley Adams', state: 'FL', agent: 'Priya Shah', at: 'Today, 1:12 PM', attempt: 1, secs: 7, duration: 214, outcome: 'transferred', note: 'Check agent: Yes in 11 s',
+  { id: 'ai-1', lead_id: 'l-1', name: 'Shirley Adams', state: 'FL', agent: 'Priya Shah', at: 'Today, 1:12 PM', attempt: 1, voice: 'hope', secs: 7, duration: 214, outcome: 'transferred', note: 'Check agent: Yes in 11 s',
     transfer: { agent: 'Priya', check: 'yes', answerSecs: 11, phone: 'answered' } },
-  { id: 'ai-2', lead_id: 'l-2', name: 'Marcus Hill', state: 'TX', agent: 'Dana Walker', at: 'Today, 12:40 PM', attempt: 1, secs: 9, duration: 251, outcome: 'booked', note: 'Booked Thu 6:30 PM CT (agent said No)',
+  { id: 'ai-2', lead_id: 'l-2', name: 'Marcus Hill', state: 'TX', agent: 'Dana Walker', at: 'Today, 12:40 PM', attempt: 1, voice: 'mark', secs: 9, duration: 251, outcome: 'booked', note: 'Booked Thu 6:30 PM CT (agent said No)',
     transfer: { agent: 'Dana', check: 'no', answerSecs: 14, bookedFor: 'Thu 6:30 PM CT' } },
-  { id: 'ai-3', lead_id: 'l-3', name: 'Teresa Lane', state: 'AZ', agent: 'Marcus Reed', at: 'Today, 11:58 AM', attempt: 1, secs: 8, duration: 188, outcome: 'booked', note: 'Appointments only: booked Fri 10:00 AM MST' },
-  { id: 'ai-4', lead_id: 'l-4', name: 'Gloria Price', state: 'TX', agent: 'Dana Walker', at: 'Today, 11:20 AM', attempt: 1, secs: 8, duration: 96, outcome: 'not_now', callback_at: 'Tue 5:30 PM CT', note: 'Not a good time · callback Tue 5:30 PM CT (booked texts)' },
-  { id: 'ai-5', lead_id: 'l-5', name: 'Daniel Ruiz', state: 'FL', agent: 'Priya Shah', at: 'Today, 10:21 AM', attempt: 1, secs: 6, duration: 0, outcome: 'no_answer', note: 'Try 2 in 2 minutes' },
-  { id: 'ai-6', lead_id: 'l-5', name: 'Daniel Ruiz', state: 'FL', agent: 'Priya Shah', at: 'Today, 10:23 AM', attempt: 2, secs: 126, duration: 0, outcome: 'no_answer', note: 'No-answer texts started' },
-  { id: 'ai-7', lead_id: 'l-7', name: 'Joan Miles', state: 'KY', agent: 'Dana Walker', at: 'Today, 9:50 AM', attempt: 1, secs: 9, duration: 41, outcome: 'opt_out', note: 'Said stop calling: do not call everywhere' },
-  { id: 'ai-8', lead_id: 'l-8', name: 'Ray Ortiz', state: 'OK', agent: 'Priya Shah', at: 'Today, 9:47 AM', attempt: 1, secs: 10, duration: 77, outcome: 'hard_no', note: 'Not interested, already covered' },
-  { id: 'ai-9', lead_id: 'l-9', name: 'Lena Fox', state: 'GA', agent: 'Marcus Reed', at: 'Today, 9:05 AM', attempt: 1, secs: 7, duration: 132, outcome: 'not_now', note: 'Not a good time, no time given · Marcus follows up' },
-  { id: 'ai-13', lead_id: 'l-13', name: 'Brian Cole', state: 'OH', agent: 'Marcus Reed', at: 'Today, 8:02 AM', attempt: 1, secs: 8, duration: 22, outcome: 'wrong_number', note: 'Never asked: closed as a bad lead, on Lead quality' },
+  { id: 'ai-3', lead_id: 'l-3', name: 'Teresa Lane', state: 'AZ', agent: 'Marcus Reed', at: 'Today, 11:58 AM', attempt: 1, voice: 'hope', secs: 8, duration: 188, outcome: 'booked', note: 'Appointments only: booked Fri 10:00 AM MST' },
+  { id: 'ai-4', lead_id: 'l-4', name: 'Gloria Price', state: 'TX', agent: 'Dana Walker', at: 'Today, 11:20 AM', attempt: 1, voice: 'mark', secs: 8, duration: 96, outcome: 'not_now', callback_at: 'Tue 5:30 PM CT', note: 'Not a good time · callback Tue 5:30 PM CT (booked texts)' },
+  { id: 'ai-5', lead_id: 'l-5', name: 'Daniel Ruiz', state: 'FL', agent: 'Priya Shah', at: 'Today, 10:21 AM', attempt: 1, voice: 'hope', secs: 6, duration: 0, outcome: 'no_answer', note: 'Try 2 in 2 minutes' },
+  { id: 'ai-6', lead_id: 'l-5', name: 'Daniel Ruiz', state: 'FL', agent: 'Priya Shah', at: 'Today, 10:23 AM', attempt: 2, voice: 'hope', secs: 126, duration: 0, outcome: 'no_answer', note: 'No-answer texts started' },
+  { id: 'ai-7', lead_id: 'l-7', name: 'Joan Miles', state: 'KY', agent: 'Dana Walker', at: 'Today, 9:50 AM', attempt: 1, voice: 'mark', secs: 9, duration: 41, outcome: 'opt_out', note: 'Said stop calling: do not call everywhere' },
+  { id: 'ai-8', lead_id: 'l-8', name: 'Ray Ortiz', state: 'OK', agent: 'Priya Shah', at: 'Today, 9:47 AM', attempt: 1, voice: 'hope', secs: 10, duration: 77, outcome: 'hard_no', note: 'Not interested, already covered' },
+  { id: 'ai-9', lead_id: 'l-9', name: 'Lena Fox', state: 'GA', agent: 'Marcus Reed', at: 'Today, 9:05 AM', attempt: 1, voice: 'mark', secs: 7, duration: 132, outcome: 'not_now', note: 'Not a good time, no time given · Marcus follows up' },
+  { id: 'ai-13', lead_id: 'l-13', name: 'Brian Cole', state: 'OH', agent: 'Marcus Reed', at: 'Today, 8:02 AM', attempt: 1, voice: 'hope', secs: 8, duration: 22, outcome: 'wrong_number', note: 'Never asked: closed as a bad lead, on Lead quality' },
 ]
+
+// P976 — the caller's voice split (Hope and Mark alternate). Per voice: calls, answered, booked, the booked rate
+// (booked of answered), minutes and cost. Tests are left out. Sample: from the calls above (each carries `voice`);
+// real: admin_ai_calls_view's by_voice (migration 271, the whole period, not just the shown rows).
+export { CALLER_VOICES, CALLER_SPLIT } from '../../supabase/functions/ai-caller/retellSpec.js'
+const voiceRow = (voice, r) => {
+  const answered = r.answered || 0, booked = r.booked || 0
+  return { voice, label: CALLER_VOICES_LOCAL[voice]?.label || voice, calls: r.calls || 0, answered, booked, transferred: r.transferred || 0,
+    rate: answered ? Math.round((booked / answered) * 100) : 0, minutes: Math.round((r.minutes || 0) * 10) / 10, costCents: r.costCents ?? null }
+}
+export function voiceStats(calls = [], centsPerMin = 0) {
+  const by = {}
+  for (const c of calls) {
+    if (!c.voice || c.test) continue
+    const v = (by[c.voice] ||= { calls: 0, answered: 0, booked: 0, transferred: 0, minutes: 0, costCents: 0 })
+    v.calls += 1
+    if (c.outcome && c.outcome !== 'no_answer') v.answered += 1
+    if (c.outcome === 'booked') v.booked += 1
+    if (c.outcome === 'transferred') v.transferred += 1
+    v.minutes += (c.duration || 0) / 60
+    v.costCents += c.costCents != null ? c.costCents : c.duration ? Math.ceil(c.duration / 60) * centsPerMin : 0
+  }
+  return orderVoices(Object.entries(by).map(([k, r]) => voiceRow(k, r)))
+}
+export const voiceStatsFromView = (rows = []) => orderVoices(rows.map(r => voiceRow(r.voice, { ...r, costCents: r.cost_cents == null ? null : Number(r.cost_cents) })))
+const orderVoices = rows => rows.sort((a, b) => (CALLER_SPLIT_LOCAL.indexOf(a.voice) + 1 || 99) - (CALLER_SPLIT_LOCAL.indexOf(b.voice) + 1 || 99))
 
 // P902: wrong numbers close the lead as a bad lead and land on admin's Lead quality list (spend check per agent).
 export const SAMPLE_BAD_LEADS = [

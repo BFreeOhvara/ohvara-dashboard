@@ -18,6 +18,8 @@ export type StartArgs = {
   callId: string; to: string; from: string; maxSecs: number
   // P916: the provider's own id for the agent's Deedstone number (Vapi), when the number came from the pool.
   fromId?: string | null
+  // P976: the Retell agent for this call's voice (the voice split); none = the provider's one agent.
+  agentId?: string | null
   vars: Record<string, string> // first name, agent first name, state, the lead's zone, the draft opening line
 }
 export type Fetch = (url: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => Promise<{ ok: boolean; status: number; json(): Promise<any>; text(): Promise<string> }>
@@ -79,7 +81,7 @@ export function retell(key: string, agentId: string, fetchFn: Fetch): Provider {
     key: 'retell', ready: !!key && !!agentId, talksWhileWaiting: true,
     async start(a) {
       const r = await ok(await fetchFn('https://api.retellai.com/v2/create-phone-call', { method: 'POST', headers: h, body: json({
-        from_number: a.from, to_number: a.to, override_agent_id: agentId, metadata: { call_id: a.callId },
+        from_number: a.from, to_number: a.to, override_agent_id: a.agentId || agentId, metadata: { call_id: a.callId },
         retell_llm_dynamic_variables: { ...a.vars, max_secs: String(a.maxSecs) },
       }) }), 'retell start')
       return { providerCallId: s(r.call_id) }

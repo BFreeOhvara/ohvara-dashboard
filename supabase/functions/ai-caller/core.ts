@@ -11,6 +11,7 @@ import { aiStep, AI_RULES, ASK_AGENT_REASONS, SAID_OUTCOMES, WAIT_QUESTIONS, WAI
 import type { Ev, Provider } from './providers.ts'
 import { whisperWords } from '../help-transfer/core.ts'
 import { reactOpener, TEXT_ASK } from './reactivation.js'
+import { CALLER_SPLIT, pickVoice, aiNameOf } from './retellSpec.js'
 
 export type Phase = 'queued' | 'dialing' | 'talking' | 'checking' | 'transferring' | 'booking' | 'done' | 'to_va'
 export type Call = {
@@ -24,12 +25,19 @@ export type Lead = { id: string; first: string; phone: string; state: string | n
   reactivation?: { voicemailLeft: boolean } | null
   // P926: an admin test call (a sample lead): the switch and the lead rules are skipped, the agent's check is answered
   // for them (check), and transfer_to stands in for the agent's phone. Never set on a real lead.
-  test?: { check?: 'yes' | 'no' | 'none'; transferTo?: string | null } | null }
+  test?: { check?: 'yes' | 'no' | 'none'; transferTo?: string | null; voice?: string | null } | null }
 export type Agent = { id: string; first: string; phone: string | null; mode: 'appts' | 'both'; hours: Record<string, unknown>; tz: string; reachable: boolean }
 export type CheckRow = { id: string; status: string; answer: 'yes' | 'no' | null; expires_at: string | null
   summary?: { name?: string | null; age?: string | null; state?: string | null; need?: string | null } }
 
 export interface Store {
+  // P976: the voice split. voiceAgents: the Retell agent per voice (null = not set up: the one old agent calls);
+  // voiceCounts: first calls per voice so far (tests and real leads counted apart); leadVoice: the voice a lead's
+  // earlier try used; setVoice: saved on the call row.
+  voiceAgents?(): Promise<Record<string, { agent_id: string }> | null>
+  voiceCounts?(tests: boolean): Promise<Record<string, number>>
+  leadVoice?(leadId: string, callId: string): Promise<string | null>
+  setVoice?(callId: string, voice: string): Promise<void>
   live(): Promise<{ on: boolean; maxSecs: number }>
   call(id: string): Promise<Call | null>
   callByProvider(providerCallId: string): Promise<Call | null>
@@ -104,22 +112,37 @@ export async function start(store: Store, provider: Provider, env: Env, callId: 
   // P952: a reactivation call only ever shows a reactivation number (never the fresh-lead fallback).
   const from = ds?.phone || (lead.reactivation ? null : env.from)
   if (!from) { await store.toVa(c.id, 'not_connected'); return { ok: false, code: 'not_connected' } }
+  const v = await chooseVoice(store, provider, c, lead).catch(() => null)
+  const name = aiNameOf(v?.voice)
   try {
     const r = await provider.start({
-      callId: c.id, to: lead.phone, from, fromId: ds?.phone ? ds.providerId : null, maxSecs: Math.min(live.maxSecs || AI_RULES.maxCallSecs, 900),
+      callId: c.id, to: lead.phone, from, fromId: ds?.phone ? ds.providerId : null, agentId: v?.agentId ?? null, maxSecs: Math.min(live.maxSecs || AI_RULES.maxCallSecs, 900),
       // P940: what the form already told us, so the AI confirms it instead of asking ('' = not on the form, ask it).
-      vars: { first_name: lead.first, state: lead.state ?? '', lead_tz: lead.tz ?? '', opening: lead.reactivation ? reactOpener(lead.first) : env.words.opening.replace('{first}', lead.first),
+      vars: { first_name: lead.first, state: lead.state ?? '', lead_tz: lead.tz ?? '', opening: (lead.reactivation ? reactOpener(lead.first) : env.words.opening.replace('{first}', lead.first)).replace(/\bMax\b/, name), ai_name: name,
         reactivation: lead.reactivation ? 'yes' : '', leave_voicemail: lead.reactivation?.voicemailLeft ? 'no' : 'yes',
         form_state: lead.state ?? '', form_homeowner: lead.homeowner == null ? '' : lead.homeowner ? 'yes' : 'no', form_mortgage: lead.mortgage ?? '', form_age: lead.age ?? '', ...formLines(lead),
         callback_number: spokenNumber(from) }, // P940: the voicemail message gives the number that called them
     })
+    if (v) await store.setVoice?.(c.id, v.voice)
     await store.status(c.id, 'dialing', { provider_call_id: r.providerCallId })
-    return { ok: true, provider_call_id: r.providerCallId }
+    return { ok: true, provider_call_id: r.providerCallId, voice: v?.voice ?? null }
   } catch (e) {
     // P902: a failed AI call counts as no answer (try 2 in 2 minutes, then the no-answer texts), never a VA hand-off.
     await store.result(c.id, 'no_answer', { summary: `start_failed: ${String((e as Error).message).slice(0, 80)}` })
     return { ok: false, code: 'start_failed' }
   }
+}
+
+// P976: which voice this call uses. Only on Retell with every split voice set up; a test call may ask for one
+// (lead.test.voice); a lead's second try keeps the first try's voice; otherwise the fewest first calls so far.
+export async function chooseVoice(store: Store, provider: Provider, c: Call, lead: Lead): Promise<{ voice: string; agentId: string } | null> {
+  if (provider.key !== 'retell' || !store.voiceAgents) return null
+  const agents = await store.voiceAgents()
+  if (!agents || !CALLER_SPLIT.every(k => agents[k]?.agent_id)) return null
+  const asked = lead.test?.voice && CALLER_SPLIT.includes(lead.test.voice) ? lead.test.voice : null
+  const earlier = !asked && c.attempt > 1 ? await store.leadVoice?.(c.lead_id, c.id) : null
+  const voice = asked || (earlier && CALLER_SPLIT.includes(earlier) ? earlier : pickVoice(await store.voiceCounts?.(!!lead.test) ?? {}))
+  return { voice, agentId: agents[voice].agent_id }
 }
 
 // ── provider events ─────────────────────────────────────────────────────────────────────────────────────────────
