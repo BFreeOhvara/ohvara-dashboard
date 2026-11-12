@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
-import { Search, X, FileUp, CalendarDays, ChevronLeft } from 'lucide-react'
+import { Search, X, FileUp, CalendarDays } from 'lucide-react'
 import { useSampleLeads, useSampleClients, useSampleOverview, useSampleNeeds, useSampleActivity } from '../data'
 import { useClientStatusOf } from '../checkSettings'
 import { clockNow } from '../leadLifecycle'
@@ -167,32 +167,26 @@ export function ANotif() {
   }, [items])
   const go = it => { if (it.ref) app.open(paths.lead(it.ref)) }
   return (
-    <div className="ma-subpage is-notif">
-      <div className="ma-scroll ma-sub-scroll" data-ma-scroll>
-        <header className="ma-sub-h ma-rise">
-          <span className="ma-sub-t"><b>Notifications</b><small>{items.length ? `${items.length} today` : 'Nothing new'}</small></span>
-          <button type="button" className="ma-round ma-press" aria-label="Close notifications" onClick={app.back}><ChevronLeft size={22} aria-hidden="true" style={{ transform: 'scaleX(-1)' }} /></button>
-        </header>
-        <p className="ma-cap is-out">Today</p>
-        <div className="ma-threads">
-          {items.map((it, i) => (
-            <button key={it.id} type="button" className={`ma-notif ma-rise${was.includes(it.id) ? '' : ' is-new'}`} style={rise(i)} onClick={() => go(it)} disabled={!it.ref}>
-              <i className={`ma-notif-dot is-${it.tone}`} aria-hidden="true" />
-              <span className="ma-grow"><b>{it.title}</b><small>{it.what}</small></span>
-              {!was.includes(it.id) && <span className="ma-new-dot" aria-label="New" />}
-            </button>
-          ))}
-          {!items.length && <p className="ma-empty">Nothing new today.</p>}
-        </div>
-        {act.length > 0 && <>
-          <p className="ma-cap is-out">Earlier</p>
-          <div className="ma-threads">
-            {act.slice(0, 12).map(a => (
-              <div key={a.id} className="ma-notif is-old"><i className="ma-notif-dot is-stone" aria-hidden="true" /><span className="ma-grow"><b>{a.who}</b><small>{a.text}{a.at ? ` · ${a.at}` : ''}</small></span></div>
-            ))}
-          </div>
-        </>}
+    <SubPage className="is-notif" title="Notifications" line={items.length ? `${items.length} today` : 'Nothing new'} close="Close notifications">
+      <p className="ma-cap is-out">Today</p>
+      <div className="ma-threads">
+        {items.map((it, i) => (
+          <button key={it.id} type="button" className={`ma-notif ma-rise${was.includes(it.id) ? '' : ' is-new'}`} style={rise(i)} onClick={() => go(it)} disabled={!it.ref}>
+            <i className={`ma-notif-dot is-${it.tone}`} aria-hidden="true" />
+            <span className="ma-grow"><b>{it.title}</b><small>{it.what}</small></span>
+            {!was.includes(it.id) && <span className="ma-new-dot" aria-label="New" />}
+          </button>
+        ))}
+        {!items.length && <p className="ma-empty">Nothing new today.</p>}
       </div>
-    </div>
+      {act.length > 0 && <>
+        <p className="ma-cap is-out">Earlier</p>
+        <div className="ma-threads">
+          {act.slice(0, 12).map(a => (
+            <div key={a.id} className="ma-notif is-old"><i className="ma-notif-dot is-stone" aria-hidden="true" /><span className="ma-grow"><b>{a.who}</b><small>{a.text}{a.at ? ` · ${a.at}` : ''}</small></span></div>
+          ))}
+        </div>
+      </>}
+    </SubPage>
   )
 }

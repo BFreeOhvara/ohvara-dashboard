@@ -181,7 +181,7 @@ export default function AHome() {
         {items.length
           ? items.slice(0, 2).map(it => <NeedCard key={it.id || it.key} item={it} leads={leads} lists={lists} />)
           : <p className="ma-empty is-glass">Nothing waiting on you. We let you know when something comes up.</p>}
-        {items.length > 2 && <button type="button" className="ma-pillbtn ma-press" onClick={() => app.openSub('needs')}>View all {items.length}<ChevronRight size={18} aria-hidden="true" /></button>}
+        {items.length > 2 && <button type="button" className="ma-pillbtn is-tone is-apricot ma-press" onClick={() => app.openSub('needs')}>View all {items.length}<ChevronRight size={18} aria-hidden="true" /></button>}
       </section>
 
       <AddLeadsCard className="ma-suggest" />
@@ -193,7 +193,6 @@ export default function AHome() {
           ? <button type="button" onClick={() => app.open(paths.billing())}><b className="tp-money">{money(dailyTotal(bill.spend))}</b><small>a day on leads</small></button>
           : <div><b>{leads.filter(l => l.stage === 'sold').length}</b><small>sold</small></div>}
       </div>
-      <p className="ma-note ma-rise" style={rise(5)}>This week, Mon to today</p>
     </div>
   )
 }

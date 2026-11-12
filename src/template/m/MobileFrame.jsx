@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Home, Inbox, CalendarDays, MessageCircle } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { useIsTestAccount } from '../../hooks/useIsTestAccount'
-import { useStretchPill } from '../../hooks/useStretchPill'
 import { useSampleLeads, useSampleThreads, useDataSource, useDataStatus } from '../data'
 import { useAccount } from '../kit'
 import { useNavKeys } from '../useProducts'
@@ -22,7 +21,8 @@ import ABilling from './ABilling'
 import ASettings from './ASettings'
 import ASubmit from './ASubmit'
 import { ASearch, ANeeds, AToday, AImport, ANotif, useUnseen } from './ASubs'
-import { TABS, OWN_BAR, routeOf, baseTab, nextTab, isSwipe, stageOf } from './appModel'
+import { TABS, OWN_BAR, routeOf, baseTab, stageOf } from './appModel'
+import { useTabSwipe } from './useTabSwipe'
 import '../glass.css'
 import '../flow.css'
 import '../palette.css'
@@ -136,39 +136,11 @@ function Frame() {
     markLead: l => setMarking(l), soldFor: l => setSold(l), pickFollow: l => setFollow(l), undoFor: id => setUndoId(id),
   }), [tab, back, open, openSub, goTab, unseen])
 
-  // Swipe between tabs: the track follows the finger; far enough sideways moves one tab over.
-  const [dx, setDx] = useState(0)
-  const swipe = useRef(null)
-  const moved = useRef(false)
-  const onDown = e => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return
-    if (e.target.closest('input, textarea, select, [data-no-swipe], .ma-layer')) return
-    swipe.current = { x: e.clientX, y: e.clientY, on: false }
-    moved.current = false
-  }
-  const onMove = e => {
-    const s = swipe.current
-    if (!s) return
-    const ddx = e.clientX - s.x
-    const ddy = e.clientY - s.y
-    if (!s.on) {
-      if (Math.abs(ddy) > 12 && Math.abs(ddy) > Math.abs(ddx)) { swipe.current = null; return }
-      if (Math.abs(ddx) > 12 && Math.abs(ddx) > Math.abs(ddy) * 1.2) { s.on = true; moved.current = true; e.currentTarget.setPointerCapture?.(e.pointerId) }
-      else return
-    }
-    const atEnd = (idx === 0 && ddx > 0) || (idx === tabs.length - 1 && ddx < 0)
-    setDx(atEnd ? ddx / 4 : ddx)
-  }
-  const onUp = e => {
-    const s = swipe.current
-    swipe.current = null
-    if (!s || !s.on) return
-    const ddx = e.clientX - s.x
-    const ddy = e.clientY - s.y
-    setDx(0)
-    if (isSwipe(ddx, ddy)) { const n = nextTab(idx, ddx, tabs.length); if (n !== idx) goTab(tabs[n]) }
-  }
-  const onClickCapture = e => { if (moved.current) { e.preventDefault(); e.stopPropagation(); moved.current = false } }
+  // Swipe between tabs (P971, useTabSwipe): the track follows the finger and snaps with its speed.
+  const viewRef = useRef(null)
+  const trackRef = useRef(null)
+  const barRef = useRef(null)
+  const onSwitch = useCallback(n => goTab(tabs[n]), [goTab, tabs])
 
   // Edge swipe back on a sub-screen (from the left edge), and swipe Notifications away to the left.
   const edgeRef = useRef(null)
@@ -199,22 +171,21 @@ function Frame() {
   const edgeHandlers = { onPointerDown: onEdgeDown, onPointerMove: onEdgeMove, onPointerUp: onEdgeUp, onPointerCancel: () => { edgeRef.current = null; setEdge(0) } }
 
   const hideBar = OWN_BAR.includes(route.sub) || notif
-  const barRef = useRef(null)
-  useStretchPill(barRef, { activeKey: tab, selector: 'button.is-on' })
-  const trackStyle = { transform: `translate3d(calc(${-idx * 100}% + ${dx}px), 0, 0)`, transition: dx || still ? 'none' : undefined }
-  const layerStyle = edge ? { transform: `translate3d(${edge}px, 0, 0)`, transition: 'none' } : undefined
-
   const body = status.error ? <DataError onRetry={status.retry} /> : status.loading ? <DataLoading /> : null
+  const { onClickCapture } = useTabSwipe({ viewRef, trackRef, barRef, idx, count: tabs.length, onSwitch, on: !body })
+  const trackStyle = { transform: `translate3d(calc(${-idx * 100}% + 0px), 0, 0)`, transition: still ? 'none' : undefined }
+  const layerStyle = edge ? { transform: `translate3d(${edge}px, 0, 0)`, transition: 'none' } : undefined
 
   return (
     <AppCtx.Provider value={app}>
       <div className={`tp fx ma${still ? ' is-still' : ''}${route.sub ? ' has-sub' : ''}`}>
         <div className="tp-sky" aria-hidden="true" />
+        <div className="ma-statusbar" aria-hidden="true" />
         {body
           ? <main className="ma-solo">{body}</main>
           : (
-            <div className="ma-viewport" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={() => { swipe.current = null; setDx(0) }} onClickCapture={onClickCapture} onDragStart={e => e.preventDefault()}>
-              <div className="ma-track" style={trackStyle}>
+            <div className="ma-viewport" ref={viewRef} onClickCapture={onClickCapture} onDragStart={e => e.preventDefault()}>
+              <div className="ma-track" ref={trackRef} style={trackStyle}>
                 {tabs.map((k, i) => {
                   const Page = TAB_PAGE[k]
                   const near = Math.abs(i - idx) <= 1 || k === 'home'
@@ -248,16 +219,17 @@ function Frame() {
           </>
         )}
 
-        <nav className={`ma-tabbar${hideBar ? ' is-hidden' : ''}`} aria-label="Pages" ref={barRef} aria-hidden={hideBar} inert={hideBar ? '' : undefined}>
+        <nav className={`ma-tabbar${hideBar ? ' is-hidden' : ''}`} aria-label="Pages" ref={barRef} aria-hidden={hideBar} inert={hideBar ? '' : undefined} style={{ '--n': tabs.length, '--p': idx }}>
+          <i className="ma-tab-hl" aria-hidden="true" />
           {tabs.map(k => {
             const Icon = TAB_ICON[k]
             const on = k === tab
             const badge = k === 'leads' ? toMark : k === 'messages' ? unread : 0
             const label = `${TAB_LABEL[k]}${badge ? `, ${badge} ${k === 'leads' ? 'to mark' : 'unread'}` : ''}`
             return (
-              <button key={on ? `${k}-on` : k} type="button" className={`ma-tab${on ? ' is-on' : ''}`} aria-label={label} aria-current={on ? 'page' : undefined} onClick={() => goTab(k)}>
+              <button key={k} type="button" className={`ma-tab${on ? ' is-on' : ''}`} aria-label={label} aria-current={on ? 'page' : undefined} onClick={() => goTab(k)}>
                 {k === 'account'
-                  ? <Ini name={account.name} size={32} className="ma-tab-me" />
+                  ? <Ini name={account.name} tone="sky" size={32} className="ma-tab-me" />
                   : <Icon size={25} strokeWidth={on ? 2.2 : 1.9} aria-hidden="true" />}
                 {badge > 0 && <span className="ma-badge is-tab">{badge}</span>}
               </button>

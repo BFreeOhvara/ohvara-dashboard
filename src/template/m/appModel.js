@@ -118,3 +118,47 @@ export const shortDay = (isoDay, todayIso) => {
 // ── Notifications: the bell badge clears once the panel is opened ─────────────────────────────────────────────
 export const unseenCount = (ids, seen) => ids.filter(id => !seen.includes(id)).length
 export const markSeen = (ids, seen) => [...new Set([...seen, ...ids])].slice(-200)
+
+// ── P971: the swipe between tabs, and short values for Account and Settings ────────────────────────────────────
+// Where a released swipe lands: a quick flick (≥ 0.3 px/ms, the way the finger moved) switches even when short, a
+// slow drag past 35 % of the width switches, anything less springs back. Never past the first or last tab.
+export function swipeTarget(i, dx, v, width, n = TABS.length) {
+  const dir = dx < 0 ? 1 : -1
+  const flick = Math.abs(v) >= 0.3 && Math.sign(v) === Math.sign(dx) && Math.abs(dx) >= 12
+  const far = Math.abs(dx) >= width * 0.35
+  return flick || far ? Math.max(0, Math.min(n - 1, i + dir)) : i
+}
+// Past the first or last tab the page only gives a little (rubber band).
+export const rubber = (dx, width) => (dx / (1 + Math.abs(dx) / Math.max(1, width * 0.5))) * 0.45
+// The finger's speed in px/ms over the last ~100 ms of samples [{ t, x }].
+export function velocityOf(samples, window = 100) {
+  if (!samples.length) return 0
+  const last = samples[samples.length - 1]
+  const first = samples.find(s => last.t - s.t <= window) || last
+  const dt = last.t - first.t
+  return dt > 0 ? (last.x - first.x) / dt : 0
+}
+
+// Account's "next charge" tile: one short value and the word for when. "Tonight, 8 PM" → 8 PM (tonight);
+// "Tue, Dec 1" → Dec 1 (Tue).
+const SOFT = ['tonight', 'today', 'tomorrow']
+export function chargeStat(at) {
+  const s = String(at || '').replace(/^at\s+/i, '').trim()
+  const m = /^(.*?),\s*(.+)$/.exec(s)
+  if (!m) return { value: s || '—', when: '' }
+  return { value: m[2], when: SOFT.includes(m[1].toLowerCase()) ? m[1].toLowerCase() : m[1] }
+}
+
+// Settings' hours row: "Mon to Fri, 9 to 6" (times only when every day shares them).
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const shortTime = t => { const m = /(\d+)(?::(\d+))?\s*(AM|PM)?/i.exec(t || ''); return m ? `${m[1]}${m[2] && m[2] !== '00' ? `:${m[2]}` : ''}` : '' }
+export function weekWords(week) {
+  const on = DAYS.filter(d => week?.[d]?.on)
+  if (!on.length) return 'Not set'
+  const idx = on.map(d => DAYS.indexOf(d))
+  const run = idx.every((x, i) => i === 0 || x === idx[i - 1] + 1)
+  const days = on.length === 1 ? on[0] : run ? `${on[0]} to ${on[on.length - 1]}` : `${on.length} days`
+  const starts = new Set(on.map(d => week[d].start))
+  const ends = new Set(on.map(d => week[d].end))
+  return starts.size === 1 && ends.size === 1 ? `${days}, ${shortTime(on.map(d => week[d].start)[0])} to ${shortTime(on.map(d => week[d].end)[0])}` : days
+}

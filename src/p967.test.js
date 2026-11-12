@@ -88,7 +88,7 @@ test('the frame: old top bar, + button and old tab bar gone; sample line kept of
   const f = read('./template/m/MobileFrame.jsx')
   assert.doesNotMatch(f, /mx-fab|mx-tabs|mx-top/)
   assert.match(f, /!isTest && source === 'sample'/)
-  assert.match(f, /useStretchPill\(barRef/)
+  assert.match(f, /useTabSwipe\(\{ viewRef, trackRef, barRef/) // P971: the bar's highlight follows the swipe
   assert.match(f, /<SupportProvider>/)
 })
 

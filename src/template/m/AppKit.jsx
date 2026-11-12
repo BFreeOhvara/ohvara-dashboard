@@ -19,19 +19,22 @@ import { RESULT, RESULT_ORDER, initialsOf } from './appModel'
 export const AppCtx = createContext(null)
 export const useApp = () => useContext(AppCtx)
 
-// A sub-screen: back button, title (and a line under it), the page, and its own buttons pinned at the bottom.
-export function SubPage({ title, line, foot, children, className = '', right }) {
+// A sub-screen (P971): a header pinned at the top under the status bar (back button, title, a line under it, buttons
+// on the right) on a blurred backdrop, the page scrolling under it (never over it, never under the status bar), and
+// its own buttons pinned at the bottom. Notifications passes `close` for its close button on the right instead.
+export function SubPage({ title, line, foot, children, className = '', right, close }) {
   const app = useApp()
   return (
     <div className={`ma-subpage ${className}`}>
       <div className="ma-scroll ma-sub-scroll" data-ma-scroll>
-        <header className="ma-sub-h ma-rise">
-          <button type="button" className="ma-round ma-press" aria-label="Back" onClick={app.back}><ChevronLeft size={22} aria-hidden="true" /></button>
-          <span className="ma-sub-t"><b>{title}</b>{line && <small>{line}</small>}</span>
-          {right}
-        </header>
         <div className="ma-sub-b">{children}</div>
       </div>
+      <header className="ma-sub-h">
+        {!close && <button type="button" className="ma-round ma-press" aria-label="Back" onClick={app.back}><ChevronLeft size={22} aria-hidden="true" /></button>}
+        <span className="ma-sub-t"><b>{title}</b>{line && <small>{line}</small>}</span>
+        {right}
+        {close && <button type="button" className="ma-round ma-press" aria-label={close} onClick={app.back}><ChevronLeft size={22} aria-hidden="true" style={{ transform: 'scaleX(-1)' }} /></button>}
+      </header>
       {foot && <div className="ma-foot">{foot}</div>}
     </div>
   )

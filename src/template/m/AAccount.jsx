@@ -22,6 +22,7 @@ import { useProducts, useNavKeys } from '../useProducts'
 import { label as productsLabel } from '../../lib/products.js'
 import { useApp, SubPage, Row, Ini, BottomSheet, rise } from './AppKit'
 import { CheckCard, ClientSheet } from './MClients'
+import { chargeStat } from './appModel'
 import { useClientStatusOf } from '../checkSettings'
 
 // P967 — Account: a dark plan card (you, your plan, three numbers), two tiles (Submit a policy with a big +, Lead
@@ -51,6 +52,7 @@ export default function AAccount() {
   const failed = !!b.payment?.failed
   const name = account?.name || s.profile?.name || 'You'
   const tiles = [serve && 'submit', leads && 'spend'].filter(Boolean)
+  const charge = chargeStat(leads ? b.nightly?.at || '8 PM' : b.nextBill) // P971: "8 PM" + (tonight), one line
 
   return (
     <div className="ma-tabpage">
@@ -68,8 +70,8 @@ export default function AAccount() {
         </div>
         <div className="ma-plan-stats">
           <div><b>{dl.total}</b><small>delivered this week</small></div>
-          <div><b>{prot}/{clients.length}</b><small>clients protected</small></div>
-          <div><b>{leads ? (b.nightly?.at || '8 PM').replace(/^at /i, '') : b.nextBill?.split(', ').pop() || '—'}</b><small>next charge</small></div>
+          <div><b>{prot}/{clients.length}</b><small>protected</small></div>
+          <div><b>{charge.value}</b><small>next charge{charge.when ? ` (${charge.when})` : ''}</small></div>
         </div>
       </div>
 

@@ -26,6 +26,12 @@
   --ma-badge-ink: var(--sh-fi-coral);
   --ma-focus: color-mix(in srgb, var(--sh-f-sky) 55%, transparent);
   --ma-wm: linear-gradient(180deg, color-mix(in srgb, var(--sh-ink) 100%, white) 0%, color-mix(in srgb, var(--sh-ink) 70%, transparent) 100%);
+  /* P971: where the floating bar sits, how far every page scrolls past its last card (just clear of the bar), and
+     the pinned sub-screen header's height under the status bar. */
+  --ma-bar-at: max(24px, calc(env(safe-area-inset-bottom, 0px) + 6px));
+  --ma-end: calc(var(--ma-bar-at) + 62px + 14px);
+  --ma-top: env(safe-area-inset-top, 0px);
+  --ma-hh: 64px;
   font-family: 'Urbanist', var(--font-sans, system-ui), sans-serif;
   color: var(--ma-ink);
   -webkit-tap-highlight-color: transparent;
@@ -73,14 +79,19 @@
 .ma :is(a, img), .ma-layer-r :is(a, img) { -webkit-user-drag: none; }
 .ma-solo { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; }
 .ma-viewport { position: absolute; inset: 0; overflow: hidden; touch-action: pan-y pinch-zoom; }
-.ma-track { display: flex; height: 100%; transition: transform .44s var(--ma-ease); will-change: transform; }
+.ma-track { display: flex; height: 100%; transition: transform .38s cubic-bezier(.2, .9, .25, 1); will-change: transform; }
+.ma-viewport.is-dragging { user-select: none; -webkit-user-select: none; }
+.ma-viewport.is-dragging .ma-page { pointer-events: none; }
 .ma-page, .ma-sub-scroll {
   flex: 0 0 100%; height: 100%; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch;
-  scrollbar-width: none; padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px calc(env(safe-area-inset-bottom, 0px) + 116px);
+  scrollbar-width: none; padding: calc(var(--ma-top) + 12px) 16px var(--ma-end);
   touch-action: pan-y pinch-zoom; /* each page scrolls up and down; a sideways drag is ours (tab swipe, edge back) */
 }
 .ma-page::-webkit-scrollbar, .ma-sub-scroll::-webkit-scrollbar { display: none; }
 .ma-page:not(.is-on) { pointer-events: none; }
+/* Nothing shows under the status bar on a tab page: a blurred strip the height of the safe area. */
+.ma-statusbar { position: fixed; top: 0; left: 0; right: 0; z-index: 30; height: var(--ma-top); pointer-events: none;
+  background: color-mix(in srgb, var(--ov-page) 86%, transparent); backdrop-filter: blur(18px) saturate(1.3); -webkit-backdrop-filter: blur(18px) saturate(1.3); }
 .ma-sample { margin: 18px 4px 0; text-align: center; font-size: 12px; color: var(--ma-ink3); }
 
 /* Layers: a sub-screen from the right, Notifications from the left. Same backdrop as the page under them. */
@@ -92,7 +103,7 @@
 .ma-layer-r { left: 0; right: 0; animation: maFromRight .42s var(--ma-ease) both; box-shadow: -18px 0 40px -24px rgba(0, 0, 0, .45); }
 .ma-layer-r.is-under { z-index: 39; animation: none; }
 .ma-layer-r.is-leaving { transform: translate3d(100%, 0, 0) !important; transition: transform .26s var(--ma-ease) !important; }
-.ma-layer-l { left: 0; width: min(88vw, 400px); z-index: 46; animation: maFromLeft .4s var(--ma-ease) both; box-shadow: 18px 0 40px -20px rgba(0, 0, 0, .45); border-radius: 0 26px 26px 0; }
+.ma-layer-l { left: 0; right: 0; z-index: 46; animation: maFromLeft .4s var(--ma-ease) both; box-shadow: 18px 0 40px -20px rgba(0, 0, 0, .45); }
 .ma-layer-l.is-leaving { transform: translate3d(-100%, 0, 0) !important; transition: transform .26s var(--ma-ease) !important; }
 .ma-notif-scrim { position: fixed; inset: 0; z-index: 45; border: 0; padding: 0; background: rgba(0, 0, 0, .28); animation: maFade .3s ease both; }
 .ma-notif-scrim.is-leaving { opacity: 0; transition: opacity .26s; }
@@ -173,6 +184,7 @@
 .ma-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--ma-glass-b); background: var(--ma-glass); font-weight: 700; font-size: 14px; color: var(--ma-ink); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); cursor: pointer; white-space: nowrap; }
 .ma-chip.is-solid { background: var(--ma-solid); color: var(--ma-solid-ink); border-color: transparent; }
 .ma-pillbtn { display: flex; width: 100%; align-items: center; justify-content: center; gap: 8px; min-height: 50px; margin-top: 10px; border-radius: 999px; border: 1px solid var(--ma-glass-b); background: var(--ma-glass); font-weight: 700; font-size: 15px; color: var(--ma-ink); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); cursor: pointer; }
+.ma-pillbtn.is-tone { background: var(--tcard); color: var(--tink); border-color: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 12px 26px -16px rgba(0, 0, 0, .4); }
 .ma-two { display: flex; gap: 10px; margin-top: 10px; }
 .ma-two > * { flex: 1; min-width: 0; }
 .ma-two .ma-pillbtn { margin-top: 0; }
@@ -207,17 +219,22 @@
 
 /* ── Tab bar: a floating glass pill, icons only ─────────────────────────────────────────────────────────── */
 .ma-tabbar {
-  position: fixed; z-index: 50; left: 16px; right: 16px; bottom: max(24px, calc(env(safe-area-inset-bottom, 0px) + 6px)); height: 62px; padding: 6px;
+  position: fixed; z-index: 50; left: 16px; right: 16px; bottom: var(--ma-bar-at); height: 62px; padding: 6px;
   display: flex; align-items: stretch; gap: 2px; border-radius: 31px; background: var(--ma-bar); border: 1px solid var(--ma-bar-b);
   backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); box-shadow: 0 14px 34px -14px rgba(0, 0, 0, .45);
   transition: transform .38s var(--ma-ease), opacity .3s;
 }
 .ma-tabbar.is-hidden { transform: translateY(calc(100% + 40px)); opacity: 0; pointer-events: none; }
-.ma-tab { position: relative; flex: 1; min-width: 44px; border: 0; border-radius: 25px; background: none; display: grid; place-items: center; color: var(--ma-ink2); cursor: pointer; padding: 0; }
-.ma-tab.is-on { background: var(--ma-pill); color: var(--ma-ink); --sp-fill: var(--ma-pill); }
+.ma-tab { position: relative; z-index: 1; flex: 1; min-width: 44px; border: 0; border-radius: 25px; background: none; display: grid; place-items: center; color: var(--ma-ink2); cursor: pointer; padding: 0; transition: color .25s; }
+.ma-tab.is-on { color: var(--ma-ink); }
+/* P971: one highlight under the tabs, at --p (the tab index; fractional while a swipe drags it along). */
+.ma-tab-hl { position: absolute; top: 6px; bottom: 6px; left: 6px; width: calc((100% - 12px - (var(--n, 5) - 1) * 2px) / var(--n, 5)); border-radius: 25px; background: var(--ma-pill);
+  transform: translate3d(calc(var(--p, 0) * (100% + 2px)), 0, 0); transition: transform .38s cubic-bezier(.2, .9, .25, 1); pointer-events: none; }
+.ma-tabbar.is-drag .ma-tab-hl { transition: none; }
 .ma-tab.is-on svg, .ma-tab.is-on .ma-tab-me { animation: maPop .4s var(--ma-pop); }
 .ma-tab:active svg, .ma-tab:active .ma-tab-me { animation: maPop .4s var(--ma-pop); }
-.ma-tab-me { --tink: var(--ma-ink); font-size: 12px; box-shadow: 0 0 0 2px var(--ma-glass-b); }
+/* The avatar: the same blue fill as on the Account card, always; the dark ring only when Account is the tab. */
+.ma-tab-me { font-size: 12px; box-shadow: 0 0 0 2px var(--ma-glass-b); transition: box-shadow .25s; }
 .ma-tab.is-on .ma-tab-me { box-shadow: 0 0 0 2px var(--ma-ink); }
 
 /* ── Home ───────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -333,17 +350,20 @@
 .ma-input:focus { outline: none; box-shadow: 0 0 0 3px var(--ma-focus); }
 
 /* ── Sub-screens ────────────────────────────────────────────────────────────────────────────────────────── */
-.ma-subpage { position: absolute; inset: 0; display: flex; flex-direction: column; }
-.ma-subpage .ma-sub-scroll { flex: 1; }
-.ma-sub-h { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 12px; margin: calc(-1 * (env(safe-area-inset-top, 0px) + 12px)) -16px 10px; padding: calc(env(safe-area-inset-top, 0px) + 12px) 12px 10px;
-  background: color-mix(in srgb, var(--ov-page) 72%, transparent); backdrop-filter: blur(16px) saturate(1.3); -webkit-backdrop-filter: blur(16px) saturate(1.3); }
+/* P971: the header is pinned (outside the scroller) under the status bar; the scroller starts below the status bar,
+   so content passes under the blurred header and never shows under the clock. */
+.ma-subpage { position: absolute; inset: 0; }
+.ma-subpage .ma-sub-scroll { position: absolute; left: 0; right: 0; bottom: 0; top: var(--ma-top); height: auto; padding-top: calc(var(--ma-hh) + 6px); }
+.ma-sub-h { position: absolute; top: 0; left: 0; right: 0; z-index: 5; display: flex; align-items: center; gap: 12px; height: calc(var(--ma-top) + var(--ma-hh)); padding: var(--ma-top) 12px 0;
+  background: color-mix(in srgb, var(--ov-page) 84%, transparent); backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border-bottom: 1px solid var(--ma-line); animation: maFade .3s ease both; }
 .ma-sub-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.ma-sub-t b { font-size: 22px; font-weight: 800; letter-spacing: -.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ma-sub-t small { font-size: 13px; }
+.ma-sub-t b { font-size: 21px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ma-sub-t small { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ma-sub-acts { display: flex; gap: 8px; }
 .ma-foot { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; display: flex; gap: 10px; padding: 12px 16px calc(env(safe-area-inset-bottom, 0px) + 14px);
   background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--ov-page) 88%, transparent) 30%); }
-.ma-subpage:has(.ma-foot) .ma-sub-scroll { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 110px); }
+.ma-subpage:has(.ma-foot) .ma-sub-scroll { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); }
 .ma-subpage.is-chat .ma-sub-scroll { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); }
 .ma-embed { min-width: 0; overflow-x: hidden; }
 .ma-embed > * { max-width: 100%; }
@@ -449,9 +469,11 @@
 .ma-plan-row { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px solid color-mix(in srgb, white 12%, transparent); font-weight: 700; }
 .ma-paid { font-size: 12px; font-weight: 800; padding: 5px 10px; border-radius: 999px; background: color-mix(in srgb, var(--sh-f-sage) 30%, transparent); color: color-mix(in srgb, var(--sh-f-sage) 60%, white); }
 .ma-paid.is-bad { background: color-mix(in srgb, var(--sh-f-coral) 30%, transparent); color: color-mix(in srgb, var(--sh-f-coral) 60%, white); }
-.ma-plan-stats { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 14px; }
-.ma-plan-stats > * { display: flex; flex-direction: column; gap: 2px; }
-.ma-plan-stats b { font-size: 20px; font-weight: 800; }
+/* P971: three equal tiles; the big value always on one line, the label under it. */
+.ma-plan-stats { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.ma-plan-stats > * { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 10px 10px 11px; border-radius: 16px; background: color-mix(in srgb, white 9%, transparent); border: 1px solid color-mix(in srgb, white 10%, transparent); }
+.ma-plan-stats b { font-size: 20px; font-weight: 800; line-height: 1.1; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.ma-plan-stats small { font-size: 12px; line-height: 1.25; }
 .ma-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
 .ma-tiles.is-one { grid-template-columns: 1fr; }
 .ma-tile { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 18px; min-height: 128px; padding: 16px; border-radius: 24px; border: 0; background: var(--tcard); color: var(--tink); text-align: left; cursor: pointer; box-shadow: 0 12px 24px -16px rgba(0, 0, 0, .45); }
@@ -517,3 +539,21 @@ body:has(.ma) .tp-note-toast svg { color: inherit; }
 /* Nothing scrolls sideways inside a page. */
 .ma-page *, .ma-sub-scroll * { max-width: 100%; }
 .ma-page .ma-seg > button, .ma-page .ma-days > * { max-width: none; }
+
+/* ── Settings (P971): grouped glass cards, one row per setting, value + chevron; tidy sub-screens ─────────── */
+.ma-set .ma-row { min-height: 54px; }
+.ma-set .ma-val { max-width: 54%; }
+.ma-set-note { margin: 8px 8px 0 !important; }
+.ma-tick { flex-shrink: 0; color: var(--sh-f-sky); }
+[data-theme="light"] .ma-tick { color: color-mix(in srgb, var(--sh-f-sky) 60%, var(--sh-fi-sky)); }
+.ma-fields { padding: 2px 0; overflow: visible; }
+.ma-field { display: flex; flex-direction: column; gap: 6px; padding: 12px 16px 14px; }
+.ma-field + .ma-field { border-top: 1px solid var(--ma-line); }
+.ma-field > span { font-size: 13px; font-weight: 700; color: var(--ma-ink2); }
+.ma-field > small { font-size: 12px; color: var(--ma-ink3); }
+.ma-field input { width: 100%; min-height: 46px; border: 1px solid var(--ma-glass-b); border-radius: 14px; background: var(--ma-glass-hi); color: var(--ma-ink); font: inherit; font-size: 16px; padding: 0 14px; }
+.ma-field input:focus { outline: none; box-shadow: 0 0 0 3px var(--ma-focus); }
+.ma-field input[readonly] { color: var(--ma-ink2); background: var(--ma-soft); }
+.ma-form .ma-hint, .ma-embed > .ma-hint { margin: 0 6px 2px !important; }
+.ma-embed > .ma-hint { margin-bottom: 12px !important; }
+.ma-form .ma-savebar .ma-btn { min-height: 52px; }
