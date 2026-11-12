@@ -16,9 +16,9 @@ import { VaCallProvider } from './VCall'
 import VToday from './VToday'
 import VCalendar from './VCalendar'
 import VRota from './VRota'
-import VMessages, { VThread } from './VMessages'
+import VMessages, { VThread, VaStandingProvider } from './VMessages'
 import { useVaThreads, FEED_SEEN } from './vaStore'
-import VMe, { VPay, VSettings, VTraining, VLesson, VHelp } from './VMe'
+import VMe, { VPay, VSettings, VProfile, VTraining, VLesson, VHelp } from './VMe'
 import { VNotif, VSearch, VClient } from './VSubs'
 import '../../glass.css'
 import '../../flow.css'
@@ -33,7 +33,7 @@ import '@fontsource/urbanist/800.css'
 
 // P975 — the fulfillment (VA) app on a phone (below 768 px, and inside the native app), from Brayden's approved
 // mockup (media/app-mockup/va-app-mockup.dc.html). The agent app's frame and rules (P967–P974): five tabs side by side
-// you swipe between (Today · Calendar · Rota · Messages · Me), a floating glass pill bar with icons only and the grey
+// you swipe between (Today · Calendar · Schedule · Messages · Me), a floating glass pill bar with icons only and the grey
 // stretchy highlight, sub-screens from the right and Notifications from the left that swipe away the way they came,
 // bottom sheets that swipe down, nothing pinned at the top. Same VA data hooks and addresses as the desktop VA desk,
 // which stays the main tool at 768 px and up (FulFrame picks).
@@ -46,7 +46,8 @@ function SubScreen({ route }) {
   switch (route.sub) {
     case 'search': return <VSearch />
     case 'client': return <VClient id={route.id} />
-    case 'settings': return <VSettings />
+    case 'settings': return <VSettings section={route.id} />
+    case 'profile': return <VProfile />
     case 'pay': return <VPay />
     case 'training': return route.id ? <VLesson id={route.id} /> : <VTraining />
     case 'help': return <VHelp />
@@ -57,7 +58,9 @@ function SubScreen({ route }) {
 
 export default function VaApp() {
   const { data: schedule } = useFulSchedule()
-  return <VaCallProvider schedule={schedule}><Frame /></VaCallProvider>
+  const sample = useFulSource() === 'sample'
+  const app = <VaCallProvider schedule={schedule}><Frame /></VaCallProvider>
+  return sample ? app : <VaStandingProvider>{app}</VaStandingProvider>
 }
 
 function Frame() {

@@ -9,7 +9,7 @@ import { BottomSheet, Ini, rise } from '../AppKit'
 import { useVaNow } from './useVaNow'
 import { weekCards, firstName } from './vaModel'
 
-// P975 — Rota: who is on shift, This week / Next week. A card per day (you first and highlighted, today ringed,
+// P975 — Rota (P977: shown as "Schedule"): who is on shift, This week / Next week. A card per day (you first and highlighted, today ringed,
 // the weekend and your days off marked). Ask for a day off is the desk's own flow and rules (DayOffDrawer: the monthly
 // allowance, booked at once while days are left, the team covers). Swap a shift asks a teammate; an admin confirms
 // every change (sample until the swaps backend, P879's list).
@@ -30,15 +30,14 @@ export default function VRota() {
 
   return (
     <div className="ma-tabpage">
-      <div className="ma-top ma-rise"><span className="ma-grow"><h1>Rota</h1><small>Who is on shift · 8 AM to 6 PM Central</small></span></div>
+      <div className="ma-top ma-rise"><span className="ma-grow"><h1>Schedule</h1><small>Who is on shift · 8 AM to 6 PM Central</small></span></div>
 
-      <div className="va-seg ma-rise" role="tablist" aria-label="Week" style={{ ...rise(0), '--i': week }}>
-        <i aria-hidden="true" />
-        {WEEK.map((w, i) => <button key={w} type="button" role="tab" aria-selected={week === i} className={week === i ? 'is-on' : ''} onClick={() => setWeek(i)}>{w}</button>)}
+      <div className="va-weeks ma-rise" role="tablist" aria-label="Week" style={rise(0)}>
+        {WEEK.map((w, i) => <button key={w} type="button" role="tab" aria-selected={week === i} className={`va-week ma-press${week === i ? ' is-on' : ''}`} onClick={() => setWeek(i)}>{w}</button>)}
       </div>
 
       {s.notSet
-        ? <p className="ma-empty is-glass ma-rise" style={rise(1)}>Your rota isn’t set up yet. Your shifts and who is on with you show here once the team builds it.</p>
+        ? <p className="ma-empty is-glass ma-rise" style={rise(1)}>Your schedule isn’t set up yet. Your shifts and who is on with you show here once the team builds it.</p>
         : (
           <div className="va-rota" key={week}>
             {cards.map((d, i) => (

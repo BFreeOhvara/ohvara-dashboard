@@ -46,11 +46,20 @@
 .va-off { font-size: 10px; font-weight: 800; letter-spacing: .02em; color: var(--ma-ink2); }
 .ma-day.va-day.is-off { background: repeating-linear-gradient(135deg, transparent 0 5px, var(--ma-line) 5px 7px); }
 .va-legend { gap: 6px 16px; }
-.va-legend i.is-sky { --tbar: color-mix(in srgb, var(--sh-f-sky) 82%, transparent); width: 16px; height: 8px; border-radius: 4px; }
 .va-legend-off::before { content: ''; width: 16px; height: 10px; border-radius: 3px; background: repeating-linear-gradient(135deg, transparent 0 3px, var(--ma-ink3) 3px 4px); }
 .va-legend.is-sheet { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; margin-top: 14px; font-size: 12px; font-weight: 600; color: var(--ma-ink2); }
 .va-legend.is-sheet span { display: inline-flex; align-items: center; gap: 6px; }
 .va-legend.is-sheet i { width: 14px; height: 10px; border-radius: 3px; background: var(--tcard); }
+/* P977: the picked day's calls under the month, swapped with a soft fade */
+.va-dayh { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 18px 4px 10px; }
+.va-dayh b { font-size: 19px; font-weight: 800; letter-spacing: -.01em; }
+.va-dayh small { font-size: 13px; font-weight: 700; color: var(--ma-ink2); }
+.va-daylist { animation: vaSwap .34s var(--ma-ease) both; }
+@keyframes vaSwap { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.va-uprow { display: flex; flex-direction: column; gap: 8px; }
+.va-daylist .ma-up.is-past { opacity: .55; }
+.va-daylist .ma-up-when small { font-size: 11px; font-weight: 800; }
+.va-legend i { width: 14px; height: 8px; border-radius: 3px; background: var(--tcard); }
 .va-dayoff { margin-bottom: 12px; padding: 14px; border-radius: 18px; text-align: center; font-weight: 700; color: var(--ma-ink2); background: repeating-linear-gradient(135deg, transparent 0 6px, var(--ma-line) 6px 8px); }
 .va-hours { display: flex; flex-direction: column; }
 .va-hour { display: flex; gap: 10px; min-height: 46px; }
@@ -65,6 +74,10 @@
 .va-slot.is-past { opacity: .55; }
 
 /* ---- Rota ---- */
+/* P977: This week / Next week = two separate pills, the picked one filled and bold */
+.va-weeks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.va-week { min-height: 46px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--ma-glass-b); background: var(--ma-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); font: inherit; font-size: 15px; font-weight: 600; color: var(--ma-ink2); cursor: pointer; transition: background-color .25s, color .25s, border-color .25s, box-shadow .25s; }
+.va-week.is-on { background: var(--ma-solid); border-color: var(--ma-solid); color: var(--ma-solid-ink); font-weight: 800; box-shadow: 0 8px 18px -10px rgba(0, 0, 0, .45); }
 .va-seg { position: relative; display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 999px; background: var(--ma-glass); border: 1px solid var(--ma-glass-b); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
 .va-seg > i { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); border-radius: 999px; background: var(--ma-solid); transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .38s var(--ma-pop); }
 .va-seg button { position: relative; min-height: 44px; border: 0; background: none; font-weight: 800; font-size: 15px; color: var(--ma-ink2); cursor: pointer; transition: color .25s; }
@@ -153,6 +166,6 @@
 :where(.va-call, .va-result .ma-sheet, .va-hours, .va-rota) { touch-action: pan-y; }
 
 @media (prefers-reduced-motion: reduce) {
-  .va-hold-ic, .va-call-merged, .ma-layer.va-call, .va-shake, .va-shift-top b > i.is-live { animation: none !important; }
+  .va-hold-ic, .va-call-merged, .va-daylist, .ma-layer.va-call, .va-shake, .va-shift-top b > i.is-live { animation: none !important; }
   .va-seg > i, .va-bar > i { transition: none !important; }
 }

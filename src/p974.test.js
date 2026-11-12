@@ -102,9 +102,10 @@ test('client screen: what is happening, since when, a timeline with sold / payme
 
 test('Settings: you on top (photo, name, phone, email, states, carriers), short labels, Sign out and Delete', () => {
   const s = read('./template/m/ASettings.jsx')
-  assert.match(s, /className="ma-glass ma-list ma-set ma-me ma-rise"/)
-  for (const t of ['Licensed states', 'Carriers', 'Call hours', 'Time zone', 'Carrier emails', 'Email alerts', 'Plan', 'Card', 'Receipts', 'Password', 'Sign out', 'Delete account']) assert.match(s, new RegExp(`title="${t}"`))
-  for (const g of ['Calls and calendar', 'Notifications', 'Plan and billing', 'Account']) assert.match(s, new RegExp(`<Group title="${g}">`))
+  // P977: profile lives on Edit profile (with states + carriers), the first screen is sections, Sign out left Settings.
+  for (const t of ['Licensed states', 'Carriers', 'Call hours', 'Time zone', 'Carrier emails', 'Email alerts', 'Plan', 'Card', 'Receipts', 'Password']) assert.match(s, new RegExp(`title="${t}"`))
+  assert.match(s, />Delete account<\/button>/)
+  for (const g of ['Calls and calendar', 'Notifications', 'Plan and billing', 'Account', 'Privacy and security']) assert.match(s, new RegExp(`title="${g}"`))
   assert.doesNotMatch(s, /AppAbout|title="Appearance"/)
   assert.match(s, /if \(k === 'carriers'\)/)
 })

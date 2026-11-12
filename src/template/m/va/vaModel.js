@@ -5,11 +5,13 @@ import { FUL, OLD_CALLS, OLD_QUEUE, OLD_SERVICING } from '../../ful/paths.js'
 import { outcomesOf } from '../../ful/words.js'
 import { findCarrier, isVerified } from '../../../lib/carriers/catalog.js'
 import { monthGrid, trimGrid, initialsOf } from '../appModel.js'
+import { whenText } from '../../../lib/fulReal.js'
+import { emptySupport } from '../../support911.js'
 
 export const VA_TABS = ['today', 'calendar', 'rota', 'messages', 'me']
-export const VA_LABEL = { today: 'Today', calendar: 'Calendar', rota: 'Rota', messages: 'Messages', me: 'Me' }
+export const VA_LABEL = { today: 'Today', calendar: 'Calendar', rota: 'Schedule', messages: 'Messages', me: 'Me' }
 // Sub-screens opened with ?s= over the current tab (the agent app's way), plus the real VA addresses they stand for.
-export const VA_SUBS = ['notif', 'search', 'settings', 'pay', 'training', 'help', 'thread', 'client']
+export const VA_SUBS = ['notif', 'search', 'settings', 'profile', 'pay', 'training', 'help', 'thread', 'client']
 // Screens with their own bottom: the tab bar slides away under them.
 export const VA_OWN_BAR = ['thread', 'search', 'client']
 
@@ -187,3 +189,20 @@ export const withYou = (mates = [], offNames = []) => {
 }
 export const callTimer = ms => mmss(Math.max(0, Math.floor(ms / 1000)))
 export { initialsOf }
+
+// ── Messages (P977) ──────────────────────────────────────────────────────────────────────────────────────────────
+export const dmThreadId = key => `dm-${key}`
+// Real: standing threads → the VA's support line and one DM per VA.
+export function toVaStanding(rows = [], meId, nowMs, tz) {
+  const last = r => (r.last_body ? { from: r.last_sender_id === meId ? 'me' : 'them', text: r.last_body, at: whenText(r.last_at, nowMs, tz) } : null)
+  let support = null
+  const vas = []
+  for (const r of rows || []) {
+    if (!r.peer_id && r.agent_id === meId) support = { ...emptySupport(), dm: { agentId: r.agent_id, peerKey: 'admin' }, unread: r.unread_count || 0, last: last(r), last_at: r.last_at }
+    else if (r.peer_id && r.agent_role === 'fulfillment' && (r.agent_id === meId || r.peer_id === meId)) {
+      const other = r.agent_id === meId ? { id: r.peer_id, name: r.peer_name } : { id: r.agent_id, name: r.agent_name }
+      vas.push({ id: dmThreadId(other.id), va: true, name: other.name || 'VA', dm: { agentId: r.agent_id, peerKey: r.peer_key }, unread: r.unread_count || 0, last: last(r), last_at: r.last_at })
+    }
+  }
+  return { support, vas }
+}

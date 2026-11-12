@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Wallet, ChevronRight, Moon, Inbox } from 'lucide-react'
+import { Plus, Wallet, ChevronRight, Moon, Inbox, Pencil } from 'lucide-react'
 import { useSampleBilling, useSampleSettings, useSampleClients, useSampleActivity } from '../data'
 import { useAccount } from '../kit'
 import { asPick } from '../licenceModel'
@@ -12,7 +12,7 @@ import { NATIVE_BILLING_TEXT } from '../../components/native/NativeBillingNote'
 import { useTheme } from '../../hooks/useTheme'
 import { useProducts, useNavKeys } from '../useProducts'
 import { label as productsLabel } from '../../lib/products.js'
-import { useApp, Row, Ini, Toggle, rise } from './AppKit'
+import { useApp, Row, Ini, Toggle, SignOutButton, rise } from './AppKit'
 import { chargeStat, tabsFromNav } from './appModel'
 import { useClientStatusOf } from '../checkSettings'
 
@@ -20,7 +20,8 @@ import { useClientStatusOf } from '../checkSettings'
 // real buttons (raised, a press state, a small arrow) with a clear gap before the list. Lead spend is THE way into
 // Billing (so there's no separate Billing row while it shows). Theme is a row with a Light/Dark switch that flips the
 // app at once and is remembered. No "About this app" line here any more (the version is at the foot of Help).
-// Servicing-only agents have Clients in the bottom bar, so here Clients gives way to Leads.
+// P977: "Edit profile" at the top right of the card opens the profile screen; Sign out is its own button under the
+// list. Servicing-only agents have Clients in the bottom bar, so here Clients gives way to Leads.
 const sinceOf = b => { const m = /([A-Z][a-z]{2}) \d+/.exec(b.setupPaid || ''); return m ? `Agent since ${m[1]} ${b.year || 2026}` : 'Agent' }
 
 export default function AAccount() {
@@ -58,6 +59,7 @@ export default function AAccount() {
         <div className="ma-plan-me">
           <Ini name={name} tone="sky" size={58} photo={s.profile?.photo} className="is-ring" />
           <span className="ma-grow"><b>{name}</b><small>{[sinceOf(b), states.length ? states.join(', ') : null].filter(Boolean).join(' · ')}</small></span>
+          <button type="button" className="ma-editbtn ma-press" onClick={() => app.open(`${paths.settings()}?set=profile`)}><Pencil size={14} aria-hidden="true" />Edit profile</button>
         </div>
         <div className="ma-plan-row">
           <span><small>Plan</small><b>{leads ? planOf(b).label : productsLabel(picked)}</b></span>
@@ -95,7 +97,7 @@ export default function AAccount() {
           : navKeys.has('clients') && <Row onClick={() => app.open(paths.clients())} lead={<span className="ma-sym is-sage">{clients.length}</span>} title="Clients" sub={need ? `${need} need attention · our team is on it` : 'Our team works your clients'} />}
         <Row onClick={() => app.open(paths.activity())} lead={<span className="ma-sym is-sky">↻</span>} title="Activity" sub={act[0] ? `${act[0].who}: ${act[0].text}` : 'Everything that happened'} />
         {!leads && <Row onClick={() => app.open(paths.billing())} lead={<span className="ma-sym is-butter">$</span>} title="Billing" sub={native ? NATIVE_BILLING_TEXT : 'Plan, card and receipts'} />}
-        <Row onClick={() => app.open(paths.settings())} lead={<span className="ma-sym is-stone">⚙</span>} title="Settings" sub="You, hours, alerts, plan" />
+        <Row onClick={() => app.open(paths.settings())} lead={<span className="ma-sym is-stone">⚙</span>} title="Settings" sub="Account, alerts, hours, plan, privacy" />
         <div className="ma-row ma-theme-row">
           <span className="ma-sym is-stone"><Moon size={16} aria-hidden="true" /></span>
           <span className="ma-grow"><b>Theme</b><small>{dark ? 'Dark' : 'Light'}</small></span>
@@ -104,6 +106,7 @@ export default function AAccount() {
         <Row onClick={() => app.openSub('help')} lead={<span className="ma-sym is-stone">?</span>} title="Help" sub="Message the team any time" />
         {!native && <Row onClick={() => setPanel('app')} lead={<span className="ma-sym is-sky">↓</span>} title="Get the phone app" sub="Alerts the moment a lead comes in" />}
       </div>
+      <SignOutButton />
 
       {isTemplateAddress() && (
         <div className="ma-glass ma-list ma-acct-list">

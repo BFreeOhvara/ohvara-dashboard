@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { CalendarOff, Play, ChevronRight, Moon, Lock, Check, MessageCircle, Bug, GraduationCap } from 'lucide-react'
+import { CalendarOff, Play, ChevronRight, Moon, Lock, Check, MessageCircle, Bug, GraduationCap, Pencil, User, Bell, CalendarDays, Shield } from 'lucide-react'
 import { useFulPay, useFulSettings, useFulActions, useFulShift } from '../../ful/data'
 import { DayOffDrawer } from '../../ful/Shift'
 import { useTimeOff } from '../../ful/useTimeOff'
 import { MY_SHEET, weekPay, hoursOf } from '../../ful/p879'
 import { useAccount, useNote } from '../../kit'
-import { useTheme } from '../../../hooks/useTheme'
+import { useTheme, useThemePref } from '../../../hooks/useTheme'
 import { useTraining, useLessons } from '../../../fulshell/training/store'
 import VideoPlayer from '../../../fulshell/training/VideoPlayer'
 import { hasVideo } from '../../../fulshell/training/videoModel'
@@ -13,10 +13,13 @@ import { PhoneInput } from '../../PhoneInput'
 import { ReportBug } from '../../ReportBug'
 import { AppAbout } from '../../../components/native/AppAbout'
 import { SUPPORT_THREAD } from '../../support911'
-import { useApp, SubPage, Row, Ini, Toggle, rise } from '../AppKit'
+import { useApp, SubPage, Row, Ini, Toggle, SignOutButton, rise } from '../AppKit'
+import { PRIVACY_URL } from '../ASettings'
 
 // P975 — Me: a dark card (you, hours this pay period, earned so far, next payday), two tiles (Ask for a day off,
-// Training), then Hours and pay, Theme (a switch), Settings (your details on top, alerts, sign out), Help.
+// Training), then Hours and pay, Theme (a switch), Settings, Help. P977: "Edit profile" at the top right of the card
+// (photo, name, phone, email live only there); Settings is a list of sections; Sign out is its own button under the
+// list; Delete account is a quiet red line at the bottom of Settings → Account.
 const money = n => `$${Math.round(Number(n) || 0).toLocaleString('en-US')}`
 const hoursWords = h => `${Math.round(h * 10) / 10} h`
 const shortPayday = p => String(p || '').replace(/^(\w{3}), \w{3} (\d+)$/, '$1 $2')
@@ -30,7 +33,9 @@ export default function VMe() {
   const { sum } = useTraining(account?.name)
   const [panel, setPanel] = useState(null)
   const w = weekPay()
-  const name = account?.name || 'You'
+  const { data: st } = useFulSettings()
+  const name = account?.name || st.profile?.name || 'You'
+  const photo = st.profile?.photo || null
   const dark = theme === 'dark'
   return (
     <div className="ma-tabpage">
@@ -38,8 +43,9 @@ export default function VMe() {
       <div className="ma-plan ma-rise" style={rise(0)}>
         <i className="ma-glow va-glow" aria-hidden="true" />
         <div className="ma-plan-me">
-          <Ini name={name} tone="sage" size={58} />
+          <Ini name={name} tone="sage" size={58} photo={photo} className="is-ring" />
           <span className="ma-grow"><b>{name}</b><small>Fulfillment · Ohvara team</small></span>
+          <button type="button" className="ma-editbtn ma-press" onClick={() => app.openSub('profile')}><Pencil size={14} aria-hidden="true" />Edit profile</button>
         </div>
         <div className="ma-plan-stats">
           <div><b>{hoursWords(w.hours)}</b><small>this pay period</small></div>
@@ -68,9 +74,10 @@ export default function VMe() {
           <span className="ma-grow"><b>Theme</b><small>{dark ? 'Dark' : 'Light'}</small></span>
           <Toggle on={dark} label="Dark theme" onChange={v => setTheme(v ? 'dark' : 'light')} />
         </div>
-        <Row onClick={() => app.openSub('settings')} lead={<span className="ma-sym is-stone">⚙</span>} title="Settings" sub="Your details, alerts, sign out" />
+        <Row onClick={() => app.openSub('settings')} lead={<span className="ma-sym is-stone">⚙</span>} title="Settings" sub="Account, alerts, shifts, privacy" />
         <Row onClick={() => app.openSub('help')} lead={<span className="ma-sym is-stone">?</span>} title="Help" sub="Message Brayden or Jordan" />
       </div>
+      <SignOutButton />
       <DayOffDrawer open={panel === 'off'} onClose={() => setPanel(null)} />
     </div>
   )
@@ -115,32 +122,63 @@ export function VPay() {
   )
 }
 
-// Settings: your details first (name, phone, email), then alerts, then the account (sign out, delete).
-export function VSettings() {
+// P977 — Settings: a list of sections, each its own screen (?s=settings&t=<section>).
+const SECTIONS = { account: 'Account', alerts: 'Notifications', shifts: 'Shifts', privacy: 'Privacy and security' }
+const THEME_WORD = { light: 'Light', dark: 'Dark', system: 'Match my phone' }
+export function VSettings({ section }) {
+  const app = useApp()
+  const { data: s } = useFulSettings()
+  const { data: shift } = useFulShift()
+  const [pref] = useThemePref()
+  const on = (s.notifications || []).filter(n => n.push).length
+  if (SECTIONS[section]) return <SubPage title={SECTIONS[section]} line="Settings" big><VSection k={section} /></SubPage>
+  const go = k => app.openSub('settings', { t: k })
+  return (
+    <SubPage title="Settings" big>
+      <div className="ma-glass ma-list ma-set ma-sections ma-rise">
+        <Row onClick={() => go('account')} lead={<span className="ma-sym is-sky"><User size={16} aria-hidden="true" /></span>} title="Account" sub={`Theme · ${THEME_WORD[pref] || 'Match my phone'}`} />
+        <Row onClick={() => go('alerts')} lead={<span className="ma-sym is-coral"><Bell size={16} aria-hidden="true" /></span>} title="Notifications" sub={on ? `${on} of ${(s.notifications || []).length} come to your phone` : 'Only in the bell'} />
+        <Row onClick={() => go('shifts')} lead={<span className="ma-sym is-sage"><CalendarDays size={16} aria-hidden="true" /></span>} title="Shifts" sub={`${(shift.shift?.text || '8:00 AM to 6:00 PM').replace(/:00/g, '')} Central`} />
+        <Row onClick={() => go('privacy')} lead={<span className="ma-sym is-stone"><Shield size={16} aria-hidden="true" /></span>} title="Privacy and security" sub="Password, privacy policy" />
+      </div>
+    </SubPage>
+  )
+}
+
+function VSection({ k }) {
+  const app = useApp()
   const account = useAccount()
   const note = useNote()
   const { data: s } = useFulSettings()
   const { data: shift } = useFulShift()
   const { saveSettings } = useFulActions()
-  const [me, setMe] = useState(s.profile)
+  const off = useTimeOff()
+  const [pref, savePref] = useThemePref()
   const [alerts, setAlerts] = useState(s.notifications || [])
   const [panel, setPanel] = useState(null)
-  const name = account?.live ? account.name : s.profile?.name
-  const dirty = JSON.stringify(me) !== JSON.stringify(s.profile)
-  const flip = (key, field, v) => { const next = alerts.map(n => (n.key === key ? { ...n, [field]: v } : n)); setAlerts(next); saveSettings({ notifications: next }) }
   const DeleteDialog = account?.DeleteDialog
-  return (
-    <SubPage title="Settings" big>
-      <div className="ma-glass ma-pad va-you ma-rise">
-        <div className="va-you-h"><Ini name={name} tone="sage" size={52} /><span className="ma-grow"><b>{name}</b><small>Fulfillment · {shift.shift?.text || '8 AM to 6 PM'} Central</small></span></div>
-        <label className="va-field"><span>Full name</span><input value={me.name || ''} onChange={e => setMe({ ...me, name: e.target.value })} autoComplete="name" /></label>
-        <label className="va-field"><span>Phone</span><PhoneInput value={me.phone || ''} onChange={(d, e164, shown) => setMe({ ...me, phone: shown })} /></label>
-        <label className="va-field"><span>Email</span><input type="email" value={me.email || ''} onChange={e => setMe({ ...me, email: e.target.value })} autoComplete="email" /></label>
-        {dirty && <div className="ma-two"><button type="button" className="ma-btn is-soft ma-press" onClick={() => setMe(s.profile)}>Undo</button><button type="button" className="ma-btn is-solid ma-press" onClick={() => { saveSettings({ profile: me }); note('Your details are saved') }}>Save</button></div>}
-      </div>
-
-      <p className="ma-cap is-out">Alerts</p>
-      <div className="ma-glass ma-list ma-rise" style={rise(1)}>
+  const flip = (key, field, v) => { const next = alerts.map(n => (n.key === key ? { ...n, [field]: v } : n)); setAlerts(next); saveSettings({ notifications: next }) }
+  if (k === 'account') {
+    return (
+      <>
+        <p className="ma-cap is-out">Theme</p>
+        <div className="ma-glass ma-list ma-set ma-rise" role="radiogroup" aria-label="Theme">
+          {Object.entries(THEME_WORD).map(([key, l]) => (
+            <button key={key} type="button" role="radio" aria-checked={pref === key} className="ma-row" onClick={() => { savePref(key); note(key === 'system' ? 'Theme follows your phone' : `${l} mode on`) }}>
+              <span className="ma-grow"><b>{l}</b></span>
+              {pref === key && <Check size={20} strokeWidth={2.6} className="ma-tick" aria-hidden="true" />}
+            </button>
+          ))}
+        </div>
+        <p className="ma-hint ma-set-note">Your photo, name, phone and email are on Edit profile, on the Me page.</p>
+        <button type="button" className="ma-quiet-danger" onClick={() => (DeleteDialog ? setPanel('delete') : note('Delete my account works once you sign in for real'))}>Delete account</button>
+        {DeleteDialog && panel === 'delete' && <DeleteDialog open onClose={() => setPanel(null)} />}
+      </>
+    )
+  }
+  if (k === 'alerts') {
+    return (
+      <div className="ma-glass ma-list ma-rise">
         <div className="ma-row is-head"><span className="ma-grow" /><small>Push</small><small>Email</small></div>
         {alerts.map(n => (
           <div key={n.key} className="ma-row">
@@ -150,14 +188,64 @@ export function VSettings() {
           </div>
         ))}
       </div>
+    )
+  }
+  if (k === 'shifts') {
+    return (
+      <>
+        <div className="ma-glass ma-list ma-set ma-rise">
+          <div className="ma-row"><span className="ma-grow"><b>Shift hours</b><small>Set by the team</small></span><span className="ma-val">{(shift.shift?.text || '8:00 AM to 6:00 PM').replace(/:00/g, '')} Central</span></div>
+          <Row onClick={() => app.goTab('rota')} title="See the schedule" sub="Who works which day" />
+          <Row onClick={() => (off.notSet ? note('Days off open once your schedule is set') : setPanel('off'))} title="Ask for a day off" right={<span className="ma-val">{off.notSet ? 'Not yet' : `${off.left} left`}</span>} />
+        </div>
+        <DayOffDrawer open={panel === 'off'} onClose={() => setPanel(null)} />
+      </>
+    )
+  }
+  if (k === 'privacy') {
+    return (
+      <>
+        <div className="ma-glass ma-list ma-set ma-rise">
+          <Row onClick={() => note('Change your password from the sign-in screen: Forgot password')} lead={<span className="ma-sym is-stone"><Lock size={16} aria-hidden="true" /></span>} title="Password" sub="Reset it from the sign-in screen" />
+          <a className="ma-row" href={PRIVACY_URL} target="_blank" rel="noreferrer"><span className="ma-grow"><b>Privacy policy</b></span><ChevronRight size={18} className="ma-chev" aria-hidden="true" /></a>
+        </div>
+        <p className="ma-hint ma-set-note">Clients’ details stay inside Ohvara. Agents and clients never see your messages with other VAs.</p>
+      </>
+    )
+  }
+  return null
+}
 
-      <p className="ma-cap is-out">Account</p>
-      <div className="ma-glass ma-list ma-rise" style={rise(2)}>
-        <Row onClick={() => note('Change your password from the sign-in screen: Forgot password')} lead={<span className="ma-sym is-stone"><Lock size={16} aria-hidden="true" /></span>} title="Password" sub="Reset it from the sign-in screen" />
-        <Row onClick={() => (account?.live ? account.signOut() : note('Sign out works once you sign in for real'))} lead={<span className="ma-sym is-stone">↩</span>} title="Sign out" chev={false} />
-        <Row className="is-danger" onClick={() => (DeleteDialog ? setPanel('delete') : note('Delete my account works once you sign in for real'))} lead={<span className="ma-sym is-coral">✕</span>} title="Delete my account" chev={false} />
+// P977 — Edit profile: photo, name, phone, email. Opened from the Me card.
+export function VProfile() {
+  const app = useApp()
+  const note = useNote()
+  const { data: s } = useFulSettings()
+  const { saveSettings } = useFulActions()
+  const [me, setMe] = useState(s.profile || {})
+  const dirty = JSON.stringify(me) !== JSON.stringify(s.profile)
+  const onPhoto = e => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    const r = new FileReader()
+    r.onload = () => setMe(x => ({ ...x, photo: String(r.result) }))
+    r.readAsDataURL(f)
+  }
+  return (
+    <SubPage title="Edit profile" line="You">
+      <div className="ma-form">
+        <div className="ma-glass ma-pad ma-photo ma-rise">
+          <Ini name={me.name} tone="sage" size={72} photo={me.photo} className="is-ring" />
+          <label className="ma-btn is-soft ma-press">{me.photo ? 'Change photo' : 'Add a photo'}<input type="file" accept="image/*" onChange={onPhoto} hidden /></label>
+          {me.photo && <button type="button" className="ma-link-btn" onClick={() => setMe(x => ({ ...x, photo: null }))}>Remove</button>}
+        </div>
+        <div className="ma-glass ma-pad ma-rise" style={rise(1)}>
+          <label className="va-field"><span>Full name</span><input value={me.name || ''} onChange={e => setMe({ ...me, name: e.target.value })} autoComplete="name" /></label>
+          <label className="va-field"><span>Phone</span><PhoneInput value={me.phone || ''} onChange={(d, e164, shown) => setMe({ ...me, phone: shown })} /></label>
+          <label className="va-field"><span>Email</span><input type="email" value={me.email || ''} onChange={e => setMe({ ...me, email: e.target.value })} autoComplete="email" /></label>
+        </div>
+        <div className="ma-savebar"><button type="button" className="ma-btn is-solid is-tall ma-press" disabled={!dirty} onClick={() => { saveSettings({ profile: me }); note('Your details are saved'); app.back() }}>Save</button></div>
       </div>
-      {DeleteDialog && panel === 'delete' && <DeleteDialog open onClose={() => setPanel(null)} />}
     </SubPage>
   )
 }

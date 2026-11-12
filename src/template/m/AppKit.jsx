@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { ChevronRight, Phone } from 'lucide-react'
+import { ChevronRight, Phone, LogOut } from 'lucide-react'
 import { useSampleActions, useSampleAppointments, useSampleSettings, useSampleBilling } from '../data'
-import { useNote } from '../kit'
+import { useNote, useAccount } from '../kit'
 import { useExit, still } from '../motion'
 import { resultsFor, followUpPick } from '../agentView'
 import { whenLabel, clockNow } from '../leadLifecycle'
@@ -203,3 +203,14 @@ export function useDragGuard() {
 
 // Reduced motion: no slide, no stagger (the CSS reads .is-still on the frame too).
 export const useStill = () => { const [s] = useState(() => still()); return s }
+
+// P977 — Sign out as its own button under the Account / Me list (agent and VA), not a row inside it.
+export function SignOutButton() {
+  const account = useAccount()
+  const note = useNote()
+  return (
+    <button type="button" className="ma-signout ma-press ma-rise" style={rise(3)} onClick={() => (account?.live ? account.signOut() : note('Sign out works once you sign in for real'))}>
+      <LogOut size={17} aria-hidden="true" />Sign out
+    </button>
+  )
+}

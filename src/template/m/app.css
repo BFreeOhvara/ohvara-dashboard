@@ -10,9 +10,10 @@
   --ma-ink2: color-mix(in srgb, var(--sh-ink) 84%, transparent);
   --ma-ink3: color-mix(in srgb, var(--sh-ink) 72%, transparent);
   --ma-line: color-mix(in srgb, var(--sh-ink) 12%, transparent);
-  --ma-glass: color-mix(in srgb, var(--sh-surface) 58%, transparent);
-  --ma-glass-b: var(--sh-edge);
-  --ma-glass-hi: color-mix(in srgb, var(--sh-surface) 80%, transparent);
+  /* P977: dark = the desktop portal's frosted panels (light grey at low alpha over the backdrop), not black glass */
+  --ma-glass: var(--sh-glass-panel);
+  --ma-glass-b: var(--sh-glass-edge);
+  --ma-glass-hi: var(--sh-glass-panel-deep);
   --ma-solid: var(--sh-ink);
   --ma-solid-ink: var(--sh-surface);
   --ma-deep: color-mix(in srgb, var(--sh-surface) 70%, black);
@@ -663,3 +664,23 @@ body:has(.ma) .tp-note-toast svg { color: inherit; }
 .ma-photo .ma-link-btn { margin: 0; }
 .ma-ini.has-photo { overflow: hidden; padding: 0; }
 .ma-ini.has-photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+
+/* ── P977: Edit profile on the top card, Settings sections, Sign out as its own button, quiet Delete ───────────── */
+.ma-plan-me .ma-grow { min-width: 0; }
+.ma-plan-me .ma-grow b { display: block; overflow-wrap: anywhere; line-height: 1.15; }
+.ma-plan-me:has(.ma-editbtn) .ma-grow b { font-size: 19px; }
+.ma-editbtn { position: relative; align-self: flex-start; flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; min-height: 44px; margin: -4px -6px 0 0; padding: 0 11px; border-radius: 999px; border: 1px solid color-mix(in srgb, white 16%, transparent); background: color-mix(in srgb, white 12%, transparent); color: inherit; font: inherit; font-size: 12.5px; font-weight: 800; white-space: nowrap; cursor: pointer; }
+.ma-editbtn:active { background: color-mix(in srgb, white 22%, transparent); }
+.ma-sections .ma-row { min-height: 64px; }
+.ma-signout { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 54px; margin-top: 16px; border-radius: 999px; border: 1px solid var(--ma-glass-b); background: var(--ma-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); color: var(--ma-ink); font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: var(--ma-shadow); }
+.ma-quiet-danger { display: block; margin: 40px auto 0; min-height: 44px; padding: 0 16px; border: 0; background: none; font: inherit; font-size: 14px; font-weight: 600; color: var(--sh-f-coral); cursor: pointer; }
+[data-theme="light"] .ma-quiet-danger { color: color-mix(in srgb, var(--sh-f-coral) 70%, var(--sh-fi-coral)); }
+.va-thread.is-pinned { position: relative; }
+
+/* ── P977: dark mode on the desktop portal's colours ───────────────────────────────────────────────────────────────
+   Glass = the desktop's frosted panels (tokens above). The dark card (Account / Me) = the desktop's deep panel, not a
+   black slab. Sheets sit on the shell base with the same frost; the page under everything is the shell base (no navy
+   showing on overscroll). Tone cards already use the desktop's card fills (--sh-cf-*). Light mode is unchanged. */
+:root:not([data-theme="light"]) .ma-plan { background: var(--sh-glass-panel-deep); border: 1px solid var(--sh-glass-edge); box-shadow: inset 0 1px 0 var(--sh-glass-hl), 0 22px 40px -24px rgba(0, 0, 0, .6); }
+:root:not([data-theme="light"]) .ma-sheet { background: linear-gradient(var(--sh-glass-panel), var(--sh-glass-panel)), var(--sh-base); box-shadow: inset 0 1px 0 var(--sh-glass-hl), 0 -18px 40px -20px rgba(0, 0, 0, .6); }
+:root:not([data-theme="light"]) body:has(.ma) { background-color: var(--sh-base); }

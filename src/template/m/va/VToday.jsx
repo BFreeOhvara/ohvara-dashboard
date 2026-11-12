@@ -49,7 +49,7 @@ export default function VToday() {
 
       <section className="va-shift is-sage ma-rise" style={rise(1)} aria-label="Your shift">
         <div className="va-shift-top">
-          <b><i className={onShift ? 'is-live' : ''} aria-hidden="true" />{shift.notSet ? 'Rota not set up yet' : onShift ? `On shift · ${(shift.shift?.text || '8:00 AM to 6:00 PM').replace(/:00/g, '')}` : 'Off today'}</b>
+          <b><i className={onShift ? 'is-live' : ''} aria-hidden="true" />{shift.notSet ? 'Schedule not set up yet' : onShift ? `On shift · ${(shift.shift?.text || '8:00 AM to 6:00 PM').replace(/:00/g, '')}` : 'Off today'}</b>
           <span>{done} of {today.length} done</span>
         </div>
         <div className="va-bar" role="progressbar" aria-label="Calls done today" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}><i style={{ width: `${pct}%` }} /></div>
