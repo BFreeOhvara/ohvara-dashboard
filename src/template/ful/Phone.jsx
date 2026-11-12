@@ -23,8 +23,8 @@ import { predial, predialLine } from './predial'
 import { flagsOf } from './p879'
 import { useRealXfer } from '../../hooks/useLiveTransfer'
 import { useRealLine } from '../../hooks/useRealLine'
-import { CALL_WORD, KIND } from './words'
-import { fp } from './paths'
+import { CALL_WORD } from './words'
+import { fromCall, fromTask, fromItem } from './callWho'
 import { HelpDot } from '../../fulshell/training/HelpDot'
 import { BeforeCall } from './BeforeCall'
 import { FrontDeskNote } from './Playbook932'
@@ -71,22 +71,6 @@ function useTheirTime(who) {
   return `${clockOf(iso, tz)} ${zoneAbbr(tz, iso)}, their time${who.city ? ` (${who.city}, ${who.state})` : ''}`
 }
 
-// Every call starts from one of these: what the system gave the VA. `rec` = the record, one tap away.
-const fromCall = k => ({
-  key: `k-${k.id}`, kind: 'call', id: k.id, role: 'client', name: k.name, number: k.client.client_phone, state: k.client.state, city: k.client.city,
-  tz: k.tz || null, agentId: k.client.agent_id, agent: k.agent, reason: `Cancel ${k.old_carrier}, keeping ${k.carrier}`, carrier: k.old_carrier,
-  callId: OPEN.includes(k.status) ? k.id : null, notes: k.notes || '', rec: fp('calendar', k.id), when: k.time, iso: k.iso || null, done: !OPEN.includes(k.status),
-  bc: { client: k.client, oldCarrier: k.old_carrier }, // P923: the "Before you call" box
-})
-// P907: a booked servicing call (a hand-off, save, change, callback...) opens on the Calendar when it's yours (P918).
-const fromTask = t => ({
-  key: `t-${t.id}`, kind: 'task', id: t.id, role: t.client.lead ? 'lead' : 'client', name: t.name, number: t.client.client_phone, state: t.client.state, city: t.client.city,
-  tz: t.tz || null, agentId: t.client.agent_id || t.agent_id, agent: t.agent, reason: [KIND[t.kind] || 'Servicing', t.carrier].filter(Boolean).join(' · '), carrier: t.carrier, notes: t.note || '',
-  rec: t.iso && t.mine !== false ? fp('calendar', t.id) : t.client_id ? fp('clients', t.client_id) : fp('calendar', t.id), when: t.when || t.due_text, iso: t.iso || null, done: t.status === 'done',
-  bc: t.kind === 'handoff_call' ? { client: t.client } : null, // P923: the "Before you call" box
-})
-// A Schedule item (P907's one row shape) or, on real data, a call row.
-const fromItem = i => (i.row ? (i.kind === 'task' ? fromTask(i.row) : fromCall(i.row)) : fromCall(i))
 
 export default function FulPhone({ open, onClose, ringId, onAnswer, onDecline, onLine: report, onLock, nudge = 0, missed = [], live, onLive, startReq, onBook }) {
   const { data: calls } = useFulCalls()

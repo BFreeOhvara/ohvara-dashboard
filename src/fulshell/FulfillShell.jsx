@@ -4,7 +4,7 @@ import '../template/template.css'
 import { NoteProvider, AccountProvider } from '../template/kit'
 import { ErrorBoundary } from '../components/shared/ErrorBoundary'
 import { ConfirmEmailBanner } from '../components/layout/ConfirmEmailBanner'
-import FulFrame from '../template/ful/FulFrame'
+import { VaShellFrame } from '../template/m/va/VaFrame'
 import { fulRoutes } from '../template/ful/routes'
 import { FulDataProvider } from '../template/ful/data'
 import { REAL } from '../hooks/fulRealData'
@@ -36,7 +36,7 @@ export default function FulfillShell({ account }) {
       <FulDataProvider key={mode} impl={real ? REAL : null}>
         <NoteProvider>
           <Routes>
-            <Route element={<FulFrame />}>{fulRoutes({ preview: false, wrap: el => <Page>{el}</Page> })}</Route>
+            <Route element={<VaShellFrame />}>{fulRoutes({ preview: false, wrap: el => <Page>{el}</Page> })}</Route>
             <Route path="*" element={<Navigate to={FUL.today} replace />} />
           </Routes>
         </NoteProvider>

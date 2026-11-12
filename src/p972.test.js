@@ -83,7 +83,8 @@ test('chat: runs, tails only on the last bubble, bubbles at most 78 % wide', () 
   assert.deepEqual(r.map(x => [x.first, x.last]), [[true, false], [false, true], [true, false], [false, true], [true, true]])
   assert.match(css, /\.ma-chat \.ma-msg \{[^}]*max-width: 78%/)
   assert.match(css, /\.ma-bub\.has-tail::after \{/)
-  const m = read('./template/m/AMessages.jsx')
+  const m = read('./template/m/useKeyboard.js') // P975: the keyboard hook moved out so the VA chat shares it
+  assert.match(read('./template/m/AMessages.jsx'), /useKeyboard\(root, input\)/)
   assert.match(m, /inputRef\.current\.blur\(\)/) // drag down / tap off drops the keyboard
   assert.match(m, /--ma-kb/)
 })
