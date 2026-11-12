@@ -21,7 +21,7 @@ const fullName = c => `${c.client_first_name} ${c.client_last_name}`
 const where = c => [c.carrier_name, [c.city, c.state].filter(Boolean).join(', ')].filter(Boolean).join(' · ')
 const standOf = (c, st) => (st === 'working' ? (stagesOf(c).current?.label || workingWhy(c)) : st === 'needs_attention' ? 'Still on the books?' : st === 'closed' ? (c.track?.closed || 'Closed') : 'Nothing needed')
 
-function useAnswer() {
+export function useAnswer() {
   const { answerChecks } = useSampleActions()
   const note = useNote()
   return (clients, draft, fellOff = []) => {
@@ -34,7 +34,7 @@ function useAnswer() {
 
 // P949: every unanswered draft date in ONE card ("Drafted Oct 27 – Nov 1"): a row per client with Yes / No (44 px),
 // and one button for all of them.
-function CheckCard({ m }) {
+export function CheckCard({ m }) {
   const answer = useAnswer()
   const n = m.rows.length
   const all = () => m.drafts.forEach(d => { const cs = m.rows.filter(r => r.draft === d).map(r => r.c); if (cs.length) answer(cs, d) })
@@ -75,7 +75,7 @@ function AppLinkSheet({ c, open, onClose }) {
   )
 }
 
-function ClientSheet({ id, onClose, today, settings, onLapsed }) {
+export function ClientSheet({ id, onClose, today, settings, onLapsed }) {
   const { data: c } = useSampleClient(id)
   const { data: threads } = useSampleThreads()
   const { sendMessage } = useSampleActions()
