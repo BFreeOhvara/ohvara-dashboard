@@ -4,12 +4,14 @@ import { GetApp } from '../TemplateFrame'
 import { TalkDrawer } from '../Talk'
 import { ReportBug } from '../ReportBug'
 import { isNativeApp } from '../../lib/native'
+import { AppAbout } from '../../components/native/AppAbout'
 import { isSupport } from '../support911'
 import { useApp, SubPage, Row, rise } from './AppKit'
 import { useThreadList } from './AMessages'
 
 // P972 — Help as its own screen (it was the portal's drawer): message Ohvara Support first, then a call with the
-// team, report a problem, get the phone app, and short answers to what agents ask most.
+// team, report a problem, get the phone app, and short answers to what agents ask most. P974: the app's version sits at
+// the very foot here, small and grey, for support (it's no longer on Account or Settings).
 const FAQ = [
   ['How do I tell you how a call went?', 'Open Leads, tap Mark on the call and pick one result. Our team handles what comes next.'],
   ['Who works my clients?', 'Our team does: the review call, the carrier and every change after. You see where each one stands under Clients.'],
@@ -50,6 +52,7 @@ export function AHelp() {
           </div>
         ))}
       </div>
+      <AppAbout style={{ margin: '22px 12px 0', textAlign: 'center', fontSize: 11 }} />
       <GetApp open={panel === 'app'} onClose={close} />
       <TalkDrawer open={panel === 'talk'} onClose={close} />
       <ReportBug open={panel === 'bug'} onClose={close} role="Agent" />

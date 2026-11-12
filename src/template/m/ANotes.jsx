@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
-import { CalendarCheck, PhoneIncoming, FileCheck, CreditCard, ShieldAlert, MessageCircle, ShieldCheck, ArrowRightLeft, BadgeCheck, CircleAlert, BellOff, CheckCheck } from 'lucide-react'
+import { CalendarCheck, PhoneIncoming, FileCheck, CreditCard, ShieldAlert, MessageCircle, ShieldCheck, ArrowRightLeft, BadgeCheck, CircleAlert, BellOff, CheckCheck, FileX, Banknote, LifeBuoy } from 'lucide-react'
 import { useSampleActivity } from '../data'
 import { SubPage, rise } from './AppKit'
 import { NOTE_KIND, kindOfActivity, dayOf, groupByDay } from './appModel'
@@ -10,7 +10,7 @@ import { useWho, useGo, useNotifItems, SEEN, READ, byTime } from './useNotes'
 // to the thing: the lead, the client, the chat or Billing. Notifications groups Today / Yesterday / Earlier; Activity
 // groups by day. Opening Notifications clears the bell's badge; a row stays bold with a dot until it's tapped or
 // "Mark all read". Seen and read live on this device.
-const ICON = { booking: CalendarCheck, live: PhoneIncoming, packet: FileCheck, payment: CreditCard, risk: ShieldAlert, message: MessageCircle, protected: ShieldCheck, moved: ArrowRightLeft, sold: BadgeCheck, todo: CircleAlert }
+const ICON = { booking: CalendarCheck, live: PhoneIncoming, packet: FileCheck, payment: CreditCard, risk: ShieldAlert, message: MessageCircle, protected: ShieldCheck, moved: ArrowRightLeft, sold: BadgeCheck, todo: CircleAlert, cancel: FileX, drafted: Banknote, save: LifeBuoy }
 export function NoteIcon({ kind, size = 40 }) {
   const Icon = ICON[kind] || CircleAlert
   return <span className={`ma-nic is-${(NOTE_KIND[kind] || NOTE_KIND.todo).tone}`} style={{ '--s': `${size}px` }} aria-hidden="true"><Icon size={Math.round(size * 0.48)} strokeWidth={2.1} /></span>

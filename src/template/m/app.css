@@ -89,11 +89,7 @@
 }
 .ma-page::-webkit-scrollbar, .ma-sub-scroll::-webkit-scrollbar { display: none; }
 .ma-page:not(.is-on) { pointer-events: none; }
-/* P972: no band at the top. The backdrop runs to the very top of the screen; the strip under the status bar is clear
-   at rest and only blurs once the page scrolls under it (iOS large-title style). */
-.ma-statusbar { position: fixed; top: 0; left: 0; right: 0; z-index: 30; height: var(--ma-top); pointer-events: none; background: transparent;
-  transition: background-color .2s, backdrop-filter .2s, -webkit-backdrop-filter .2s; }
-.ma.is-scrolled .ma-statusbar { background: color-mix(in srgb, var(--ov-page) 55%, transparent); backdrop-filter: blur(18px) saturate(1.3); -webkit-backdrop-filter: blur(18px) saturate(1.3); }
+/* P974: nothing pinned at the top, no strip under the status bar: pages run up behind the clock with no blur or tint. */
 .ma-sample { margin: 18px 4px 0; text-align: center; font-size: 12px; color: var(--ma-ink3); }
 
 /* Layers: a sub-screen from the right, Notifications from the left. Same backdrop as the page under them. */
@@ -356,32 +352,22 @@
 .ma-input:focus { outline: none; box-shadow: 0 0 0 3px var(--ma-focus); }
 
 /* ── Sub-screens ────────────────────────────────────────────────────────────────────────────────────────── */
-/* P971: the header is pinned (outside the scroller) under the status bar; the scroller starts below the status bar,
-   so content passes under the blurred header and never shows under the clock. */
+/* P974: nothing pinned. The scroller runs from the top of the screen (behind the status bar); a short row for any
+   buttons, then the title and its line, all in the page, so they scroll away. No back arrow (swipe back): an
+   invisible 44 px Back target sits top-left (top-right on Notifications) for VoiceOver. */
 .ma-subpage { position: absolute; inset: 0; }
-/* P972: the header is clear at rest (the page's backdrop shows to the very top) and only blurs once the page has
-   scrolled under it; the scroller runs from the top of the screen. */
-.ma-subpage .ma-sub-scroll { position: absolute; left: 0; right: 0; bottom: 0; top: 0; height: auto; padding-top: calc(var(--ma-top) + var(--ma-hh) + 6px); }
-.ma-sub-h { position: absolute; top: 0; left: 0; right: 0; z-index: 5; display: flex; align-items: center; gap: 12px; height: calc(var(--ma-top) + var(--ma-hh)); padding: var(--ma-top) 12px 0;
-  background: transparent; border-bottom: 1px solid transparent; transition: background-color .2s, border-color .2s, backdrop-filter .2s, -webkit-backdrop-filter .2s; }
-.ma-sub-h.is-scrolled { background: color-mix(in srgb, var(--ov-page) 62%, transparent); backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4); border-bottom-color: var(--ma-line); }
-/* Large title (big): a plain arrow on top, the title in the page, a small title fading into the header once it's gone. */
-.ma-subpage.is-big { --ma-hh: 50px; }
-.ma-subpage.is-big .ma-sub-scroll { padding-top: calc(var(--ma-top) + var(--ma-hh)); }
-.ma-subpage.is-big .ma-sub-h { gap: 4px; padding-left: 6px; padding-right: 10px; }
-.ma-subpage.is-big .ma-sub-t { position: absolute; left: 64px; right: 64px; bottom: 0; height: var(--ma-hh); justify-content: center; align-items: center; text-align: center; opacity: 0; transform: translateY(6px); transition: opacity .2s, transform .2s; pointer-events: none; }
-.ma-subpage.is-big .ma-sub-t b { font-size: 17px; }
-.ma-subpage.is-big .ma-sub-h.is-titled .ma-sub-t { opacity: 1; transform: none; }
-.ma-subpage.is-big .ma-sub-h > .ma-back:last-child, .ma-subpage.is-big .ma-sub-h > .ma-sub-acts:last-child { margin-left: auto; }
-.ma-back { width: 44px; height: 44px; flex: 0 0 44px; display: grid; place-items: center; border: 0; padding: 0; background: none; color: var(--ma-ink); cursor: pointer; border-radius: 12px; }
-.ma-bigt { display: flex; flex-direction: column; gap: 2px; margin: 0 4px 16px; }
-.ma-bigt h1 { font-size: 32px; font-weight: 800; letter-spacing: -.03em; line-height: 1.08; }
+.ma-subpage .ma-sub-scroll { position: absolute; inset: 0; height: auto; padding-top: calc(var(--ma-top) + 4px); }
+.ma-sub-h { position: relative; display: flex; align-items: center; gap: 8px; min-height: 44px; margin-bottom: 4px; }
+.ma-sub-r { margin-left: auto; display: flex; gap: 8px; }
+.ma-backhit { position: absolute; top: 0; left: -12px; width: 44px; height: 44px; border: 0; padding: 0; background: transparent; opacity: 0; cursor: default; -webkit-tap-highlight-color: transparent; }
+.ma-backhit.is-end { left: auto; right: -12px; }
+.ma-backhit:focus-visible { opacity: 1; outline: 2px solid var(--ma-focus); border-radius: 12px; }
+.ma-bigt { display: flex; flex-direction: column; gap: 2px; margin: 0 4px 16px; min-width: 0; }
+.ma-bigt h1 { font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.12; overflow-wrap: anywhere; }
+.ma-subpage.is-big .ma-bigt h1 { font-size: 32px; letter-spacing: -.03em; line-height: 1.08; }
 .ma-bigt small { font-size: 14px; }
 .ma-textbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 8px; border: 0; background: none; color: var(--ma-ink); font-weight: 700; font-size: 15px; cursor: pointer; }
 .ma-textbtn:disabled { opacity: .4; cursor: default; }
-.ma-sub-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.ma-sub-t b { font-size: 21px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ma-sub-t small { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ma-sub-acts { display: flex; gap: 8px; }
 .ma-foot { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; display: flex; gap: 10px; padding: 12px 16px calc(env(safe-area-inset-bottom, 0px) + 14px);
   background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--ov-page) 88%, transparent) 30%); }
@@ -527,7 +513,14 @@
 .ma-plan-stats small { font-size: 12px; line-height: 1.25; }
 .ma-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
 .ma-tiles.is-one { grid-template-columns: 1fr; }
-.ma-tile { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 18px; min-height: 128px; padding: 16px; border-radius: 24px; border: 0; background: var(--tcard); color: var(--tink); text-align: left; cursor: pointer; box-shadow: 0 12px 24px -16px rgba(0, 0, 0, .45); }
+/* P974: the tiles are buttons: raised (a lip under them and a lift shadow), press down on touch, a small arrow. */
+.ma-tile { position: relative; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 18px; min-height: 128px; padding: 16px; border-radius: 24px; border: 1px solid color-mix(in srgb, white 22%, transparent); background: var(--tcard); color: var(--tink); text-align: left; cursor: pointer;
+  box-shadow: 0 4px 0 0 color-mix(in srgb, var(--tbar) 70%, black), 0 14px 26px -14px rgba(0, 0, 0, .5); transition: transform .14s var(--ma-ease), box-shadow .14s var(--ma-ease), filter .14s; }
+.ma-tile:active { transform: translateY(3px); box-shadow: 0 1px 0 0 color-mix(in srgb, var(--tbar) 70%, black), 0 6px 14px -10px rgba(0, 0, 0, .45); filter: brightness(.96); }
+.ma-tile:focus-visible { outline: 3px solid var(--ma-focus); outline-offset: 2px; }
+.ma-tile-go { position: absolute; top: 14px; right: 12px; opacity: .75; }
+.ma-tiles + .ma-acct-list, .ma-acct-list + .ma-acct-list { margin-top: 22px; }
+.ma-plan + .ma-acct-list { margin-top: 14px; }
 .ma-tile > span:last-child { display: flex; flex-direction: column; gap: 2px; }
 .ma-tile small { color: inherit; opacity: .85; font-weight: 600; }
 .ma-tile b { font-size: 17px; font-weight: 800; }
@@ -643,3 +636,30 @@ body:has(.ma) .tp-note-toast svg { color: inherit; }
 .ma-paybar { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 12px; border-radius: 20px; background: var(--ma-glass-hi); border: 1px solid var(--ma-glass-b); box-shadow: var(--ma-shadow); }
 .ma-paybar.is-bad { border-color: color-mix(in srgb, var(--sh-f-coral) 60%, transparent); }
 .ma-pillbtn.is-sm { width: auto; min-height: 40px; margin: 0; padding: 0 16px; }
+
+/* ── P974: Clients built out, Settings' "you" card, Theme row, photo ─────────────────────────────────────────── */
+.ma-csum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 2px 0 12px; }
+.ma-csum-t { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; min-height: 84px; padding: 11px 12px 12px; border-radius: 20px; border: 2px solid transparent; background: var(--tcard); color: var(--tink); text-align: left; cursor: pointer; box-shadow: 0 10px 22px -16px rgba(0, 0, 0, .45); transition: opacity .2s, border-color .2s, transform .2s var(--ma-ease); }
+.ma-csum-t b { font-size: 26px; font-weight: 800; line-height: 1.05; letter-spacing: -.02em; font-variant-numeric: tabular-nums; margin-top: 4px; }
+.ma-csum-t small { color: inherit; font-size: 12px; font-weight: 700; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.ma-csum-t.is-on { border-color: currentColor; }
+.ma-csum-t.is-dim { opacity: .5; }
+.ma-link-btn.is-left { margin: -4px 4px 4px; }
+.ma-cgroup .ma-cap.is-out { display: flex; align-items: center; gap: 8px; }
+.ma-cgroup .ma-cap .ma-dot { --tbar: var(--tf); }
+.ma-cgroup .ma-cap span { margin-left: auto; font-weight: 700; color: var(--ma-ink3); }
+.ma-cgroup:first-of-type .ma-cap.is-out { margin-top: 14px !important; }
+.ma-lead.is-client { padding-right: 10px; }
+.ma-lead.is-client .ma-chev { color: inherit; opacity: .6; }
+.ma-clip2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
+.ma-subpage.is-clients .ma-pillbtn, .ma-tabpage .ma-cgroup ~ .ma-pillbtn { margin-top: 16px; }
+.ma-me .ma-me-top { min-height: 86px; gap: 14px; }
+.ma-me .ma-me-top .ma-grow b { font-size: 19px; font-weight: 800; }
+.ma-me .ma-me-top .ma-grow small { font-size: 14px; }
+.ma-me-edit { font-size: 14px; font-weight: 700; color: var(--ma-ink2); padding: 6px 12px; border-radius: 999px; background: var(--ma-soft); }
+.ma-theme-row { cursor: default; }
+.ma-photo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.ma-photo .ma-btn { cursor: pointer; }
+.ma-photo .ma-link-btn { margin: 0; }
+.ma-ini.has-photo { overflow: hidden; padding: 0; }
+.ma-ini.has-photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }

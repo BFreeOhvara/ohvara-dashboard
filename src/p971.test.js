@@ -39,13 +39,10 @@ test('the swipe moves the track and the bar highlight directly, and locks direct
   assert.match(css, /\.ma-tabbar\.is-drag \.ma-tab-hl \{ transition: none; \}/)
 })
 
-// P972 changed this: the scroller now runs from the very top (no band) and the header is clear until the page
-// scrolls under it; see p972.test.js. Still true: the header sits outside the scroller, Notifications is full width.
-test('slide-in screens: header pinned outside the scroller, Notifications full width', () => {
-  const k = read('./template/m/AppKit.jsx')
-  assert.ok(k.indexOf('<header className="ma-sub-h"') > k.indexOf('<div className="ma-scroll ma-sub-scroll"'), 'header sits outside the scroller')
+// P974 changed this again: nothing is pinned, the header row now sits INSIDE the scroller and scrolls away; see
+// p974.test.js. Still true: Notifications is full width.
+test('slide-in screens: Notifications full width', () => {
   const css = read('./template/m/app.css')
-  assert.match(css, /\.ma-sub-h \{[^}]*position: absolute; top: 0/)
   assert.match(css, /\.ma-layer-l \{ left: 0; right: 0;/) // Notifications covers the full width
   assert.match(read('./template/m/ANotes.jsx'), /<SubPage className="is-notif"/)
 })
@@ -77,7 +74,7 @@ test('Settings: hours in words, every portal setting, Sign out and Delete accoun
   assert.equal(weekWords({ ...week, Wed: day(false) }), '4 days, 9 to 6')
   assert.equal(weekWords({}), 'Not set')
   const s = read('./template/m/ASettings.jsx')
-  for (const g of ['You', 'Calls and calendar', 'Notifications', 'Plan and billing', 'Account']) assert.match(s, new RegExp(`<Group title="${g}">`))
+  for (const g of ['Calls and calendar', 'Notifications', 'Plan and billing', 'Account']) assert.match(s, new RegExp(`<Group title="${g}">`)) // P974: "You" is the card on top
   for (const k of ['profile', 'zone', 'licence', 'setup', 'calls', 'email', 'alerts', 'receipts', 'appearance', 'password']) assert.match(s, new RegExp(`k === '${k}'`))
   assert.match(s, /NATIVE_BILLING_TEXT/)
 })

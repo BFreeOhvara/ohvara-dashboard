@@ -99,6 +99,11 @@ export default function ALeads() {
   )
 }
 
+// P974: servicing-only agents have Clients in the bar; Leads opens from Account as a screen of its own.
+export function ALeadsSub() {
+  return <SubPage bare title="Leads" className="is-leads"><ALeads /></SubPage>
+}
+
 // ── One lead ──────────────────────────────────────────────────────────────────────────────────────────────────
 const ASK_WHY = ['I can’t reach them', 'They want a different time', 'Check their details', 'Something else']
 export function ALead({ id }) {

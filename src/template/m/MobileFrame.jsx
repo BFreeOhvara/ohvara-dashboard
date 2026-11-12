@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useNavigationType } from 'react-router-dom'
-import { Home, Inbox, CalendarDays, MessageCircle } from 'lucide-react'
+import { Home, Inbox, CalendarDays, MessageCircle, Users } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { useIsTestAccount } from '../../hooks/useIsTestAccount'
-import { useSampleLeads, useSampleThreads, useDataSource, useDataStatus } from '../data'
+import { useSampleLeads, useSampleThreads, useSampleClients, useDataSource, useDataStatus } from '../data'
 import { useAccount } from '../kit'
 import { useNavKeys } from '../useProducts'
+import { useClientStatusOf } from '../checkSettings'
 import { clockNow } from '../leadLifecycle'
 import { paths } from '../paths'
 import { DataLoading, DataError } from '../DataState'
@@ -13,10 +14,11 @@ import { NoShowUndo } from '../LeadOutcome'
 import { AppCtx, ResultSheet, SoldSheet, FollowPicker, Ini, useStill } from './AppKit'
 import { SupportProvider, AThread } from './AMessages'
 import AHome from './AHome'
-import ALeads, { ALead } from './ALeads'
+import ALeads, { ALead, ALeadsSub } from './ALeads'
 import ACalendar from './ACalendar'
 import AMessages from './AMessages'
-import AAccount, { AClients } from './AAccount'
+import AAccount from './AAccount'
+import { AClients, AClientsTab } from './AClients'
 import { AClient } from './AClient'
 import { AHelp } from './AHelp'
 import { ANotif, AActivity } from './ANotes'
@@ -25,7 +27,7 @@ import ABilling from './ABilling'
 import ASettings from './ASettings'
 import ASubmit from './ASubmit'
 import { ASearch, ANeeds, AToday, AImport } from './ASubs'
-import { TABS, OWN_BAR, routeOf, baseTab, stageOf, parentOf, nestedOf, screenKey } from './appModel'
+import { OWN_BAR, routeOf, routeForTabs, tabsFromNav, baseTabFor, parentFor, stageOf, nestedOf, screenKey } from './appModel'
 import { useTabSwipe } from './useTabSwipe'
 import { useBackSwipe } from './useBackSwipe'
 import '../glass.css'
@@ -45,15 +47,17 @@ import '@fontsource/urbanist/800.css'
 // Messages · Account), each its own scroller; sub-screens slide in from the right and Notifications from the left;
 // P972: each swipes away the way it came (from anywhere on it), with the screen under it peeking in. A floating glass tab bar, icons only, hides on a lead, a chat,
 // Submit and Import. Every screen reads the same data hooks as the portal; the addresses are the portal's own.
-const TAB_PATH = { home: () => paths.home(), leads: () => paths.leads(), calendar: () => paths.calendar(), messages: () => paths.messages(), account: () => paths.more() }
-const TAB_PAGE = { home: AHome, leads: ALeads, calendar: ACalendar, messages: AMessages, account: AAccount }
-const TAB_ICON = { home: Home, leads: Inbox, calendar: CalendarDays, messages: MessageCircle }
-const TAB_LABEL = { home: 'Home', leads: 'Leads', calendar: 'Calendar', messages: 'Messages', account: 'Account' }
+// P974: servicing-only agents (no lead product) have Clients in Leads' place; Leads then opens from Account.
+const TAB_PATH = { home: () => paths.home(), leads: () => paths.leads(), clients: () => paths.clients(), calendar: () => paths.calendar(), messages: () => paths.messages(), account: () => paths.more() }
+const TAB_PAGE = { home: AHome, leads: ALeads, clients: AClientsTab, calendar: ACalendar, messages: AMessages, account: AAccount }
+const TAB_ICON = { home: Home, leads: Inbox, clients: Users, calendar: CalendarDays, messages: MessageCircle }
+const TAB_LABEL = { home: 'Home', leads: 'Leads', clients: 'Clients', calendar: 'Calendar', messages: 'Messages', account: 'Account' }
 const LEAVE_MS = 260
 
 function SubScreen({ route, root = false }) {
   switch (route.sub) {
     case 'lead': return <ALead id={route.id} />
+    case 'leads': return <ALeadsSub />
     case 'clients': return route.id ? <AClient id={route.id} /> : <AClients />
     case 'billing': return <ABilling root={root} />
     case 'activity': return <AActivity />
@@ -83,18 +87,18 @@ function Frame() {
   const source = useDataSource()
   const isTest = useIsTestAccount() // P929: no sample line on test accounts
   const status = useDataStatus()
-  const navKeys = useNavKeys() // P955: tabs for what they bought
-  const tabs = TABS.filter(t => t !== 'leads' || navKeys.has('leads'))
-  const route = routeOf(loc.pathname, loc.search)
+  const navKeys = useNavKeys() // P955: tabs for what they bought; P974: Clients in Leads' place when servicing only
+  const tabs = tabsFromNav(navKeys)
+  const route = routeForTabs(routeOf(loc.pathname, loc.search), tabs)
   const fromTab = loc.state?.tab
-  const tab = tabs.includes(baseTab(route, fromTab)) ? baseTab(route, fromTab) : 'home'
+  const tab = baseTabFor(route, fromTab, tabs)
   const idx = Math.max(0, tabs.indexOf(tab))
   const notif = route.sub === 'notif'
 
   // P972 — the layer stack. The screen on top, and under it the screen Back lands on (a setting's Settings, a
   // client's Clients, the client under its chat): it shows while the top one is swiped away, and keeps its place
   // (same key) when it comes back up. A screen that came back with Back doesn't slide in again.
-  const parent = route.sub ? parentOf(route, loc.search) : null
+  const parent = parentFor(route, loc.search, tabs)
   const layers = []
   if (parent) layers.push({ key: screenKey(parent.sub, parent.id), route: { sub: parent.sub, id: parent.id }, top: notif })
   if (route.sub && !notif) layers.push({ key: screenKey(route.sub, route.id, nestedOf(route, loc.search)), route, top: true })
@@ -103,6 +107,9 @@ function Frame() {
   // Badges: leads to mark (Leads), unread messages (Messages), new notifications (the bell, on Home).
   const { data: leads } = useSampleLeads()
   const { data: threads } = useSampleThreads()
+  const { data: clients } = useSampleClients()
+  const statusOf = useClientStatusOf()
+  const needClients = tabs.includes('clients') ? clients.filter(c => statusOf(c) === 'needs_attention').length : 0
   const unseen = useUnseen()
   const now = clockNow()
   const toMark = leads.filter(l => stageOf(l, now) === 'mark').length
@@ -167,17 +174,6 @@ function Frame() {
   const swipeR = useBackSwipe({ layerRef: topRef, underOf: underR, dir: 1, on: !!topId && !notif, onClose: doBack, key: topId })
   const swipeL = useBackSwipe({ layerRef: notifRef, underOf: underL, scrimRef, dir: -1, on: notif, onClose: doBack })
 
-  // The status bar: clear over a tab page at rest; a soft blur once the page scrolls under it (P972).
-  const onPageScroll = e => {
-    const el = e.target
-    if (!el.classList?.contains('ma-page') || !el.classList.contains('is-on')) return
-    frameRef.current?.classList.toggle('is-scrolled', el.scrollTop > 4)
-  }
-  useEffect(() => {
-    const page = frameRef.current?.querySelector(`[data-ma-tab="${tab}"]`)
-    frameRef.current?.classList.toggle('is-scrolled', (page?.scrollTop || 0) > 4)
-  }, [tab])
-
   const hideBar = OWN_BAR.includes(route.sub) || notif || (route.sub === 'clients' && !!route.id) // P972: a client has its own button at the bottom
   const body = status.error ? <DataError onRetry={status.retry} /> : status.loading ? <DataLoading /> : null
   const { onClickCapture } = useTabSwipe({ viewRef, trackRef, barRef, idx, count: tabs.length, onSwitch, on: !body })
@@ -187,11 +183,10 @@ function Frame() {
     <AppCtx.Provider value={app}>
       <div className={`tp fx ma${still ? ' is-still' : ''}${route.sub ? ' has-sub' : ''}`} ref={frameRef}>
         <div className="tp-sky" aria-hidden="true" />
-        <div className="ma-statusbar" aria-hidden="true" />
         {body
           ? <main className="ma-solo">{body}</main>
           : (
-            <div className="ma-viewport" ref={viewRef} onClickCapture={onClickCapture} onDragStart={e => e.preventDefault()} onScrollCapture={onPageScroll}>
+            <div className="ma-viewport" ref={viewRef} onClickCapture={onClickCapture} onDragStart={e => e.preventDefault()}>
               <div className="ma-track" ref={trackRef} style={trackStyle}>
                 {tabs.map((k, i) => {
                   const Page = TAB_PAGE[k]
@@ -232,8 +227,8 @@ function Frame() {
           {tabs.map(k => {
             const Icon = TAB_ICON[k]
             const on = k === tab
-            const badge = k === 'leads' ? toMark : k === 'messages' ? unread : 0
-            const label = `${TAB_LABEL[k]}${badge ? `, ${badge} ${k === 'leads' ? 'to mark' : 'unread'}` : ''}`
+            const badge = k === 'leads' ? toMark : k === 'messages' ? unread : k === 'clients' ? needClients : 0
+            const label = `${TAB_LABEL[k]}${badge ? `, ${badge} ${k === 'leads' ? 'to mark' : k === 'clients' ? 'need attention' : 'unread'}` : ''}`
             return (
               <button key={k} type="button" className={`ma-tab${on ? ' is-on' : ''}`} aria-label={label} aria-current={on ? 'page' : undefined} onClick={() => goTab(k)}>
                 {k === 'account'

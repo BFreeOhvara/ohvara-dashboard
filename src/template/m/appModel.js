@@ -4,6 +4,8 @@
 // desktop and in the native app; the small sub-screens with no page of their own ride in ?s= so Back closes them.
 import { agentStatusOf, needsResult, isLiveCall } from '../agentView.js'
 import { layoutOf } from '../paths.js'
+import { shortDate } from '../../lib/clientCheck.js'
+import { navFor } from '../../lib/products.js'
 
 export const TABS = ['home', 'leads', 'calendar', 'messages', 'account']
 // Sub-screens with their own buttons at the bottom: the tab bar slides away on these.
@@ -199,6 +201,9 @@ export const NOTE_KIND = {
   moved: { tone: 'butter', label: 'Moved' },
   sold: { tone: 'sage', label: 'Sold' },
   todo: { tone: 'apricot', label: 'To do' },
+  cancel: { tone: 'stone', label: 'Old policy cancelled' },
+  drafted: { tone: 'sage', label: 'Drafted' },
+  save: { tone: 'butter', label: 'Save' },
 }
 // An activity row's kind, from what it says (the log has a coarse kind: lead, client, moved, call, text).
 export function kindOfActivity(a) {
@@ -240,3 +245,97 @@ export function runsOf(msgs, whoOf) {
 }
 // The policy number's last four ("•• 1001"), never the whole number.
 export const last4 = n => { const d = String(n || '').replace(/[^0-9A-Za-z]/g, ''); return d ? `•• ${d.slice(-4)}` : '' }
+
+// ── P974: servicing-only agents, Clients built out ────────────────────────────────────────────────────────────
+// The bottom bar for what they bought (lib/products.js navFor, live: adding a product flips it). Any lead product
+// (Leads or Your own leads) keeps Leads second, with Clients in Account. Servicing only: Clients takes Leads' place
+// and Leads moves into Account's list.
+export const tabsFromNav = nav => TABS.map(t => (t === 'leads' ? (nav.has('leads') ? 'leads' : nav.has('clients') ? 'clients' : null) : t)).filter(Boolean)
+export const tabsFor = (picked, opts) => tabsFromNav(navFor(picked, opts))
+export const clientsInBar = tabs => tabs.includes('clients')
+
+// With Clients in the bar, /clients is that tab (not a sub-screen) and Leads (/leads) opens as a sub-screen from
+// Account. Everything else is routeOf as is.
+export function routeForTabs(route, tabs) {
+  if (clientsInBar(tabs)) {
+    if (route.sub === 'clients' && !route.id) return { ...route, tab: 'clients', sub: null, id: null }
+    if (route.over === 'clients' && !route.overId) return { ...route, tab: 'clients', over: null, overId: null }
+  }
+  if (route.tab === 'leads' && !tabs.includes('leads')) return { ...route, tab: null, sub: 'leads', id: null }
+  return route
+}
+
+export const CLIENT_TONE = { needs_attention: 'apricot', working: 'sky', protected: 'sage', closed: 'stone' }
+export const CLIENT_GROUPS = [['needs_attention', 'Needs attention'], ['working', 'Working'], ['protected', 'Protected']]
+const clientName = c => `${c.client_first_name || ''} ${c.client_last_name || ''}`.trim()
+const digits = v => String(v || '').replace(/\D/g, '').slice(-10)
+export const clientMatches = (c, q) => {
+  const n = String(q || '').trim().toLowerCase()
+  if (!n) return true
+  const d = n.replace(/\D/g, '')
+  return `${clientName(c)} ${c.carrier_name || ''} ${c.product_name || ''}`.toLowerCase().includes(n) || (d.length >= 3 && digits(c.client_phone).includes(d))
+}
+// The grouped list: Needs attention, then Working, then Protected (Closed only when asked), each in book order.
+// f = 'all' or one status (the summary tiles); q = the search.
+export function groupClients(clients, statusOf, { f = 'all', q = '', closed = false } = {}) {
+  const groups = [...CLIENT_GROUPS, ...(closed || f === 'closed' ? [['closed', 'Closed']] : [])]
+  return groups
+    .filter(([k]) => f === 'all' || f === k)
+    .map(([key, label]) => ({ key, label, tone: CLIENT_TONE[key], items: clients.filter(c => statusOf(c) === key && clientMatches(c, q)) }))
+    .filter(g => g.items.length)
+}
+
+// What's happening with a client, in one plain line (the list row and the client screen).
+export function clientNow(c, st, stages, next) {
+  if (st === 'closed') return c.track?.closed || 'Closed. Nothing more to do.'
+  if (st === 'needs_attention') return 'Waiting on you: is it still on the books?'
+  if (c.next_step) return c.next_step
+  if (stages?.current) return `${stages.current.label}${stages.current.next ? ` · ${stages.current.next}` : ''}`
+  if (next?.askOn) return `Nothing needed. Next check ${shortDate(next.askOn)}`
+  return c.note || 'Nothing needed right now.'
+}
+// The hero's "since when": the draft a check is about, when the current work started, or when it was last settled.
+export function clientSince(c, st, stages, due) {
+  const done = (stages?.steps || []).filter(x => x.state === 'done' && x.at)
+  if (st === 'needs_attention' && due?.draft) return `since the ${shortDate(due.draft)} draft`
+  if (st === 'closed') return ''
+  if (st === 'working') { const at = c.fixing?.since ? shortDate(c.fixing.since) : done[0]?.at || c.submitted; return at ? `since ${at}` : '' }
+  const at = done.length ? done[done.length - 1].at : c.submitted
+  return at ? `since ${at}` : ''
+}
+// The client screen's timeline, newest first: what the log says about them, then the steps done (sold, hand-off,
+// approved, old policy cancelled, payments, saves), the draft last confirmed, a missed payment, and where it began.
+const STEP_KIND = { sold: 'sold', handoff: 'booking', approved: 'protected', old_cancel: 'cancel', first_payment: 'payment', found: 'risk', booked: 'booking', reached: 'live', fixed: 'save', cleared: 'payment', requested: 'moved', carrier: 'moved', confirmed: 'protected', added: 'sold', welcome: 'booking' }
+export function clientTimeline(c, act = [], stages) {
+  if (!c) return []
+  const name = clientName(c).toLowerCase()
+  const logged = act.filter(a => String(a.who || '').toLowerCase() === name).map(a => ({ id: a.id, kind: kindOfActivity(a), text: a.text, at: a.at }))
+  const done = (stages?.steps || []).filter(x => x.state === 'done').reverse().map(x => ({ id: `st-${x.key}`, kind: STEP_KIND[x.key] || 'moved', text: x.label, at: x.at || '' }))
+  const extra = []
+  if (c.missed?.on || c.missed?.draft) extra.push({ id: 'missed', kind: 'risk', text: c.missed.done ? 'Missed payment, saved' : 'Payment missed', at: c.missed.on || c.missed.draft || '' })
+  if (c.checked_through) extra.push({ id: 'drafted', kind: 'drafted', text: 'Draft confirmed on the books', at: /^\d{4}-\d{2}-\d{2}/.test(c.checked_through) ? shortDate(c.checked_through) : c.checked_through })
+  const began = done.some(x => x.id === 'st-sold' || x.id === 'st-added') ? [] : [{ id: 'start', kind: 'sold', text: c.added ? 'Added to your book' : 'Sold and submitted', at: c.submitted || '' }]
+  return [...logged, ...extra, ...done, ...began]
+}
+// The lead a client came from: its id when the row has one, else the sold lead with the same phone, else the name.
+export function leadOfClient(c, leads = []) {
+  if (!c) return null
+  const id = c.lead_id || c.leadId
+  if (id) return leads.find(l => l.id === id) || null
+  const d = digits(c.client_phone)
+  const byPhone = d.length === 10 ? leads.find(l => digits(l.rawPhone || l.phone) === d) : null
+  if (byPhone) return byPhone
+  const n = clientName(c).toLowerCase()
+  return leads.find(l => `${l.first_name || ''} ${l.last_name || ''}`.trim().toLowerCase() === n) || null
+}
+// With Clients in the bar a client's screen sits straight on the Clients tab (no Clients sub-screen under it), and a
+// client opened from anywhere without a tab to go back to belongs to the Clients tab.
+export function parentFor(route, search, tabs) {
+  const p = route.sub ? parentOf(route, search) : null
+  return p && clientsInBar(tabs) && p.sub === 'clients' && !p.id ? null : p
+}
+export function baseTabFor(route, fromTab, tabs) {
+  if (clientsInBar(tabs) && !route.tab && route.sub === 'clients' && !tabs.includes(fromTab)) return 'clients'
+  const t = baseTab(route, fromTab)
+  return tabs.includes(t) ? t : tabs.includes(fromTab) ? fromTab : clientsInBar(tabs) && t === 'leads' ? 'account' : 'home'
+}

@@ -9,14 +9,9 @@ import { routeOf, parentOf, nestedOf, screenKey, backCloses, sheetCloses, kindOf
 const read = f => readFileSync(new URL(f, import.meta.url), 'utf8')
 const css = read('./template/m/app.css')
 
-test('no band at the top: the status bar strip and sub-screen headers are clear until the page scrolls under them', () => {
-  assert.match(css, /\.ma-statusbar \{[^}]*background: transparent;/)
-  assert.match(css, /\.ma\.is-scrolled \.ma-statusbar \{[^}]*backdrop-filter: blur/)
-  assert.match(css, /\.ma-sub-h \{[^}]*background: transparent;/)
-  assert.match(css, /\.ma-sub-h\.is-scrolled \{[^}]*backdrop-filter: blur/)
-  assert.match(css, /\.ma-subpage \.ma-sub-scroll \{[^}]*top: 0;[^}]*padding-top: calc\(var\(--ma-top\) \+ var\(--ma-hh\) \+ 6px\)/)
-  const k = read('./template/m/AppKit.jsx')
-  assert.match(k, /h\.classList\.toggle\('is-scrolled', y > 2\)/)
+// P974 went further: no strip and no blur at all (p974.test.js); the scroller still runs from the top of the screen.
+test('no band at the top: the sub-screen scroller runs from the top of the screen', () => {
+  assert.match(css, /\.ma-subpage \.ma-sub-scroll \{[^}]*inset: 0;/)
 })
 
 test('Search: no keyboard on open, no bottom bar, a big title that scrolls away', () => {
@@ -24,7 +19,7 @@ test('Search: no keyboard on open, no bottom bar, a big title that scrolls away'
   assert.doesNotMatch(s, /autoFocus/)
   assert.match(s, /<SubPage big title="Search"/)
   assert.ok(OWN_BAR.includes('search'))
-  assert.match(read('./template/m/AppKit.jsx'), /className="ma-back ma-press"/) // plain arrow, no circle
+  assert.match(read('./template/m/AppKit.jsx'), /className=\{`ma-backhit/) // P974: no arrow at all, an invisible Back target
 })
 
 test('layer stack: a nested screen has its parent under it (the peek), with one key on top or under', () => {
@@ -97,6 +92,6 @@ test('client screen: hero, policy (last 4 only), what the team is doing, timelin
   assert.equal(last4('SAMPLE-1001'), '•• 1001')
   assert.equal(last4(''), '')
   const c = read('./template/m/AClient.jsx')
-  for (const s of ['ma-hero', 'What our team is doing', 'Policy', 'What happened', 'Message the team about']) assert.ok(c.includes(s), s)
+  for (const s of ['ma-hero', 'What our team is doing', 'Policy', 'Timeline', 'Message the team about']) assert.ok(c.includes(s), s) // P974: "What happened" is now "Timeline"
   assert.match(read('./template/m/MobileFrame.jsx'), /route\.id \? <AClient id=\{route\.id\} \/> : <AClients \/>/)
 })

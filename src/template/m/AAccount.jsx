@@ -1,30 +1,26 @@
-import { useMemo, useState } from 'react'
-import { useLocation } from 'react-router-dom'
-import { Plus, Wallet, Search, X, UserPlus, StickyNote } from 'lucide-react'
-import { useSampleBilling, useSampleSettings, useSampleClients, useSampleActivity, useDataSource } from '../data'
+import { useState } from 'react'
+import { Plus, Wallet, ChevronRight, Moon, Inbox } from 'lucide-react'
+import { useSampleBilling, useSampleSettings, useSampleClients, useSampleActivity } from '../data'
 import { useAccount } from '../kit'
-import { useCheckSettings, todayFor } from '../checkSettings'
-import { clientStatusOf, clientStatus, checkLists, mergeLists, workingWhy, ordinal } from '../../lib/clientCheck.js'
-import { stagesOf } from '../../lib/clientStages.js'
 import { asPick } from '../licenceModel'
 import { dailyTotal, deliveredOf, planOf } from '../spendPlan'
 import { usd } from '../motion'
 import { paths, isTemplateAddress } from '../paths'
-import { GetApp, AddNote } from '../TemplateFrame'
-import { AddClients } from '../AddClients891'
+import { GetApp } from '../TemplateFrame'
 import { isNativeApp } from '../../lib/native'
 import { NATIVE_BILLING_TEXT } from '../../components/native/NativeBillingNote'
-import { AppAbout } from '../../components/native/AppAbout'
+import { useTheme } from '../../hooks/useTheme'
 import { useProducts, useNavKeys } from '../useProducts'
 import { label as productsLabel } from '../../lib/products.js'
-import { useApp, SubPage, Row, Ini, rise } from './AppKit'
-import { CheckCard } from './MClients'
-import { chargeStat } from './appModel'
+import { useApp, Row, Ini, Toggle, rise } from './AppKit'
+import { chargeStat, tabsFromNav } from './appModel'
 import { useClientStatusOf } from '../checkSettings'
 
-// P967 — Account: a dark plan card (you, your plan, three numbers), two tiles (Submit a policy with a big +, Lead
-// spend with the $ a day as the bold number), then Clients, Activity, Billing, Settings and Help. Each opens as a
-// sub-screen from the right.
+// P967 — Account: a dark plan card (you, your plan, three numbers), two tiles, then the list. P974: the tiles are
+// real buttons (raised, a press state, a small arrow) with a clear gap before the list. Lead spend is THE way into
+// Billing (so there's no separate Billing row while it shows). Theme is a row with a Light/Dark switch that flips the
+// app at once and is remembered. No "About this app" line here any more (the version is at the foot of Help).
+// Servicing-only agents have Clients in the bottom bar, so here Clients gives way to Leads.
 const sinceOf = b => { const m = /([A-Z][a-z]{2}) \d+/.exec(b.setupPaid || ''); return m ? `Agent since ${m[1]} ${b.year || 2026}` : 'Agent' }
 
 export default function AAccount() {
@@ -38,10 +34,11 @@ export default function AAccount() {
   const statusOf = useClientStatusOf()
   const { picked, has, serve } = useProducts()
   const navKeys = useNavKeys()
+  const [theme, setTheme] = useTheme()
   const money = usd()
   const [panel, setPanel] = useState(null)
-  const close = () => setPanel(null)
   const leads = has('leads')
+  const clientsTab = tabsFromNav(navKeys).includes('clients')
   const states = s.licence ? asPick(s.licence).states : []
   const dl = deliveredOf({ booked: b.booked, live: b.live || 0 })
   const prot = clients.filter(c => statusOf(c) === 'protected').length
@@ -50,6 +47,7 @@ export default function AAccount() {
   const name = account?.name || s.profile?.name || 'You'
   const tiles = [serve && 'submit', leads && 'spend'].filter(Boolean)
   const charge = chargeStat(leads ? b.nightly?.at || '8 PM' : b.nextBill) // P971: "8 PM" + (tonight), one line
+  const dark = theme === 'dark'
 
   return (
     <div className="ma-tabpage">
@@ -58,7 +56,7 @@ export default function AAccount() {
       <div className="ma-plan ma-rise" style={rise(0)}>
         <i className="ma-glow is-sky" aria-hidden="true" />
         <div className="ma-plan-me">
-          <Ini name={name} tone="sky" size={58} className="is-ring" />
+          <Ini name={name} tone="sky" size={58} photo={s.profile?.photo} className="is-ring" />
           <span className="ma-grow"><b>{name}</b><small>{[sinceOf(b), states.length ? states.join(', ') : null].filter(Boolean).join(' · ')}</small></span>
         </div>
         <div className="ma-plan-row">
@@ -75,99 +73,47 @@ export default function AAccount() {
       {tiles.length > 0 && (
         <div className={`ma-tiles ma-rise${tiles.length === 1 ? ' is-one' : ''}`} style={rise(1)}>
           {serve && (
-            <button type="button" className="ma-tile is-sage ma-press" onClick={() => app.open(paths.submit())}>
+            <button type="button" className="ma-tile is-sage" onClick={() => app.open(paths.submit())}>
               <span className="ma-tile-plus" aria-hidden="true"><Plus size={24} strokeWidth={2.6} /></span>
+              <ChevronRight size={20} strokeWidth={2.4} className="ma-tile-go" aria-hidden="true" />
               <span><b>Submit a policy</b><small>We service it for you</small></span>
             </button>
           )}
           {leads && (
-            <button type="button" className="ma-tile is-butter ma-press" onClick={() => app.open(paths.billing())}>
+            <button type="button" className="ma-tile is-butter" onClick={() => app.open(paths.billing())} aria-label={`Lead spend, ${money(dailyTotal(b.spend))} a day. Opens Billing`}>
               <span className="ma-tile-ic" aria-hidden="true"><Wallet size={19} /></span>
+              <ChevronRight size={20} strokeWidth={2.4} className="ma-tile-go" aria-hidden="true" />
               <span><small>Lead spend</small><b className="ma-tile-big"><span className="tp-money">{money(dailyTotal(b.spend))}</span><em> a day</em></b></span>
             </button>
           )}
         </div>
       )}
 
-      <div className="ma-glass ma-list ma-rise" style={rise(2)}>
-        {navKeys.has('clients') && <Row onClick={() => app.open(paths.clients())} lead={<span className="ma-sym is-sage">{clients.length}</span>} title="Clients" sub={need ? `${need} need attention · our team is on it` : 'Our team works your clients'} />}
+      <div className="ma-glass ma-list ma-acct-list ma-rise" style={rise(2)}>
+        {clientsTab
+          ? <Row onClick={() => app.open(paths.leads())} lead={<span className="ma-sym is-apricot"><Inbox size={16} aria-hidden="true" /></span>} title="Leads" sub="Add leads, or import your own" />
+          : navKeys.has('clients') && <Row onClick={() => app.open(paths.clients())} lead={<span className="ma-sym is-sage">{clients.length}</span>} title="Clients" sub={need ? `${need} need attention · our team is on it` : 'Our team works your clients'} />}
         <Row onClick={() => app.open(paths.activity())} lead={<span className="ma-sym is-sky">↻</span>} title="Activity" sub={act[0] ? `${act[0].who}: ${act[0].text}` : 'Everything that happened'} />
-        <Row onClick={() => app.open(paths.billing())} lead={<span className="ma-sym is-butter">$</span>} title="Billing" sub={native ? NATIVE_BILLING_TEXT : 'Plan, card and receipts'} />
-        <Row onClick={() => app.open(paths.settings())} lead={<span className="ma-sym is-stone">⚙</span>} title="Settings" sub="Hours, alerts, account" />
+        {!leads && <Row onClick={() => app.open(paths.billing())} lead={<span className="ma-sym is-butter">$</span>} title="Billing" sub={native ? NATIVE_BILLING_TEXT : 'Plan, card and receipts'} />}
+        <Row onClick={() => app.open(paths.settings())} lead={<span className="ma-sym is-stone">⚙</span>} title="Settings" sub="You, hours, alerts, plan" />
+        <div className="ma-row ma-theme-row">
+          <span className="ma-sym is-stone"><Moon size={16} aria-hidden="true" /></span>
+          <span className="ma-grow"><b>Theme</b><small>{dark ? 'Dark' : 'Light'}</small></span>
+          <Toggle on={dark} label="Dark theme" onChange={v => setTheme(v ? 'dark' : 'light')} />
+        </div>
         <Row onClick={() => app.openSub('help')} lead={<span className="ma-sym is-stone">?</span>} title="Help" sub="Message the team any time" />
         {!native && <Row onClick={() => setPanel('app')} lead={<span className="ma-sym is-sky">↓</span>} title="Get the phone app" sub="Alerts the moment a lead comes in" />}
       </div>
 
       {isTemplateAddress() && (
-        <div className="ma-glass ma-list">
+        <div className="ma-glass ma-list ma-acct-list">
           <Row to={paths.signup()} title="Sign-up preview" />
           <Row to={paths.welcome()} title="Setup preview" />
           <Row to={paths.deedstone()} title="What a lead sees" />
         </div>
       )}
-      <AppAbout style={{ margin: '4px 12px 12px' }} />
 
-      <GetApp open={panel === 'app'} onClose={close} />
+      <GetApp open={panel === 'app'} onClose={() => setPanel(null)} />
     </div>
   )
 }
-
-// ── Clients ───────────────────────────────────────────────────────────────────────────────────────────────────
-const fullName = c => `${c.client_first_name} ${c.client_last_name}`
-const TONE_OF = { working: 'sky', needs_attention: 'apricot', protected: 'sage', closed: 'stone' }
-const FILTERS = [['all', 'All'], ['needs_attention', 'Needs attention'], ['working', 'Working'], ['protected', 'Protected'], ['closed', 'Closed']]
-const lineOf = (c, st) => {
-  const where = [c.carrier_name, c.draft_day ? `drafts the ${ordinal(Number(c.draft_day))}` : null].filter(Boolean).join(' · ')
-  if (st === 'working') return `${where ? `${where} · ` : ''}${stagesOf(c).current?.label || workingWhy(c)}`
-  if (st === 'needs_attention') return `${where ? `${where} · ` : ''}still on the books?`
-  if (st === 'closed') return c.track?.closed || 'Closed'
-  return where || 'Nothing needed'
-}
-
-export function AClients() {
-  const app = useApp()
-  const loc = useLocation()
-  const { data: clients } = useSampleClients()
-  const source = useDataSource()
-  const settings = useCheckSettings()
-  const today = todayFor(source)
-  const [f, setF] = useState(loc.state?.cf === 'need' ? 'needs_attention' : 'all')
-  const [q, setQ] = useState('')
-  const [panel, setPanel] = useState(null)
-  const statusOf = useMemo(() => new Map(clients.map(c => [c.id, clientStatusOf(c, today, settings)])), [clients, today, settings])
-  const merged = useMemo(() => mergeLists(checkLists(clients, today, settings)), [clients, today, settings])
-  const count = k => (k === 'all' ? clients.filter(c => statusOf.get(c.id) !== 'closed').length : clients.filter(c => statusOf.get(c.id) === k).length)
-  const n = q.trim().toLowerCase()
-  const rows = clients.filter(c => (f === 'all' ? statusOf.get(c.id) !== 'closed' : statusOf.get(c.id) === f) && (!n || `${fullName(c)} ${c.client_phone} ${c.carrier_name || ''}`.toLowerCase().includes(n)))
-  const filters = FILTERS.filter(([k]) => k === 'all' || k === f || count(k) > 0)
-  return (
-    <SubPage big title="Clients" line={`${clients.length} client${clients.length === 1 ? '' : 's'} · our team works them`}
-      right={<span className="ma-sub-acts"><button type="button" className="ma-round is-soft ma-press" aria-label="Add clients" onClick={() => setPanel('add')}><UserPlus size={19} aria-hidden="true" /></button><button type="button" className="ma-round is-soft ma-press" aria-label="Add a note to a client" onClick={() => setPanel('note')}><StickyNote size={19} aria-hidden="true" /></button></span>}>
-      <div className="ma-chips" role="tablist" aria-label="Client status">
-        {filters.map(([k, label]) => <button key={k} type="button" role="tab" aria-selected={f === k} className={`ma-fchip ma-press${f === k ? ' is-on' : ''}`} onClick={() => setF(k)}>{label} {count(k)}</button>)}
-      </div>
-      <p className="ma-hint">Our team works your clients. You just see where each one stands.</p>
-      <label className="ma-search is-small"><Search size={18} aria-hidden="true" /><input type="search" aria-label="Find a client" placeholder="Name, phone or carrier" value={q} onChange={e => setQ(e.target.value)} />{q && <button type="button" className="ma-ib" aria-label="Clear" onClick={() => setQ('')}><X size={18} aria-hidden="true" /></button>}</label>
-      {merged.rows.length > 0 && (f === 'all' || f === 'needs_attention') && !n && <div className="ma-checkwrap"><CheckCard key={merged.drafts.join()} m={merged} /></div>}
-      <ul className="ma-cards">
-        {rows.map(c => {
-          const st = statusOf.get(c.id)
-          return (
-            <li key={c.id} className={`ma-lead is-${TONE_OF[st] || 'sage'} is-client`}>
-              <button type="button" className="ma-lead-open" onClick={() => app.open(paths.client(c.id))}>
-                <Ini name={fullName(c)} size={44} />
-                <span className="ma-grow"><b>{fullName(c)}</b><small>{lineOf(c, st)}</small></span>
-              </button>
-              <span className="ma-tag">{clientStatus(st).label}</span>
-            </li>
-          )
-        })}
-      </ul>
-      {!rows.length && <p className="ma-empty">{f === 'needs_attention' ? 'Nothing to check. Every policy is confirmed on the books.' : 'No clients match.'}</p>}
-      <AddClients open={panel === 'add'} onClose={() => setPanel(null)} />
-      <AddNote open={panel === 'note'} onClose={() => setPanel(null)} />
-    </SubPage>
-  )
-}
-
-// Activity moved to ANotes.jsx (P972: icons, tap-through).

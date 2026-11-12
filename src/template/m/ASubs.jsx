@@ -5,6 +5,7 @@ import { useClientStatusOf } from '../checkSettings'
 import { clockNow } from '../leadLifecycle'
 import { paths } from '../paths'
 import { ReactivateDrawer, ReactivationCards } from '../Reactivate'
+import { useNavKeys } from '../useProducts'
 import { useApp, SubPage, Ini, rise } from './AppKit'
 import { NeedCard, useNeedItems, useNow } from './AHome'
 import { stageOf, TONE, TAG, minutesOf } from './appModel'
@@ -81,7 +82,8 @@ export function AToday() {
   const { data: o } = useSampleOverview()
   const { data: leads } = useSampleLeads()
   const now = useNow(o)
-  const list = [...o.todayAppts].sort((a, b) => minutesOf(a.time) - minutesOf(b.time))
+  const navKeys = useNavKeys() // P974: servicing-only agents see their client calls only
+  const list = o.todayAppts.filter(a => navKeys.has('leads') || a.kind === 'client').sort((a, b) => minutesOf(a.time) - minutesOf(b.time))
   const toneOf = a => { if (a.kind === 'client') return 'sage'; const l = leads.find(x => x.id === a.ref); return (l && TONE[stageOf(l, clockNow())]) || 'sky' }
   const foot = <button type="button" className="ma-btn is-soft is-grow is-tall ma-press" onClick={() => { app.back(); app.goTab('calendar') }}><CalendarDays size={18} aria-hidden="true" />Open the calendar</button>
   return (

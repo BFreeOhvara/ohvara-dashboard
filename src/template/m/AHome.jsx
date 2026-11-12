@@ -10,7 +10,7 @@ import { usd } from '../motion'
 import { paths } from '../paths'
 import { targetOf } from '../../lib/deedstoneCall'
 import { AddLeadsCard } from '../Products955'
-import { useProducts } from '../useProducts'
+import { useProducts, useNavKeys } from '../useProducts'
 import { useApp, useMark, CallButton, Ini, rise } from './AppKit'
 import { useAnswer } from './MClients'
 import { greeting, minutesOf, untilWords, stageOf, TONE, RESULT } from './appModel'
@@ -90,7 +90,10 @@ export function useNeedItems() {
   const source = useDataSource()
   const settings = useCheckSettings()
   const lists = useMemo(() => checkLists(clients, todayFor(source), settings), [clients, source, settings])
-  const items = [...(needs.notices || []), ...needs.now]
+  const navKeys = useNavKeys()
+  // P974: servicing-only agents (Clients in the bar) see client to-dos only (and billing), never lead ones.
+  const all = [...(needs.notices || []), ...needs.now]
+  const items = navKeys.has('leads') ? all : all.filter(it => it.key || (it.kind !== 'lead' && it.kind !== 'submit'))
   return { items, leads, clients, lists }
 }
 
@@ -102,14 +105,21 @@ export default function AHome() {
   const { data: bill } = useSampleBilling()
   const statusOf = useClientStatusOf()
   const { has } = useProducts()
+  const navKeys = useNavKeys()
   const { items, lists } = useNeedItems()
   const money = usd()
   const now = useNow(o)
-  const next = o.nextAppt
+  // P974: servicing-only agents (Clients in the bar): Needs you and Up next are about clients only.
+  const clientsOnly = !navKeys.has('leads')
+  const appts = clientsOnly ? o.todayAppts.filter(a => a.kind === 'client') : o.todayAppts
+  const next = clientsOnly
+    ? (o.nextAppt?.kind === 'client' ? o.nextAppt : appts.filter(a => minutesOf(a.time) > now).sort((a, b) => minutesOf(a.time) - minutesOf(b.time))[0] || null)
+    : o.nextAppt
   const personOf = a => (a.kind === 'client' ? clients.find(c => c.id === a.ref) : leads.find(l => l.id === a.ref))
   const toOf = a => (a.kind === 'client' ? paths.client(a.ref) : paths.lead(a.ref))
   const toneOf = a => { const p = personOf(a); return a.kind === 'client' ? 'sage' : (p && TONE[stageOf(p, clockNow())]) || 'sky' }
-  const later = o.todayAppts.filter(a => (!next || a.id !== next.id) && minutesOf(a.time) > now).sort((a, b) => minutesOf(a.time) - minutesOf(b.time))
+  const later = appts.filter(a => (!next || a.id !== next.id) && minutesOf(a.time) > now).sort((a, b) => minutesOf(a.time) - minutesOf(b.time))
+  const needClients = clients.filter(c => statusOf(c) === 'needs_attention').length
   const dl = deliveredOf({ booked: bill.booked, live: bill.live || 0 })
   const prot = clients.filter(c => statusOf(c) === 'protected').length
   const hour = Math.floor(now / 60)
@@ -154,9 +164,11 @@ export default function AHome() {
           <article className="ma-next is-calm ma-rise" style={rise(1)}>
             <i className="ma-glow" aria-hidden="true" />
             <span className="ma-next-k"><i aria-hidden="true" />Up next</span>
-            <b className="ma-next-none">Nothing else booked today</b>
-            <span className="ma-next-when">Our team books calls inside your hours as leads come in.</span>
-            <button type="button" className="ma-btn is-white ma-press" onClick={() => app.goTab('calendar')}>Open the calendar</button>
+            <b className="ma-next-none">{clientsOnly ? 'No client calls today' : 'Nothing else booked today'}</b>
+            <span className="ma-next-when">{clientsOnly ? 'Our team works your clients. Anything that needs you shows below.' : 'Our team books calls inside your hours as leads come in.'}</span>
+            {clientsOnly
+              ? <button type="button" className="ma-btn is-white ma-press" onClick={() => app.goTab('clients')}>Open your clients</button>
+              : <button type="button" className="ma-btn is-white ma-press" onClick={() => app.goTab('calendar')}>Open the calendar</button>}
           </article>
         )}
 
@@ -171,10 +183,10 @@ export default function AHome() {
               <ChevronRight size={18} className="ma-chev" aria-hidden="true" />
             </Link>
           ))}
-          <button type="button" className="ma-all" onClick={() => app.openSub('today')}>All {o.todayAppts.length} calls today<ChevronRight size={16} aria-hidden="true" /></button>
+          <button type="button" className="ma-all" onClick={() => app.openSub('today')}>{appts.length === 1 ? '1 call today' : `All ${appts.length} calls today`}<ChevronRight size={16} aria-hidden="true" /></button>
         </div>
       )}
-      {!later.length && o.todayAppts.length > 0 && <button type="button" className="ma-pillbtn ma-rise ma-press" style={rise(2)} onClick={() => app.openSub('today')}>All {o.todayAppts.length} calls today<ChevronRight size={18} aria-hidden="true" /></button>}
+      {!later.length && appts.length > 0 && <button type="button" className="ma-pillbtn ma-rise ma-press" style={rise(2)} onClick={() => app.openSub('today')}>{appts.length === 1 ? '1 call today' : `All ${appts.length} calls today`}<ChevronRight size={18} aria-hidden="true" /></button>}
 
       <section className="ma-needs ma-rise" style={rise(3)} aria-label="Needs you">
         <div className="ma-h2"><h2>Needs you</h2><span>{items.length ? `${items.length} waiting` : 'All caught up'}</span></div>
@@ -191,7 +203,9 @@ export default function AHome() {
         <div><b>{prot}/{clients.length}</b><small>protected</small></div>
         {has('leads')
           ? <button type="button" onClick={() => app.open(paths.billing())}><b className="tp-money">{money(dailyTotal(bill.spend))}</b><small>a day on leads</small></button>
-          : <div><b>{leads.filter(l => l.stage === 'sold').length}</b><small>sold</small></div>}
+          : clientsOnly
+            ? <button type="button" onClick={() => app.goTab('clients')}><b>{needClients}</b><small>need attention</small></button>
+            : <div><b>{leads.filter(l => l.stage === 'sold').length}</b><small>sold</small></div>}
       </div>
     </div>
   )

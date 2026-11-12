@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Check } from 'lucide-react'
-import { useSampleSettings, useSampleActions, useSampleBilling } from '../data'
+import { Check, X } from 'lucide-react'
+import { useSampleSettings, useSampleActions, useSampleBilling, useSampleClients, useDataSource } from '../data'
 import { useThemePref } from '../../hooks/useTheme'
 import { useNote, useAccount } from '../kit'
 import { TimeZoneSelect } from '../Clock'
@@ -17,35 +17,42 @@ import { DeedstonePhone } from '../DeedstonePhone'
 import { SetupProgress } from '../SetupProgress'
 import { useLaunchView } from '../launchView'
 import { asPick } from '../licenceModel'
-import { AppAbout } from '../../components/native/AppAbout'
+import { CarrierSelect } from '../CarrierSelect'
 import { isNativeApp } from '../../lib/native'
 import { NATIVE_BILLING_TEXT } from '../../components/native/NativeBillingNote'
 import { useProducts } from '../useProducts'
 import { label as productsLabel } from '../../lib/products.js'
 import '../settings929.css'
-import { useApp, SubPage, Row, Toggle } from './AppKit'
+import { useApp, SubPage, Row, Toggle, Ini } from './AppKit'
 import { weekWords } from './appModel'
 
-// P971 — Settings on the phone, redone like the mockup: grouped glass cards (You · Calls and calendar ·
-// Notifications · Plan and billing · Account), one row per setting with its current value on the right and a
-// chevron, real switches for the on/off ones, and each row opening its own sub-screen (?set=…, same pinned header,
-// so Back and the edge swipe come back to the list). Every setting the portal's Settings has (P929's tabs) is here:
-// profile, time zone, licence, your setup, hours and calls, carrier emails, notifications (push and email),
-// receipts, appearance, password; plus Sign out and Delete account (Apple requires it). Billing itself stays
-// "managed on the Ohvara website" in the native app (no payments in the app).
+// P971 — Settings on the phone: grouped glass cards, one row per setting with its current value on the right and a
+// chevron, real switches for the on/off ones, each row opening its own sub-screen (?set=…). P974: easier to read. The
+// top card is everything about you (photo, name, phone, email, licensed states, the carriers you write with); tap a
+// line to edit it. Then Calls and calendar, Notifications (switches), Plan and billing, Account (password, Sign out,
+// Delete account). Short plain labels, current values on the right. Theme moved to Account (a switch); "About this
+// app" moved to the foot of Help. Billing itself stays "managed on the Ohvara website" in the native app.
 const THEMES = [['light', 'Light'], ['dark', 'Dark'], ['system', 'Match my phone']]
-const THEME_WORD = { light: 'Light', dark: 'Dark', system: 'Automatic' }
 const TITLE = {
-  profile: 'Name and contact', zone: 'Time zone', licence: 'Licensed states', setup: 'Your setup', calls: 'Hours you take calls',
-  email: 'Carrier emails', alerts: 'Email me too', receipts: 'Receipts', appearance: 'Appearance', password: 'Password and sign-in',
+  profile: 'You', zone: 'Time zone', licence: 'Licensed states', carriers: 'Carriers you write with', setup: 'Your setup', calls: 'Call hours',
+  email: 'Carrier emails', alerts: 'Email alerts', receipts: 'Receipts', appearance: 'Theme', password: 'Password',
 }
 const zoneWord = tz => String(tz || '').split(/[/]/).pop().replace(/_/g, ' ') || 'Not set'
+const listWords = (xs, none) => (xs.length ? (xs.length > 2 ? `${xs.slice(0, 2).join(', ')} +${xs.length - 2}` : xs.join(', ')) : none)
 
 export default function ASettings({ root = false }) {
   const [params] = useSearchParams()
   const set = root ? null : params.get('set')
   if (set && TITLE[set]) return <SubPage title={TITLE[set]} line="Settings"><Section k={set} /></SubPage>
   return <SettingsList />
+}
+
+// The carriers the agent writes with: what they saved, else the carriers their clients are with.
+function useCarriers() {
+  const { data: s } = useSampleSettings()
+  const { data: clients } = useSampleClients()
+  if (Array.isArray(s.profile?.carriers)) return s.profile.carriers
+  return [...new Set(clients.map(c => c.carrier_name).filter(Boolean))].sort()
 }
 
 // A setting row: its name, its current value on the right, a chevron; opens its own screen.
@@ -57,10 +64,10 @@ function SettingsList() {
   const { data: s } = useSampleSettings()
   const { data: b } = useSampleBilling()
   const { setNotification } = useSampleActions()
-  const [theme] = useThemePref()
   const account = useAccount()
   const note = useNote()
   const { has, picked } = useProducts()
+  const carriers = useCarriers()
   const money = usd()
   const native = isNativeApp()
   const [panel, setPanel] = useState(null)
@@ -73,43 +80,48 @@ function SettingsList() {
   const signOut = () => (account?.live ? account.signOut() : note('Sign out works once you sign in for real'))
   const leads = has('leads')
   const card = b.card?.onFile === false ? 'No card' : `${b.card?.brand || ''} ${b.card?.last4 || ''}`.trim()
+  const p = s.profile || {}
+  const name = p.name || account?.name || 'You'
   return (
-    <SubPage big title="Settings" line="Everything from the portal’s Settings">
-      <Group title="You">
-        <Row onClick={() => go('profile')} title="Name and contact" right={<Val>{s.profile?.name}</Val>} />
-        <Row onClick={() => go('zone')} title="Time zone" right={<Val>{zoneWord(s.timeZone)}</Val>} />
-        <Row onClick={() => go('licence')} title="Licensed states" right={<Val bad={!states.length}>{states.length ? states.join(', ') : 'None yet'}</Val>} />
-        {leads && <Row onClick={() => go('setup')} title="Your setup" right={<Val>Steps</Val>} />}
-      </Group>
+    <SubPage big title="Settings">
+      <div className="ma-glass ma-list ma-set ma-me ma-rise">
+        <button type="button" className="ma-row ma-me-top" onClick={() => go('profile')} aria-label={`Edit your details, ${name}`}>
+          <Ini name={name} tone="sky" size={58} photo={p.photo} className="is-ring" />
+          <span className="ma-grow"><b>{name}</b><small>{p.phone || 'Add your phone'}</small><small>{p.email || 'Add your email'}</small></span>
+          <span className="ma-me-edit">Edit</span>
+        </button>
+        <Row onClick={() => go('licence')} title="Licensed states" right={<Val bad={!states.length}>{listWords(states, 'None yet')}</Val>} />
+        <Row onClick={() => go('carriers')} title="Carriers" right={<Val bad={!carriers.length}>{listWords(carriers, 'None yet')}</Val>} />
+      </div>
 
       <Group title="Calls and calendar">
-        <Row onClick={() => go('calls')} title="Hours you take calls" sub={leads ? (duty ? 'Live calls ring you now' : 'Outside your hours: we book callers') : undefined} right={<Val>{weekWords(s.week)}</Val>} />
+        <Row onClick={() => go('calls')} title="Call hours" sub={leads ? (duty ? 'Live calls ring you now' : 'Outside your hours we book callers') : undefined} right={<Val>{weekWords(s.week)}</Val>} />
+        <Row onClick={() => go('zone')} title="Time zone" right={<Val>{zoneWord(s.timeZone)}</Val>} />
         <Row onClick={() => go('email')} title="Carrier emails" right={<Val>Forwarding</Val>} />
+        {leads && <Row onClick={() => go('setup')} title="Your setup" right={<Val>Steps</Val>} />}
       </Group>
 
       <Group title="Notifications">
         {alerts.map(n => (
-          <div key={n.key} className="ma-row"><span className="ma-grow"><b>{n.label}</b><small>Push to this phone</small></span>
+          <div key={n.key} className="ma-row"><span className="ma-grow"><b>{n.label}</b></span>
             <Toggle on={n.push} label={`${n.label} push`} onChange={v => { setNotification(n.key, 'push', v); note(`${n.label}: push ${v ? 'on' : 'off'}`) }} /></div>
         ))}
-        <Row onClick={() => go('alerts')} title="Email me too" right={<Val>{emailed ? `${emailed} on` : 'Off'}</Val>} />
+        <Row onClick={() => go('alerts')} title="Email alerts" right={<Val>{emailed ? `${emailed} on` : 'Off'}</Val>} />
       </Group>
 
       <Group title="Plan and billing">
         <Row onClick={() => app.open(paths.billing())} title="Plan" right={<Val>{leads ? planOf(b).label : productsLabel(picked)}</Val>} />
         {leads && <Row onClick={() => app.open(paths.billing())} title="Lead spend" right={<span className="ma-val tp-money">{money(dailyTotal(b.spend))} a day</span>} />}
         <Row onClick={() => app.open(native ? paths.billing() : `${paths.billing()}?full=1`)} title="Card" right={<Val bad={card === 'No card'}>{card}</Val>} />
-        <Row onClick={() => go('receipts')} title="Receipts" right={<Val>Email</Val>} />
+        <Row onClick={() => go('receipts')} title="Receipts" right={<Val>By email</Val>} />
       </Group>
       {native && <p className="ma-hint ma-set-note">{NATIVE_BILLING_TEXT}</p>}
 
       <Group title="Account">
-        <Row onClick={() => go('appearance')} title="Appearance" right={<Val>{THEME_WORD[theme] || 'Automatic'}</Val>} />
-        <Row onClick={() => go('password')} title="Password and sign-in" />
+        <Row onClick={() => go('password')} title="Password" />
         <Row onClick={signOut} title="Sign out" chev={false} />
         <Row onClick={() => (DeleteDialog ? setPanel('delete') : note('Delete my account works once you sign in for real'))} title="Delete account" className="is-danger" chev={false} />
       </Group>
-      <AppAbout style={{ margin: '14px 12px 0', textAlign: 'center' }} />
       {panel === 'delete' && DeleteDialog && <DeleteDialog onClose={() => setPanel(null)} />}
     </SubPage>
   )
@@ -130,22 +142,53 @@ function Section({ k }) {
   const [week, setWeek] = useState(s.week)
   const [alerts, setAlerts] = useState(s.notifications || [])
   const [rc, setRc] = useState({ email: s.profile?.email || '', receipts: true })
+  const source = useDataSource()
+  const carriers = useCarriers()
+  const [cs, setCs] = useState(carriers)
   const done = text => { note(text); app.back() }
   const save = (on, fn) => <div className="ma-savebar"><button type="button" className="ma-btn is-solid is-tall ma-press" disabled={!on} onClick={fn}>Save</button></div>
   const intro = text => <p className="ma-hint">{text}</p>
 
   if (k === 'profile') {
     const dirty = JSON.stringify(p) !== JSON.stringify(s.profile)
+    const onPhoto = e => {
+      const f = e.target.files?.[0]
+      if (!f) return
+      const r = new FileReader()
+      r.onload = () => setP(x => ({ ...x, photo: String(r.result) }))
+      r.readAsDataURL(f)
+    }
     return (
       <div className="ma-form">
         {intro('How you show up to the team and on everything we send for you.')}
+        <div className="ma-glass ma-pad ma-photo">
+          <Ini name={p.name} tone="sky" size={72} photo={p.photo} className="is-ring" />
+          <label className="ma-btn is-soft ma-press">{p.photo ? 'Change photo' : 'Add a photo'}<input type="file" accept="image/*" onChange={onPhoto} hidden /></label>
+          {p.photo && <button type="button" className="ma-link-btn" onClick={() => setP(x => ({ ...x, photo: null }))}>Remove</button>}
+        </div>
         <div className="ma-glass ma-fields">
           <MField label="Full name"><input value={p.name || ''} autoComplete="name" onChange={e => setP({ ...p, name: e.target.value })} /></MField>
-          <MField label="Email"><input type="email" value={p.email || ''} autoComplete="email" onChange={e => setP({ ...p, email: e.target.value })} /></MField>
           <MField label="Phone"><PhoneInput value={p.phone || ''} onChange={(d, e164, shown) => setP({ ...p, phone: shown })} /></MField>
-          <MField label="Plan" hint="Change it in Billing"><input value={p.plan || ''} readOnly /></MField>
+          <MField label="Email"><input type="email" value={p.email || ''} autoComplete="email" onChange={e => setP({ ...p, email: e.target.value })} /></MField>
         </div>
-        {save(dirty, () => done('Profile saved'))}
+        {save(dirty, () => { if (source === 'sample') saveSettings({ profile: p }); done('Profile saved') })}
+      </div>
+    )
+  }
+  if (k === 'carriers') {
+    const dirty = JSON.stringify(cs) !== JSON.stringify(carriers)
+    return (
+      <div className="ma-form">
+        {intro('The carriers you’re appointed with. Our team uses them when they set up or save a policy.')}
+        <div className="ma-glass ma-list ma-set">
+          {cs.map(c => (
+            <div key={c} className="ma-row"><span className="ma-grow"><b>{c}</b></span>
+              <button type="button" className="ma-ib ma-press" aria-label={`Remove ${c}`} onClick={() => setCs(cs.filter(x => x !== c))}><X size={18} aria-hidden="true" /></button></div>
+          ))}
+          {!cs.length && <p className="ma-empty">No carriers yet.</p>}
+        </div>
+        <div className="ma-glass ma-fields"><div className="ma-field"><CarrierSelect label="Add a carrier" value="" onChange={v => { if (v && !cs.includes(v)) setCs([...cs, v].sort()) }} /></div></div>
+        {save(dirty, () => { if (source === 'sample') saveSettings({ profile: { ...(s.profile || {}), carriers: cs } }); done('Carriers saved') })}
       </div>
     )
   }

@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Phone } from 'lucide-react'
+import { ChevronRight, Phone } from 'lucide-react'
 import { useSampleActions, useSampleAppointments, useSampleSettings, useSampleBilling } from '../data'
 import { useNote } from '../kit'
 import { useExit, still } from '../motion'
@@ -20,39 +20,26 @@ import { useSheetDrag } from './useBackSwipe'
 export const AppCtx = createContext(null)
 export const useApp = () => useContext(AppCtx)
 
-// A sub-screen (P971, P972): a header pinned at the top (back, title, a line, buttons on the right) that is clear at
-// rest and only blurs once the page scrolls under it, so the page's backdrop runs to the very top of the screen. The
-// page scrolls under the header and the status bar. `big` (Search, Notifications, the Account screens) is the iOS
-// large title: a plain back arrow on top, the big title in the page that scrolls away, and a small title that fades
-// into the header once it has. Notifications passes `close` for its arrow on the right instead of Back.
-export function SubPage({ title, line, foot, children, className = '', right, close, big = false, left }) {
+// A sub-screen (P974): nothing is pinned at the top. A short row (buttons on the left or right, if any), the title and
+// its line all sit IN the page and scroll away with it; the page runs up behind the status bar with no strip, no blur.
+// There is no back arrow: you swipe back (P972). An invisible 44 px "Back" target sits top-left (top-right for
+// Notifications, which passes `close`) so VoiceOver and a stray tap still have one. `big` is the large title (32 px);
+// otherwise 26 px. `bare` drops the title block (the client screen's hero carries the name).
+export function SubPage({ title, line, foot, children, className = '', right, close, big = false, left, bare = false }) {
   const app = useApp()
-  const head = useRef(null)
-  const onScroll = e => {
-    const h = head.current
-    if (!h) return
-    const y = e.currentTarget.scrollTop
-    h.classList.toggle('is-scrolled', y > 2)
-    if (big) h.classList.toggle('is-titled', y > 44)
-  }
-  const arrow = (label, flip) => big
-    ? <button type="button" className="ma-back ma-press" aria-label={label} onClick={app.back}><ChevronLeft size={30} strokeWidth={2.1} aria-hidden="true" style={flip ? { transform: 'scaleX(-1)' } : undefined} /></button>
-    : <button type="button" className="ma-round ma-press" aria-label={label} onClick={app.back}><ChevronLeft size={22} aria-hidden="true" style={flip ? { transform: 'scaleX(-1)' } : undefined} /></button>
   return (
     <div className={`ma-subpage${big ? ' is-big' : ''} ${className}`}>
-      <div className="ma-scroll ma-sub-scroll" data-ma-scroll onScroll={onScroll}>
+      <div className="ma-scroll ma-sub-scroll" data-ma-scroll>
         <div className="ma-sub-b">
-          {big && <div className="ma-bigt"><h1>{title}</h1>{line && <small>{line}</small>}</div>}
+          <div className="ma-sub-h">
+            <button type="button" className={`ma-backhit${close ? ' is-end' : ''}`} aria-label={close || 'Back'} onClick={app.back} />
+            {left}
+            {right && <span className="ma-sub-r">{right}</span>}
+          </div>
+          {!bare && <div className="ma-bigt"><h1>{title}</h1>{line && <small>{line}</small>}</div>}
           {children}
         </div>
       </div>
-      <header className="ma-sub-h" ref={head}>
-        {left}
-        {!close && arrow('Back')}
-        <span className="ma-sub-t" aria-hidden={big || undefined}><b>{title}</b>{line && !big && <small>{line}</small>}</span>
-        {right}
-        {close && arrow(close, true)}
-      </header>
       {foot && <div className="ma-foot">{foot}</div>}
     </div>
   )
@@ -68,8 +55,9 @@ export function Toggle({ on, label, onChange, small = false, tone, disabled }) {
   )
 }
 
-export const Ini = ({ name, tone, size = 46, className = '' }) => (
-  <span className={`ma-ini${tone ? ` is-${tone}` : ''} ${className}`} style={{ '--s': `${size}px` }} aria-hidden="true">{initialsOf(name)}</span>
+// Initials in a circle, or the agent's photo when they've added one (P974).
+export const Ini = ({ name, tone, size = 46, className = '', photo }) => (
+  <span className={`ma-ini${tone ? ` is-${tone}` : ''}${photo ? ' has-photo' : ''} ${className}`} style={{ '--s': `${size}px` }} aria-hidden="true">{photo ? <img src={photo} alt="" /> : initialsOf(name)}</span>
 )
 
 // A row in a glass list: something on the left, a title and a line, a chevron. A link, a button or plain.
