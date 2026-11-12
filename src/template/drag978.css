@@ -1,0 +1,28 @@
+/* P978: drag a lead that's waiting for its result onto its result's column (ResultDrag.jsx, leadDrag.js). */
+
+/* A card that can be picked up: grab cursor and a quiet grip. Every other card is exactly as before. */
+.fx .ldg-can { cursor: grab; user-select: none; -webkit-user-select: none; }
+.fx .ldg-can .fx-cover { cursor: grab; -webkit-user-drag: none; }
+.fx .ldg-can .ldg-grip { position: absolute; left: 3px; top: 50%; width: 10px; height: 18px; margin-top: -9px; display: inline-flex; align-items: center; justify-content: center; color: var(--ci, var(--ov-mid)); opacity: .45; pointer-events: none; transition: opacity .2s; }
+.fx .ldg-can:hover .ldg-grip { opacity: .9; }
+.fx .lv-card.ldg-can .ldg-grip { top: 14px; margin-top: 0; color: var(--ov-mid); }
+.fx .ldg-can[data-lifted] { opacity: .38; cursor: grabbing; }
+html.ldg-grabbing, html.ldg-grabbing * { cursor: grabbing !important; user-select: none !important; -webkit-user-select: none !important; }
+
+/* The card in the hand: lifted, tilted, with a deeper shadow (the tilt and lift are set by the drag itself). */
+.ldg-ghost { border-radius: 18px; background: var(--bg-surface); position: fixed; left: 0; top: 0; z-index: 2000; pointer-events: none; will-change: transform; transform-origin: 50% 40%; }
+.ldg-ghost > * { height: 100%; margin: 0; animation: none !important; opacity: 1 !important; transition: none !important; box-shadow: 0 34px 56px -22px rgba(0, 0, 0, .62), 0 12px 22px -12px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .3) !important; }
+.ldg-ghost .ldg-grip { display: none; }
+
+/* While a card is in the hand: columns that take it glow in their stage colour, every other column dims and refuses. */
+.fx .fx-lane { transition: opacity .22s, box-shadow .22s, background-color .22s, border-color .22s, filter .22s; }
+.fx .lc-board.is-dragging .fx-lane.is-target { border-color: color-mix(in srgb, var(--c) 60%, transparent); background: color-mix(in srgb, var(--c) 14%, color-mix(in srgb, var(--bg-surface) 34%, transparent)); box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--c) 60%, transparent), 0 0 34px -6px color-mix(in srgb, var(--c) 60%, transparent); }
+.fx .lc-board.is-dragging .fx-lane.is-target.is-over { border-color: var(--c); background: color-mix(in srgb, var(--c) 24%, color-mix(in srgb, var(--bg-surface) 34%, transparent)); box-shadow: 0 0 0 2.5px var(--c), 0 0 54px -2px color-mix(in srgb, var(--c) 75%, transparent); }
+.fx .lc-board.is-dragging .fx-lane.is-nodrop { opacity: .4; filter: saturate(.55); }
+
+/* The note when a drop is refused, and the Undo for a no show marked from the board (same bar as the lead's). */
+.ldg-undo { position: fixed; z-index: 120; left: 50%; bottom: 28px; transform: translateX(-50%); width: min(420px, calc(100vw - 32px)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fx .fx-lane { transition: none; }
+}

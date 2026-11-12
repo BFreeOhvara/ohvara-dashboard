@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PhoneIncoming, BadgeCheck, CalendarClock, Ban } from 'lucide-react'
+import { PhoneIncoming, BadgeCheck, CalendarClock, Ban, GripVertical } from 'lucide-react'
 import { paths } from './paths'
 import { liveAt, liveFacts, agentStatus, RESULT_STATUS } from './agentView'
 import { dayLabel, timeLabel, clockNow } from './leadLifecycle'
 import { OutcomePrompt } from './LeadOutcome'
+import { canDrag } from './leadDrag'
 import './live910.css'
 
 // P910 — a live call is never a column. While it rings and once it connects, it's pinned at the top of Leads with
@@ -23,13 +24,18 @@ function whenOf(l) {
   return `${today ? 'Today' : dayLabel(at)}, ${timeLabel(at)}`
 }
 
-export function LiveCallCard({ l, i = 0, compact = false }) {
+// P978: on the desktop Leads board a live call the agent took (not one still ringing) can be dragged onto Sold, Follow up
+// or Not interested (onGrab, ResultDrag.jsx); the result buttons stay.
+export function LiveCallCard({ l, i = 0, compact = false, onGrab = null }) {
   const [pick, setPick] = useState(null)
   const ringing = l.stage === 'ringing'
   const name = `${l.first_name} ${l.last_name}`
   const facts = liveFacts(l)
+  const drag = !!onGrab && canDrag(l)
   return (
-    <article className={`lv-card${ringing ? ' is-ringing' : ''}${compact ? ' is-compact' : ''}`} style={{ '--i': i }} data-live={l.stage} aria-label={`Live call, ${name}`}>
+    <article className={`lv-card${ringing ? ' is-ringing' : ''}${compact ? ' is-compact' : ''}${drag ? ' ldg-can' : ''}`} style={{ '--i': i }} data-live={l.stage} data-drag={drag ? 'yes' : undefined} aria-label={`Live call, ${name}`}
+      onPointerDown={drag ? e => onGrab(e, l) : undefined} onDragStart={drag ? e => e.preventDefault() : undefined}>
+      {drag && <span className="ldg-grip" aria-hidden="true"><GripVertical size={14} /></span>}
       <header className="lv-top">
         <span className="lv-k"><PhoneIncoming size={14} aria-hidden="true" />Live call</span>
         <span className="lv-when">{ringing && <i className="lv-pulse" aria-hidden="true" />}{whenOf(l)}</span>
@@ -47,11 +53,11 @@ export function LiveCallCard({ l, i = 0, compact = false }) {
 }
 
 // The pinned row: every live call ringing or waiting for a result, newest first.
-export function LiveCalls({ calls, compact = false }) {
+export function LiveCalls({ calls, compact = false, onGrab = null }) {
   if (!calls.length) return null
   return (
     <section className={`lv-pin${compact ? ' is-compact' : ''}`} aria-label={`Live calls, ${calls.length}`}>
-      {calls.map((l, i) => <LiveCallCard key={l.id} l={l} i={i} compact={compact} />)}
+      {calls.map((l, i) => <LiveCallCard key={l.id} l={l} i={i} compact={compact} onGrab={onGrab} />)}
     </section>
   )
 }
