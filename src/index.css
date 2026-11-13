@@ -5432,3 +5432,21 @@ html body :is(.fx-tb, .fx-badge, .tp-tb, .tp-ovcount, .mx-badge, .mx-count, .ov-
   --btn-white-hover: #EDEFEA;
   --btn-white-press: #DFE2DC;
 }
+
+/* P996 — the crash card ("This page ran into a problem", ErrorBoundary) on the shell's look: Urbanist, a frosted
+   glass panel and the --sh-* palette, like /login. Still no animation (P861). */
+.ov-crash { font-family: 'Urbanist', system-ui, sans-serif; }
+.ov-crash .ov-crash-card {
+  border-radius: 28px; padding: 34px 30px 28px;
+  background: var(--sh-glass-panel); border: 1px solid var(--sh-glass-edge);
+  box-shadow: 0 40px 80px -36px var(--sh-scrim), inset 0 1px 0 var(--sh-glass-hl);
+  -webkit-backdrop-filter: var(--sh-glass-blur); backdrop-filter: var(--sh-glass-blur);
+}
+.ov-crash .ov-crash-icon { border: 0; color: var(--sh-apricot); background: color-mix(in srgb, var(--sh-apricot) 16%, transparent); }
+.ov-crash .ov-crash-title { font-family: 'Urbanist', system-ui, sans-serif; font-size: 24px; font-weight: 700; letter-spacing: -0.02em; color: var(--sh-ink); }
+.ov-crash .ov-crash-text { font-size: 15px; color: var(--sh-ink-3); }
+.ov-crash .ov-crash-actions .ov-primary {
+  height: 50px; border-radius: 999px; border: 0; font-size: 15.5px; font-weight: 700;
+  background: var(--sh-acc); color: var(--sh-on-accent);
+}
+.ov-crash .ov-crash-actions .ov-ghost { height: 48px; color: var(--sh-ink); border: 1px solid var(--sh-edge); background: transparent; }
