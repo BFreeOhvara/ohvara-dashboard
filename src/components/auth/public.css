@@ -1,0 +1,81 @@
+/* P996 — every signed-out page on the /login look (login.css, P895): the shell backdrop, a frosted glass card,
+   Urbanist, the --sh-* palette. Light unless this browser saved a theme (useTheme.js usePublicTheme). AuthPage
+   (Join, Reset password, Confirm email) and Sign-up use it. Story on the left, the card on the right; one column
+   below 1180 px, card first (phones: story line up top, card in thumb reach), like /login.
+   The story and card bits keep their sx-* class names; here they take the shell palette. No hex: --sh-* tokens. */
+
+.lg-page .lg-main--pub {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 470px);
+  max-width: 1180px;
+  column-gap: 88px;
+}
+.lg-main--pub .lg-side--story { justify-self: stretch; max-width: 500px; }
+.lg-main--pub .lg-mid { align-items: stretch; }
+
+/* Story */
+.lg-page .sx-pill {
+  background: var(--sh-glass-panel); border: 1px solid var(--sh-glass-edge); color: var(--sh-ink-2);
+  -webkit-backdrop-filter: var(--sh-glass-blur); backdrop-filter: var(--sh-glass-blur);
+}
+.lg-page .sx-pill i { background: var(--sh-acc-line); }
+.lg-page .sx-h1 {
+  margin: 0; max-width: 500px;
+  font-family: var(--font-display); font-size: 50px; font-weight: 700;
+  letter-spacing: -0.035em; line-height: 1.04; color: var(--sh-ink); text-wrap: balance;
+}
+.lg-page .sx-grad { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--sh-acc-line); }
+.lg-page .sx-lede { margin: 16px 0 0; max-width: 420px; font-size: 17px; line-height: 1.55; color: var(--sh-ink-2); }
+.lg-page .sx-perks { margin-top: 30px; gap: 12px; max-width: 460px; }
+.lg-page .sx-perk {
+  padding: 15px 16px; border-radius: 20px;
+  background: var(--sh-glass-panel); border: 1px solid var(--sh-glass-edge);
+  box-shadow: inset 0 1px 0 var(--sh-glass-hl);
+  -webkit-backdrop-filter: var(--sh-glass-blur); backdrop-filter: var(--sh-glass-blur);
+}
+.lg-page .sx-perk-ico { background: color-mix(in srgb, var(--sh-acc) 16%, transparent); color: var(--sh-acc-line); }
+.lg-page .sx-perk b { color: var(--sh-ink); }
+.lg-page .sx-perk span span { color: var(--sh-ink-3); }
+
+/* The card: the same glass as /login's */
+.lg-page .sx-card {
+  position: relative; width: 470px; max-width: 100%;
+  padding: 34px 34px 28px; border-radius: 28px;
+  background: var(--sh-glass-panel);
+  border: 1px solid var(--sh-glass-edge);
+  box-shadow: 0 40px 80px -36px var(--lg-shadow), inset 0 1px 0 var(--sh-glass-hl);
+  -webkit-backdrop-filter: var(--sh-glass-blur); backdrop-filter: var(--sh-glass-blur);
+  animation: lg-rise 0.5s cubic-bezier(.2, .7, .2, 1) both;
+}
+.lg-page .sx-card h2 { font-size: 31px; color: var(--sh-ink); }
+.lg-page .sx-card-sub { font-size: 15px; color: var(--sh-ink-3); }
+.lg-page .sx-card-sub strong { color: var(--sh-ink); }
+.lg-page .sx-big-ico--warn { background: color-mix(in srgb, var(--sh-apricot) 16%, transparent); color: var(--sh-apricot); }
+.lg-page .sx-role--agent { background: color-mix(in srgb, var(--sh-apricot) 16%, transparent); color: var(--sh-ink-2); }
+.lg-page .sx-role--fulfillment { background: color-mix(in srgb, var(--sh-acc) 14%, transparent); color: var(--sh-acc-line); }
+.lg-page .sx-link { color: var(--sh-acc-line); }
+.lg-page .sx-alert { background: var(--sx-red-tint); border-color: var(--sx-red-box); color: var(--sh-ink); }
+.lg-page .sx-note { background: var(--sx-chip); border-color: var(--sh-line); color: var(--sh-ink-2); }
+
+/* Waiting on the server: an empty card the size of the real one, so nothing jumps when it fills */
+.pub-wait { display: flex; align-items: center; justify-content: center; min-height: 300px; color: var(--sh-acc-line); }
+.lg-mid--wait .sx-card { min-height: 300px; }
+
+@media (max-width: 1379px) {
+  .lg-page .lg-main--pub { column-gap: 56px; }
+  .lg-page .sx-h1 { font-size: 42px; }
+}
+@media (max-width: 1179px) {
+  .lg-main--pub .lg-mid { align-items: center; }
+  .lg-main--pub .lg-side--story { max-width: 460px; }
+  .lg-page .sx-h1 { font-size: 26px; letter-spacing: -0.03em; line-height: 1.15; margin: 0 auto; }
+  .lg-page .sx-lede { margin: 8px auto 0; font-size: 14.5px; }
+  .lg-page .sx-perks { margin: 18px auto 0; text-align: left; }
+  .lg-page .sx-pill { display: none; }
+  .lg-page .sx-card { width: 100%; padding: 26px 22px 20px; border-radius: 26px; }
+  .lg-page .sx-card h2 { font-size: 28px; }
+}
+@media (max-width: 767.98px) {
+  .lg-page .sx-perks, .lg-page .sx-desk-only { display: none; }
+  .lg-page .sx-card { padding: 22px 20px 16px; }
+  .lg-page .sx-card h2 { font-size: 26px; }
+}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { Mail, Lock, ShieldCheck, Loader2, ArrowRight, ArrowLeft, MailCheck, Check } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { usePublicTheme } from '../hooks/useTheme'
 import { supabase, setKeepSignedIn, keepSignedIn } from '../lib/supabase'
 import { isNativeApp, webUrl } from '../lib/native'
 import { CodeBoxes } from '../components/agent/AgentUI'
@@ -130,8 +131,10 @@ export default function Login() {
   useEffect(() => {
     const el = document.documentElement
     el.classList.add('lg-root')
+    el.style.background = '' // P996: index.html's first-paint colour; lg-root paints it from here
     return () => el.classList.remove('lg-root')
   }, [])
+  usePublicTheme() // P996: light unless a theme was saved
 
   // Role redirect — held while the two-step code is still owed.
   useEffect(() => {
@@ -312,7 +315,7 @@ export default function Login() {
         )}
       </section>
       {!isNativeApp() && (
-        <a href="/app" className="lg-getapp">
+        <a href="https://ohvara.com/app" className="lg-getapp">
           <span className="lg-getapp-ico"><AppGlyph /></span>Get the phone app
         </a>
       )}

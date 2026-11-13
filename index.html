@@ -13,6 +13,20 @@
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/pwa-192.png" />
     <title>Ohvara Portal</title>
+    <!-- P996: signed-out pages open light (like ohvara.com) unless a theme was saved, from the very first paint,
+         so a click from the website never shows a dark frame first. src/hooks/useTheme.js makes the same call. -->
+    <script>
+      (function () {
+        var saved = null
+        try { saved = localStorage.getItem('ohvara-theme') } catch (e) {}
+        if (!saved && /^\/(login|signup|join|j|reset-password|confirm-email)(\/|$)/.test(location.pathname)) {
+          document.documentElement.setAttribute('data-theme', 'light')
+          document.documentElement.style.background = '#ECECE7'
+          var m = document.querySelector('meta[name="theme-color"]')
+          if (m) m.setAttribute('content', '#ECECE7')
+        }
+      })()
+    </script>
 
     <!-- Open Graph / link-unfurl preview (Prompt 294 Part A). Static: this is
          a client-rendered SPA, so bots that don't run JS see these tags for

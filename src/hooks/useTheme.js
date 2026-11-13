@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 
 // Theme, shared. The header toggle (DashboardLayout) and Settings →
 // Appearance both drive it, so it can't live as local state in either — one
@@ -16,6 +16,13 @@ const systemTheme = () => (media && !media.matches ? 'light' : 'dark')
 const resolve = pref => (pref === 'system' ? systemTheme() : pref)
 const apply = theme => document.documentElement.setAttribute('data-theme', theme)
 
+// P996: the signed-out pages (sign in, create account, invite, reset password, confirm email) open light, like
+// ohvara.com, unless this browser has a saved choice. Nothing is saved, so the portal behind them keeps its own
+// default (dark) once someone is signed in. index.html's inline script makes the same call before first paint.
+export const PUBLIC_PATH = /^\/(login|signup|join|j|reset-password|confirm-email)(\/|$)/
+const hasSaved = () => { try { return !!localStorage.getItem(KEY) } catch { return false } }
+const publicLight = () => typeof location !== 'undefined' && PUBLIC_PATH.test(location.pathname) && !hasSaved()
+
 let pref = (typeof localStorage !== 'undefined' && localStorage.getItem(KEY)) || 'dark'
 let current = resolve(pref)
 
@@ -23,7 +30,7 @@ let current = resolve(pref)
 // imports it). Before, the attribute was only set when a component called
 // useTheme(), and the only caller was Settings → Appearance — so a saved
 // "light" choice reverted to dark on every reload until Settings was opened.
-if (typeof document !== 'undefined') apply(current)
+if (typeof document !== 'undefined') apply(publicLight() ? 'light' : current)
 
 // 'System' follows the device while it is the saved choice.
 if (media) {
@@ -72,4 +79,14 @@ export function useThemePref() {
     return () => { prefListeners.delete(set) }
   }, [])
   return [p, setTheme]
+}
+
+// P996: a signed-out page calls this. With no saved choice it shows light while mounted and puts the portal's own
+// theme back when it unmounts (e.g. after sign-in moves on to the portal). Layout effect, so no dark frame paints.
+export function usePublicTheme() {
+  useLayoutEffect(() => {
+    if (hasSaved()) return
+    apply('light')
+    return () => { if (!hasSaved()) apply(current) }
+  }, [])
 }

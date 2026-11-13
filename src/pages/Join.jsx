@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { User, Mail, Lock, ArrowRight, Loader2, Check, Clock, CalendarCheck, PhoneCall, Eye, ListChecks, Wallet, Link2Off } from 'lucide-react'
+import { User, Mail, Lock, ArrowRight, Loader2, Check, Clock, PhoneCall, ListChecks, Wallet, Link2Off } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { AuthPage, AuField, PasswordField, AuCheck, AuAlert } from '../components/auth/AuthShell'
-import { keepSubmitVisible, EMAIL_RE, SUPPORT_EMAIL } from '../components/auth/authUtils'
+import { keepSubmitVisible, EMAIL_RE, SUPPORT_EMAIL, AGENT_PERKS } from '../components/auth/authUtils'
 
 // Create account — Prompt 781 (mockups media/sign-in/Join + JoinPhone in the
 // vault). Reached from an invite: /join?t=<token>, the text's short
@@ -17,11 +17,7 @@ import { keepSubmitVisible, EMAIL_RE, SUPPORT_EMAIL } from '../components/auth/a
 // Role comes from the invite; nobody else ever sees the password.
 
 const PERKS = {
-  agent: [
-    [CalendarCheck, 'Submit a client in under a minute', 'Pick a time that fits the client and the carrier.'],
-    [PhoneCall, 'We make the cancel call', 'Our team gets the old policy cancelled, on the record.'],
-    [Eye, 'Watch it happen live', 'Booked, called, cancelled. Every step shows up for you.'],
-  ],
+  agent: AGENT_PERKS, // P996: what an agent gets now (was the old cancel-call lines)
   fulfillment: [
     [ListChecks, 'Your calls, lined up', 'Today shows your next call and everything after it.'],
     [PhoneCall, 'Call from the portal', 'Ring the client and carrier, merge, done.'],
@@ -37,7 +33,7 @@ function Story({ role, pay }) {
     <>
       <h1 className="sx-h1 sx-h1--join">You’re invited to <span className="sx-grad">Ohvara.</span></h1>
       <p className="sx-lede sx-desk-only">
-        {role === 'fulfillment' ? 'Make the cancel calls. Get paid every Monday.' : 'Submit the client. We handle the cancel, and you watch it happen.'}
+        {role === 'fulfillment' ? 'Make the cancel calls. Get paid every Monday.' : 'Make your account and your portal opens right away.'}
       </p>
       <div className="sx-perks">
         {perks.map(([Icon, t, s], i) => {
@@ -159,7 +155,7 @@ export default function Join() {
     <AuthPage left={<Story role={role} pay={invite?.pay} />}>
       <section className="sx-card sx-card--join" aria-label={invite ? 'Create your account' : 'Invite'} aria-busy={checking || undefined}>
         {checking ? (
-          <div style={{ padding: '48px 0', display: 'flex', justifyContent: 'center', color: 'var(--sx-teal-hi)' }}>
+          <div style={{ padding: '48px 0', display: 'flex', justifyContent: 'center', color: 'var(--sh-acc-line)', minHeight: 252, alignItems: 'center' }}>
             <Loader2 size={24} className="animate-spin" aria-label="Checking your invite" />
           </div>
         ) : !invite ? (

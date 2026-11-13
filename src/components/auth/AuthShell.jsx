@@ -3,27 +3,37 @@ import { Eye, EyeOff, Check, Lock } from 'lucide-react'
 import { OhvaraMark } from '../ui/OhvaraMark'
 import { SUPPORT_EMAIL } from './authUtils'
 import { isNativeApp } from '../../lib/native'
+import { usePublicTheme } from '../../hooks/useTheme'
+import '@fontsource/urbanist/500.css'
+import '@fontsource/urbanist/600.css'
+import '@fontsource/urbanist/700.css'
 import './auth.css'
+import '../../pages/login.css'
+import './public.css'
 
-// Prompt 781 — the shell every signed-out page shares: sign in, create
-// account (/join), confirm email, reset password. Always the deep-navy look
-// (auth.css holds its own fixed tokens), so the OS/app theme never shows here.
+// The shell every signed-out page shares: create account (/signup), invite (/join), confirm email, reset password.
+// P996: on /login's look (P895): the shell backdrop, a frosted glass card, the real logo (big piece navy, wing teal
+// in light). Light unless this browser saved a theme. The fields keep auth.css's sx-* rules, fed the shell palette
+// by login.css. Was P781's always-navy shell.
 
 const SITE = 'https://ohvara.com'
 
+
 export function Brand() {
   return (
-    <div className="sx-brand">
-      <OhvaraMark height={44} back="var(--sx-hi)" front="var(--sx-mark-front)" />
+    <span className="lg-brand">
+      <OhvaraMark height={36} back="var(--sh-mark-back)" front="var(--sh-mark-front)" />
       {/* P983: the app is just "Ohvara"; the website keeps "Ohvara Portal". */}
-      <span className="sx-brand-name">{isNativeApp() ? 'Ohvara' : 'Ohvara Portal'}</span>
-    </div>
+      {isNativeApp()
+        ? <span className="lg-brand-name">Ohvara</span>
+        : <><span className="lg-brand-name lg-name-web">Ohvara Portal</span><span className="lg-brand-name lg-name-phone">Ohvara</span></>}
+    </span>
   )
 }
 
 export function FootLinks({ phone = false }) {
   return (
-    <div className={phone ? 'sx-foot sx-foot--phone' : 'sx-foot'}>
+    <div className={phone ? 'lg-foot lg-foot--phone' : 'lg-foot lg-foot--desk'}>
       {!phone && <span>© {new Date().getFullYear()} Ohvara</span>}
       <a href={`${SITE}/privacy`} target="_blank" rel="noreferrer">Privacy</a>
       <a href={`${SITE}/terms`} target="_blank" rel="noreferrer">Terms</a>
@@ -32,23 +42,25 @@ export function FootLinks({ phone = false }) {
   )
 }
 
-// left = the story column (hidden parts collapse on phones), children = the
-// card column. Marks <html> while mounted so overscroll stays navy.
-export function AuthPage({ left, children }) {
+// left = the story column, children = the card column. Marks <html> while mounted so overscroll shows the page
+// colour in either theme.
+export function AuthPage({ left, children, waiting = false }) {
+  usePublicTheme()
   useEffect(() => {
     const el = document.documentElement
-    el.classList.add('sx-root')
-    return () => el.classList.remove('sx-root')
+    el.classList.add('lg-root')
+    el.style.background = '' // index.html's first-paint colour; lg-root paints it from here
+    return () => el.classList.remove('lg-root')
   }, [])
   return (
-    <div className="sx-page">
-      <div className="sx-left">
-        <Brand />
-        <div className="sx-left-mid">{left}</div>
-        <FootLinks />
-      </div>
-      <div className="sx-right">{children}</div>
-      <div className="sx-spacer" aria-hidden="true" />
+    <div className="lg-page">
+      <div className="lg-bd" aria-hidden="true" />
+      <header className="lg-top"><Brand /></header>
+      <main className="lg-main lg-main--pub">
+        <div className="lg-side lg-side--story">{left}</div>
+        <div className={`lg-mid${waiting ? ' lg-mid--wait' : ''}`}>{children}</div>
+      </main>
+      <FootLinks />
       <FootLinks phone />
     </div>
   )

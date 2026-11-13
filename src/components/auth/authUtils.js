@@ -1,3 +1,4 @@
+import { Check, ShieldCheck, Phone } from 'lucide-react'
 // Prompt 781 — helpers the signed-out pages share (kept out of AuthShell.jsx
 // so that file only exports components).
 
@@ -20,3 +21,10 @@ export function keepSubmitVisible(e) {
 }
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+// What an agent gets (Sign-up and an agent's invite). [icon, title, line].
+export const AGENT_PERKS = [
+  [ShieldCheck, 'Servicing', 'Submit every deal you close and we keep each policy on the books.'],
+  [Phone, 'Leads', 'Opens soon. Set a weekly spend and we bring you people to sell to.'],
+  [Check, 'Opens right away', 'Pick a plan and your portal opens as soon as your payment is confirmed.'],
+]

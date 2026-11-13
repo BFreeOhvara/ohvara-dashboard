@@ -1,16 +1,14 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
-import { User, Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, Check, Clock, Info, AlertCircle, ShieldCheck, Phone } from 'lucide-react'
+import { User, Mail, Lock, ArrowRight, Loader2, Check, Clock, Info } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { isNativeApp } from '../lib/native'
-import { useSignupOpen } from '../lib/signupStatus'
+import { fetchSignupOpen, useSignupOpen } from '../lib/signupStatus'
 import { useAuth } from '../hooks/useAuth'
-import { OhvaraMark } from '../components/ui/OhvaraMark'
-import { keepSubmitVisible, EMAIL_RE, SUPPORT_EMAIL } from '../components/auth/authUtils'
-import './signup.css'
+import { AuthPage, AuField, PasswordField, AuCheck, AuAlert } from '../components/auth/AuthShell'
+import { keepSubmitVisible, EMAIL_RE, SUPPORT_EMAIL, AGENT_PERKS } from '../components/auth/authUtils'
 
-// Create your account — the approved mockup (media/signup/Signup + SignupPhone
-// in the vault). Anyone can make a portal account here, but only while the
+// Create your account. Anyone can make a portal account here, but only while the
 // server's sign-up switch is on: the page asks self-signup for its status and
 // fails closed (an error or anything but open shows "Sign-up isn't open yet").
 // ?early=1 shows the form regardless; that is a convenience, the server still
@@ -18,66 +16,43 @@ import './signup.css'
 //
 // One message for every failed sign-up (an email that already has an account
 // included), so the page can't be used to learn whether an email is registered.
+//
+// P996: rebuilt on /login's look (AuthShell). No flash: the story never changes, and the card waits (same size)
+// until both the sign-in check and the sign-up switch have answered, so a signed-in visitor goes straight to the
+// portal and a closed switch never shows the form first. The switch is asked as soon as this file loads on /signup.
 
-const PERKS = [
-  [ShieldCheck, 'Servicing', 'Submit every deal you close and we keep each policy on the books.'],
-  [Phone, 'Leads', 'Opens soon. Set a weekly spend and we bring you people to sell to.'],
-  [Check, 'Opens right away', 'Pick a plan and your portal opens as soon as your payment is confirmed.'],
-]
+if (typeof location !== 'undefined' && location.pathname === '/signup' && !isNativeApp()) fetchSignupOpen()
 
-function Field({ label, icon: Icon, error, right, ...input }) {
+function Story() {
   return (
-    <label className="su-fld">
-      <span className="su-lab">{label}</span>
-      <span className={`su-inp${error ? ' is-err' : ''}`}>
-        <Icon size={18} strokeWidth={2} aria-hidden="true" />
-        <input aria-invalid={error || undefined} {...input} />
-        {right}
-      </span>
-    </label>
-  )
-}
-
-function PasswordField(props) {
-  const [show, setShow] = useState(false)
-  return (
-    <Field {...props} type={show ? 'text' : 'password'}
-      right={
-        <button type="button" className="su-eye" onClick={() => setShow(s => !s)}
-          aria-label={show ? 'Hide password' : 'Show password'} aria-pressed={show}>
-          {show ? <EyeOff size={19} strokeWidth={2} /> : <Eye size={19} strokeWidth={2} />}
-        </button>
-      } />
-  )
-}
-
-function FieldError({ children }) {
-  return <div className="su-ferr" role="alert"><AlertCircle size={15} strokeWidth={2} aria-hidden="true" />{children}</div>
-}
-
-function Hint({ ok, children }) {
-  return (
-    <span className={`su-hint${ok ? ' ok' : ''}`}>
-      {ok ? <Check size={13} strokeWidth={3} aria-hidden="true" /> : <i aria-hidden="true" />}
-      {children}<span className="su-sr">{ok ? ' (done)' : ' (needed)'}</span>
-    </span>
+    <>
+      <span className="sx-pill"><i />For licensed life insurance agents</span>
+      <h1 className="sx-h1" style={{ marginTop: 20 }}>Create your <span className="sx-grad">Ohvara</span> account.</h1>
+      <p className="sx-lede">Make your account, pick a plan, and your portal opens right away.</p>
+      <div className="sx-perks">
+        {AGENT_PERKS.map(([Icon, t, s]) => (
+          <div className="sx-perk" key={t}>
+            <span className="sx-perk-ico" aria-hidden="true"><Icon size={18} strokeWidth={2} /></span>
+            <span><b>{t}</b><span>{s}</span></span>
+          </div>
+        ))}
+      </div>
+    </>
   )
 }
 
 function ClosedCard({ native }) {
   return (
-    <section className="ov-card su-card" aria-label={native ? 'Sign-up isn’t available in the app' : 'Sign-up isn’t open yet'}>
-      <span className="su-tile"><Clock size={24} strokeWidth={2} aria-hidden="true" /></span>
-      <h2 className="su-closed-h">{native ? 'Sign-up isn’t available in the app' : 'Sign-up isn’t open yet'}</h2>
-      <p className="lede su-closed-p">
+    <section className="sx-card" aria-label={native ? 'Sign-up isn’t available in the app' : 'Sign-up isn’t open yet'}>
+      <span className="sx-big-ico sx-big-ico--warn"><Clock size={24} strokeWidth={2} aria-hidden="true" /></span>
+      <h2>{native ? 'Sign-up isn’t available in the app' : 'Sign-up isn’t open yet'}</h2>
+      <p className="sx-card-sub" style={{ marginTop: 8 }}>
         {native
           ? 'New accounts can’t be made in the app. If you already have an account, sign in. If you were sent an invite, use the link in it.'
           : 'New accounts can’t be made on this page right now. If you already have an account, sign in. If you were sent an invite, use the link in it.'}
       </p>
-      <div className="su-acts2">
-        <Link to="/login" className="ov-solid su-btn">Go to sign in</Link>
-      </div>
-      <div className="su-below">Need help? <a className="su-lnk" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a></div>
+      <Link to="/login" className="sx-btn" style={{ marginTop: 20, textDecoration: 'none' }}>Go to sign in</Link>
+      <div className="sx-center-note">Need help? <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a></div>
     </section>
   )
 }
@@ -144,112 +119,63 @@ export default function Signup() {
 
   if (!loading && session) return <Navigate to="/" replace />
 
+  const waiting = loading || (!native && !serverClosed && !early && open === null)
   const showForm = !native && !serverClosed && (open === true || early)
-  const asking = !native && !serverClosed && !early && open === null
   const limited = banner === 'rate'
   const bad = error?.field
   const clearRate = () => { if (limited) setBanner(null) }
+  const check = (ok, label, optional) => (
+    <span className={ok ? 'is-on' : ''}>
+      {ok ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : <i className="sx-dot" aria-hidden="true" />}{label}
+      {!optional && <span className="sx-sr">{ok ? ' (done)' : ' (needed)'}</span>}
+    </span>
+  )
 
   return (
-    <div className="su">
-      <div className="su-brand">
-        <OhvaraMark height={40} back="var(--ov-hi)" front="var(--ov-data-b)" />
-        Ohvara Portal
-      </div>
-      <div className="su-mid">
-        {showForm || asking
-          ? <h1>Create your <span>Ohvara</span> account.</h1>
-          : <h1>The Ohvara <span>Portal.</span></h1>}
-        <p className="su-sub">
-          {showForm || asking
-            ? 'Make your account, pick a plan, and your portal opens right away.'
-            : 'We keep every policy you write on the books, so you can keep selling.'}
-        </p>
-        {(showForm || asking) && (
-          <div className="su-perks">
-            {PERKS.map(([Icon, t, s]) => (
-              <div className="ov-card su-perk" key={t}>
-                <i aria-hidden="true"><Icon size={17} strokeWidth={2.4} /></i>
-                <span><b>{t}</b><span>{s}</span></span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="su-r">
-        {asking ? (
-          <section className="ov-card su-card" aria-label="Checking sign-up" aria-busy="true">
-            <div style={{ padding: '40px 0', display: 'flex', justifyContent: 'center', color: 'var(--ov-data-b)' }}>
-              <Loader2 size={24} className="animate-spin" aria-label="Checking whether sign-up is open" />
-            </div>
-          </section>
-        ) : !showForm ? (
-          <ClosedCard native={native} />
-        ) : (
-          <form className="ov-card su-card" aria-label="Create your account" onSubmit={handleSubmit} onFocus={keepSubmitVisible} noValidate>
+    <AuthPage left={<Story />} waiting={waiting}>
+      {waiting ? (
+        <section className="sx-card" aria-label="Checking sign-up" aria-busy="true">
+          <div className="pub-wait"><Loader2 size={24} className="animate-spin" aria-label="Loading" /></div>
+        </section>
+      ) : !showForm ? (
+        <ClosedCard native={native} />
+      ) : (
+        <section className="sx-card">
+          <form aria-label="Create your account" onSubmit={handleSubmit} onFocus={keepSubmitVisible} noValidate>
             <h2>Create your account</h2>
-            <p className="lede">You’ll sign in with your email.</p>
-            {banner === 'rate' && (
-              <div className="su-note quiet" role="alert">
-                <Clock size={18} strokeWidth={2} aria-hidden="true" />
-                <span><b>Too many tries</b>Wait a few minutes, then try again.</span>
-              </div>
-            )}
+            <p className="sx-card-sub">You’ll sign in with your email.</p>
+            {banner === 'rate' && <div className="sx-note" role="alert"><b>Too many tries.</b> Wait a few minutes, then try again.</div>}
             {banner === 'neutral' && (
-              <div className="su-note info" role="alert">
-                <Info size={18} strokeWidth={2} aria-hidden="true" />
-                <span>
-                  <b>We couldn’t sign you in</b>
-                  If you already have an account, sign in or reset your password.
-                  <span className="su-acts">
-                    <Link className="su-lnk" to="/login">Sign in</Link>
-                    <Link className="su-lnk" to="/login?forgot=1">Reset your password</Link>
-                  </span>
-                </span>
+              <div className="sx-note" role="alert">
+                <Info size={16} strokeWidth={2} aria-hidden="true" style={{ verticalAlign: '-3px', marginRight: 6 }} />
+                <b>We couldn’t sign you in.</b> If you already have an account, <Link className="sx-link sx-link--soft" to="/login">sign in</Link> or <Link className="sx-link sx-link--soft" to="/login?forgot=1">reset your password</Link>.
               </div>
             )}
-            <Field label="Full name" icon={User} name="name" autoComplete="name" autoCapitalize="words"
+            {error && <AuAlert>{error.msg}</AuAlert>}
+            <AuField first label="Full name" icon={User} name="name" autoComplete="name" autoCapitalize="words"
               autoFocus={window.innerWidth >= 768} value={form.full_name}
               onChange={e => { setForm(f => ({ ...f, full_name: e.target.value })); clearRate() }}
               placeholder="Your full name" error={bad === 'name'} />
-            {bad === 'name' && <FieldError>{error.msg}</FieldError>}
-            <Field label="Email" icon={Mail} type="email" inputMode="email" name="email" autoComplete="username"
+            <AuField label="Email" icon={Mail} type="email" inputMode="email" name="email" autoComplete="username"
               autoCapitalize="none" spellCheck={false} value={form.email}
               onChange={e => { setForm(f => ({ ...f, email: e.target.value })); clearRate() }}
               placeholder="you@email.com" error={bad === 'email'} />
-            {bad === 'email' && <FieldError>{error.msg}</FieldError>}
             <PasswordField label="Password" icon={Lock} name="new-password" autoComplete="new-password"
               value={pw} onChange={e => { setForm(f => ({ ...f, password: e.target.value })); clearRate() }}
-              placeholder="Choose a password" error={bad === 'pw'} aria-describedby="su-pw-hints" />
-            {bad === 'pw' && <FieldError>{error.msg}</FieldError>}
-            <div className="su-hints" id="su-pw-hints" aria-live="polite">
-              <Hint ok={has8}>8+ characters</Hint>
-              <Hint ok={hasNum}>A number</Hint>
-              <Hint ok={hasSym}>A symbol (optional)</Hint>
+              placeholder="Choose a password" error={bad === 'pw'} aria-describedby="su-pw-checks" />
+            <div className="sx-checks" id="su-pw-checks" aria-live="polite">
+              {check(has8, '8+ characters')}{check(hasNum, 'A number')}{check(hasSym, 'A symbol (optional)', true)}
             </div>
-            <label className="su-cbrow">
-              <input type="checkbox" checked={agree} onChange={e => setAgree(e.target.checked)} aria-invalid={bad === 'agree' || undefined} />
-              <span className={`su-cb${agree ? ' on' : ''}${bad === 'agree' ? ' bad' : ''}`} aria-hidden="true">{agree && <Check size={13} strokeWidth={3.4} />}</span>
-              <span>
-                I agree to the <a href="https://ohvara.com/terms" target="_blank" rel="noreferrer">Terms</a> and <a href="https://ohvara.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.
-              </span>
-            </label>
-            {bad === 'agree' && <FieldError>{error.msg}</FieldError>}
-            <button type="submit" className="ov-solid su-btn" disabled={submitting || limited}>
+            <AuCheck terms checked={agree} onChange={setAgree} error={bad === 'agree'}>
+              I agree to the <a className="sx-link sx-link--soft" href="https://ohvara.com/terms" target="_blank" rel="noreferrer">Terms</a> and <a className="sx-link sx-link--soft" href="https://ohvara.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.
+            </AuCheck>
+            <button type="submit" className="sx-btn" style={{ marginTop: 16 }} disabled={submitting || limited}>
               {submitting ? <><Loader2 size={18} className="animate-spin" />Creating your account…</> : <>Create account<ArrowRight size={17} strokeWidth={2.4} /></>}
             </button>
-            <div className="su-below">Already have an account? <Link className="su-lnk" to="/login">Sign in</Link></div>
+            <div className="sx-center-note">Already have an account? <Link to="/login">Sign in</Link></div>
           </form>
-        )}
-      </div>
-
-      <div className="su-foot">
-        <span>© {new Date().getFullYear()} Ohvara</span>
-        <a href="https://ohvara.com/privacy" target="_blank" rel="noreferrer">Privacy</a>
-        <a href="https://ohvara.com/terms" target="_blank" rel="noreferrer">Terms</a>
-        <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
-      </div>
-    </div>
+        </section>
+      )}
+    </AuthPage>
   )
 }
