@@ -10,7 +10,6 @@ import { clashes } from '../hoursModel'
 import { leadText } from '../leadTexts'
 import '../p878.css'
 import { needsOutcome, clockNow } from '../leadLifecycle'
-import { needsResult } from '../agentView'
 import { stageChip } from '../LeadOutcome'
 import { paths } from '../paths'
 import { DayBox, WeekList } from '../DayBox'
@@ -20,7 +19,7 @@ import '../cal910.css'
 import { useOpenDay, useStickyDay } from '../useOpenDay'
 import { blockTime, clockOf, zoneAbbr, dateOf } from '../../lib/callSlots'
 import { calLanes, boxMinutes } from '../../lib/calLanes'
-import { EV_MIN_PX, clientAt, evClass, evLine2, evLook, isPast, leadResultTone, stampOf } from '../cal958'
+import { EV_MIN_PX, agentCallLook, clientAt, evClass, evLine2 } from '../cal958'
 import { EvText } from '../CalEv'
 import { useDayFirst, useSettled } from '../useCal958'
 
@@ -110,6 +109,44 @@ function Ev({ e, look, top, height, lane: [k, of], onPick }) {
   )
 }
 
+// P992: what clicking a call opens, the same everywhere the agent sees their week (this Calendar and the Overview
+// "This week" card): a lead's call opens the Leads pop-up (with Can't make it), a client's call its details.
+const monthOf = e => (e.on ? MONS[Number(e.on.slice(5, 7)) - 1] : e.mon || '')
+export function CallDrawer({ open, onClose }) {
+  const { data: leads } = useSampleLeads()
+  const { data: clients } = useSampleClients()
+  const note = useNote()
+  const [cant, setCant] = useState(null)
+  const ref = open && (open.kind === 'lead' ? leads.find(l => l.id === open.ref) : clients.find(c => c.id === open.ref))
+  const phone = ref && (ref.phone || ref.client_phone)
+  const place = ref && `${ref.city}, ${ref.state}`
+  // P873: a lead's appointment card shows where the lead is now, and asks how it went once it has ended.
+  const leadRef = open?.kind === 'lead' ? ref : null
+  const ask = leadRef && needsOutcome(leadRef, clockNow())
+  return (
+    <>
+      {/* P949: a lead's booking opens the same pop-up as on Leads (details, status, messages, actions) */}
+      {open?.kind === 'lead' && leadRef && <LeadDrawer id={open.ref} onClose={() => onClose()}
+        extra={!ask && ['booked', 'showed'].includes(leadRef.stage) ? <button type="button" className="tp-btn ov-ghost" data-cant onClick={() => { setCant(open); onClose() }}><CalendarX2 size={14} />Can{'’'}t make it</button> : null} />}
+      <Drawer open={!!open && open.kind !== 'lead'} onClose={() => onClose()} title={open?.who || ''} sub={open && `${open.day}, ${monthOf(open)} ${open.date}, ${open.time} your time${open.iso && open.tz && clockOf(open.iso, open.tz) !== open.time ? ` · ${clockOf(open.iso, open.tz)} ${zoneAbbr(open.tz, open.iso)} for them` : ''}`}
+        footer={<><Link to={open?.kind === 'lead' ? paths.lead(open.ref) : paths.client(open?.ref)} className="tp-primary fx-accent" onClick={() => onClose()}>{open?.kind === 'lead' ? 'Open lead' : 'Open client'}</Link>
+          {open?.kind === 'lead'
+            ? <button type="button" className="tp-btn ov-ghost" onClick={() => { setCant(open); onClose() }}><CalendarX2 size={14} />Can{'’'}t make it</button>
+            : <button type="button" className="tp-btn ov-ghost" onClick={() => { note('Asked the team to move it. They call the client'); onClose() }}>Ask the team to move it</button>}</>}>
+        {open && <>
+          <p className="tp-mid">{open.label}</p>
+          {leadRef && <p className="tp-row"><Chip tone={stageChip(leadRef.stage, leadRef)[0]}>{stageChip(leadRef.stage, leadRef)[1]}</Chip></p>}
+          {ask && <Link to={`${paths.lead(leadRef.id)}?outcome=1`} className="lc-nudge" onClick={() => onClose()}><ClipboardCheck size={16} aria-hidden="true" /><span className="tp-grow"><b>How did it go?</b><small>The appointment ended. Mark the outcome</small></span><span className="lc-nudge-go">Mark outcome</span></Link>}
+          <p className="tp-row"><Phone size={16} />{phone}</p>
+          <p className="tp-row"><MapPin size={16} />Lives in {place}</p>
+          <p className="tp-sub">{open.kind === 'lead' ? 'Can’t make it sends them an apology and a link to pick a new time.' : 'The team makes the change and tells the client. You see it here.'}</p>
+        </>}
+      </Drawer>
+      <CantMakeIt appt={cant} lead={cant && leads.find(l => l.id === cant.ref)} onClose={() => setCant(null)} />
+    </>
+  )
+}
+
 // P910: no row of day buttons above the grid; a This week · Next week toggle instead (next week can be empty). Each
 // day header and each row is a real button: pointer, hover, pressed.
 const MONS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -152,35 +189,21 @@ export default function Calendar() {
   }, [])
   const { data: raw } = useSampleAppointments()
   const { data: leads } = useSampleLeads()
-  const { data: clients } = useSampleClients()
   const { data: settings } = useSampleSettings()
-  const note = useNote()
   const { data: blocked } = useSampleBlocks()
   const [open, setOpen] = useState(null)
   const [panel, setPanel] = useState(null)
-  const [cant, setCant] = useState(null)
   const tz = settings.timeZone || AGENT_TZ
   const events = raw.map(e => (e.iso ? { ...e, ...onAgentClock(e.iso, tz), on: dateOf(e.iso, tz), when: blockTime(e.iso, tz, e.tz), client: clientAt(e.iso, tz, e.tz) } : { ...e, on: week.isoOf(e.date), when: e.time, client: '' }))
   // P958: how each box looks. A lead's appointment that has ended takes the lead's result colour (Sold, No show,
   // Follow up, Not interested), dimmed; ended with no result yet, it keeps its colour with the Mark result dot.
   const now = clockNow()
-  const lookOf = e => {
-    const base = e.kind === 'lead' ? 'blue' : 'teal'
-    if (e.kind !== 'lead') return evLook({ base, past: false })
-    const lead = leads.find(l => l.id === e.ref)
-    const past = isPast(stampOf(e.on, e.time), now, e.mins || e.duration || 30)
-    return evLook({ base, past, result: leadResultTone(lead), needs: !!lead && needsResult(lead, now) })
-  }
+  // P992: the rule lives in cal958 agentCallLook, shared with the Overview "This week" card.
+  const lookOf = e => agentCallLook(e, e.kind === 'lead' ? leads.find(l => l.id === e.ref) : null, now)
   const settled = useSettled()
   const dayFirst = useDayFirst()
   const { day, open: openDay, close } = useOpenDay(NUMS, { esc: !open, isoOf })
   const { view, leaving } = useStickyDay(day)
-  const ref = open && (open.kind === 'lead' ? leads.find(l => l.id === open.ref) : clients.find(c => c.id === open.ref))
-  const phone = ref && (ref.phone || ref.client_phone)
-  const place = ref && `${ref.city}, ${ref.state}`
-  // P873: a lead's appointment card shows where the lead is now, and asks how it went once it has ended.
-  const leadRef = open?.kind === 'lead' ? ref : null
-  const ask = leadRef && needsOutcome(leadRef, clockNow())
   const shown = view != null ? DAYS.filter(([, d]) => d === view) : DAYS
   const ofDay = d => events.filter(e => e.on === isoOf(d)).sort((a, b) => minutesIn(a.time) - minutesIn(b.time))
   const list = view != null ? ofDay(view) : []
@@ -246,26 +269,9 @@ export default function Calendar() {
         )}
       </div>
 
-      {/* P949: a lead's booking opens the same pop-up as on Leads (details, status, messages, actions) */}
-      {open?.kind === 'lead' && leadRef && <LeadDrawer id={open.ref} onClose={() => setOpen(null)}
-        extra={!ask && ['booked', 'showed'].includes(leadRef.stage) ? <button type="button" className="tp-btn ov-ghost" data-cant onClick={() => { setCant(open); setOpen(null) }}><CalendarX2 size={14} />Can{'’'}t make it</button> : null} />}
-      <Drawer open={!!open && open.kind !== 'lead'} onClose={() => setOpen(null)} title={open?.who || ''} sub={open && `${open.day}, ${monOf(open.date)} ${open.date}, ${open.time} your time${open.iso && open.tz && clockOf(open.iso, open.tz) !== open.time ? ` · ${clockOf(open.iso, open.tz)} ${zoneAbbr(open.tz, open.iso)} for them` : ''}`}
-        footer={<><Link to={open?.kind === 'lead' ? paths.lead(open.ref) : paths.client(open?.ref)} className="tp-primary fx-accent" onClick={() => setOpen(null)}>{open?.kind === 'lead' ? 'Open lead' : 'Open client'}</Link>
-          {open?.kind === 'lead'
-            ? <button type="button" className="tp-btn ov-ghost" onClick={() => { setCant(open); setOpen(null) }}><CalendarX2 size={14} />Can{'’'}t make it</button>
-            : <button type="button" className="tp-btn ov-ghost" onClick={() => { note('Asked the team to move it. They call the client'); setOpen(null) }}>Ask the team to move it</button>}</>}>
-        {open && <>
-          <p className="tp-mid">{open.label}</p>
-          {leadRef && <p className="tp-row"><Chip tone={stageChip(leadRef.stage, leadRef)[0]}>{stageChip(leadRef.stage, leadRef)[1]}</Chip></p>}
-          {ask && <Link to={`${paths.lead(leadRef.id)}?outcome=1`} className="lc-nudge" onClick={() => setOpen(null)}><ClipboardCheck size={16} aria-hidden="true" /><span className="tp-grow"><b>How did it go?</b><small>The appointment ended. Mark the outcome</small></span><span className="lc-nudge-go">Mark outcome</span></Link>}
-          <p className="tp-row"><Phone size={16} />{phone}</p>
-          <p className="tp-row"><MapPin size={16} />Lives in {place}</p>
-          <p className="tp-sub">{open.kind === 'lead' ? 'Can’t make it sends them an apology and a link to pick a new time.' : 'The team makes the change and tells the client. You see it here.'}</p>
-        </>}
-      </Drawer>
+      <CallDrawer open={open} onClose={() => setOpen(null)} />
       <HoursDrawer key={panel === 'hours' ? 'h-open' : 'h'} open={panel === 'hours'} onClose={() => setPanel(null)} settings={settings} appts={raw} />
       <BlockDrawer key={panel === 'block' ? 'b-open' : 'b'} open={panel === 'block'} onClose={() => setPanel(null)} appts={raw} blocked={blocked} />
-      <CantMakeIt appt={cant} lead={cant && leads.find(l => l.id === cant.ref)} onClose={() => setCant(null)} />
     </div>
   )
 }

@@ -4,7 +4,7 @@
    in fast and settling back slowly; a press sinks them. Separate translate/scale properties, so an entrance animation
    holding `transform` can't pin them. */
 .fx-week .tp-tcol.today { background-color: transparent; }
-.fx-week .tp-tgrid-h b.today small {
+.fx-wk-d .fx-wk-today, .fx-week .tp-tgrid-h b.today small {
   margin-left: 4px; align-self: center; flex: none; padding: 2px 8px; border-radius: 999px;
   font-family: var(--font-ui); font-size: 11px; font-weight: 650; line-height: 1.35; letter-spacing: .01em;
   color: var(--sh-on-accent); background: var(--sh-acc, var(--ov-data-a)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3);

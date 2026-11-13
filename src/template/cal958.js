@@ -2,7 +2,7 @@
 // has passed looks, and the timings for "click a call: its day opens first, then the details slide in". Plain
 // functions, no React (cal958.test.js); the box itself is CalEv.jsx.
 import { clockOf, zoneAbbr } from '../lib/callSlots.js'
-import { agentStatusOf } from './agentView.js'
+import { agentStatusOf, needsResult } from './agentView.js'
 
 // Two lines at 16 px plus the box's padding and border: a box is never drawn shorter, so no line is ever cut in half.
 export const EV_MIN_PX = 44
@@ -47,6 +47,17 @@ export function isPast(startStamp, now, mins = 30) {
 export function evLook({ base, past, result, needs = past }) {
   if (past && result) return { tone: result, done: true, mark: false }
   return { tone: base, done: false, mark: !!(past && needs) }
+}
+
+// P992: the agent's call box look, one rule for the Calendar grid, its day list and the Overview "This week" card, so
+// they always match. A client call stays teal. A lead's call is blue until it ends; then it takes the lead's result
+// colour, dimmed (done), or keeps blue with the "Mark result" dot while the result is still to mark. `e.on` is the
+// call's day (YYYY-MM-DD) on the agent's clock.
+export function agentCallLook(e, lead, now) {
+  const base = e.kind === 'lead' ? 'blue' : 'teal'
+  if (e.kind !== 'lead') return evLook({ base, past: false })
+  const past = isPast(stampOf(e.on, e.time), now, e.mins || e.duration || 30)
+  return evLook({ base, past, result: leadResultTone(lead), needs: !!lead && needsResult(lead, now) })
 }
 
 // The class names a box adds: the two-line layout, its colour (is-<tone>), dimmed once done, and the dot.

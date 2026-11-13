@@ -1,9 +1,16 @@
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, Check, Clock, CalendarDays } from 'lucide-react'
 import { rangeWords } from '../spendPlan'
 import { useDeliveredPace } from '../useDeliveredPace'
 import { countByStatus } from '../agentView'
-import { useDataSource, useSampleOverview, useSampleClients, useSampleLeads, useSampleAppointments, useSampleNeeds } from '../data'
+import { useDataSource, useSampleOverview, useSampleClients, useSampleLeads, useSampleAppointments, useSampleNeeds, useSampleSettings, useWeek, AGENT_TZ, onAgentClock } from '../data'
+import { dateOf } from '../../lib/callSlots'
+import { clockNow } from '../leadLifecycle'
+import { agentCallLook, evClass, minsOf } from '../cal958'
+import { CallDrawer } from './Calendar'
+import '../cal947.css'
+import '../cal958.css'
 import { Avatar, Empty } from '../kit'
 import { CountUp } from '../motion'
 import { SetupProgress } from '../SetupProgress'
@@ -105,36 +112,51 @@ function Ring({ value, of }) {
 }
 
 // The working week, Mon to Fri, one column per day with its calls; today is marked. P893: all five days always show,
-// a day with nothing booked keeps its (empty) box. The week is the one holding today (or the first call).
-const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+// a day with nothing booked keeps its (empty) box.
+// P992: works like the Calendar. The week is the current one (Mon to Fri holding today, on the agent's clock, the same
+// useWeek the Calendar reads); today carries the Calendar's "Today" pill. Every call keeps its place; its look is the
+// Calendar's own (cal958 agentCallLook + evClass): blue lead, teal client, and once a lead's call has ended, the lead's
+// result colour dimmed, or the "Mark result" dot while it's still to mark. It follows the lead's status live and
+// re-checks the clock every minute. A call opens the Calendar's pop-up (CallDrawer).
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-function workWeek(appts, today) {
-  const ref = appts.find(a => a.date === today) || appts[0]
-  const year = Number(ref?.iso?.slice(0, 4)) || new Date().getFullYear()
-  const base = ref ? new Date(Date.UTC(year, Math.max(0, MON.indexOf(ref.mon || 'Nov')), ref.date)) : new Date()
-  const back = (base.getUTCDay() + 6) % 7 // days since Monday
-  return Array.from({ length: 5 }, (_, i) => {
-    const d = new Date(base.getTime() + (i - back) * 86400000)
-    return { day: DOW[d.getUTCDay()], date: d.getUTCDate(), mon: MON[d.getUTCMonth()] }
-  })
+function useWeekCalls() {
+  const week = useWeek()
+  const { data: raw } = useSampleAppointments()
+  const { data: settings } = useSampleSettings()
+  const tz = settings.timeZone || AGENT_TZ
+  return useMemo(() => {
+    const events = raw.map(e => (e.iso ? { ...e, ...onAgentClock(e.iso, tz), on: dateOf(e.iso, tz) } : { ...e, on: week.isoOf(e.date) }))
+    return week.days.map(([day, n]) => {
+      const iso = week.isoOf(n)
+      const list = events.filter(e => e.on === iso).sort((x, y) => (minsOf(x.time) ?? 0) - (minsOf(y.time) ?? 0))
+      return { day, date: n, mon: MON[Number(iso.slice(5, 7)) - 1], iso, today: n === week.today, list }
+    })
+  }, [raw, tz, week])
 }
-const inDay = (a, d) => a.date === d.date && (a.mon || 'Nov') === d.mon
-const minOf = t => { const m = String(t).match(/(\d+):(\d+) ([AP])M/); return m ? ((Number(m[1]) % 12) + (m[3] === 'P' ? 12 : 0)) * 60 + Number(m[2]) : 0 }
 
-function WeekStrip({ appts, today }) {
-  const week = workWeek(appts, today)
+function WeekStrip({ days, onPick }) {
+  const { data: leads } = useSampleLeads()
+  const [, tick] = useState(0)
+  useEffect(() => { const t = setInterval(() => tick(n => n + 1), 60000); return () => clearInterval(t) }, [])
+  const now = clockNow()
   return (
     <ol className="fx-wk" aria-label="Calls this week">
-      {week.map(d => {
-        const list = appts.filter(a => inDay(a, d)).sort((x, y) => minOf(x.time) - minOf(y.time))
-        return (
-          <li key={`${d.mon}${d.date}`} className={`${d.date === today ? 'is-today' : d.date < today ? 'is-past' : ''}${list.length ? '' : ' is-empty'}`.trim()}>
-            <span className="fx-wk-d"><b>{d.day}</b><small>{d.mon} {d.date}</small><i className="tp-num">{list.length}</i></span>
-            {list.map(a => <Link key={a.id} to={apptTo(a)} className={`fx-wk-ev is-${a.kind === 'client' ? 'teal' : 'blue'}`}><small>{a.time}</small><b>{a.who.split(' ')[0]}</b></Link>)}
-            {!list.length && <span className="fx-wk-none">Nothing booked</span>}
-          </li>
-        )
-      })}
+      {days.map(d => (
+        <li key={d.iso} className={`${d.today ? 'is-today' : ''}${d.list.length ? '' : ' is-empty'}`.trim() || undefined}>
+          <span className="fx-wk-d"><b>{d.day}</b><small>{d.mon} {d.date}</small>{d.today && <small className="fx-wk-today">Today</small>}<i className="tp-num">{d.list.length}</i></span>
+          {d.list.map(e => {
+            const look = agentCallLook(e, e.kind === 'lead' ? leads.find(l => l.id === e.ref) : null, now)
+            return (
+              <button key={e.id} type="button" className={`fx-wk-ev ${evClass(look)}`} onClick={() => onPick(e)}
+                aria-label={`${e.time}, ${e.who}, ${e.label}${look.done ? ', done' : look.mark ? ', mark the result' : ''}`}>
+                <small>{e.time}</small><b>{e.who.split(' ')[0]}</b>
+                {look.mark && <i className="ev958-mark" title="Mark result" aria-hidden="true" />}
+              </button>
+            )
+          })}
+          {!d.list.length && <span className="fx-wk-none">Nothing booked</span>}
+        </li>
+      ))}
     </ol>
   )
 }
@@ -171,7 +193,6 @@ export default function Overview() {
   const stOf = c => clientStatusOf(c, checkDay, checks)
   const clients = all.filter(c => stOf(c) !== 'closed')
   const { data: leads } = useSampleLeads()
-  const { data: appts } = useSampleAppointments()
   // P923: Delivered this week = booked appointments + live calls that reached the agent; the range and chart too.
   // P991: judged by pace while the week runs (Ahead of pace / On pace / Behind pace), by the full range once it closes.
   const { wk, dl, pace, last } = useDeliveredPace()
@@ -186,8 +207,9 @@ export default function Overview() {
   // P910: Your to-dos (calls to mark, the monthly check), each with its action; live calls pinned above them.
   const { data: needs } = useSampleNeeds()
   const act = useNeedAction()
-  const today = o.todayAppts[0]?.date ?? appts[0]?.date
-  const weekCalls = workWeek(appts, today).reduce((n, d) => n + appts.filter(a => inDay(a, d)).length, 0)
+  const weekDays = useWeekCalls()
+  const weekCalls = weekDays.reduce((n, d) => n + d.list.length, 0)
+  const [call, setCall] = useState(null)
   // P941: until their leads are live, the setup steps (the admin's Setup ticket, in the same words) lead the page.
   const setup = useLaunchView()
   // P955: the setup steps are the Leads setup: only with Leads. Without it, one small Add Leads card.
@@ -261,8 +283,9 @@ export default function Overview() {
       </div>
 
       <Tile className="fx-ovl-week" i={6} title="This week" sub={`${weekCalls} calls, Mon to Fri`} to={paths.calendar()} label="Open Calendar">
-        <WeekStrip appts={appts} today={today} />
+        <WeekStrip days={weekDays} onPick={setCall} />
       </Tile>
+      <CallDrawer open={call} onClose={() => setCall(null)} />
     </div>
   )
 }

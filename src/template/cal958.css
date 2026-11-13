@@ -19,13 +19,13 @@
 .fx-week .tp-tgrid-b .tp-tcol .tp-ev.ev958 > .ev958-l1::before, .fx-week .tp-tgrid-b .tp-tcol .tp-ev.ev958 > .ev958-l2::before { content: none; }
 
 /* Colour = the call's status (the shell's fills, the same as the Leads and Clients cards). */
-.fx-week .tp-ev.ev958.is-blue { --cf: var(--sh-cf-sky); --ci: var(--sh-ci); }
-.fx-week .tp-ev.ev958.is-teal { --cf: var(--sh-cf-butter); --ci: var(--sh-ci); }
-.fx-week .tp-ev.ev958.is-green { --cf: var(--sh-cf-sage); --ci: var(--sh-ci); }
-.fx-week .tp-ev.ev958.is-warn { --cf: var(--sh-cf-apricot); --ci: var(--sh-ci); }
-.fx-week .tp-ev.ev958.is-mute { --cf: var(--sh-cf-stone); --ci: var(--sh-ci); }
-.fx-week .tp-ev.ev958.is-rose { --cf: var(--sh-cf-coral); --ci: var(--sh-ci); }
-.fx-week .tp-ev.ev958.is-violet { --cf: var(--sh-cf-lilac); --ci: var(--sh-ci); }
+.fx-week .tp-ev.ev958.is-blue, .fx-wk-ev.ev958.is-blue { --cf: var(--sh-cf-sky); --ci: var(--sh-ci); }
+.fx-week .tp-ev.ev958.is-teal, .fx-wk-ev.ev958.is-teal { --cf: var(--sh-cf-butter); --ci: var(--sh-ci); }
+.fx-week .tp-ev.ev958.is-green, .fx-wk-ev.ev958.is-green { --cf: var(--sh-cf-sage); --ci: var(--sh-ci); }
+.fx-week .tp-ev.ev958.is-warn, .fx-wk-ev.ev958.is-warn { --cf: var(--sh-cf-apricot); --ci: var(--sh-ci); }
+.fx-week .tp-ev.ev958.is-mute, .fx-wk-ev.ev958.is-mute { --cf: var(--sh-cf-stone); --ci: var(--sh-ci); }
+.fx-week .tp-ev.ev958.is-rose, .fx-wk-ev.ev958.is-rose { --cf: var(--sh-cf-coral); --ci: var(--sh-ci); }
+.fx-week .tp-ev.ev958.is-violet, .fx-wk-ev.ev958.is-violet { --cf: var(--sh-cf-lilac); --ci: var(--sh-ci); }
 
 /* A call that has passed with a result: its result's colour, dimmed so it reads as done. Hover brings it up a little. */
 /* P966: a passed call comes in already dimmed: its entrance ends at the dimmed look, so it never shows at full colour and
@@ -47,3 +47,13 @@
 /* Nothing re-animates: once the page's first entrance is over (CalEv useSettled), the grid and its boxes never play an
    entrance again: not when the day opens or closes, not when details open or close, not when a box mounts later. */
 .fx-week.is-settled, .fx-week.is-settled .tp-ev { animation: none; }
+
+/* P992 — the Overview "This week" card's rows are Calendar call boxes in small: the same fill and ink per status (above),
+   the same dimmed look once a call has ended with a result, the same "Mark result" dot while it's still to mark. */
+.fx-wk-ev.ev958 { position: relative; border: 0; margin: 0; font: inherit; text-align: left; cursor: pointer; color: var(--ci); background: var(--cf); }
+.fx-wk-ev.ev958.has-mark > b { padding-right: 12px; }
+.fx-wk-ev.ev958.is-past { opacity: .6; }
+.fx-wk-ev.ev958.is-past:hover { opacity: .85; }
+.fx-wk-ev.ev958:focus-visible { outline: 2px solid var(--sh-acc, var(--ov-data-a)); outline-offset: 2px; }
+/* Today: no tinted column, the Calendar's "Today" pill after the date. */
+.fx-wk > li.is-today { border-color: var(--fx-edge); background: color-mix(in srgb, var(--ov-hi) 4%, transparent); }
