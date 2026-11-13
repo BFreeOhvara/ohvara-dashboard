@@ -360,9 +360,9 @@
 .ma-subpage .ma-sub-scroll { position: absolute; inset: 0; height: auto; padding-top: calc(var(--ma-top) + 4px); }
 .ma-sub-h { position: relative; display: flex; align-items: center; gap: 8px; min-height: 44px; margin-bottom: 4px; }
 .ma-sub-r { margin-left: auto; display: flex; gap: 8px; }
-.ma-backhit { position: absolute; top: 0; left: -12px; width: 44px; height: 44px; border: 0; padding: 0; background: transparent; opacity: 0; cursor: default; -webkit-tap-highlight-color: transparent; }
-.ma-backhit.is-end { left: auto; right: -12px; }
-.ma-backhit:focus-visible { opacity: 1; outline: 2px solid var(--ma-focus); border-radius: 12px; }
+/* P982: the back arrow is back: a plain chevron (no circle), 44 px target, top-left of the title row. */
+.ma-back { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; margin-left: -12px; border: 0; padding: 0; background: none; color: var(--ma-ink); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.ma-back:focus-visible { outline: 2px solid var(--ma-focus); border-radius: 12px; }
 .ma-bigt { display: flex; flex-direction: column; gap: 2px; margin: 0 4px 16px; min-width: 0; }
 .ma-bigt h1 { font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.12; overflow-wrap: anywhere; }
 .ma-subpage.is-big .ma-bigt h1 { font-size: 32px; letter-spacing: -.03em; line-height: 1.08; }
@@ -684,3 +684,15 @@ body:has(.ma) .tp-note-toast svg { color: inherit; }
 :root:not([data-theme="light"]) .ma-plan { background: var(--sh-glass-panel-deep); border: 1px solid var(--sh-glass-edge); box-shadow: inset 0 1px 0 var(--sh-glass-hl), 0 22px 40px -24px rgba(0, 0, 0, .6); }
 :root:not([data-theme="light"]) .ma-sheet { background: linear-gradient(var(--sh-glass-panel), var(--sh-glass-panel)), var(--sh-base); box-shadow: inset 0 1px 0 var(--sh-glass-hl), 0 -18px 40px -20px rgba(0, 0, 0, .6); }
 :root:not([data-theme="light"]) body:has(.ma) { background-color: var(--sh-base); }
+
+/* ── P982 ──────────────────────────────────────────────────────────────────────────────────────────────────────────
+   A chat keeps its arrow + name at the top on a soft fade (no band, no box); messages scroll under it. Sign out is red. */
+.ma-subpage.is-pin .ma-sub-scroll { padding-top: calc(var(--ma-top) + 62px); }
+.ma-pinh { position: absolute; top: 0; left: 0; right: 0; z-index: 4; display: flex; align-items: center; gap: 6px; padding: calc(var(--ma-top) + 4px) 16px 18px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ov-page) 94%, transparent) 0%, color-mix(in srgb, var(--ov-page) 80%, transparent) 62%, transparent 100%); pointer-events: none; }
+.ma-pinh > * { pointer-events: auto; }
+.ma-pinh-t { display: flex; flex-direction: column; min-width: 0; }
+.ma-pinh-t b { font-size: 17px; font-weight: 800; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ma-pinh-t small { font-size: 12.5px; color: var(--ma-ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ma-signout { color: var(--sh-f-coral); }
+[data-theme="light"] .ma-signout { color: color-mix(in srgb, var(--sh-f-coral) 70%, var(--sh-fi-coral)); }

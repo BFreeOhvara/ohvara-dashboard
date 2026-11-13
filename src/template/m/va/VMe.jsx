@@ -75,7 +75,7 @@ export default function VMe() {
           <Toggle on={dark} label="Dark theme" onChange={v => setTheme(v ? 'dark' : 'light')} />
         </div>
         <Row onClick={() => app.openSub('settings')} lead={<span className="ma-sym is-stone">⚙</span>} title="Settings" sub="Account, alerts, shifts, privacy" />
-        <Row onClick={() => app.openSub('help')} lead={<span className="ma-sym is-stone">?</span>} title="Help" sub="Message Brayden or Jordan" />
+        <Row onClick={() => app.openSub('help')} lead={<span className="ma-sym is-stone">?</span>} title="Help" sub="Message Ohvara support" />
       </div>
       <SignOutButton />
       <DayOffDrawer open={panel === 'off'} onClose={() => setPanel(null)} />
@@ -290,14 +290,14 @@ export function VLesson({ id }) {
   )
 }
 
-// Help: message Brayden or Jordan (the Ohvara thread), report a problem, the app's version.
+// Help: message Ohvara support (the Ohvara thread; P982: no names), report a problem, the app's version.
 export function VHelp() {
   const app = useApp()
   const [bug, setBug] = useState(false)
   return (
     <SubPage title="Help" line="We usually answer within the hour on a shift day" big>
       <div className="ma-glass ma-list ma-rise">
-        <Row onClick={() => app.openSub('thread', { t: SUPPORT_THREAD })} lead={<span className="ma-sym is-sky"><MessageCircle size={16} aria-hidden="true" /></span>} title="Message Brayden or Jordan" sub="Shifts, pay, the app, anything" />
+        <Row onClick={() => app.openSub('thread', { t: SUPPORT_THREAD })} lead={<span className="ma-sym is-sky"><MessageCircle size={16} aria-hidden="true" /></span>} title="Message Ohvara support" sub="Shifts, pay, the app, anything" />
         <Row onClick={() => app.openSub('training')} lead={<span className="ma-sym is-sage"><GraduationCap size={16} aria-hidden="true" /></span>} title="Training" sub="How every call works, step by step" />
         <Row onClick={() => setBug(true)} lead={<span className="ma-sym is-coral"><Bug size={16} aria-hidden="true" /></span>} title="Report a problem" sub="Something broken or looks wrong" />
       </div>

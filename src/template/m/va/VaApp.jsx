@@ -10,7 +10,7 @@ import { DataLoading, DataError } from '../../DataState'
 import { AppCtx, Ini, useStill } from '../AppKit'
 import { useTabSwipe } from '../useTabSwipe'
 import { useBackSwipe } from '../useBackSwipe'
-import { screenKey } from '../appModel'
+import { screenKey, stackOf } from '../appModel'
 import { VA_TABS, VA_LABEL, VA_OWN_BAR, vaRouteOf } from './vaModel'
 import { VaCallProvider } from './VCall'
 import VToday from './VToday'
@@ -79,10 +79,18 @@ function Frame() {
   const notif = route.sub === 'notif'
 
   // The layer stack: the screen on top and, under it, the one Back lands on (a lesson's Training list).
-  const parent = useMemo(() => (route.sub === 'training' && route.id ? { sub: 'training', id: null } : null), [route.sub, route.id])
+  const inLesson = route.sub === 'training' && !!route.id
+  const parent = inLesson ? { sub: 'training', id: null } : null
+  // P982 — a real screen stack (same as the agent app): each screen opened over another carries the screens under it
+  // in the address state, so Back / swipe-back goes one screen at a time and the one underneath is already there
+  // while you swipe (Settings under a Settings section, a client under its chat, Training under a lesson).
+  const topKey = route.sub && !notif ? screenKey(route.sub, route.id) : null
+  const stackJson = typeof loc.state?.stack === 'string' ? loc.state.stack : '' // the stack rides as a JSON string
+  const { under, stack } = stackOf(stackJson, topKey, parent ? { key: screenKey(parent.sub, parent.id), route: { sub: parent.sub, id: parent.id } } : null)
   const layers = []
-  if (parent) layers.push({ key: screenKey(parent.sub, parent.id), route: parent, top: false })
-  if (route.sub && !notif) layers.push({ key: screenKey(route.sub, route.id), route, top: true })
+  if (under) layers.push({ key: under.key, route: under.route, top: false })
+  if (topKey) layers.push({ key: topKey, route, top: true })
+  const pushKey = JSON.stringify(topKey ? [...stack, { key: topKey, route: { ...route }, href: loc.pathname + loc.search, tab }].slice(-8) : [])
   const enter = navType !== 'POP'
 
   // Badges: unread messages (Messages), new notifications (the bell on Today).
@@ -96,9 +104,11 @@ function Frame() {
   const leaveT = useRef(null)
   const doBack = useCallback(() => {
     if (window.history.state?.idx > 0) { navigate(-1); return }
-    const up = parent ? `${loc.pathname}?s=training` : TAB_PATH[tab]()
+    const st = stackOf(stackJson, topKey)
+    if (st.under?.href) { navigate(st.under.href, { replace: true, state: { tab: st.under.tab || tab, stack: JSON.stringify(st.stack.slice(0, -1)) } }); return }
+    const up = inLesson ? `${loc.pathname}?s=training` : TAB_PATH[tab]()
     navigate(up, { replace: true, state: { tab } })
-  }, [navigate, tab, parent, loc.pathname])
+  }, [navigate, tab, inLesson, loc.pathname, stackJson, topKey])
   const back = useCallback(() => {
     if (still || !route.sub) { doBack(); return }
     setLeaving(true)
@@ -114,12 +124,12 @@ function Frame() {
     if (key === tab && !route.sub && !Object.keys(state).length) { document.querySelector(`[data-ma-tab="${key}"]`)?.scrollTo({ top: 0, behavior: still ? 'auto' : 'smooth' }); return }
     navigate(TAB_PATH[key](), { replace: !route.sub, state: { tab: key, ...state } })
   }, [tab, route.sub, navigate, still])
-  const open = useCallback((to, extra = {}) => navigate(to, { state: { tab, ...extra } }), [navigate, tab])
+  const open = useCallback((to, extra = {}) => navigate(to, { state: { tab, ...extra, stack: pushKey } }), [navigate, tab, pushKey])
   const openSub = useCallback((key, params = {}) => {
     const q = new URLSearchParams({ s: key, ...params })
     const base = key === 'thread' ? TAB_PATH.messages() : loc.pathname
-    navigate(`${base}?${q}`, { state: { tab } })
-  }, [navigate, loc.pathname, tab])
+    navigate(`${base}?${q}`, { state: { tab, stack: pushKey } })
+  }, [navigate, loc.pathname, tab, pushKey])
 
   const app = useMemo(() => ({ tab, back, open, openSub, goTab, unseen, va: true }), [tab, back, open, openSub, goTab, unseen])
 

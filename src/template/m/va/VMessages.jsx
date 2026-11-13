@@ -115,7 +115,7 @@ function ChatView({ t, msgs, onSend, offline = false }) {
   )
   return (
     <div className="ma-chatwrap" ref={root}>
-      <SubPage title={titleOf(t)} line={isSupport(t) ? 'Brayden and Jordan · schedule, pay, anything' : t.va ? 'Just the two of you' : `About ${t.name} · the client doesn't see this`} foot={foot} className="is-chat">
+      <SubPage title={titleOf(t)} line={isSupport(t) ? 'Brayden and Jordan · schedule, pay, anything' : t.va ? 'Just the two of you' : `About ${t.name} · the client doesn't see this`} pin foot={foot} className="is-chat">
         <div className="ma-chat">
           {msgs.map((m, i) => {
             const mine = m.from === 'me'

@@ -16,11 +16,11 @@ import { useApp, SubPage, Row } from './AppKit'
 // the card, and recent charges. Everything else Billing does (change plan, products, pause, cancel, fix card) is on
 // "Plan, products and card", the portal's full Billing page. No payments inside the phone app (P775): there the
 // slider is read-only and Billing says it's managed on the website.
-export default function ABilling({ root = false }) {
+export default function ABilling({ root = false, nested }) {
   const app = useApp()
   const [params] = useSearchParams()
   const native = isNativeApp()
-  if (!root && params.get('full') === '1') {
+  if (typeof nested === 'string' ? nested === 'full' : !root && params.get('full') === '1') {
     return <SubPage title="Plan, products and card" className="is-wide">{native ? <NativeBillingNote /> : <div className="ma-embed"><Billing /></div>}</SubPage>
   }
   return <BillingSummary app={app} native={native} />

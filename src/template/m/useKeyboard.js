@@ -37,3 +37,21 @@ export function useKeyboard(rootRef, inputRef) {
     }
   }, [rootRef, inputRef])
 }
+
+// P982 — Search never brings the keyboard up by itself (iOS did, on open): if the field gets focus in the first moment
+// without the person touching it, it's dropped. A tap on the field focuses it as normal.
+export function useNoAutoKeyboard(ref) {
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    let touched = false
+    const touch = () => { touched = true }
+    const onFocus = () => { if (!touched) el.blur() }
+    el.addEventListener('pointerdown', touch)
+    el.addEventListener('touchstart', touch, { passive: true })
+    el.addEventListener('focus', onFocus)
+    if (document.activeElement === el) el.blur()
+    const t = setTimeout(() => el.removeEventListener('focus', onFocus), 1200)
+    return () => { clearTimeout(t); el.removeEventListener('pointerdown', touch); el.removeEventListener('touchstart', touch); el.removeEventListener('focus', onFocus) }
+  }, [ref])
+}

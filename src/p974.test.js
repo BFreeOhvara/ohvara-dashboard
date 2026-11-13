@@ -18,15 +18,15 @@ test('nothing pinned at the top: no status-bar strip, no blur, the sub-screen he
   const k = read('./template/m/AppKit.jsx')
   const scroller = k.indexOf('<div className="ma-scroll ma-sub-scroll"')
   assert.ok(scroller > 0 && k.indexOf('<div className="ma-sub-h">') > scroller, 'the header row is inside the scroller')
-  assert.doesNotMatch(k, /<header className="ma-sub-h"|ChevronLeft|onScroll/)
+  assert.doesNotMatch(k, /<header className="ma-sub-h"|onScroll/) // P982: the chevron is back, still in the scroller
   assert.match(css, /\.ma-sub-h \{ position: relative;/)
   assert.match(css, /\.ma-subpage \.ma-sub-scroll \{ position: absolute; inset: 0;/)
 })
 
-test('no back arrows: an invisible 44 px Back target for VoiceOver (top-right "Close notifications")', () => {
+test('back target: P982 brought the arrow back (a plain 44 px chevron; "Close notifications" on Notifications)', () => {
   const k = read('./template/m/AppKit.jsx')
-  assert.match(k, /className=\{`ma-backhit\$\{close \? ' is-end' : ''\}`\} aria-label=\{close \|\| 'Back'\} onClick=\{app\.back\}/)
-  assert.match(css, /\.ma-backhit \{[^}]*width: 44px; height: 44px;[^}]*opacity: 0;/)
+  assert.ok(k.includes("<BackArrow label={close || 'Back'} />"))
+  assert.ok(css.includes('.ma-back { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px;'))
   assert.match(read('./template/m/ANotes.jsx'), /close="Close notifications"/)
   assert.match(css, /\.ma-grab \{/) // bottom sheets keep their handle
 })

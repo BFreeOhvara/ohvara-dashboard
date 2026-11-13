@@ -103,7 +103,7 @@ export default function AAccount() {
           <span className="ma-grow"><b>Theme</b><small>{dark ? 'Dark' : 'Light'}</small></span>
           <Toggle on={dark} label="Dark theme" onChange={v => setTheme(v ? 'dark' : 'light')} />
         </div>
-        <Row onClick={() => app.openSub('help')} lead={<span className="ma-sym is-stone">?</span>} title="Help" sub="Message the team any time" />
+        <Row onClick={() => app.openSub('help')} lead={<span className="ma-sym is-stone">?</span>} title="Help" sub="Message Ohvara support" />
         {!native && <Row onClick={() => setPanel('app')} lead={<span className="ma-sym is-sky">↓</span>} title="Get the phone app" sub="Alerts the moment a lead comes in" />}
       </div>
       <SignOutButton />

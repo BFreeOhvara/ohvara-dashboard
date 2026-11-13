@@ -19,7 +19,7 @@ test('Search: no keyboard on open, no bottom bar, a big title that scrolls away'
   assert.doesNotMatch(s, /autoFocus/)
   assert.match(s, /<SubPage big title="Search"/)
   assert.ok(OWN_BAR.includes('search'))
-  assert.match(read('./template/m/AppKit.jsx'), /className=\{`ma-backhit/) // P974: no arrow at all, an invisible Back target
+  assert.ok(read('./template/m/AppKit.jsx').includes('className={`ma-back ma-press')) // P982: the plain back arrow is back
 })
 
 test('layer stack: a nested screen has its parent under it (the peek), with one key on top or under', () => {

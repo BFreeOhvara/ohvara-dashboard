@@ -43,9 +43,10 @@ const GROUPS = { account: 1, notify: 1, calendar: 1, billing: 1, privacy: 1 }
 const zoneWord = tz => String(tz || '').split(/[/]/).pop().replace(/_/g, ' ') || 'Not set'
 const listWords = (xs, none) => (xs.length ? (xs.length > 2 ? `${xs.slice(0, 2).join(', ')} +${xs.length - 2}` : xs.join(', ')) : none)
 
-export default function ASettings({ root = false }) {
+export default function ASettings({ root = false, nested }) {
   const [params] = useSearchParams()
-  const set = root ? null : params.get('set')
+  // P982: each screen in the stack says which section it is (the address only knows the top one).
+  const set = typeof nested === 'string' ? nested || null : root ? null : params.get('set')
   if (set && GROUPS[set]) return <SubPage title={TITLE[set]} line="Settings" big><GroupScreen k={set} /></SubPage>
   if (set && TITLE[set]) return <SubPage title={TITLE[set]} line={set === 'profile' ? 'You' : 'Settings'}><Section k={set} /></SubPage>
   return <SettingsList />

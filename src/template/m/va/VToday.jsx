@@ -39,7 +39,10 @@ export default function VToday() {
           <Bell size={25} strokeWidth={1.9} aria-hidden="true" />{app.unseen > 0 && <span className="ma-badge is-bell">{app.unseen}</span>}
         </button>
         <span className="ma-wordmark" aria-hidden="true">ohvara</span>
-        <button type="button" className="ma-ib ma-press" aria-label="Search clients" onClick={() => app.openSub('search')}><Search size={25} strokeWidth={1.9} aria-hidden="true" /></button>
+        <span className="va-home-r">
+          <button type="button" className="ma-ib ma-press" aria-label={vc.call && !vc.call.end ? 'Back to the call' : 'Phone'} onClick={vc.openPhone}><Phone size={24} strokeWidth={1.9} aria-hidden="true" /></button>
+          <button type="button" className="ma-ib ma-press" aria-label="Search clients" onClick={() => app.openSub('search')}><Search size={25} strokeWidth={1.9} aria-hidden="true" /></button>
+        </span>
       </div>
 
       <div className="ma-hello ma-rise" style={rise(0)}>

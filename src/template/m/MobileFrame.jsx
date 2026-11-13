@@ -27,7 +27,7 @@ import ABilling from './ABilling'
 import ASettings from './ASettings'
 import ASubmit from './ASubmit'
 import { ASearch, ANeeds, AToday, AImport } from './ASubs'
-import { OWN_BAR, routeOf, routeForTabs, tabsFromNav, baseTabFor, parentFor, stageOf, nestedOf, screenKey } from './appModel'
+import { OWN_BAR, routeOf, routeForTabs, tabsFromNav, baseTabFor, parentFor, stageOf, nestedOf, screenKey, stackOf } from './appModel'
 import { useTabSwipe } from './useTabSwipe'
 import { useBackSwipe } from './useBackSwipe'
 import '../glass.css'
@@ -54,15 +54,15 @@ const TAB_ICON = { home: Home, leads: Inbox, clients: Users, calendar: CalendarD
 const TAB_LABEL = { home: 'Home', leads: 'Leads', clients: 'Clients', calendar: 'Calendar', messages: 'Messages', account: 'Account' }
 const LEAVE_MS = 260
 
-function SubScreen({ route, root = false }) {
+function SubScreen({ route, root = false, nested }) {
   switch (route.sub) {
     case 'lead': return <ALead id={route.id} />
     case 'leads': return <ALeadsSub />
     case 'clients': return route.id ? <AClient id={route.id} /> : <AClients />
-    case 'billing': return <ABilling root={root} />
+    case 'billing': return <ABilling root={root} nested={nested} />
     case 'activity': return <AActivity />
-    case 'settings': return <ASettings root={root} />
-    case 'submit': return <ASubmit root={root} />
+    case 'settings': return <ASettings root={root} nested={nested} />
+    case 'submit': return <ASubmit root={root} nested={nested} />
     case 'search': return <ASearch />
     case 'needs': return <ANeeds />
     case 'today': return <AToday />
@@ -98,10 +98,21 @@ function Frame() {
   // P972 — the layer stack. The screen on top, and under it the screen Back lands on (a setting's Settings, a
   // client's Clients, the client under its chat): it shows while the top one is swiped away, and keeps its place
   // (same key) when it comes back up. A screen that came back with Back doesn't slide in again.
+  // P982 — a real screen stack: every screen opened over another carries the screens under it (address state), so
+  // the one Back lands on is already sitting there while you swipe, and keeps its place when it comes back up (no
+  // flash, no re-open). Back goes one screen at a time. With no stack (a link from outside): the parent, as before.
   const parent = parentFor(route, loc.search, tabs)
+  const topKey = route.sub && !notif ? screenKey(route.sub, route.id, nestedOf(route, loc.search)) : null
+  const pSub = parent && !notif ? parent.sub : null
+  const pId = parent && !notif ? parent.id : null
+  const stackJson = typeof loc.state?.stack === 'string' ? loc.state.stack : '' // the stack rides as a JSON string
+  const { under, stack } = stackOf(stackJson, topKey, pSub ? { key: screenKey(pSub, pId), route: { sub: pSub, id: pId } } : null)
   const layers = []
-  if (parent) layers.push({ key: screenKey(parent.sub, parent.id), route: { sub: parent.sub, id: parent.id }, top: notif })
-  if (route.sub && !notif) layers.push({ key: screenKey(route.sub, route.id, nestedOf(route, loc.search)), route, top: true })
+  const topNested = topKey ? nestedOf(route, loc.search) : ''
+  if (notif && parent) layers.push({ key: screenKey(parent.sub, parent.id), route: { sub: parent.sub, id: parent.id }, top: true })
+  else if (under) layers.push({ key: under.key, route: under.route, nested: under.nested, top: false })
+  if (topKey) layers.push({ key: topKey, route, nested: topNested, top: true })
+  const pushKey = JSON.stringify(topKey ? [...stack, { key: topKey, route: { ...route }, nested: topNested, href: loc.pathname + loc.search, tab: loc.state?.tab }].slice(-8) : [])
   const enter = navType !== 'POP'
 
   // Badges: leads to mark (Leads), unread messages (Messages), new notifications (the bell, on Home).
@@ -127,9 +138,11 @@ function Frame() {
   const leaveT = useRef(null)
   const doBack = useCallback(() => {
     if (window.history.state?.idx > 0) { navigate(-1); return }
+    const st = stackOf(stackJson, topKey)
+    if (st.under?.href) { navigate(st.under.href, { replace: true, state: { tab: st.under.tab || tab, stack: JSON.stringify(st.stack.slice(0, -1)) } }); return }
     const up = !parent ? TAB_PATH[tab]() : route.over || nestedOf(route, loc.search) ? loc.pathname : paths.clients()
     navigate(up, { replace: true, state: { tab } })
-  }, [navigate, tab, parent, route, loc.pathname, loc.search])
+  }, [navigate, tab, parent, route, loc.pathname, loc.search, stackJson, topKey])
   const back = useCallback(() => {
     if (still || !route.sub) { doBack(); return }
     setLeaving(true)
@@ -146,11 +159,11 @@ function Frame() {
     if (key === tab && !route.sub) { document.querySelector(`[data-ma-tab="${key}"]`)?.scrollTo({ top: 0, behavior: still ? 'auto' : 'smooth' }); return }
     navigate(TAB_PATH[key](), { replace: !route.sub, state: { tab: key } })
   }, [tabs, tab, route.sub, navigate, still])
-  const open = useCallback((to, extra = {}) => navigate(to, { state: { tab, ...extra } }), [navigate, tab])
+  const open = useCallback((to, extra = {}) => navigate(to, { state: { tab, ...extra, stack: pushKey } }), [navigate, tab, pushKey])
   const openSub = useCallback((key, params = {}) => {
     const q = new URLSearchParams({ s: key, ...params })
-    navigate(`${loc.pathname}?${q}`, { state: { tab } })
-  }, [navigate, loc.pathname, tab])
+    navigate(`${loc.pathname}?${q}`, { state: { tab, stack: pushKey } })
+  }, [navigate, loc.pathname, tab, pushKey])
 
   const app = useMemo(() => ({
     tab, back, open, openSub, goTab, unseen,
@@ -209,7 +222,7 @@ function Frame() {
               className={`ma-layer-r${top ? '' : ' is-under'}${top && enter ? ' is-enter' : ''}${top && leaving ? ' is-leaving' : ''}`}
               aria-hidden={!top && !notif ? true : undefined} inert={!top && !notif ? '' : undefined}
               onClickCapture={top ? swipeR.onClickCapture : undefined}>
-              <SubScreen route={L.route} root={!top} />
+              <SubScreen route={L.route} root={!top} nested={L.nested} />
             </div>
           )
         })}

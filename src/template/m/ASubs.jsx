@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Search, X, FileUp, CalendarDays } from 'lucide-react'
 import { useSampleLeads, useSampleClients, useSampleOverview } from '../data'
 import { useClientStatusOf } from '../checkSettings'
@@ -7,6 +7,7 @@ import { paths } from '../paths'
 import { ReactivateDrawer, ReactivationCards } from '../Reactivate'
 import { useNavKeys } from '../useProducts'
 import { useApp, SubPage, Ini, rise } from './AppKit'
+import { useNoAutoKeyboard } from './useKeyboard'
 import { NeedCard, useNeedItems, useNow } from './AHome'
 import { stageOf, TONE, TAG, minutesOf } from './appModel'
 
@@ -26,6 +27,8 @@ export function ASearch() {
   const statusOf = useClientStatusOf()
   const [q, setQ] = useState('')
   const [f, setF] = useState('all')
+  const input = useRef(null)
+  useNoAutoKeyboard(input) // P982: the keyboard only comes up when they tap the field
   const n = q.trim().toLowerCase()
   const digits = n.replace(/\D/g, '')
   const hit = (name, phone, more = '') => !n || `${name} ${more}`.toLowerCase().includes(n) || (digits.length >= 3 && String(phone || '').replace(/\D/g, '').includes(digits))
@@ -34,7 +37,7 @@ export function ASearch() {
   const cs = f === 'leads' ? [] : clients.filter(c => hit(clientName(c), c.client_phone, c.carrier_name || ''))
   return (
     <SubPage big title="Search" line="Leads and clients" className="is-search">
-      <label className="ma-search"><Search size={19} aria-hidden="true" /><input type="search" aria-label="Search leads and clients" placeholder="Name, phone, city or carrier" value={q} onChange={e => setQ(e.target.value)} />{q && <button type="button" className="ma-ib" aria-label="Clear" onClick={() => setQ('')}><X size={18} aria-hidden="true" /></button>}</label>
+      <label className="ma-search"><Search size={19} aria-hidden="true" /><input ref={input} type="search" aria-label="Search leads and clients" placeholder="Name, phone, city or carrier" value={q} onChange={e => setQ(e.target.value)} />{q && <button type="button" className="ma-ib" aria-label="Clear" onClick={() => setQ('')}><X size={18} aria-hidden="true" /></button>}</label>
       <div className="ma-chips" role="tablist" aria-label="Search in">
         {[['all', 'All'], ['leads', 'Leads'], ['clients', 'Clients']].map(([k, w]) => <button key={k} type="button" role="tab" aria-selected={f === k} className={`ma-fchip ma-press${f === k ? ' is-on' : ''}`} onClick={() => setF(k)}>{w}</button>)}
       </div>

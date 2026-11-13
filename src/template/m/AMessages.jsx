@@ -107,7 +107,7 @@ export function AThread({ id }) {
   )
   return (
     <div className="ma-chatwrap" ref={root}>
-      <SubPage title={t.name} line="with the Ohvara team" foot={foot} className="is-chat">
+      <SubPage pin title={t.name} line="with the Ohvara team" foot={foot} className="is-chat">
         <div className="ma-chat">
           {msgs.map((m, i) => {
             const me = m.from === 'me'

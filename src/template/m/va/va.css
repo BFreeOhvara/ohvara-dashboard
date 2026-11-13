@@ -169,3 +169,56 @@
   .va-hold-ic, .va-call-merged, .va-daylist, .ma-layer.va-call, .va-shake, .va-shift-top b > i.is-live { animation: none !important; }
   .va-seg > i, .va-bar > i { transition: none !important; }
 }
+
+/* ── P982: the call screen, iPhone style ─────────────────────────────────────────────────────────────────────────
+   Name + timer on top, a 3×2 grid of round buttons in the middle (the keypad swaps into the same spot), End centred
+   at the bottom with Hide beside it. Swipe down or the chevron minimises it to the green pill. */
+.ma-layer.va-call { padding: calc(var(--ma-top) + 6px) 22px calc(env(safe-area-inset-bottom, 0px) + 24px); overflow: hidden; touch-action: none; }
+.ma-layer.va-call textarea, .ma-layer.va-call input { touch-action: auto; }
+.va-call-top { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 44px; }
+.va-call-top > i { width: 44px; }
+.va-call-min { width: 44px; height: 44px; margin-left: -10px; border: 0; padding: 0; background: none; color: inherit; display: grid; place-items: center; cursor: pointer; }
+.va-call-who { display: flex; flex-direction: column; align-items: center; width: 100%; margin-top: clamp(12px, 5vh, 44px); text-align: center; }
+.ma-layer.va-call .va-call-name { margin-top: 0; font-size: 34px; font-weight: 700; line-height: 1.15; }
+.va-call-name.is-tones { letter-spacing: .06em; font-variant-numeric: tabular-nums; min-height: 39px; overflow-wrap: anywhere; }
+.va-call-who .va-call-timer { margin-top: 6px; }
+.va-call-mid { flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 0; }
+.ma-layer.va-call .va-call-grid { margin-top: 0; padding-top: 0; gap: 26px 0; max-width: 300px; }
+.ma-layer.va-call .va-cb-i { width: 78px; height: 78px; }
+.ma-layer.va-call .va-cb small { font-size: 13px; font-weight: 600; }
+.ma-layer.va-call .va-pad { grid-template-columns: repeat(3, 78px); gap: 16px 26px; margin-top: 0; animation: maFade .18s ease both; }
+.ma-layer.va-call .va-key { width: 78px; height: 78px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.va-key b { font-size: 32px; font-weight: 500; line-height: 1.05; }
+.va-key small { font-size: 9.5px; font-weight: 800; letter-spacing: .16em; opacity: .75; }
+.va-call-endrow { display: grid; grid-template-columns: 1fr 78px 1fr; align-items: center; width: 100%; max-width: 300px; margin-top: 18px; }
+.ma-layer.va-call .va-end { margin-top: 0; width: 78px; height: 78px; flex: none; }
+.va-hide { justify-self: center; display: grid; place-items: center; min-width: 64px; min-height: 44px; border: 0; padding: 0 8px; background: none; color: inherit; font: inherit; font-size: 17px; font-weight: 600; cursor: pointer; }
+.va-dial { width: 78px; height: 78px; border-radius: 50%; border: 0; display: grid; place-items: center; background: var(--sh-sage); color: white; cursor: pointer; box-shadow: 0 12px 30px -10px color-mix(in srgb, var(--sh-sage) 70%, transparent); }
+.va-dial:disabled { opacity: .45; cursor: default; }
+.va-phone .va-call-who { margin-top: clamp(16px, 6vh, 56px); min-height: 72px; }
+/* Sheets opened from the call sit above it. */
+.ma-layer.va-over { z-index: 125; }
+.va-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin: 4px 0 12px; border-radius: 999px; background: var(--ma-glass); }
+.va-seg button { min-height: 40px; border: 0; border-radius: 999px; background: none; color: var(--ma-ink2); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.va-seg button.is-on { background: var(--ma-ink); color: var(--ov-page); font-weight: 800; }
+.va-carriers { margin-top: 12px; }
+.va-carriers .ma-row.is-sug b::after { content: 'Suggested'; margin-left: 8px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; background: color-mix(in srgb, var(--sh-f-sage) 45%, transparent); color: inherit; vertical-align: 2px; }
+.va-num { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; font-size: 12px; font-weight: 700; color: var(--ma-ink2); }
+.va-num input { min-height: 52px; padding: 0 16px; border-radius: 16px; border: 1px solid var(--ma-glass-b); background: var(--ma-glass-hi); color: var(--ma-ink); font: inherit; font-size: 20px; font-variant-numeric: tabular-nums; }
+.va-sysnote { margin-top: 6px; }
+.va-sysnote .va-facts { margin-top: 10px; background: color-mix(in srgb, white 35%, transparent); }
+.va-sysnote-x { margin-top: 10px; font-weight: 600; }
+.va-mynotes { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; font-size: 12px; font-weight: 700; color: var(--ma-ink2); }
+.va-mynotes textarea { width: 100%; min-height: 120px; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--ma-glass-b); background: var(--ma-glass-hi); color: var(--ma-ink); font: inherit; font-size: 16px; resize: vertical; }
+/* The green pill while the call is minimised: above everything, under the status bar. */
+.va-pill { position: fixed; z-index: 140; top: calc(env(safe-area-inset-top, 0px) + 6px); left: 0; right: 0; width: max-content; margin: 0 auto; display: flex; align-items: center; gap: 8px; max-width: calc(100% - 32px); min-height: 36px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--sh-sage); color: white; font: inherit; font-size: 14px; font-weight: 700; box-shadow: 0 10px 26px -10px color-mix(in srgb, var(--sh-sage) 80%, transparent); cursor: pointer; animation: vaPillIn .3s var(--ma-ease, ease) both; }
+.va-pill b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.va-pill span { font-variant-numeric: tabular-nums; opacity: .92; }
+@keyframes vaPillIn { from { opacity: 0; transform: translateY(-12px); } }
+/* Today: phone + search on the right. Calendar rows: a round call button at the end of each row. */
+.va-home-r { display: flex; gap: 2px; }
+.va-uprow:has(.va-rowcall) { position: relative; }
+.va-uprow:has(.va-rowcall) .ma-up { padding-right: 62px; }
+.va-rowcall { position: absolute; right: 10px; bottom: 6px; width: 44px; height: 44px; border-radius: 50%; border: 0; display: grid; place-items: center; background: color-mix(in srgb, white 55%, transparent); color: var(--sh-fi-sage, inherit); cursor: pointer; }
+:root:not([data-theme="light"]) .va-rowcall { background: color-mix(in srgb, white 16%, transparent); color: white; }
+@media (prefers-reduced-motion: reduce) { .va-pill, .ma-layer.va-call .va-pad { animation: none !important; } }

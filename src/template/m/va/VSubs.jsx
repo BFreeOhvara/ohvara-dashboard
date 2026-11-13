@@ -3,6 +3,7 @@ import { Search, MessageCircle, Phone, CheckCheck } from 'lucide-react'
 import { useFulFeed, useFulClients, useFulSchedule } from '../../ful/data'
 import { whyShort } from '../../ful/callSteps'
 import { useApp, SubPage, Ini, rise } from '../AppKit'
+import { useNoAutoKeyboard } from '../useKeyboard'
 import { NoteRow } from '../ANotes'
 import { useVaCall, useVaThreads, FEED_SEEN } from './vaStore'
 import { useVaNow, dayOfItem } from './useVaNow'
@@ -35,7 +36,7 @@ export function VSearch() {
   const { data: clients } = useFulClients()
   const [q, setQ] = useState('')
   const input = useRef(null)
-  useEffect(() => { const t = setTimeout(() => input.current?.focus(), 380); return () => clearTimeout(t) }, [])
+  useNoAutoKeyboard(input) // P982: no focus on open; the keyboard only comes up when they tap the field
   const hits = useMemo(() => {
     const t = q.trim().toLowerCase()
     if (!t) return clients.slice(0, 8)

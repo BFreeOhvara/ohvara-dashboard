@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { ChevronRight, Phone, LogOut } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Phone, LogOut } from 'lucide-react'
 import { useSampleActions, useSampleAppointments, useSampleSettings, useSampleBilling } from '../data'
 import { useNote, useAccount } from '../kit'
 import { useExit, still } from '../motion'
@@ -22,24 +22,41 @@ export const useApp = () => useContext(AppCtx)
 
 // A sub-screen (P974): nothing is pinned at the top. A short row (buttons on the left or right, if any), the title and
 // its line all sit IN the page and scroll away with it; the page runs up behind the status bar with no strip, no blur.
-// There is no back arrow: you swipe back (P972). An invisible 44 px "Back" target sits top-left (top-right for
-// Notifications, which passes `close`) so VoiceOver and a stray tap still have one. `big` is the large title (32 px);
+// P982: a plain back arrow sits top-left (Notifications passes `close` for its label); swipe back works too. `big` is the large title (32 px);
 // otherwise 26 px. `bare` drops the title block (the client screen's hero carries the name).
-export function SubPage({ title, line, foot, children, className = '', right, close, big = false, left, bare = false }) {
+// P982 — the back arrow is back (tap OR swipe): a plain chevron, no circle, top-left of the title row, inside the
+// scroller so it scrolls away with the title. `pin` (a chat): the arrow + name stay at the top on a soft fade instead.
+export function BackArrow({ label = 'Back', className = '' }) {
   const app = useApp()
   return (
-    <div className={`ma-subpage${big ? ' is-big' : ''} ${className}`}>
+    <button type="button" className={`ma-back ma-press ${className}`} aria-label={label} onClick={app.back}>
+      <ChevronLeft size={30} strokeWidth={2.3} aria-hidden="true" />
+    </button>
+  )
+}
+export function SubPage({ title, line, foot, children, className = '', right, close, big = false, left, bare = false, pin = false }) {
+  return (
+    <div className={`ma-subpage${big ? ' is-big' : ''}${pin ? ' is-pin' : ''} ${className}`}>
       <div className="ma-scroll ma-sub-scroll" data-ma-scroll>
         <div className="ma-sub-b">
-          <div className="ma-sub-h">
-            <button type="button" className={`ma-backhit${close ? ' is-end' : ''}`} aria-label={close || 'Back'} onClick={app.back} />
-            {left}
-            {right && <span className="ma-sub-r">{right}</span>}
-          </div>
-          {!bare && <div className="ma-bigt"><h1>{title}</h1>{line && <small>{line}</small>}</div>}
+          {!pin && (
+            <div className="ma-sub-h">
+              <BackArrow label={close || 'Back'} />
+              {left}
+              {right && <span className="ma-sub-r">{right}</span>}
+            </div>
+          )}
+          {!bare && !pin && <div className="ma-bigt"><h1>{title}</h1>{line && <small>{line}</small>}</div>}
           {children}
         </div>
       </div>
+      {pin && (
+        <div className="ma-pinh">
+          <BackArrow label={close || 'Back'} />
+          <span className="ma-grow ma-pinh-t"><b>{title}</b>{line && <small>{line}</small>}</span>
+          {right && <span className="ma-sub-r">{right}</span>}
+        </div>
+      )}
       {foot && <div className="ma-foot">{foot}</div>}
     </div>
   )
@@ -88,7 +105,7 @@ function useEsc(open, onClose) {
 
 // A sheet that slides up from the bottom over a dimmed page (the result sheet, a calendar day). P972: pull it down
 // by the handle or the body (when scrolled to its top) to close it; it springs back if the pull is short.
-export function BottomSheet({ open, onClose, label, children, tall = false }) {
+export function BottomSheet({ open, onClose, label, children, tall = false, className = '' }) {
   const [shown, leaving] = useExit(open)
   const sheet = useRef(null)
   const scrim = useRef(null)
@@ -96,7 +113,7 @@ export function BottomSheet({ open, onClose, label, children, tall = false }) {
   useSheetDrag({ sheetRef: sheet, scrimRef: scrim, onClose, on: shown && !leaving })
   if (!shown) return null
   return createPortal(
-    <div className={`tp fx ma-layer${leaving ? ' is-leaving' : ''}`} role="presentation">
+    <div className={`tp fx ma-layer${leaving ? ' is-leaving' : ''}${className ? ` ${className}` : ''}`} role="presentation">
       <button type="button" className="ma-scrim" aria-label="Close" onClick={onClose} ref={scrim} />
       <section className={`ma-sheet${tall ? ' is-tall' : ''}`} role="dialog" aria-modal="true" aria-label={label} ref={sheet}>
         <i className="ma-grab" aria-hidden="true" />

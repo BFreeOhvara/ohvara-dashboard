@@ -21,9 +21,9 @@ import { useApp, SubPage, Toggle } from './AppKit'
 // call). A spouse or an exact call time opens the portal's full form (?full=1).
 const BEST = TIMES.map(t => ({ key: t, label: t }))
 
-export default function ASubmit({ root = false }) {
+export default function ASubmit({ root = false, nested }) {
   const [params] = useSearchParams()
-  if (!root && params.get('full') === '1') return <SubPage title="Submit a policy" className="is-wide"><div className="ma-embed"><Submit /></div></SubPage>
+  if (typeof nested === 'string' ? nested === 'full' : !root && params.get('full') === '1') return <SubPage title="Submit a policy" className="is-wide"><div className="ma-embed"><Submit /></div></SubPage>
   return <SubmitForm leadId={params.get('lead')} />
 }
 

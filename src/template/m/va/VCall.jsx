@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Phone, Mic, MicOff, Grid3x3, Volume2, Building2, Check, Pause, Play, NotebookPen, PhoneOff } from 'lucide-react'
+import { Phone, Mic, MicOff, Grid3x3, Volume2, Building2, Check, Pause, Play, NotebookPen, PhoneOff, Plus, ChevronDown, Search, Delete } from 'lucide-react'
 import { useFulActions, useFulClients, useFulClock, useFulSource, useFulThreads } from '../../ful/data'
 import { newCall, callReducer } from '../../ful/callLine'
 import { fromItem } from '../../ful/callWho'
@@ -13,9 +13,10 @@ import { clockOf } from '../../../lib/callSlots'
 import { useNote } from '../../kit'
 import { useExit } from '../../motion'
 import { BottomSheet, Ini } from '../AppKit'
+import { CARRIER_CATALOG, findCarrier, matchCarriers } from '../../../lib/carriers/catalog'
 import { CallCtx } from './vaStore'
 import { useVaNow } from './useVaNow'
-import { OUTCOMES, outcomePlan, carrierLine, carrierPhone, carrierId, draftWords, firstName, callTimer, holdTitle, forLine } from './vaModel'
+import { OUTCOMES, outcomePlan, carrierLine, draftWords, firstName, callTimer, holdTitle, forLine } from './vaModel'
 
 // P975 — the call, the heart of the VA app. One call at a time, on the SAME engine as the desktop VA phone
 // (ful/Phone.jsx): the call state is ful/callLine's reducer, the person is ful/callWho's, and once calling is on
@@ -50,6 +51,8 @@ export function VaCallProvider({ schedule = [], children }) {
   const [pending, setPending] = useState(readPending) // a result still owed from a call that ended before the app closed
   const [held, setHeld] = useState(() => (source === 'sample' ? 2 : 0)) // sample: callers waiting on the line
   const [heldAt] = useState(() => Date.now())
+  const [mini, setMini] = useState(false)    // P982: the call screen swiped down to the green pill
+  const [phone, setPhone] = useState(false)  // P982: the dialer
 
   const { nowMs } = useVaNow()
   const gateOf = useCallback(i => callGate({ iso: i?.iso, done: i?.done, nowMs, lead: openMin }), [nowMs, openMin])
@@ -58,7 +61,7 @@ export function VaCallProvider({ schedule = [], children }) {
 
   const begin = useCallback((who, it) => {
     if (call) { note(call.end ? 'Save how the last call went first' : 'Finish this call first'); return false }
-    setItem(it); setBrief(null)
+    setItem(it); setBrief(null); setMini(false); setPhone(false)
     act({ type: 'start', who })
     if (rl && !who.offer) {
       rl.openLine({ leadId: who.kind === 'lead' ? who.id : null, policyId: who.kind !== 'lead' ? who.policyId || who.id : null }, { onEnd: () => act({ type: 'end' }) })
@@ -133,10 +136,24 @@ export function VaCallProvider({ schedule = [], children }) {
     note(`${first}: ${plan.word.toLowerCase()}${k === 'agent' ? ' · the agent sees it now' : ''}`)
   }, [owed, call?.notes, clock.tz, tellAgent, clients, actions, rl, note])
 
+  // P982: the dialer. Someone on file: their booked call when it's open now, else a call to them. A number not on file
+  // only runs while calling is off (the screen keeps time and notes); the live line never dials a free number.
+  const dial = useCallback(({ digits, client }) => {
+    if (client) {
+      const booked = schedule.find(i => !i.done && (i.row?.client_id === client.id || i.row?.client?.id === client.id) && gateOf(i).open)
+      if (booked) { begin(fromItem(booked), booked); return }
+      begin({ key: `p-${client.id}`, kind: 'callin', id: client.id, role: 'client', name: client.name, number: client.client_phone, state: client.state, city: client.city, agentId: client.agent_id, agent: client.agent, carrier: client.carrier_name, reason: 'You called them', clientId: client.id }, null)
+      return
+    }
+    if (rl) { note('The Ohvara line only calls clients and leads on file'); return }
+    begin({ key: `d-${digits}`, kind: 'dial', role: 'client', name: fmtPhone(digits), number: fmtPhone(digits), reason: 'Dialed from the keypad' }, null)
+  }, [schedule, gateOf, begin, rl, note])
+
   const value = useMemo(() => ({
-    call, act, srv, rl, item, start, takeHold, holdCount, gateOf, nowMs,
+    call, act, srv, rl, item, start, takeHold, holdCount, gateOf, nowMs, mini,
+    openPhone: () => (call && !call.end ? setMini(false) : setPhone(true)),
     openBrief: it => setBrief(it), needResult: it => { const p = { ref: it.ref, name: it.name, clientId: it.row?.client_id || null, at: Date.now() }; writePending(p); setPending(p) },
-  }), [call, srv, rl, item, start, takeHold, holdCount, gateOf, nowMs])
+  }), [call, srv, rl, item, start, takeHold, holdCount, gateOf, nowMs, mini])
 
   const holdNow = useTick(holdCount > 0)
   const longest = Math.round((holdNow - heldAt) / 1000) + 100
@@ -144,7 +161,9 @@ export function VaCallProvider({ schedule = [], children }) {
     <CallCtx.Provider value={{ ...value, holdLine: holdCount ? holdTitle(holdCount, offer ? 0 : longest) : '' }}>
       {children}
       <BriefSheet it={brief} onClose={() => setBrief(null)} onStart={() => start(brief)} gate={brief ? gateOf(brief) : null} tz={clock.tz} />
-      {call && !call.end && <CallScreen call={call} act={act} srv={srv} rl={rl} item={item} />}
+      {phone && !call && <PhoneScreen onClose={() => setPhone(false)} onDial={dial} />}
+      {call && !call.end && !mini && <CallScreen call={call} act={act} srv={srv} rl={rl} item={item} onMin={() => setMini(true)} />}
+      {call && !call.end && mini && <CallPill call={call} onOpen={() => setMini(false)} />}
       <ResultSheet owed={owed} onPick={pick} />
     </CallCtx.Provider>
   )
@@ -183,18 +202,76 @@ function BriefSheet({ it, onClose, onStart, gate, tz }) {
   )
 }
 
-// ── The call screen ──────────────────────────────────────────────────────────────────────────────────────────────
-function CallScreen({ call, act, srv, rl, item }) {
-  const now = useTick(true)
-  const [notes, setNotes] = useState(false)
-  const who = call.who
-  const carrierName = who.carrier || item?.row?.old_carrier || item?.row?.carrier || ''
-  const carrierParty = call.parties.find(p => p.role === 'carrier')
-  const merged = carrierParty?.state === 'line'
-  const ringing = carrierParty && carrierParty.state !== 'line'
-  const partyOf = p => (p.role === 'lead' ? 'lead' : p.role === 'client' ? 'client' : p.role)
+// ── The call screen (P982: iPhone style) ─────────────────────────────────────────────────────────────────────────
+// Big name + timer on top, one 3×2 grid of round buttons (Speaker, Mute, Hold / Keypad, Add, Notes), End centred
+// below. Keypad swaps the grid for a 3×4 dial pad in the same spot, with "Hide" beside End to bring the buttons back.
+// Add (+) opens a small sheet: a carrier (the brief's suggested one first) or another number, rung and merged into a
+// 3-way call on the same stack as before. Notes: the system's note for this call on top, the VA's own notes below.
+// Swipe down (or the chevron) minimises the screen to a green pill at the top; the call keeps going.
+const digitsOf = s => String(s || '').replace(/\D/g, '')
+const fmtPhone = s => {
+  const d = digitsOf(s).replace(/^1(?=\d{10}$)/, '')
+  if (d.length === 10) return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`
+  if (d.length === 7) return `${d.slice(0, 3)}-${d.slice(3)}`
+  return s
+}
+const KEY_LETTERS = { 2: 'ABC', 3: 'DEF', 4: 'GHI', 5: 'JKL', 6: 'MNO', 7: 'PQRS', 8: 'TUV', 9: 'WXYZ', 0: '+' }
+const keyLabel = k => (k === '*' ? 'Star' : k === '#' ? 'Pound' : k)
 
-  // Sample: the carrier picks up after a moment (a real line reports its own legs). Then the 3-way merge.
+function useSwipeDown(onDone, on = true) {
+  const ref = useRef(null)
+  const d = useRef(null)
+  const moved = useRef(false)
+  const reset = el => { el.style.transition = ''; el.style.transform = '' }
+  const handlers = on ? {
+    onPointerDown: e => { if (e.target.closest('textarea, input, .ma-sheet')) return; d.current = { y: e.clientY, x: e.clientX, t: Date.now(), dy: 0 }; moved.current = false },
+    onPointerMove: e => {
+      const g = d.current
+      const el = ref.current
+      if (!g || !el) return
+      g.dy = Math.max(0, e.clientY - g.y)
+      if (!moved.current && g.dy > 8 && g.dy > Math.abs(e.clientX - g.x)) moved.current = true
+      if (moved.current) { el.style.transition = 'none'; el.style.transform = `translate3d(0, ${g.dy}px, 0)` }
+    },
+    onPointerUp: () => {
+      const g = d.current
+      const el = ref.current
+      d.current = null
+      if (!g || !el || !moved.current) return
+      const fast = g.dy / Math.max(1, Date.now() - g.t) > 0.6
+      if (g.dy > 120 || (fast && g.dy > 40)) { el.style.transition = 'transform .22s var(--ma-ease)'; el.style.transform = 'translate3d(0, 100%, 0)'; setTimeout(onDone, 200) } else reset(el)
+    },
+    onPointerCancel: () => { d.current = null; if (ref.current) reset(ref.current) },
+    onClickCapture: e => { if (moved.current) { e.preventDefault(); e.stopPropagation(); moved.current = false } },
+  } : {}
+  return { ref, handlers }
+}
+
+function Pad({ onKey }) {
+  return (
+    <div className="va-pad" role="group" aria-label="Keypad">
+      {PAD.map(k => (
+        <button key={k} type="button" className="va-key ma-press" aria-label={keyLabel(k)} onClick={() => onKey(k)}>
+          <b>{k}</b>{KEY_LETTERS[k] && <small>{KEY_LETTERS[k]}</small>}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function CallScreen({ call, act, srv, rl, item, onMin }) {
+  const now = useTick(true)
+  const note = useNote()
+  const [sheet, setSheet] = useState(null) // 'add' | 'notes'
+  const who = call.who
+  const carrierName = who.carrier || item?.row?.old_carrier || item?.row?.carrier || item?.row?.client?.carrier_name || ''
+  const added = call.parties.find((p, i) => i > 0)
+  const merged = added?.state === 'line'
+  const ringing = !!added && added.state !== 'line'
+  const partyOf = p => (p.role === 'lead' ? 'lead' : p.role === 'client' ? 'client' : p.role)
+  const { ref, handlers } = useSwipeDown(onMin, !sheet)
+
+  // Sample: whoever was added picks up after a moment (a real line reports its own legs). Then the 3-way merge.
   const ringingIds = call.parties.filter(p => p.state === 'ringing').map(p => p.id).join('|')
   useEffect(() => {
     if (!ringingIds || call.lineId) return undefined
@@ -204,49 +281,193 @@ function CallScreen({ call, act, srv, rl, item }) {
   const waiting = call.parties.some(p => p.state === 'waiting')
   useEffect(() => { if (waiting) { srv('merge'); act({ type: 'merge' }) } }, [waiting, srv, act])
 
-  const addCarrier = () => {
-    if (carrierParty) return
-    const id = carrierId(carrierName) || `carrier-${carrierName || 'line'}`
-    srv('ring_carrier', { carrier_id: id })
-    act({ type: 'add', party: { id, name: carrierName || 'Carrier', role: 'carrier', number: carrierPhone(carrierName) } })
+  const addParty = p => {
+    setSheet(null)
+    if (added) return
+    if (p.role === 'carrier') srv('ring_carrier', { carrier_id: p.id })
+    else if (p.role === 'agent') srv('ring_agent')
+    else if (call.lineId) { note('The Ohvara line only rings numbers on file: a carrier or the agent'); return }
+    act({ type: 'add', party: p })
   }
   const heldMs = call.held ? now - (call.heldSince || now) : 0
   const took = callTimer(now - call.start)
   const end = () => { srv('end_all'); rl?.hangUp?.(); act({ type: 'end' }) }
   const btn = (key, label, Icon, on, run, extra = {}) => (
     <button key={key} type="button" className={`va-cb ma-press${on ? ' is-on' : ''}${extra.tone ? ` is-${extra.tone}` : ''}`} aria-pressed={extra.press === false ? undefined : !!on} aria-label={extra.aria || label} onClick={run} disabled={extra.disabled}>
-      <span className="va-cb-i"><Icon size={24} aria-hidden="true" /></span><small>{label}</small>
+      <span className="va-cb-i"><Icon size={28} strokeWidth={1.9} aria-hidden="true" /></span><small>{label}</small>
     </button>
   )
+  const status = call.held ? `On hold · ${callTimer(heldMs)}` : call.muted ? `Muted · ${took}` : took
+  const tones = call.pad && call.tones
   return createPortal(
-    <div className="tp fx ma-layer va-call" role="dialog" aria-modal="true" aria-label={`On a call with ${who.name}`}>
-      <small className="va-call-line">{merged ? 'Ohvara line · 3-way call' : 'Ohvara line · client line'}</small>
-      <span className="va-call-av"><Ini name={who.name} tone="sky" size={96} /></span>
-      <b className="va-call-name">{who.name}</b>
-      <span className="va-call-what">{forLine(item ? whyShort(item) : who.reason, who.agent)}</span>
-      {merged && <span className="va-call-merged" role="status">3-way · {carrierParty.name} line joined</span>}
-      {ringing && <span className="va-call-merged is-ringing" role="status">Calling {carrierParty.name}…</span>}
-      <span className="va-call-timer" aria-live="off">{call.held ? `On hold · ${callTimer(heldMs)}` : call.muted ? `Muted · ${took}` : took}</span>
-      {!call.lineId && <p className="va-call-off">Calling is off right now. Dial <b>{who.number || 'them'}</b> from your phone. This keeps the time, the line and your notes.</p>}
-      {notes && (
-        <label className="va-call-notes"><span>Notes · saved with the call</span>
-          <textarea rows={3} value={call.notes} placeholder="What happened on the call" onChange={e => act({ type: 'notes', text: e.target.value })} />
-        </label>
-      )}
-      {call.pad && !notes && (
-        <div className="va-pad" aria-label="Keypad for carrier menus">
-          {PAD.map(d => <button key={d} type="button" className="va-key ma-press" onClick={() => { act({ type: 'tone', key: d }); srv('dtmf', { digits: d }) }}>{d}</button>)}
-        </div>
-      )}
-      <div className="va-call-grid">
-        {btn('mute', call.muted ? 'Muted' : 'Mute', call.muted ? MicOff : Mic, call.muted, () => { rl?.mute?.(!call.muted); act({ type: 'mute' }) })}
-        {btn('pad', 'Keypad', Grid3x3, call.pad, () => { setNotes(false); act({ type: 'pad' }) })}
-        {btn('spk', 'Speaker', Volume2, call.speaker, () => act({ type: 'speaker' }))}
-        {btn('carrier', merged ? 'Carrier on' : ringing ? 'Calling…' : 'Add carrier', merged ? Check : Building2, merged, addCarrier, { press: false, tone: merged ? 'sage' : null, aria: merged ? `${carrierParty.name} is on the call` : `Call ${carrierName || 'the carrier'} and merge them in`, disabled: !!carrierParty })}
-        {btn('hold', call.held ? 'Resume' : 'Hold', call.held ? Play : Pause, call.held, () => { srv(call.held ? 'resume' : 'hold', { party: partyOf(who) }); act({ type: 'hold' }) }, { tone: call.held ? 'butter' : null })}
-        {btn('notes', 'Notes', NotebookPen, notes, () => { if (call.pad) act({ type: 'pad' }); setNotes(n => !n) }, { press: false })}
+    <div ref={ref} className={`tp fx ma-layer va-call${call.pad ? ' is-pad' : ''}`} role="dialog" aria-modal="true" aria-label={`On a call with ${who.name}`} {...handlers}>
+      <div className="va-call-top">
+        <button type="button" className="va-call-min ma-press" aria-label="Minimise the call" onClick={onMin}><ChevronDown size={30} strokeWidth={2.2} aria-hidden="true" /></button>
+        <small className="va-call-line">{merged ? 'Ohvara line · 3-way call' : 'Ohvara line'}</small>
+        <i aria-hidden="true" />
       </div>
-      <button type="button" className="va-end ma-press" aria-label="End call" onClick={end}><PhoneOff size={30} aria-hidden="true" /></button>
+      <div className="va-call-who">
+        <b className={`va-call-name${tones ? ' is-tones' : ''}`} aria-live={tones ? 'polite' : undefined}>{tones ? call.tones : who.name}</b>
+        <span className="va-call-timer" aria-live="off">{tones ? who.name : status}</span>
+        {!call.pad && <span className="va-call-what">{forLine(item ? whyShort(item) : who.reason, who.agent)}</span>}
+        {merged && <span className="va-call-merged" role="status">3-way · {added.name} joined</span>}
+        {ringing && <span className="va-call-merged is-ringing" role="status">Calling {added.name}…</span>}
+        {!call.lineId && !call.pad && <p className="va-call-off">Calling is off right now. Dial <b>{who.number || 'them'}</b> from your phone. This keeps the time, the line and your notes.</p>}
+      </div>
+      <div className="va-call-mid">
+        {call.pad
+          ? <Pad onKey={k => { act({ type: 'tone', key: k }); srv('dtmf', { digits: k }) }} />
+          : (
+            <div className="va-call-grid">
+              {btn('spk', 'Speaker', Volume2, call.speaker, () => act({ type: 'speaker' }))}
+              {btn('mute', 'Mute', call.muted ? MicOff : Mic, call.muted, () => { rl?.mute?.(!call.muted); act({ type: 'mute' }) })}
+              {btn('hold', call.held ? 'Resume' : 'Hold', call.held ? Play : Pause, call.held, () => { srv(call.held ? 'resume' : 'hold', { party: partyOf(who) }); act({ type: 'hold' }) })}
+              {btn('pad', 'Keypad', Grid3x3, false, () => act({ type: 'pad' }), { press: false })}
+              {btn('add', merged ? 'Added' : ringing ? 'Calling…' : 'Add', merged ? Check : Plus, merged, () => setSheet('add'), { press: false, tone: merged ? 'sage' : null, aria: added ? `${added.name} is ${merged ? 'on the call' : 'ringing'}` : 'Add someone to the call', disabled: !!added })}
+              {btn('notes', 'Notes', NotebookPen, !!call.notes, () => setSheet('notes'), { press: false })}
+            </div>
+          )}
+      </div>
+      <div className="va-call-endrow">
+        <span aria-hidden="true" />
+        <button type="button" className="va-end ma-press" aria-label="End call" onClick={end}><PhoneOff size={32} aria-hidden="true" /></button>
+        {call.pad ? <button type="button" className="va-hide" onClick={() => act({ type: 'pad' })}>Hide</button> : <span aria-hidden="true" />}
+      </div>
+      <AddSheet open={sheet === 'add'} onClose={() => setSheet(null)} onPick={addParty} suggested={carrierName} agent={who.agent} />
+      <NotesSheet open={sheet === 'notes'} onClose={() => setSheet(null)} call={call} act={act} item={item} carrier={carrierName} />
+    </div>,
+    document.body,
+  )
+}
+
+// Add (+): a carrier (searchable, each with its service line; the suggested one from the brief first) or another
+// number (the agent on file, or one typed in). The real line only rings numbers on file (fulfillment-call has no free
+// dialing), so a typed number joins on sample and while calling is off; on a live line it says why not.
+function AddSheet({ open, onClose, onPick, suggested, agent }) {
+  const [tab, setTab] = useState('carrier')
+  const [q, setQ] = useState('')
+  const [num, setNum] = useState('')
+  const today = new Date().toISOString().slice(0, 10)
+  const sug = suggested ? findCarrier(suggested) : null
+  const list = useMemo(() => {
+    const all = q.trim() ? matchCarriers(q, 40).map(h => h.carrier) : CARRIER_CATALOG.slice().sort((a, b) => a.sort_rank - b.sort_rank).slice(0, 40)
+    return sug && !q.trim() ? [sug, ...all.filter(c => c.id !== sug.id)] : all
+  }, [q, sug])
+  const d = digitsOf(num)
+  return (
+    <BottomSheet open={open} onClose={onClose} label="Add to the call" tall className="va-over">
+      <p className="ma-sheet-t">Add to the call</p>
+      <div className="va-seg" role="tablist" aria-label="Who to add">
+        <button type="button" role="tab" aria-selected={tab === 'carrier'} className={tab === 'carrier' ? 'is-on' : ''} onClick={() => setTab('carrier')}>Carrier</button>
+        <button type="button" role="tab" aria-selected={tab === 'number'} className={tab === 'number' ? 'is-on' : ''} onClick={() => setTab('number')}>Another number</button>
+      </div>
+      {tab === 'carrier' ? <>
+        <label className="va-find"><Search size={18} aria-hidden="true" /><input type="search" placeholder="Search carriers" aria-label="Search carriers" value={q} onChange={e => setQ(e.target.value)} /></label>
+        <div className="ma-glass ma-list va-carriers">
+          {list.map(c => (
+            <button key={c.id} type="button" className={`ma-row${sug && c.id === sug.id ? ' is-sug' : ''}`} onClick={() => onPick({ id: c.id, name: c.name, role: 'carrier', number: c.service_phone })}>
+              <span className="ma-sym is-sky" aria-hidden="true"><Building2 size={16} /></span>
+              <span className="ma-grow"><b>{c.name}</b><small>{sug && c.id === sug.id ? 'Suggested from the brief · ' : ''}{carrierLine(c.name, today)}{c.service_phone ? ` · ${fmtPhone(c.service_phone)}` : ''}</small></span>
+              <Plus size={18} className="ma-chev" aria-hidden="true" />
+            </button>
+          ))}
+          {!list.length && <p className="ma-hint">No carrier by that name.</p>}
+        </div>
+      </> : <>
+        {agent && (
+          <div className="ma-glass ma-list">
+            <button type="button" className="ma-row" onClick={() => onPick({ id: 'agent', name: agent, role: 'agent' })}>
+              <span className="ma-sym is-sage" aria-hidden="true"><Phone size={16} /></span>
+              <span className="ma-grow"><b>{agent}</b><small>The agent · their phone on file</small></span>
+              <Plus size={18} className="ma-chev" aria-hidden="true" />
+            </button>
+          </div>
+        )}
+        <label className="va-num"><span>Phone number</span>
+          <input type="tel" inputMode="tel" autoComplete="off" placeholder="(555) 555-0100" value={num} onChange={e => setNum(e.target.value)} />
+        </label>
+        <button type="button" className="ma-btn is-solid is-tall va-wide ma-press" disabled={d.length < 7} onClick={() => onPick({ id: `num-${d}`, name: fmtPhone(d), role: 'other', number: d })}>
+          <Phone size={18} aria-hidden="true" />Call and merge
+        </button>
+      </>}
+    </BottomSheet>
+  )
+}
+
+// Notes: what the system knows about this call (goal, the carrier to add, draft day) on top, the VA's own notes below.
+// They travel with the result pick; on a booked call they're also saved to the client when the sheet closes.
+function NotesSheet({ open, onClose, call, act, item, carrier }) {
+  const actions = useFulActions()
+  const row = item?.row || {}
+  const c = row.client || {}
+  const day = item?.iso ? new Date(item.iso).toISOString().slice(0, 10) : null
+  const sysNote = row.brief?.note || ''
+  const saved = useRef(call.notes)
+  const close = () => {
+    const id = item?.ref || item?.id
+    if (item?.kind === 'call' && id && call.notes !== saved.current) { actions.saveCallNotes?.(id, call.notes); saved.current = call.notes }
+    onClose()
+  }
+  return (
+    <BottomSheet open={open} onClose={close} label="Call notes" className="va-over">
+      <p className="ma-sheet-t">Notes</p>
+      <div className="va-todo is-butter va-sysnote">
+        <b>From Ohvara</b>
+        <p>{item ? whyLine(row) : call.who.reason || 'A call with no booking.'}</p>
+        <div className="va-facts">
+          <span><small>Carrier to add</small><b>{carrier || 'Not given'}</b></span>
+          <span><small>Their line</small><b>{carrier ? carrierLine(carrier, day) : 'Not given'}</b></span>
+          <span><small>Draft day</small><b>{draftWords(c.draft_day || row.brief?.replaces?.draft_day)}</b></span>
+          <span><small>Agent</small><b>{call.who.agent || item?.agent || 'Not given'}</b></span>
+        </div>
+        {sysNote && <p className="va-sysnote-x">{sysNote}</p>}
+      </div>
+      <label className="va-mynotes"><span>Your notes · saved to {firstName(call.who.name) || 'the client'}</span>
+        <textarea rows={5} value={call.notes} placeholder="What happened on the call" onChange={e => act({ type: 'notes', text: e.target.value })} />
+      </label>
+      <button type="button" className="ma-btn is-solid is-tall va-wide ma-press" onClick={close}>Done</button>
+    </BottomSheet>
+  )
+}
+
+// The green pill while the call screen is minimised: name + timer, above everything; a tap opens the call again.
+function CallPill({ call, onOpen }) {
+  const now = useTick(true)
+  const t = callTimer(now - call.start)
+  return createPortal(
+    <button type="button" className="va-pill ma-press" aria-label={`Back to the call with ${call.who.name}, ${t}`} onClick={onOpen}>
+      <Phone size={15} aria-hidden="true" /><b>{call.who.name}</b><span>{call.held ? 'On hold' : t}</span>
+    </button>,
+    document.body,
+  )
+}
+
+// ── The phone (P982): the dialer a VA opens from Today ───────────────────────────────────────────────────────────
+// A keypad with the number on top; as they type, the client on file with that number shows. Calling someone on file
+// starts their call (their booked call when it's open now). The live line never dials a free number.
+function PhoneScreen({ onClose, onDial }) {
+  const { data: clients } = useFulClients()
+  const [num, setNum] = useState('')
+  const d = digitsOf(num)
+  const match = d.length >= 7 ? clients.find(c => { const cd = digitsOf(c.client_phone); return cd && (cd.endsWith(d) || d.endsWith(cd.slice(-10))) }) || null : null
+  const { ref, handlers } = useSwipeDown(onClose)
+  return createPortal(
+    <div ref={ref} className="tp fx ma-layer va-call va-phone" role="dialog" aria-modal="true" aria-label="Phone" {...handlers}>
+      <div className="va-call-top">
+        <button type="button" className="va-call-min ma-press" aria-label="Close the phone" onClick={onClose}><ChevronDown size={30} strokeWidth={2.2} aria-hidden="true" /></button>
+        <small className="va-call-line">Phone · Ohvara line</small>
+        <i aria-hidden="true" />
+      </div>
+      <div className="va-call-who va-phone-num">
+        <b className="va-call-name is-tones" aria-live="polite">{d ? fmtPhone(d) : ' '}</b>
+        <span className="va-call-timer">{match ? `${match.name} · client${match.agent ? ` of ${match.agent}` : ''}` : d.length >= 7 ? 'Not on file' : 'Type a number'}</span>
+      </div>
+      <div className="va-call-mid"><Pad onKey={k => setNum(n => (n + k).slice(0, 15))} /></div>
+      <div className="va-call-endrow">
+        <span aria-hidden="true" />
+        <button type="button" className="va-dial ma-press" aria-label={match ? `Call ${match.name}` : 'Call'} disabled={d.length < 3} onClick={() => onDial({ digits: d, client: match })}><Phone size={30} aria-hidden="true" /></button>
+        {d ? <button type="button" className="va-hide" aria-label="Delete a digit" onClick={() => setNum(n => digitsOf(n).slice(0, -1))}><Delete size={26} aria-hidden="true" /></button> : <span aria-hidden="true" />}
+      </div>
     </div>,
     document.body,
   )

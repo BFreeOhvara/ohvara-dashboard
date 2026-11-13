@@ -183,6 +183,18 @@ export function parentOf(route, search = '') {
 // One key per screen, the same whether it's on top or under, so the parent keeps its scroll when it comes back up.
 export const screenKey = (sub, id, nested = '') => `${sub}:${id || ''}:${nested || ''}`
 
+// P982 — the screen stack (both apps). `json` (a JSON string, so it's plain data) = the screens under the top one, kept in the address state by whoever
+// opened it: [{ key, route, href, tab }], bottom first. Returns the one right under the top (Back lands there) and
+// the stack without the top screen. No stack in the address (a link from outside, an old entry): the parent, if any.
+export function stackOf(json, topKey, parent = null) {
+  if (!topKey) return { under: null, stack: [] }
+  let raw
+  try { raw = typeof json === 'string' && json ? JSON.parse(json) : json } catch { raw = null }
+  const ok = Array.isArray(raw) ? raw.filter(e => e && typeof e.key === 'string' && e.route && e.key !== topKey) : null
+  if (ok && ok.length) return { under: ok[ok.length - 1], stack: ok }
+  return parent ? { under: parent, stack: [parent] } : { under: null, stack: [] }
+}
+
 // Where a released swipe-back lands: a flick the way it came from (≥ 0.35 px/ms) or a drag past 35 % closes it,
 // anything less springs back. d and v are signed in the closing direction (positive = closing).
 export const backCloses = (d, v, width) => (v >= 0.35 && d >= 12) || d >= width * 0.35

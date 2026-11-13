@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Phone } from 'lucide-react'
 import { useFulSchedule, useFulShift } from '../../ful/data'
 import { whyShort } from '../../ful/callSteps'
 import { fp } from '../../ful/paths'
@@ -103,6 +103,7 @@ export default function VCalendar({ route }) {
                 <span className="ma-up-when"><b>{i.time}</b>{st !== 'todo' && <small>{STATE_TAG[st]}</small>}</span>
                 <span className="ma-grow"><b>{i.name}</b><small>{forLine(whyShort(i), i.agent)}</small></span>
               </button>
+              {st !== 'done' && <button type="button" className="va-rowcall ma-press" aria-label={`Call ${i.name}`} onClick={() => vc.start(i)}><Phone size={18} aria-hidden="true" /></button>}
             </div>
           )
         })}
