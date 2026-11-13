@@ -3,7 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { LESSONS } from './lessons.js'
-import { emptyProgress, lessonStates, summary, recordTry, recordAttempt, assignLesson, scoreCheck, matchesTry, endsInQuiz } from './model.js'
+import { emptyProgress, lessonStates, summary, recordPractice, recordAttempt, assignLesson, scoreCheck, matchesTry, endsInQuiz } from './model.js'
 import { FUL } from '../../template/ful/paths.js'
 
 const QUIZ = ['never', 'optout', 'inbound', 'carrier', 'escalate']
@@ -21,7 +21,7 @@ test('every other lesson has a Try it: a real page, what to do, and the button t
 })
 
 test('Try it finishes the lesson and opens the next; no score, never shown as out of date', () => {
-  const p = recordTry(emptyProgress, 'desk')
+  const p = recordPractice(emptyProgress, 'desk')
   const s = lessonStates(p)
   assert.equal(s[0].state, 'passed')
   assert.equal(s[0].score, null)
@@ -33,17 +33,17 @@ test('Try it finishes the lesson and opens the next; no score, never shown as ou
 })
 
 test('an assigned Try it lesson is due again, and doing it clears the assign', () => {
-  let p = recordTry(emptyProgress, 'desk')
+  let p = recordPractice(emptyProgress, 'desk')
   p = assignLesson(p, 'desk')
   assert.equal(lessonStates(p)[0].state, 'next')
-  p = recordTry(p, 'desk')
+  p = recordPractice(p, 'desk')
   assert.deepEqual(p.assigned, [])
   assert.equal(p.results.desk.tries, 2)
 })
 
 test('a check lesson still needs a pass', () => {
   const never = LESSONS.find(l => l.id === 'never')
-  let p = recordTry(emptyProgress, 'desk')
+  let p = recordPractice(emptyProgress, 'desk')
   p = recordAttempt(p, 'never', scoreCheck(never, never.check.map(() => -1)))
   assert.equal(lessonStates(p)[1].state, 'next')
   assert.equal(lessonStates(p)[2].state, 'locked')

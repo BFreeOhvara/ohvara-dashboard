@@ -220,3 +220,11 @@
 .tr-practised-x:hover { color: var(--ov-hi); background: color-mix(in srgb, var(--ov-hi) 8%, transparent); }
 .tr-practice-why { font-size: 13px; }
 .tr-cta .tp-btn.ov-ghost + .tp-btn, .tr-cta .tp-primary + .tp-btn { margin-top: -2px; }
+
+/* P979 — Practice: the steps it walks through, and the card that starts it when the video ends */
+.tr-psteps { margin: 2px 0 4px; padding-left: 20px; display: grid; gap: 4px; font-size: 13.5px; color: var(--ov-hi); }
+.tr-psteps li::marker { color: var(--accent); font-family: var(--font-mono); font-size: 12px; }
+.tr-next { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
+.tr-next h2 { margin: 0 0 2px; font-size: 17px; }
+.tr-next p { margin: 0; color: var(--ov-mid); }
+.tr-next-acts { display: flex; gap: 8px; flex-wrap: wrap; }

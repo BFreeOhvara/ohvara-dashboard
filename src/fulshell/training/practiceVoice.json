@@ -1,0 +1,265 @@
+{
+ "base": "https://jjextitmbptoaolacocs.supabase.co/storage/v1/object/public/training/v979/practice/",
+ "clips": {
+  "desk-1": {
+   "src": "desk-1.mp4",
+   "hash": "aad3c458",
+   "dur": 3.28
+  },
+  "desk-2": {
+   "src": "desk-2.mp4",
+   "hash": "8cd4cdad",
+   "dur": 3.36
+  },
+  "desk-3": {
+   "src": "desk-3.mp4",
+   "hash": "a261c97d",
+   "dur": 4.32
+  },
+  "speed-1": {
+   "src": "speed-1.mp4",
+   "hash": "9ecf974c",
+   "dur": 4.4
+  },
+  "speed-2": {
+   "src": "speed-2.mp4",
+   "hash": "f088b6af",
+   "dur": 6.32
+  },
+  "speed-3": {
+   "src": "speed-3.mp4",
+   "hash": "2d93ec93",
+   "dur": 5.92
+  },
+  "welcome-1": {
+   "src": "welcome-1.mp4",
+   "hash": "5edcfd1a",
+   "dur": 5.2
+  },
+  "welcome-2": {
+   "src": "welcome-2.mp4",
+   "hash": "2da61851",
+   "dur": 3.2
+  },
+  "welcome-3": {
+   "src": "welcome-3.mp4",
+   "hash": "d4e28832",
+   "dur": 4.24
+  },
+  "welcome-4": {
+   "src": "welcome-4.mp4",
+   "hash": "2df634e2",
+   "dur": 1.92
+  },
+  "carrier-1": {
+   "src": "carrier-1.mp4",
+   "hash": "1572accc",
+   "dur": 5.84
+  },
+  "carrier-2": {
+   "src": "carrier-2.mp4",
+   "hash": "25e467e8",
+   "dur": 4.16
+  },
+  "carrier-3": {
+   "src": "carrier-3.mp4",
+   "hash": "a9d0698c",
+   "dur": 3.76
+  },
+  "saves-1": {
+   "src": "saves-1.mp4",
+   "hash": "b6b6de53",
+   "dur": 5.28
+  },
+  "saves-2": {
+   "src": "saves-2.mp4",
+   "hash": "2da61851",
+   "dur": 3.28
+  },
+  "saves-3": {
+   "src": "saves-3.mp4",
+   "hash": "9ffe2261",
+   "dur": 2.0
+  },
+  "saves-4": {
+   "src": "saves-4.mp4",
+   "hash": "2df634e2",
+   "dur": 2.0
+  },
+  "changes-1": {
+   "src": "changes-1.mp4",
+   "hash": "f35f7653",
+   "dur": 5.28
+  },
+  "changes-2": {
+   "src": "changes-2.mp4",
+   "hash": "2da61851",
+   "dur": 3.36
+  },
+  "changes-3": {
+   "src": "changes-3.mp4",
+   "hash": "9ffe2261",
+   "dur": 2.0
+  },
+  "changes-4": {
+   "src": "changes-4.mp4",
+   "hash": "2df634e2",
+   "dur": 2.0
+  },
+  "callbacks-1": {
+   "src": "callbacks-1.mp4",
+   "hash": "6f06be02",
+   "dur": 4.4
+  },
+  "callbacks-2": {
+   "src": "callbacks-2.mp4",
+   "hash": "76165735",
+   "dur": 1.44
+  },
+  "callbacks-3": {
+   "src": "callbacks-3.mp4",
+   "hash": "cd6216d2",
+   "dur": 4.0
+  },
+  "callbacks-4": {
+   "src": "callbacks-4.mp4",
+   "hash": "9ff4cc09",
+   "dur": 3.28
+  },
+  "packets-1": {
+   "src": "packets-1.mp4",
+   "hash": "9e6481c4",
+   "dur": 3.84
+  },
+  "packets-2": {
+   "src": "packets-2.mp4",
+   "hash": "342bfe5c",
+   "dur": 2.0
+  },
+  "packets-3": {
+   "src": "packets-3.mp4",
+   "hash": "cc6edea9",
+   "dur": 3.92
+  },
+  "payments-1": {
+   "src": "payments-1.mp4",
+   "hash": "40c38cd9",
+   "dur": 1.92
+  },
+  "payments-2": {
+   "src": "payments-2.mp4",
+   "hash": "c48962fe",
+   "dur": 3.12
+  },
+  "payments-3": {
+   "src": "payments-3.mp4",
+   "hash": "6d2cdc79",
+   "dur": 4.16
+  },
+  "reminders-1": {
+   "src": "reminders-1.mp4",
+   "hash": "f41ac75b",
+   "dur": 4.32
+  },
+  "reminders-2": {
+   "src": "reminders-2.mp4",
+   "hash": "76165735",
+   "dur": 1.44
+  },
+  "reminders-3": {
+   "src": "reminders-3.mp4",
+   "hash": "cd6216d2",
+   "dur": 4.08
+  },
+  "reminders-4": {
+   "src": "reminders-4.mp4",
+   "hash": "9ff4cc09",
+   "dur": 3.2
+  },
+  "inbound-1": {
+   "src": "inbound-1.mp4",
+   "hash": "ade14b7a",
+   "dur": 3.6
+  },
+  "inbound-2": {
+   "src": "inbound-2.mp4",
+   "hash": "53bb13cf",
+   "dur": 3.2
+  },
+  "inbound-3": {
+   "src": "inbound-3.mp4",
+   "hash": "4f97129f",
+   "dur": 4.88
+  },
+  "inbound-4": {
+   "src": "inbound-4.mp4",
+   "hash": "c0b20dc9",
+   "dur": 3.84
+  },
+  "escalate-1": {
+   "src": "escalate-1.mp4",
+   "hash": "40c38cd9",
+   "dur": 2.0
+  },
+  "escalate-2": {
+   "src": "escalate-2.mp4",
+   "hash": "0a73a9f9",
+   "dur": 1.84
+  },
+  "escalate-3": {
+   "src": "escalate-3.mp4",
+   "hash": "6bddd6ce",
+   "dur": 7.28
+  },
+  "logging-1": {
+   "src": "logging-1.mp4",
+   "hash": "8b314442",
+   "dur": 3.2
+  },
+  "logging-2": {
+   "src": "logging-2.mp4",
+   "hash": "3aedd920",
+   "dur": 1.6
+  },
+  "logging-3": {
+   "src": "logging-3.mp4",
+   "hash": "f292965d",
+   "dur": 3.12
+  },
+  "logging-4": {
+   "src": "logging-4.mp4",
+   "hash": "365447d0",
+   "dur": 3.2
+  },
+  "timeoff-1": {
+   "src": "timeoff-1.mp4",
+   "hash": "e23f1829",
+   "dur": 4.24
+  },
+  "timeoff-2": {
+   "src": "timeoff-2.mp4",
+   "hash": "be7fe28d",
+   "dur": 1.2
+  },
+  "timeoff-3": {
+   "src": "timeoff-3.mp4",
+   "hash": "d0a9e359",
+   "dur": 1.2
+  },
+  "timeoff-4": {
+   "src": "timeoff-4.mp4",
+   "hash": "b32d4709",
+   "dur": 4.32
+  },
+  "finish": {
+   "src": "finish.mp4",
+   "hash": "ca401be9",
+   "dur": 1.84
+  },
+  "phone": {
+   "src": "phone.mp4",
+   "hash": "9e12a6d5",
+   "dur": 3.12
+  }
+ }
+}

@@ -1,10 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { LESSONS, HELP, PASS_MARK } from './lessons.js'
-import { emptyProgress, lessonStates, scoreCheck, recordAttempt, assignLesson, resetLesson, summary, canOpen, helpLesson, searchLessons } from './model.js'
+import { emptyProgress, lessonStates, scoreCheck, recordAttempt, recordPractice, assignLesson, resetLesson, summary, canOpen, helpLesson, searchLessons } from './model.js'
 
 const allRight = l => l.check.map(c => c.answer)
-const pass = (p, id) => { const l = LESSONS.find(x => x.id === id); return recordAttempt(p, id, scoreCheck(l, allRight(l))) }
+const pass = (p, id) => { const l = LESSONS.find(x => x.id === id); return recordAttempt(recordPractice(p, id), id, scoreCheck(l, allRight(l))) }
 
 test('every lesson is complete: steps, do and don\'t, a picture, and a 3 to 5 question check with a valid answer', () => {
   const ids = new Set()
@@ -62,9 +62,10 @@ test('check scoring: right count, wrong list, and the 80% pass mark', () => {
 test('a failed re-try never takes away a pass', () => {
   const l = LESSONS[0]
   let p = pass(emptyProgress, l.id)
+  const before = p.results[l.id].tries
   p = recordAttempt(p, l.id, scoreCheck(l, []))
   assert.equal(p.results[l.id].pass, true)
-  assert.equal(p.results[l.id].tries, 2)
+  assert.equal(p.results[l.id].tries, before + 1)
 })
 
 test('admin assign makes a passed lesson due again without locking the rest; reset clears it', () => {

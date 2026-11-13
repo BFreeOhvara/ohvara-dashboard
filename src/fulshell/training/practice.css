@@ -1,5 +1,5 @@
-/* P948 — the practice copy's walkthrough (./practiceRun.js): the bar on top, the pointer, the highlight's caption
-   (driver.js, restyled with the shell's tokens) and the end cards. No new colours. */
+/* P948/P979 — Practice in the practice copy (./practiceRun.js): the bar, the pointer, the highlight's caption
+   (driver.js, restyled with the shell's tokens), the replay and mute buttons, the "Nice" tick and the cards. No new colours. */
 
 /* The practice bar: always clickable, above the highlight */
 /* Bottom right, so it never covers the top tabs or a centred pop-up's buttons a walkthrough points at. */
@@ -19,7 +19,13 @@
   .pr-safe { display: none; }
 }
 
-/* The pointer (watch phase) */
+/* Mute / voice on, in the bar */
+.pr-ic { all: unset; cursor: pointer; flex: none; width: 32px; height: 32px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center;
+  color: var(--ov-hi); box-shadow: inset 0 0 0 1px var(--ov-line, color-mix(in srgb, var(--ov-hi) 18%, transparent)); }
+.pr-ic[aria-pressed="true"] { color: var(--ov-mid); }
+.pr-ic:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The pointer: glides to the spot, then a soft ring says "you click this" */
 .pr-ptr { position: fixed; z-index: 1000000003; left: 0; top: 0; pointer-events: none !important; transition: transform .75s cubic-bezier(0.65, 0, 0.35, 1); will-change: transform; }
 .pr-ptr svg { display: block; fill: var(--ov-hi); stroke: var(--bg-base, #000); stroke-width: 1.4; filter: drop-shadow(0 3px 6px rgb(0 0 0 / .45)); }
 .pr-ptr i { position: absolute; left: -14px; top: -14px; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; }
@@ -27,14 +33,37 @@
 .pr-ptr.is-press i { animation: pr-ring .55s ease-out; }
 @keyframes pr-press { 50% { transform: scale(.82); } }
 @keyframes pr-ring { from { opacity: .9; transform: scale(.4); } to { opacity: 0; transform: scale(1.6); } }
-@media (prefers-reduced-motion: reduce) { .pr-ptr { transition: none; } .pr-ptr.is-press svg, .pr-ptr.is-press i { animation: none; } }
+.pr-ptr.is-hint i { animation: pr-ring 1.4s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) { .pr-ptr { transition: none; } .pr-ptr.is-press svg, .pr-ptr.is-press i, .pr-ptr.is-hint i { animation: none; } .pr-ptr.is-hint i { opacity: .8; } }
+
+/* A click off the spot: the spot pulses (no penalty) */
+.pr-pulse { animation: pr-pulse .7s ease-out 2; }
+@keyframes pr-pulse { 0% { box-shadow: 0 0 0 3px var(--accent); } 60% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 0%, transparent), 0 0 0 3px var(--accent); } 100% { box-shadow: 0 0 0 3px var(--accent); } }
+
+/* The right click: a small "Nice" tick where they clicked */
+.pr-nice { position: fixed; z-index: 1000000005; transform: translate(-50%, -100%); display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px 5px 9px;
+  border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--sh-on-accent, #fff); background: var(--ov-up, var(--accent)); pointer-events: none;
+  box-shadow: 0 8px 22px rgb(0 0 0 / .3); animation: pr-nice 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+@keyframes pr-nice { 0% { opacity: 0; transform: translate(-50%, -70%) scale(.8); } 18% { opacity: 1; transform: translate(-50%, -100%) scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -150%); } }
+@media (prefers-reduced-motion: reduce) { .pr-pulse { animation: none; box-shadow: 0 0 0 4px var(--accent) !important; } .pr-nice { animation: pr-nice-still 1.1s linear forwards; } }
+@keyframes pr-nice-still { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
 
 /* The caption next to the highlight (driver.js popover) */
 .driver-popover.pr-pop { z-index: 1000000004; min-width: 220px; max-width: min(340px, calc(100vw - 32px)); padding: 14px 16px; border-radius: 14px; color: var(--ov-hi);
   background: var(--ov-card-solid, var(--sh-base)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 14px 36px rgb(0 0 0 / .4); }
 .driver-popover.pr-pop .driver-popover-title { font-family: var(--font-mono); font-size: 11.5px; font-weight: 600; letter-spacing: .04em; color: var(--accent); }
 .driver-popover.pr-pop .driver-popover-description { margin-top: 4px; font-size: 14.5px; line-height: 1.45; color: var(--ov-hi); }
-.driver-popover.pr-pop .driver-popover-footer { margin-top: 12px; }
+.driver-popover.pr-pop .driver-popover-description b { color: var(--accent); font-weight: 700; }
+.driver-popover.pr-pop .driver-popover-footer { margin-top: 10px; justify-content: flex-start; }
+.driver-popover.pr-pop .driver-popover-navigation-btns, .driver-popover.pr-pop .driver-popover-close-btn { display: none !important; } /* Practice moves on only by their click */
+.pr-replay { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+  color: var(--ov-hi); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); }
+.pr-replay:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.pr-replay:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pr-replay.is-ask, .pr-replay.is-nudge { color: var(--sh-on-accent, #fff); background: var(--accent); }
+.pr-replay.is-nudge { animation: pr-nudge .5s ease 2; }
+@keyframes pr-nudge { 50% { transform: scale(1.06); } }
+@media (prefers-reduced-motion: reduce) { .pr-replay.is-nudge { animation: none; } }
 .driver-popover.pr-pop .driver-popover-progress-text { display: none; }
 .driver-popover.pr-pop .driver-popover-next-btn { all: unset; cursor: pointer; display: inline-flex; align-items: center; min-height: 34px; padding: 0 14px; border-radius: 999px;
   font-size: 13.5px; font-weight: 600; color: var(--sh-on-accent, #fff); background: var(--accent); }
@@ -45,7 +74,7 @@
 .driver-popover.pr-pop .driver-popover-arrow-side-right { border-right-color: var(--ov-card-solid, var(--sh-base)); }
 .driver-active .driver-active-element { box-shadow: 0 0 0 3px var(--accent) !important; border-radius: 10px; }
 
-/* The end cards: Your turn, Nice, you've got it, That spot moved */
+/* The cards: That's it, you've got it / That spot moved */
 .pr-card-wrap { position: fixed; inset: 0; z-index: 1000000001; display: flex; align-items: center; justify-content: center; padding: 16px;
   background: color-mix(in srgb, var(--bg-base, #000) 55%, transparent); backdrop-filter: blur(3px); }
 .pr-card-wrap, .pr-card-wrap * { pointer-events: auto !important; }

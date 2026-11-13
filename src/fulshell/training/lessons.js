@@ -10,11 +10,11 @@
 //
 // P948: LESSONS is in the order of a VA's real day: start of shift, the next call and its brief, each call type (most
 // common first), calls that come in, coverage questions to the agent, after the call, time off and pay, and last what to
-// steer clear of. Lessons with a portal task also have a "Show me how" walkthrough (./tours.js).
+// steer clear of. Lessons with a portal task also have a Practice: a guided, spoken walkthrough the VA must finish (./tours.js, P979).
 //
 // Bump TRAINING_VERSION when a lesson's check changes, so a VA's old pass is shown as "updated, take the check again".
 
-export const TRAINING_VERSION = '2026-11-12.1' // P976: lead lessons gone; text matches the re-voiced videos (no lead content, no promises, portal facts checked). Before: P948: lessons in the order of the job (start of shift first, what to steer clear of last); 'desk' split into Start of your shift and Time off and pay. Before: P932: the carrier's way on every change (e-sign their form, or a merge call), do it now or book their next open time, the AI front desk's summary. Before: P931: you only talk to sold clients; no-show rebooks are the AI caller's; the cancel call merges the client in; no identity checks on booked calls. Before: P924: saves end with the agent or Closed; clients call our team. P907: speed is now Working in bookings; callbacks, check-ins, fromai, reminders follow the bookings
+export const TRAINING_VERSION = '2026-11-12.2' // P979: Practice (a guided walkthrough) is part of 14 lessons. Before that: '2026-11-12.1' // P976: lead lessons gone; text matches the re-voiced videos (no lead content, no promises, portal facts checked). Before: P948: lessons in the order of the job (start of shift first, what to steer clear of last); 'desk' split into Start of your shift and Time off and pay. Before: P932: the carrier's way on every change (e-sign their form, or a merge call), do it now or book their next open time, the AI front desk's summary. Before: P931: you only talk to sold clients; no-show rebooks are the AI caller's; the cancel call merges the client in; no identity checks on booked calls. Before: P924: saves end with the agent or Closed; clients call our team. P907: speed is now Working in bookings; callbacks, check-ins, fromai, reminders follow the bookings
 export const PASS_MARK = 0.8 // 4 of 5, 4 of 4, 3 of 3: a check passes at 80% or better
 
 const say = (text, o = {}) => ({ who: 'You', text, ...o })

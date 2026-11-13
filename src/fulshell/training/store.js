@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react'
 import { LESSONS } from './lessons.js'
 import { fp } from '../../template/ful/paths.js'
-import { emptyProgress, lessonStates, summary, scoreCheck, recordAttempt, recordTry, matchesTry, endsInQuiz, assignLesson, resetLesson } from './model.js'
+import { emptyProgress, lessonStates, summary, scoreCheck, recordAttempt, recordTry, recordPractice, needsPractice, matchesTry, endsInQuiz, assignLesson, resetLesson } from './model.js'
 import { practiceOn } from '../../lib/practice.js'
 
 // P872 — training progress and lesson edits, sample only (this browser). One store, so the rail badge, the Overview
@@ -12,7 +12,9 @@ import { practiceOn } from '../../lib/practice.js'
 const KEY = 'ful-training:v1'
 const allRight = id => { const l = LESSONS.find(x => x.id === id); return scoreCheck(l, l.check.map(c => c.answer)) }
 const AT = '2026-11-02T15:00:00Z'
-const passFirst = (n, extra = p => p) => extra(LESSONS.slice(0, n).reduce((p, l) => (endsInQuiz(l) ? recordAttempt(p, l.id, allRight(l.id), AT) : recordTry(p, l.id, AT)), emptyProgress))
+// P979: sample VAs who finished also did each lesson's Practice.
+const passOne = (p, l) => (endsInQuiz(l) ? recordAttempt(needsPractice(l) ? recordPractice(p, l.id, AT) : p, l.id, allRight(l.id), AT) : needsPractice(l) ? recordPractice(p, l.id, AT) : recordTry(p, l.id, AT))
+const passFirst = (n, extra = p => p) => extra(LESSONS.slice(0, n).reduce(passOne, emptyProgress))
 // P936: a VA takes calls only once training is complete, so every sample VA on a rota (the VA side's Maya, Leo, Sasha
 // and Devon; admin's Maya, Andre, Keisha, Omar and Lily) has finished it. Rosa Diaz (invited, not on the team yet)
 // hasn't started: she gets no calls until she finishes.
@@ -104,8 +106,8 @@ const snap = () => state
 const progressOf = name => state.people[name] || SEED[name] || emptyProgress
 const putProgress = (name, p) => set({ ...state, people: { ...state.people, [name]: p } })
 
-// P948: "Show me how" finished in the practice copy (./practiceRun.js): the lesson counts as done, like a Try it.
-export const markPracticed = (name, id) => putProgress(name, recordTry(progressOf(name), id))
+// P979: Practice finished in the practice copy (./practiceRun.js). A Try it lesson is done; a check lesson's check opens.
+export const markPracticed = (name, id) => putProgress(name, recordPractice(progressOf(name), id))
 // The practice copy's player loads only while a practice is on, so driver.js stays out of every other page.
 if (typeof window !== 'undefined' && practiceOn()) import('./practiceRun.js').then(m => m.boot()).catch(e => console.warn('[practice] could not start', e))
 

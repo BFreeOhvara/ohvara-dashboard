@@ -3,6 +3,7 @@
 //   { results: { [lessonId]: { correct, total, pass, at, version, tries } | { tried, pass, at, version, tries } }, assigned: [lessonId] }
 // An assigned lesson must be taken (again) even if it was passed; it does not lock anything after it.
 import { LESSONS, HELP, PASS_MARK, TRAINING_VERSION } from './lessons.js'
+import { hasTour } from './tours.js'
 
 export const emptyProgress = { results: {}, assigned: [] }
 export const lessonById = id => LESSONS.find(l => l.id === id) || null
@@ -28,7 +29,17 @@ export function carried(p = emptyProgress) {
   return out
 }
 
-const passed = (p, id) => !!p.results[id]?.pass && !p.assigned.includes(id)
+// P979 — Practice is part of the lesson: where a lesson has one (./tours.js), it counts as done only once its Practice
+// is finished (progress.practised[id]) as well as its check or Try it. A lesson passed before Practice was required
+// (a pass stamped with an older version) keeps its pass, like the P948 carry-over.
+export const PRACTICE_FROM = '2026-11-12.2'
+export const needsPractice = l => !!l && hasTour(l.id)
+export function practiceDone(p, id) {
+  if (p.practised?.[id]) return true
+  const r = p.results?.[id]
+  return !!r?.pass && !!r.version && r.version < PRACTICE_FROM
+}
+const passed = (p, id) => !!p.results[id]?.pass && !p.assigned.includes(id) && (!hasTour(id) || practiceDone(p, id))
 
 // Every lesson's state, in order: 'passed' | 'next' (the one to do now) | 'open' (unlocked, e.g. assigned) | 'locked'.
 export function lessonStates(p = emptyProgress, lessons = LESSONS) {
@@ -46,7 +57,7 @@ export function lessonStates(p = emptyProgress, lessons = LESSONS) {
     if (state === 'next') nextSet = true
     // The path stays open only while every lesson so far is passed (an assigned re-take of a passed lesson does not close it).
     if (!done && !(assigned && r?.pass)) gateOpen = false
-    return { id: l.id, state, assigned, stale: !!r?.pass && !!r.total && r.version !== TRAINING_VERSION, score: r?.total ? { correct: r.correct, total: r.total } : null, tried: !!r?.tried, tries: r?.tries || 0 }
+    return { id: l.id, state, assigned, stale: !!r?.pass && !!r.total && r.version !== TRAINING_VERSION, score: r?.total ? { correct: r.correct, total: r.total } : null, tried: !!r?.tried, tries: r?.tries || 0, practised: !hasTour(l.id) || practiceDone(p, l.id) }
   })
 }
 
@@ -67,14 +78,19 @@ export function recordAttempt(p, id, result, at = new Date().toISOString()) {
   const prev = p.results[id]
   const keepPass = prev?.pass && !result.pass && !p.assigned.includes(id) // a failed re-try never takes a pass away
   const r = keepPass ? { ...prev, tries: (prev.tries || 0) + 1 } : { correct: result.correct, total: result.total, pass: result.pass, at, version: TRAINING_VERSION, tries: (prev?.tries || 0) + 1 }
-  return { results: { ...p.results, [id]: r }, assigned: result.pass ? p.assigned.filter(x => x !== id) : p.assigned }
+  return { ...p, results: { ...p.results, [id]: r }, assigned: result.pass ? p.assigned.filter(x => x !== id) : p.assigned }
 }
 // P877: a lesson ends in a quiz (lesson.quiz) or a Try it (lesson.tryIt). Try it is done when the VA presses
 // tryIt.button on sample data; it counts as the lesson's pass (no score), and clears an admin's assign like a pass does.
 export const endsInQuiz = l => !!l?.quiz || !l?.tryIt
 export function recordTry(p, id, at = new Date().toISOString()) {
   const prev = p.results[id]
-  return { results: { ...p.results, [id]: { tried: true, pass: true, at, version: TRAINING_VERSION, tries: (prev?.tries || 0) + 1 } }, assigned: p.assigned.filter(x => x !== id) }
+  return { ...p, results: { ...p.results, [id]: { tried: true, pass: true, at, version: TRAINING_VERSION, tries: (prev?.tries || 0) + 1 } }, assigned: p.assigned.filter(x => x !== id) }
+}
+// P979: Practice finished. A lesson that ends in Try it is done with it; one that ends in a check still needs the check.
+export function recordPractice(p, id, at = new Date().toISOString()) {
+  const q = { ...p, practised: { ...(p.practised || {}), [id]: at } }
+  return endsInQuiz(lessonById(id)) ? q : recordTry(q, id, at)
 }
 const squash = s => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase()
 // The pressed button's text, as the browser reads it (icons add nothing), against the lesson's Try it button.
@@ -83,7 +99,9 @@ export const assignLesson = (p, id) => (p.assigned.includes(id) ? p : { ...p, as
 export function resetLesson(p, id) {
   const rest = { ...p.results }
   delete rest[id]
-  return { results: rest, assigned: p.assigned.filter(x => x !== id) }
+  const practised = { ...(p.practised || {}) }
+  delete practised[id] // P979: a reset lesson is practised again
+  return { ...p, results: rest, practised, assigned: p.assigned.filter(x => x !== id) }
 }
 
 // The "?" on a task: which lesson it opens (a HELP task key, or a lesson id).

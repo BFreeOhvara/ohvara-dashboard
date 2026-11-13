@@ -3,7 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { LESSONS, HELP } from './fulshell/training/lessons.js'
-import { lessonStates, summary, recordTry, recordAttempt, endsInQuiz, emptyProgress, carried } from './fulshell/training/model.js'
+import { lessonStates, summary, recordTry, recordAttempt, recordPractice, endsInQuiz, emptyProgress, carried } from './fulshell/training/model.js'
 import { TOURS, hasTour } from './fulshell/training/tours.js'
 import { FUL } from './template/ful/paths.js'
 import { callGate } from './lib/callOpen.js'
@@ -41,21 +41,17 @@ test('the first lesson no longer teaches days off; Time off and pay does, and th
   assert.equal(new Set(ids).size, ids.length)
 })
 
-test('every lesson with a task in the portal has a Show me how; every tour points at a real lesson and page', () => {
-  for (const l of LESSONS.filter(x => !endsInQuiz(x))) assert.ok(hasTour(l.id), `${l.id} has Show me how`)
-  for (const id of ['inbound', 'escalate', 'carrier']) assert.ok(hasTour(id), `${id} (a check lesson) still shows it in the portal`)
+test('every lesson with a task in the portal has a Practice; every tour points at a real lesson and page', () => {
+  for (const l of LESSONS.filter(x => !endsInQuiz(x))) assert.ok(hasTour(l.id), `${l.id} has Practice`)
+  for (const id of ['inbound', 'escalate', 'carrier']) assert.ok(hasTour(id), `${id} (a check lesson) still has it in the portal`)
   for (const [id, t] of Object.entries(TOURS)) {
     assert.ok(ids.includes(id), `${id} is a lesson`)
     assert.ok(FUL[t.start], `${id} starts on a real page`)
-    assert.ok(t.steps.length >= 2 && t.done)
-    for (const s of t.steps) {
-      assert.ok(s.sel && s.say && ['click', 'look'].includes(s.act), `${id} step "${s.say}"`)
-    }
-    assert.equal(t.steps.at(-1).act === 'click' || t.steps.at(-1).act === 'look', true)
+    assert.ok(t.steps.length >= 3 && t.steps.length <= 4 && t.done, `${id}: 3 or 4 steps (P979)`)
   }
   // The spec's list: request time off, start a booked call, read the brief, log the outcome, open a client, the phone, pay.
-  const said = Object.values(TOURS).flatMap(t => t.steps.map(s => s.say)).join(' ')
-  for (const w of ['Request a day off', 'Start call', 'brief', 'No answer', 'Open Clients', 'phone', 'Pay']) assert.ok(said.includes(w), w)
+  const said = Object.values(TOURS).flatMap(t => t.steps.map(s => `${s.say} ${s.voice}`)).join(' ')
+  for (const w of ['Request a day off', 'Start call', 'brief', 'No answer', 'Clients', 'phone', 'Pay']) assert.ok(said.includes(w), w)
 })
 
 test('the training gate: a VA who passed the old first lesson keeps training finished after the split', () => {
@@ -69,7 +65,7 @@ test('the training gate: a VA who passed the old first lesson keeps training fin
   assert.equal(summary(p).complete, true)
   assert.equal(carried(p).results.timeoff.carried, true)
   // A brand-new VA gets no carry: Time off and pay is a lesson like any other.
-  const fresh = recordTry(emptyProgress, 'desk')
+  const fresh = recordPractice(emptyProgress, 'desk') // P979: a new pass needs its Practice
   assert.equal(carried(fresh).results.timeoff, undefined)
   assert.equal(lessonStates(fresh)[1].state, 'next')
   assert.equal(summary(emptyProgress).complete, false)
@@ -82,7 +78,7 @@ test('the practice copy: only on its own pages, and there every call can start (
   const later = { iso: '2026-11-11T20:00:00Z', nowMs: Date.parse('2026-11-11T15:00:00Z') }
   assert.equal(practiceOn(), false)
   assert.equal(callGate(later).open, false)
-  writePractice({ lesson: 'welcome', name: 'Rosa Diaz', back: '/fulfillment/training', phase: 'show' })
+  writePractice({ lesson: 'welcome', name: 'Rosa Diaz', back: '/fulfillment/training' })
   assert.equal(readPractice().lesson, 'welcome')
   assert.equal(practiceOn(), true)
   assert.equal(callGate(later).open, true)
