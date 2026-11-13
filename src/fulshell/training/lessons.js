@@ -257,7 +257,7 @@ export const LESSONS = [
     minutes: 4,
     why: 'A client with no packet worries, and a worried client may cancel.',
     steps: [
-      'A packet check is not a booked call: it sits on the client\'s checklist, under Not a call. Work the overdue ones first.',
+      'A packet check is not a booked call: it is on the client\'s card, under Your work on this client. Work the overdue ones first.',
       'Open the client, start the packet check, then call them: has the packet arrived, by mail or email?',
       'Arrived: record Delivered. Not arrived: ask the carrier (inside their hours) to resend it, tell the client what the carrier said about timing, write that in the notes and record Not delivered.',
       'Questions about what the policy covers go to the agent: Send to agent.',
@@ -272,7 +272,7 @@ export const LESSONS = [
     donts: ['Don\'t explain what the policy covers', 'Don\'t send policy documents from your own email'],
     portal: { shot: 'servicing', clicks: [{ spot: 'lane0', text: 'Overdue steps first' }, { spot: 'card', text: 'Open a step, then Start' }] },
     check: [
-      ok('Where do you find a packet check?', ['On your Calendar, as a booked call', 'On the client\'s checklist, under Not a call', 'In Messages', 'The agent emails it'], 1, 'It is not a call: it sits on the client\'s checklist.'),
+      ok('Where do you find a packet check?', ['On your Calendar, as a booked call', 'On the client\'s card, under Your work on this client', 'In Messages', 'The agent emails it'], 1, 'It is not a call: it is on the client\'s card.'),
       ok('The packet hasn\'t arrived. You:', ['Email them your copy', 'Ask the carrier to resend it, and tell the client when to expect it', 'Tell them to wait a month', 'Cancel the policy'], 1, 'The carrier resends it.'),
       ok('The client asks what their policy covers. You:', ['Explain it', 'Send to agent', 'Read them the packet', 'Guess'], 1, 'Coverage questions go to the agent.'),
     ],
@@ -285,7 +285,7 @@ export const LESSONS = [
     minutes: 5,
     why: 'A lapsed policy leaves the client without cover, and the agent can lose their commission.',
     steps: [
-      'A failed draft shows as a payment call on your Calendar, and the client card shows Needs attention.',
+      'A failed draft shows as a payment call, and as the next step on the client\'s card.',
       'Call the client within one business day. Be calm: it is usually a changed card or low balance.',
       'Help them choose: retry the draft, change the draft date, or update the payment method with the carrier.',
       'Payment details go straight to the carrier, on a three-way call. Never write card or bank numbers down or in notes.',

@@ -54,7 +54,8 @@ test('every video in the manifest belongs to a real lesson, and every "?" moment
     assert.ok(LESSONS.some(l => l.id === id), `${id} is a lesson`)
     assert.ok(hasVideo(id))
     assert.ok(videoFor(id, {}).url.endsWith(v.src))
-    assert.ok(v.duration >= 120 && v.duration <= 300, `${id} is 2-5 minutes (${v.duration} s)`)
+    // P976: the script check cut whatever a VA does not need, so a short lesson (Reminders, 1:50) is fine; 90 s to 5 minutes
+    assert.ok(v.duration >= 90 && v.duration <= 300, `${id} is 1.5-5 minutes (${v.duration} s)`)
     for (const [task, t] of Object.entries(v.helpAt || {})) {
       assert.equal(HELP[task] || task, id, `"?" ${task} opens ${id}`)
       assert.ok(t >= 0 && t < v.duration)
