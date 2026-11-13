@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Search, CheckCheck } from 'lucide-react'
-import { useAdmFeed, useAdmAgents, useAdmVas, useAdmLeads, useAdmClients, useAdmActions } from '../data'
+import { Search, CheckCheck, X, Clock3, CalendarOff, CreditCard, UserPlus, ListChecks, Users, BarChart3, Bug } from 'lucide-react'
+import { useAdmFeed, useAdmAgents, useAdmVas, useAdmLeads, useAdmClients, useAdmActions, useAdmDay } from '../data'
 import { useNote } from '../../template/kit'
-import { useApp, SubPage, BottomSheet, Ini, rise } from '../../template/m/AppKit'
+import { useApp, SubPage, BottomSheet, Ini, Row, rise } from '../../template/m/AppKit'
 import { useNoAutoKeyboard } from '../../template/m/useKeyboard'
 import { NoteRow } from '../../template/m/ANotes'
-import { FEED_SEEN } from './admStore'
-import { searchAll, takingLeads, money } from './admModel'
+import { FEED_SEEN, RECENT, useRecent } from './admStore'
+import { useNeeds } from './useAdm'
+import { searchAll, takingLeads, money, toWatch, flagOf, statusLine, leadStage, leadWhen, LEAD_TONE, LEAD_WORD } from './admModel'
 
 // P986 — the admin app's small shared screens and pieces: Notifications (from the left), Search (agents, VAs, leads
 // and clients), the "Give to an agent" sheet, and opening a chat with one person.
@@ -30,6 +31,11 @@ export function ANotif() {
 }
 
 const TONE = { agent: 'sky', va: 'sage', lead: 'stone', client: 'sky' }
+// P995: Search never opens blank. Before typing: recent searches, Needs you (failed cards, day-off requests,
+// unassigned leads), today's booked calls, agents to watch, VAs on shift now, and quick jumps. Typing searches agents,
+// VAs, leads and clients as before; a search is kept as a recent one once a result is opened.
+const Sym = ({ tone, Icon }) => <span className={`ma-sym is-${tone}`}><Icon size={16} aria-hidden="true" /></span>
+const JUMPS = [['leads', 'All leads', ListChecks, 'sky'], ['clients', 'All clients', Users, 'sage'], ['reports', 'Reports', BarChart3, 'butter'], ['bugs', 'Bug reports', Bug, 'coral']]
 export function ASearch() {
   const app = useApp()
   const { data: agents } = useAdmAgents()
@@ -40,22 +46,100 @@ export function ASearch() {
   const input = useRef(null)
   useNoAutoKeyboard(input) // no focus on open; the keyboard only comes up when they tap the field
   const hits = useMemo(() => searchAll({ agents, vas, leads, clients }, q), [agents, vas, leads, clients, q])
+  const open = h => { RECENT.add(q); app.openSub(h.kind, { t: h.id }) }
   return (
-    <SubPage title="Search" line="Agents, VAs, leads and clients" big>
-      <label className="va-find ma-rise"><Search size={18} aria-hidden="true" /><input ref={input} type="search" inputMode="search" placeholder="Name or phone" aria-label="Search agents, VAs, leads and clients" value={q} onChange={e => setQ(e.target.value)} /></label>
-      {q.trim() && (
+    <SubPage title="Search" line="Agents, VAs, leads and clients" big className="is-search">
+      <label className="va-find ma-rise"><Search size={18} aria-hidden="true" /><input ref={input} type="search" inputMode="search" enterKeyHint="search" placeholder="Name or phone" aria-label="Search agents, VAs, leads and clients" value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') RECENT.add(q) }} />{q && <button type="button" className="ma-ib" aria-label="Clear" onClick={() => setQ('')}><X size={18} aria-hidden="true" /></button>}</label>
+      {q.trim() ? (
         <div className="ma-glass ma-list ma-rise" style={rise(1)}>
           {hits.map(h => (
-            <button key={`${h.kind}-${h.id}`} type="button" className="ma-row" onClick={() => app.openSub(h.kind, { t: h.id })}>
+            <button key={`${h.kind}-${h.id}`} type="button" className="ma-row" onClick={() => open(h)}>
               <Ini name={h.name} tone={TONE[h.kind]} size={40} />
               <span className="ma-grow"><b>{h.name}</b><small>{h.sub}</small></span>
             </button>
           ))}
           {!hits.length && <p className="ma-empty">Nobody by that name or number.</p>}
         </div>
-      )}
-      {!q.trim() && <p className="ma-note">Type a name or at least 3 digits of a phone number.</p>}
+      ) : <SearchSuggest onPick={setQ} />}
     </SubPage>
+  )
+}
+
+function SearchSuggest({ onPick }) {
+  const app = useApp()
+  const recent = useRecent()
+  const needs = useNeeds()
+  const { data: day } = useAdmDay()
+  const { data: agents } = useAdmAgents()
+  const { data: leads } = useAdmLeads()
+  const booked = leads.filter(l => l.day === day.today && l.agent_id && l.kind !== 'none').slice().reverse().slice(0, 4)
+  const watch = toWatch(agents)
+  let sec = 1
+  return (
+    <>
+      {recent.length > 0 && (
+        <div className="ma-rise" style={rise(sec++)}>
+          <div className="ma-h2 am-sh2"><h2>Recent</h2><button type="button" className="ma-textbtn" onClick={() => RECENT.clear()}>Clear</button></div>
+          <div className="ma-chips am-recent">
+            {recent.map(t => <button key={t} type="button" className="ma-fchip ma-press" onClick={() => onPick(t)}><Clock3 size={14} aria-hidden="true" />{t}</button>)}
+          </div>
+        </div>
+      )}
+      {needs.length > 0 && (
+        <div className="ma-rise" style={rise(sec++)}>
+          <div className="ma-h2 am-sh2"><h2>Needs you</h2><span className="am-count">{needs.length}</span></div>
+          <div className="ma-glass ma-list">
+            {needs.map(it => {
+              if (it.kind === 'dayoff') return <Row key={it.key} onClick={() => app.openSub('va', { t: it.r.va_id })} lead={<Sym tone="butter" Icon={CalendarOff} />} title={`${it.r.va} asked for a day off`} sub={`Nov ${it.r.date}${it.r.reason ? ` · ${it.r.reason}` : ''}`} />
+              if (it.kind === 'failed') return <Row key={it.key} onClick={() => app.openSub('agent', { t: it.a.id })} lead={<Sym tone="coral" Icon={CreditCard} />} title={`${it.a.name}’s card failed`} sub={`${it.a.billing.failed.what} · ${money(it.a.billing.failed.amount)}`} />
+              const n = it.leads.length
+              return <Row key={it.key} onClick={() => app.openSub('unassigned')} lead={<Sym tone="apricot" Icon={UserPlus} />} title={`${n} ${n === 1 ? 'lead has' : 'leads have'} no agent`} sub={it.leads.slice(0, 2).map(l => l.name).join(', ')} />
+            })}
+          </div>
+        </div>
+      )}
+      <div className="ma-rise" style={rise(sec++)}>
+        <div className="ma-h2 am-sh2"><h2>Booked today</h2><button type="button" className="ma-textbtn" onClick={() => app.openSub('leads')}>All leads</button></div>
+        {booked.length > 0 ? (
+          <ul className="ma-cards">
+            {booked.map(l => {
+              const st = leadStage(l)
+              return (
+                <li key={l.id} className={`ma-lead is-${LEAD_TONE[st]}`}>
+                  <button type="button" className="ma-lead-open" onClick={() => app.openSub('lead', { t: l.id })}><Ini name={l.name} size={42} /><span className="ma-grow"><b>{l.name}</b><small className="is-when">{leadWhen(l)}</small><small>{l.agent}{l.state ? ` · ${l.state}` : ''}</small></span></button>
+                  <span className="ma-tag">{LEAD_WORD[st]}</span>
+                </li>
+              )
+            })}
+          </ul>
+        ) : <p className="ma-empty is-glass">Nothing booked yet today.</p>}
+      </div>
+      {watch.length > 0 && (
+        <div className="ma-rise" style={rise(sec++)}>
+          <div className="ma-h2 am-sh2"><h2>Agents to watch</h2><button type="button" className="ma-textbtn" onClick={() => app.goTab('agents')}>All agents</button></div>
+          <div className="ma-glass ma-list">
+            {watch.map(a => {
+              const f = flagOf(a)
+              return <Row key={a.id} onClick={() => app.openSub('agent', { t: a.id })} lead={<Ini name={a.name} tone="sky" size={40} />} title={a.name} sub={<span className={f ? 'am-warn' : ''}>{f ? f.title : statusLine(a)}</span>} />
+            })}
+          </div>
+        </div>
+      )}
+      <div className="ma-rise" style={rise(sec++)}>
+        <div className="ma-h2 am-sh2"><h2>VAs on shift now</h2><button type="button" className="ma-textbtn" onClick={() => app.goTab('team')}>Team</button></div>
+        {day.onShift.length > 0 ? (
+          <div className="ma-glass ma-list">
+            {day.onShift.map(v => <Row key={v.id} onClick={() => app.openSub('va', { t: v.id })} lead={<Ini name={v.name} tone="sage" size={40} />} title={v.name} sub="On shift now" />)}
+          </div>
+        ) : <p className="ma-empty is-glass">Nobody is on shift right now.</p>}
+      </div>
+      <div className="ma-rise" style={rise(sec++)}>
+        <div className="ma-h2 am-sh2"><h2>Jump to</h2></div>
+        <div className="am-jumps">
+          {JUMPS.map(([k, w, Icon, tone]) => <button key={k} type="button" className="am-jump ma-press" onClick={() => app.openSub(k)}><Sym tone={tone} Icon={Icon} /><b>{w}</b></button>)}
+        </div>
+      </div>
+    </>
   )
 }
 

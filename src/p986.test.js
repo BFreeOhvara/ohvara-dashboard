@@ -77,14 +77,14 @@ test("today's desk calls split by result", () => {
 })
 
 test('All leads: stages, search, filter by agent', () => {
+  // P995 replaced the stages (see p995.test.js): Delivered = booked + live, Not interested is a filter.
   assert.equal(leadStage({ stage: 'unassigned' }), 'new')
-  assert.equal(leadStage({ stage: 'booked', kind: 'live' }), 'live')
-  assert.equal(leadStage({ stage: 'booked', kind: 'appointment' }), 'booked')
-  assert.equal(leadStage({ stage: 'not_interested' }), 'closed')
+  assert.equal(leadStage({ stage: 'booked', kind: 'live', agent_id: 'b' }), 'delivered')
+  assert.equal(leadStage({ stage: 'not_interested', agent_id: 'b' }), 'not_interested')
   const leads = [{ id: 1, name: 'Angela Moore', phone: '(512) 555-0110', agent_id: 'a', agent: 'Dana', stage: 'sold' }, { id: 2, name: 'Kevin Hill', phone: '(602) 555-0111', agent_id: 'b', agent: 'Priya', stage: 'booked', kind: 'live' }]
   assert.deepEqual(filterLeads(leads, { q: 'kev' }).map(l => l.id), [2])
   assert.deepEqual(filterLeads(leads, { q: '0110' }).map(l => l.id), [1])
-  assert.deepEqual(filterLeads(leads, { stage: 'live' }).map(l => l.id), [2])
+  assert.deepEqual(filterLeads(leads, { stage: 'delivered' }).map(l => l.id), [2])
   assert.deepEqual(filterLeads(leads, { agent: 'a' }).map(l => l.id), [1])
   assert.deepEqual(filterClients([{ name: 'Tom', phone: '', policy: 'FF-1', stage: 'working' }], { q: 'ff-1' }).length, 1)
 })

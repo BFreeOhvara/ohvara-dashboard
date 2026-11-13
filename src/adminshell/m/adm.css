@@ -129,3 +129,30 @@
 
 :where(.am-rota, .am-ctiles, .am-stats, .am-split) { touch-action: pan-y; }
 @media (prefers-reduced-motion: reduce) { .am-bars i, .am-split > i { transition: none !important; } }
+
+/* P995 — All leads like the agent Leads page: four tiles in the agent page's status colours (a colour dot and count
+   when off, filled with the status card colour when on), the Show closed row, and status-coloured lead cards. */
+.am-ltiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 14px 0 10px; touch-action: pan-y; }
+.am-ltile { display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 4px; min-width: 0; min-height: 78px; padding: 10px 10px 11px; border-radius: 20px; border: 1px solid var(--ma-glass-b); background: var(--ma-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); color: var(--ma-ink); font: inherit; text-align: left; cursor: pointer; }
+.am-ltile b { font-size: 24px; font-weight: 800; line-height: 1.1; }
+.am-ltile small { display: flex; align-items: flex-start; gap: 5px; font-size: 12px; font-weight: 700; line-height: 1.2; color: var(--ma-ink2); }
+.am-ltile small i { flex: none; width: 8px; height: 8px; margin-top: 3px; border-radius: 50%; background: var(--tbar); }
+.am-ltile:not(.is-on) b { color: var(--tbar); }
+.am-ltile.is-stone:not(.is-on) b { color: var(--ma-ink); }
+.am-ltile.is-on { background: var(--tcard); color: var(--tink); border-color: transparent; box-shadow: 0 10px 22px -14px rgba(0, 0, 0, .45); }
+.am-ltile.is-on small { color: inherit; }
+.am-ltile.is-on small i { background: currentColor; }
+.am-lhint { margin-top: 4px; }
+.am-lhint p { min-width: 0; }
+.am-lgroup + .am-lgroup { margin-top: 6px; }
+.am-lgroup .ma-cards { margin-bottom: 4px; }
+.am .ma-lead .ma-tag { flex: none; }
+.am .ma-lead .ma-grow small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* P995 — admin Search before typing: section heads, recent chips and the quick-jump grid. */
+.am-sh2 { margin-top: 18px; }
+.am-sh2 .am-count { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 11px; display: inline-grid; place-items: center; background: var(--sh-coral); color: white; font-weight: 800; font-size: 12px; }
+.am-recent .ma-fchip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.am-jumps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.am-jump { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 56px; padding: 10px 12px; border-radius: 18px; border: 1px solid var(--ma-glass-b); background: var(--ma-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); color: var(--ma-ink); font: inherit; text-align: left; cursor: pointer; }
+.am-jump b { font-size: 15px; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

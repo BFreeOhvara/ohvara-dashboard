@@ -19,7 +19,7 @@ import { useApp, SubPage, Row, Ini, Toggle, SignOutButton, BottomSheet, rise } f
 import { useNoAutoKeyboard } from '../../template/m/useKeyboard'
 import { firstName } from '../../template/m/va/vaModel'
 import {
-  money, halvesOf, LEAD_FILTERS, LEAD_WORD, LEAD_TONE, leadStage, filterLeads, CLIENT_FILTERS, filterClients, BUG_WORD, BUG_TONE,
+  money, halvesOf, LEAD_FILTERS, LEAD_WORD, LEAD_TONE, LEAD_HINT, leadStage, leadKind, leadWhen, leadEvents, leadCounts, groupLeads, filterLeads, CLIENT_FILTERS, filterClients, BUG_WORD, BUG_TONE,
   appOf, pageOf, connectionsOf, callSplit,
 } from './admModel'
 import { useOwnerMe, useAdmName } from './useAdm'
@@ -146,6 +146,10 @@ export function AAi() {
 }
 
 // ── All leads ────────────────────────────────────────────────────────────────────────────────────────────────────
+// P995: built like the agent Leads page. Four colour tiles with counts (Delivered, Follow up, Not interested, Sold;
+// tap again for every lead), a "Show closed" switch for the no-shows, and every lead a full card in its status colour,
+// grouped by status. Filter by agent (sheet) and search stay.
+const leadPlace = l => [l.agent || 'No agent yet', l.state].filter(Boolean).join(' · ')
 export function ALeadsAll() {
   const app = useApp()
   const { data: leads } = useAdmLeads({ all: true })
@@ -153,33 +157,56 @@ export function ALeadsAll() {
   const [q, setQ] = useState('')
   const [stage, setStage] = useState(null)
   const [agent, setAgent] = useState(null)
+  const [closed, setClosed] = useState(false)
   const [pick, setPick] = useState(false)
   const input = useRef(null)
   useNoAutoKeyboard(input)
-  const list = useMemo(() => filterLeads(leads, { q, stage, agent }).slice().reverse(), [leads, q, stage, agent])
+  const list = useMemo(() => filterLeads(leads, { q, stage, agent, closed }), [leads, q, stage, agent, closed])
+  const groups = useMemo(() => groupLeads(list), [list])
+  const counts = useMemo(() => leadCounts(leads, { q, agent }), [leads, q, agent])
   const agentName = agents.find(a => a.id === agent)?.name
+  let shown = 0
   return (
     <SubPage title="All leads" line={`${leads.length} leads across every agent`} big>
-      <div className="am-findrow ma-rise">
+      <div className="am-ltiles ma-rise" role="tablist" aria-label="Show">
+        {LEAD_FILTERS.map(([k, w]) => (
+          <button key={k} type="button" role="tab" aria-selected={stage === k} className={`am-ltile ma-press is-${LEAD_TONE[k]}${stage === k ? ' is-on' : ''}`} onClick={() => setStage(stage === k ? null : k)}>
+            <b>{counts[k]}</b><small><i aria-hidden="true" />{w}</small>
+          </button>
+        ))}
+      </div>
+      <div className="am-findrow ma-rise" style={rise(1)}>
         <label className="va-find"><Search size={18} aria-hidden="true" /><input ref={input} type="search" inputMode="search" placeholder="Name, phone or agent" aria-label="Search leads" value={q} onChange={e => setQ(e.target.value)} /></label>
         <button type="button" className={`ma-round ma-press am-filt${agent ? ' is-on' : ''}`} aria-label={agent ? `Agent: ${agentName}. Change` : 'Filter by agent'} onClick={() => setPick(true)}><SlidersHorizontal size={19} aria-hidden="true" /></button>
       </div>
-      <div className="ma-chips ma-rise" style={rise(1)}>
-        {LEAD_FILTERS.map(([k, w]) => <button key={k} type="button" className={`ma-fchip${stage === k ? ' is-on' : ''}`} aria-pressed={stage === k} onClick={() => setStage(stage === k ? null : k)}>{w}</button>)}
-        {agent && <button type="button" className="ma-fchip is-on" onClick={() => setAgent(null)}>{agentName} ✕</button>}
+      {agent && <div className="ma-chips"><button type="button" className="ma-fchip is-on" onClick={() => setAgent(null)}>{agentName} ✕</button></div>}
+      <div className="ma-hintrow am-lhint ma-rise" style={rise(2)}>
+        <p>{LEAD_HINT[stage || 'all']}</p>
+        <label className="ma-closed">Show closed<Toggle small tone="sage" on={closed} label="Show closed leads" onChange={setClosed} /></label>
       </div>
-      <div className="ma-glass ma-list ma-rise" style={rise(2)}>
-        {list.slice(0, 80).map(l => {
-          const st = leadStage(l)
-          return (
-            <button key={l.id} type="button" className="ma-row" onClick={() => app.openSub('lead', { t: l.id })}>
-              <span className="ma-grow"><b>{l.name}</b><small>{l.agent || 'No agent yet'} · {l.came}</small></span>
-              <span className={`ma-tag is-${LEAD_TONE[st]}`}>{LEAD_WORD[st]}</span>
-            </button>
-          )
-        })}
-        {!list.length && <p className="ma-empty">No lead matches that.</p>}
+      <div key={`${stage}-${closed}-${agent}`}>
+        {groups.map(([k, items]) => (
+          <section key={k} className="am-lgroup">
+            {(!stage || k !== stage) && <p className="ma-cap is-out">{LEAD_WORD[k]} · {items.length}</p>}
+            <ul className="ma-cards">
+              {items.slice(0, 60).map(l => {
+                const st = leadStage(l)
+                const i = shown++
+                return (
+                  <li key={l.id} className={`ma-lead is-${LEAD_TONE[st]}`} style={{ animationDelay: `${Math.min(i, 8) * 0.03}s` }}>
+                    <button type="button" className="ma-lead-open" onClick={() => app.openSub('lead', { t: l.id })}>
+                      <Ini name={l.name} />
+                      <span className="ma-grow"><b>{l.name}</b><small className="is-when">{leadWhen(l)}</small><small>{leadPlace(l)}</small></span>
+                    </button>
+                    <span className="ma-tag">{LEAD_WORD[st]}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        ))}
       </div>
+      {!list.length && <p className="ma-empty is-glass">{q.trim() || agent ? 'No lead matches that.' : stage ? `No ${LEAD_WORD[stage].toLowerCase()} leads yet.` : 'No leads yet.'}</p>}
       <BottomSheet open={pick} onClose={() => setPick(false)} label="Filter by agent" tall>
         <p className="ma-sheet-t">Show one agent’s leads</p>
         <div className="am-sheetlist">
@@ -195,6 +222,8 @@ export function ALeadsAll() {
   )
 }
 
+// One lead: a hero in its status colour (like the agent's lead screen), the details, what happened, and changing the
+// agent. Results stay with the agent and the system: nothing here changes one.
 const F = ({ k, v }) => <span><small>{k}</small><b>{v || 'Not given'}</b></span>
 export function ALeadAdm({ id }) {
   const { data: leads } = useAdmLeads({ all: true })
@@ -202,15 +231,25 @@ export function ALeadAdm({ id }) {
   const l = leads.find(x => x.id === id)
   if (!l) return <SubPage title="Lead"><p className="ma-empty">This lead isn’t here any more.</p></SubPage>
   const st = leadStage(l)
+  const events = leadEvents(l)
   const foot = <button type="button" className="ma-btn is-solid is-grow is-tall ma-press" onClick={() => setGive([l])}>{l.agent_id ? 'Change the agent' : 'Give to an agent'}</button>
   return (
-    <SubPage title={l.name} line={`${LEAD_WORD[st]} · ${l.agent || 'No agent yet'}`} foot={foot} big>
-      <div className="ma-glass ma-pad va-facts is-glass ma-rise">
+    <SubPage title={l.name} line={`Came in ${l.came || ''}`.trim()} foot={foot} big>
+      <div className={`ma-hero is-${LEAD_TONE[st]} ma-rise`}>
+        <div className="ma-hero-top"><span>{leadKind(l)}</span><span className="ma-tag">{LEAD_WORD[st]}</span></div>
+        <b>{l.agent || 'No agent yet'}</b>
+        <span className="ma-hero-place">{[[l.city, l.state].filter(Boolean).join(', '), l.product].filter(Boolean).join(' · ')}</span>
+      </div>
+      <div className="ma-glass ma-pad va-facts is-glass ma-rise" style={rise(1)}>
         <F k="Phone" v={l.phone} /><F k="Lives in" v={[l.city, l.state].filter(Boolean).join(', ')} />
         <F k="Wants" v={l.product} /><F k="Came in" v={l.came} />
-        <F k="How" v={l.kind === 'live' ? 'Live transfer' : l.kind === 'appointment' ? 'Booked appointment' : 'Not reached yet'} /><F k="Appointment" v={l.appt} />
+        <F k="How" v={leadKind(l)} /><F k="Appointment" v={l.appt} />
         <F k="Source" v={l.source} /><F k="Agent ID" v={l.agentRef || (l.campaignId ? 'From the campaign' : '')} />
       </div>
+      <section className="ma-glass ma-pad ma-rise" style={rise(2)}>
+        <p className="ma-sec-t">What happened</p>
+        <ol className="ma-tl">{events.map((e, i) => <li key={i}><i aria-hidden="true" className={i === events.length - 1 ? `is-${LEAD_TONE[st]}` : ''} /><span><b>{e.what}</b>{e.sub && <small>{e.sub}</small>}</span></li>)}</ol>
+      </section>
       {l.note && <p className="ma-note">{l.note}</p>}
       <p className="ma-note">Results come from the agent and the system, never set by hand. You can change which agent has it.</p>
       <AssignSheet leads={give} current={l.agent_id} onClose={() => setGive(null)} />

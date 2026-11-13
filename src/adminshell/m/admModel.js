@@ -129,26 +129,78 @@ export const callTag = c => (c.status === 'live' ? 'On the call now' : c.status 
 export const rotaOf = (rota, days, vaId) => days.map(d => (rota[d] || []).includes(vaId))
 
 // ── Leads and clients ────────────────────────────────────────────────────────────────────────────────────────────
-// The All leads filters (they wrap). live = a live transfer; no_show / sold by stage; closed = not interested.
-export const LEAD_FILTERS = [['new', 'New'], ['booked', 'Booked'], ['live', 'Live transfer'], ['sold', 'Sold'], ['no_show', 'No-show'], ['closed', 'Closed']]
+// P995 — All leads built like the agent Leads page: Delivered (booked appointments and live transfers together),
+// Follow up, Not interested and Sold, each in the agent page's colour (template/m/appModel TONE: booked sky, follow
+// up butter, sold sage, closed stone). No-shows are the closed ones: they only show with the "Show closed" switch,
+// in grey, like the agent side. A lead with no agent yet is in no filter: it leads the full list in apricot.
+export const LEAD_FILTERS = [['delivered', 'Delivered'], ['follow', 'Follow up'], ['not_interested', 'Not interested'], ['sold', 'Sold']]
+export const LEAD_GROUPS = ['new', 'delivered', 'follow', 'not_interested', 'sold', 'closed']
 export function leadStage(l) {
-  if (l.stage === 'unassigned') return 'new'
+  if (l.stage === 'unassigned' || !l.agent_id) return 'new'
   if (l.stage === 'sold') return 'sold'
-  if (l.stage === 'no_show') return 'no_show'
-  if (l.stage === 'not_interested') return 'closed'
-  if (l.kind === 'live') return 'live'
-  if (l.stage === 'follow_up') return l.owner === 'team' ? 'new' : 'booked'
-  return 'booked'
+  if (l.stage === 'not_interested') return 'not_interested'
+  if (l.stage === 'no_show') return 'closed'
+  if (l.stage === 'follow_up') return 'follow'
+  return 'delivered'
 }
-export const LEAD_WORD = { new: 'New', booked: 'Booked', live: 'Live transfer', sold: 'Sold', no_show: 'No-show', closed: 'Closed' }
-export const LEAD_TONE = { new: 'stone', booked: 'sky', live: 'sky', sold: 'sage', no_show: 'apricot', closed: 'stone' }
+export const LEAD_WORD = { new: 'Needs an agent', delivered: 'Delivered', follow: 'Follow up', not_interested: 'Not interested', sold: 'Sold', closed: 'Closed' }
+export const LEAD_TONE = { new: 'apricot', delivered: 'sky', follow: 'butter', not_interested: 'stone', sold: 'sage', closed: 'stone' }
+export const LEAD_HINT = {
+  all: 'Every lead across every agent, newest first.',
+  delivered: 'Booked appointments and live transfers handed to an agent.',
+  follow: 'To call back: the agent’s, or our team’s while we try to reach them.',
+  not_interested: 'The agent marked them not interested. Calls and texts stopped.',
+  sold: 'Sold. Each one goes on to servicing.',
+}
+// The lead type on a row: booked or live (a lead the team never reached has neither yet).
+export const leadKind = l => (l.kind === 'live' ? 'Live transfer' : l.kind === 'appointment' ? 'Booked appointment' : 'Not reached yet')
+// The bold line on a row, like the agent page's "when": what kind of lead and when it came in, or what happened.
+export function leadWhen(l) {
+  const st = leadStage(l)
+  if (st === 'closed') return `No show${l.appt ? ` · ${l.appt}` : ''} · rebook text sent`
+  if (st === 'delivered' && l.kind === 'appointment' && l.appt) return `Booked · ${l.appt}`
+  return `${leadKind(l)} · ${l.came || ''}`.replace(/ · $/, '')
+}
 const digits = s => String(s || '').replace(/\D/g, '')
-export function filterLeads(leads, { q = '', stage = null, agent = null } = {}) {
+export function filterLeads(leads, { q = '', stage = null, agent = null, closed = false } = {}) {
   const t = q.trim().toLowerCase()
   const d = digits(t)
-  return leads.filter(l => (!stage || leadStage(l) === stage)
-    && (!agent || l.agent_id === agent)
-    && (!t || l.name.toLowerCase().includes(t) || (d.length >= 3 && digits(l.phone).includes(d)) || String(l.agent || '').toLowerCase().includes(t)))
+  return leads.filter(l => {
+    const st = leadStage(l)
+    const inView = stage ? st === stage || (closed && st === 'closed') : closed || st !== 'closed'
+    return inView && (!agent || l.agent_id === agent)
+      && (!t || l.name.toLowerCase().includes(t) || (d.length >= 3 && digits(l.phone).includes(d)) || String(l.agent || '').toLowerCase().includes(t))
+  })
+}
+// The count on each filter tile: the leads that agent and that search would show in it (closed never counts).
+export function leadCounts(leads, { q = '', agent = null } = {}) {
+  const base = filterLeads(leads, { q, agent })
+  return Object.fromEntries(LEAD_FILTERS.map(([k]) => [k, base.filter(l => leadStage(l) === k).length]))
+}
+// The full list grouped like the agent page (one group per status, in filter order), newest first in each.
+export function groupLeads(list) {
+  const newest = list.slice().reverse()
+  return LEAD_GROUPS.map(k => [k, newest.filter(l => leadStage(l) === k)]).filter(([, items]) => items.length)
+}
+// A lead's timeline for the admin lead screen, oldest first. The result lines come from the agent and the system.
+const MATCH_WORD = { link: 'From the agent ID in the ad link', campaign: 'From the Meta campaign ID', admin: 'Given by an admin' }
+export function leadEvents(l) {
+  const st = leadStage(l)
+  const who = String(l.agent || '').split(' ')[0] || 'The agent'
+  const ev = [{ what: 'Came in', sub: [l.source, l.came].filter(Boolean).join(' · ') }]
+  if (!l.agent_id) ev.push({ what: 'Waiting for an agent', sub: l.why || 'No agent matched it yet' })
+  else {
+    ev.push({ what: `Matched to ${l.agent}`, sub: MATCH_WORD[l.matchedBy] || '' })
+    if (l.kind === 'live') ev.push({ what: `Live transfer to ${who}`, sub: l.came || '' })
+    else if (l.kind === 'appointment') ev.push({ what: 'Appointment booked', sub: l.appt || '' })
+    else ev.push({ what: 'Not reached yet', sub: 'Our team keeps trying' })
+    if (st === 'sold') ev.push({ what: 'Sold', sub: l.premium ? `${money(l.premium)} a month · goes on to servicing` : 'Goes on to servicing' })
+    else if (st === 'not_interested') ev.push({ what: 'Not interested', sub: 'Calls and texts stopped' })
+    else if (st === 'closed') ev.push({ what: 'No show', sub: 'Rebook text sent · the AI caller calls to book again' })
+    else if (st === 'follow' && l.owner !== 'team') ev.push({ what: 'Follow up', sub: `${who} calls them back` })
+  }
+  for (const x of l.log || []) ev.push({ what: String(x), sub: '' })
+  return ev
 }
 export const CLIENT_FILTERS = [['needs_attention', 'Needs attention'], ['working', 'Working'], ['protected', 'Protected']]
 export function filterClients(clients, { q = '', stage = null } = {}) {

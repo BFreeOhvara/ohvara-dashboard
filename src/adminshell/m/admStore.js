@@ -50,3 +50,13 @@ export const admChats = {
   start: (id, name, about) => chatStore.set(s => (s[id] ? s : { ...s, [id]: { id, name, about, tone: 'stone', unread: 0, messages: [], fresh: true } })),
 }
 export const isLocalChat = id => String(id || '').startsWith('adm-')
+
+// P995: recent searches on the admin Search screen (this phone only), newest first, at most 6.
+const RKEY = 'ohvara-adm-recent-search'
+const recentStore = small((() => { try { const v = JSON.parse(localStorage.getItem(RKEY) || '[]'); return Array.isArray(v) ? v : [] } catch { return [] } })())
+const saveRecent = n => { try { localStorage.setItem(RKEY, JSON.stringify(n)) } catch { /* private window */ } return n }
+export const RECENT = {
+  add: q => { const t = String(q || '').trim(); if (t.length < 2) return; recentStore.set(s => saveRecent([t, ...s.filter(x => x.toLowerCase() !== t.toLowerCase())].slice(0, 6))) },
+  clear: () => recentStore.set(() => saveRecent([])),
+}
+export const useRecent = () => use(recentStore)
