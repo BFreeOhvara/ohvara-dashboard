@@ -81,7 +81,7 @@ test('the call screen uses the desk\'s calling stack, not a second one', () => {
   assert.match(src, /from '\.\.\/\.\.\/ful\/callLine'/)
   assert.match(src, /useRealLine/)
   for (const w of ['Mute', 'Keypad', 'Speaker', 'Add', 'Hold', 'Notes']) // P982: Add (+) replaced Add carrier
-    assert.ok(src.includes(`'${w}'`), w)
+    assert.ok(src.includes(`'${w}'`) || src.includes(`/>${w}</`), w) // P986: Keypad is a small text button now
 })
 
 test('the result sheet has no close: the scrim and Escape only shake it', () => {

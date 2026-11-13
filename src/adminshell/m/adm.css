@@ -1,0 +1,131 @@
+/* P986 — the admin phone app (src/template/m/adm). Built on the agent and VA apps' pieces (app.css, va.css); only
+   what's new for admin lives here. Colours are the shared tokens (--ma-*, --sh-*), light is the reference, dark
+   matches the desktop dark. Everything scrolls up and down only. */
+
+/* A card that's a button (the profit card, the shift card, the day's numbers) */
+.am :is(button.ma-plan, button.va-shift, button.ma-week) { display: block; width: 100%; border: 0; font: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.am button.ma-week { display: grid; text-align: center; color: var(--ma-ink); }
+.am button.ma-week > * { border-top: 0; border-bottom: 0; border-right: 0; }
+
+/* Home: the dark profit card */
+.am-profit { margin-top: 14px; }
+.am-profit-top { position: relative; display: flex; align-items: flex-end; gap: 12px; padding-right: 22px; }
+.am-profit-top .ma-grow { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.am-profit-top .ma-grow > b { font-size: 34px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
+.am-change { font-weight: 700; }
+.am-bars { display: flex; align-items: flex-end; gap: 6px; height: 64px; flex: none; }
+.am-bars > span { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; width: 22px; height: 100%; }
+.am-bars i { display: block; width: 100%; border-radius: 6px 6px 3px 3px; background: color-mix(in srgb, white 30%, transparent); }
+.am-bars i.is-now { background: var(--sh-f-sky); }
+.am-bars small { font-size: 10px; font-weight: 700; }
+.am-halves { margin-top: 16px; }
+.am-profit-go, .am-shift-go { position: absolute; top: 18px; right: 14px; opacity: .7; }
+.am-shift { position: relative; }
+.am-shift .va-shift-top { padding-right: 26px; }
+.am-shift > small { display: block; margin-top: 10px; }
+
+/* Needs you */
+.am-needs .ma-need + .ma-need { margin-top: 10px; }
+.am-needs .ma-h2 span { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 11px; display: inline-grid; place-items: center; background: var(--sh-coral); color: white; font-weight: 800; font-size: 12px; }
+.am-clear { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--ma-ink); font-weight: 700; }
+.am-clear svg { color: var(--sh-f-sage); }
+[data-theme="light"] .am-clear svg { color: color-mix(in srgb, var(--sh-f-sage) 60%, var(--sh-fi-sage)); }
+.am-warn { color: color-mix(in srgb, var(--sh-f-coral) 70%, var(--sh-fi-coral)) !important; font-weight: 700; }
+.ma:not(:is([data-theme="light"] *)) .am-warn { color: var(--sh-f-coral) !important; }
+.am-ok { color: color-mix(in srgb, var(--sh-f-sage) 60%, var(--sh-fi-sage)) !important; font-weight: 700; }
+.ma:not(:is([data-theme="light"] *)) .am-ok { color: var(--sh-f-sage) !important; }
+
+/* Count tiles that filter a list (Agents, All clients) */
+.am-ctiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.am-ctile { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 76px; padding: 12px; border-radius: 20px; border: 1px solid var(--ma-glass-b); background: var(--ma-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); color: var(--ma-ink); font: inherit; text-align: left; cursor: pointer; }
+.am-ctile b { font-size: 24px; font-weight: 800; line-height: 1.1; }
+.am-ctile small { font-size: 12px; font-weight: 700; color: var(--ma-ink2); line-height: 1.2; }
+.am-ctile.is-on { background: var(--ma-solid); color: var(--ma-solid-ink); border-color: transparent; }
+.am-ctile.is-on small { color: inherit; opacity: .8; }
+.am-ctile:is(.is-apricot, .is-sky, .is-sage).is-on { background: var(--tcard); color: var(--tink); }
+.am-ctile:is(.is-apricot):not(.is-on) b { color: color-mix(in srgb, var(--sh-f-apricot) 60%, var(--sh-fi-apricot)); }
+.ma:not(:is([data-theme="light"] *)) .am-ctile.is-apricot:not(.is-on) b { color: var(--sh-f-apricot); }
+
+/* Agents: the Need you cards */
+.am-needrow { margin-top: 8px; min-height: 72px; border-radius: 20px; background: var(--tcard); color: var(--tink); box-shadow: 0 12px 26px -16px rgba(0, 0, 0, .4); }
+.am-needrow small { color: inherit; opacity: .85; }
+.am-needrow .ma-ini { background: color-mix(in srgb, white 34%, transparent); color: inherit; }
+.am-flagline { font-weight: 800; opacity: 1 !important; }
+.ma-row .ma-grow > small + small { margin-top: 1px; }
+
+/* An agent / VA / client screen */
+.am-buys { margin: 0 4px 12px; font-size: 14px; font-weight: 600; color: var(--ma-ink2); }
+.am-flag { margin-bottom: 12px; }
+.am-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.am-stats.is-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.am-stats > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 14px; border-radius: 18px; background: var(--ma-glass); border: 1px solid var(--ma-glass-b); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.am-stats b { font-size: 22px; font-weight: 800; letter-spacing: -.01em; line-height: 1.15; overflow-wrap: anywhere; }
+.am-stats.is-3 b { font-size: 19px; }
+.am-stats small { font-size: 12px; font-weight: 700; color: var(--ma-ink2); line-height: 1.25; }
+.am-foot2 { margin-top: 0; width: 100%; }
+.am-foot2 > * { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.am-line.is-strong b, .am-line.is-strong .ma-val { color: var(--ma-ink); font-weight: 800; }
+.am-profitline { margin-top: 14px; }
+.am-profitline b { display: block; font-size: 30px; font-weight: 800; }
+.am-seg { margin-bottom: 4px; }
+.am-seg > button { display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+
+/* Team: today's calls */
+.am-calls { margin-top: 14px; }
+.am-calls-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.am-calls-h b { font-size: 17px; font-weight: 800; }
+.am-calls-h span { font-size: 13px; font-weight: 700; color: var(--ma-ink2); }
+.am-split { display: flex; gap: 3px; height: 14px; margin-top: 12px; border-radius: 7px; overflow: hidden; }
+.am-split > i { flex-basis: 0; min-width: 8px; background: var(--tbar); }
+.am-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; font-size: 13px; font-weight: 600; color: var(--ma-ink2); }
+.am-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.am-legend i { width: 10px; height: 10px; border-radius: 3px; background: var(--tbar); }
+.am-legend b { color: var(--ma-ink); font-weight: 800; }
+.am-hold { display: block; margin-top: 10px; font-size: 13px; font-weight: 600; color: var(--ma-ink2); }
+.am-avdot { position: relative; flex: none; }
+.am-avdot > i { position: absolute; right: -1px; bottom: -1px; width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--ma-bg, white); background: var(--sh-f-sage); }
+.am-avdot > i.is-call { background: var(--sh-f-sky); }
+.am-avdot > i.is-late { background: var(--sh-f-apricot); }
+.am-varow .ma-grow { display: flex; flex-direction: column; }
+.am-vabar { height: 6px; margin-top: 8px; --tbar: var(--sh-f-sage); }
+[data-theme="light"] .am-vabar { --tbar: color-mix(in srgb, var(--sh-f-sage) 72%, var(--sh-fi-sage)); }
+
+/* Team: this week's rota (7 days fit 390 px with no sideways scroll) */
+.am-rota { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; padding: 10px 6px; border-radius: 22px; }
+.am-rday { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: 6px 0 8px; border-radius: 14px; }
+.am-rday small { font-size: 11px; font-weight: 700; color: var(--ma-ink2); }
+.am-rday > b { font-size: 16px; font-weight: 800; }
+.am-rday.is-today { background: var(--ma-solid); color: var(--ma-solid-ink); }
+.am-rday.is-today small { color: inherit; opacity: .8; }
+.am-rday.is-past { opacity: .55; }
+.am-rppl { display: flex; flex-direction: column; align-items: center; gap: 3px; margin-top: 4px; }
+.am-rppl .ma-ini { font-size: 10px; }
+.am-daychips { margin-top: 12px; }
+.am-sheetlist { display: flex; flex-direction: column; padding-bottom: 6px; }
+.ma-pick.is-on { border-color: var(--ma-ink); }
+.ma-pick:disabled { opacity: .5; cursor: default; }
+.am-tick { width: 26px; height: 26px; flex: none; border-radius: 50%; border: 2px solid var(--ma-glass-b); display: grid; place-items: center; font-weight: 800; font-size: 14px; }
+.am-tick.is-on { background: var(--ma-solid); color: var(--ma-solid-ink); border-color: transparent; }
+
+/* You: lists and screens */
+.am-unrow { flex-wrap: wrap; }
+.am-unrow .ma-nb { flex: none; }
+.am-status { display: flex; align-items: center; gap: 12px; }
+.am-status > i, .am-cdot { width: 12px; height: 12px; flex: none; border-radius: 50%; background: var(--ma-ink3); }
+.am-status > i.is-on, .am-cdot.is-on { background: var(--sh-f-sage); }
+.am-status b { font-size: 17px; font-weight: 800; }
+.am-status small { display: block; color: var(--ma-ink2); }
+.am-findrow { display: flex; gap: 8px; align-items: flex-start; }
+.am-findrow .va-find { flex: 1; min-width: 0; }
+.am-filt { width: 52px; height: 52px; flex-basis: 52px; }
+.am-filt.is-on { background: var(--ma-solid); color: var(--ma-solid-ink); border-color: transparent; }
+.am-bugtext { display: flex; flex-direction: column; gap: 4px; margin: 12px 0; }
+.am-bugtext small { font-size: 12px; font-weight: 700; color: var(--ma-ink3); }
+.am-bugtext p { font-size: 16px; line-height: 1.4; margin: 0 0 8px; overflow-wrap: anywhere; }
+.am-conn { align-items: flex-start; }
+.am-conn .am-cdot { margin-top: 6px; }
+.am-conn .ma-grow { display: flex; flex-direction: column; }
+.am .ma-row .ma-tag { flex: none; }
+
+:where(.am-rota, .am-ctiles, .am-stats, .am-split) { touch-action: pan-y; }
+@media (prefers-reduced-motion: reduce) { .am-bars i, .am-split > i { transition: none !important; } }

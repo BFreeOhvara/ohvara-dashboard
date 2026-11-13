@@ -21,7 +21,7 @@ export function VNotif() {
   const left = feed.filter(f => !read.includes(f.id)).length
   const markAll = <button type="button" className="ma-textbtn ma-press" onClick={() => setRead(feed.map(f => f.id))} disabled={!left}><CheckCheck size={18} aria-hidden="true" />Mark all read</button>
   return (
-    <SubPage title="Notifications" line={left ? `${left} new` : 'All caught up'} close="Close notifications" className="is-notif" right={markAll} big>
+    <SubPage title="Notifications" line={left ? `${left} new` : 'All caught up'} close="Close notifications" className="is-notif" left={markAll} arrowRight big>
       {feed.map((f, i) => (
         <NoteRow key={f.id} i={i} unread={!read.includes(f.id)} it={{ kind: KIND[f.kind] || 'todo', title: f.who, what: f.text, time: f.at }} onClick={() => setRead(r => [...new Set([...r, f.id])])} />
       ))}
@@ -70,9 +70,13 @@ export function VClient({ id }) {
   if (!c) return <SubPage title="Client"><p className="ma-empty">This client isn’t here any more.</p></SubPage>
   const calls = all.filter(i => (i.row?.client_id || i.row?.client?.id) === c.id)
   const thread = threads.find(t => t.client_id === c.id)
-  const foot = thread
-    ? <button type="button" className="ma-btn is-solid is-grow is-tall ma-press" onClick={() => app.openSub('thread', { t: thread.id })}><MessageCircle size={18} aria-hidden="true" />Message {c.agent.split(' ')[0]}</button>
-    : null
+  // P986: Call is one of the few places the phone opens (with Start call, the brief and the hold line).
+  const foot = (
+    <div className="ma-two va-clientfoot">
+      {thread && <button type="button" className="ma-btn is-soft is-tall ma-press" onClick={() => app.openSub('thread', { t: thread.id })}><MessageCircle size={18} aria-hidden="true" />Message {c.agent.split(' ')[0]}</button>}
+      <button type="button" className="ma-btn is-solid is-tall ma-press" onClick={() => vc.callClient(c)}><Phone size={18} aria-hidden="true" />Call</button>
+    </div>
+  )
   return (
     <SubPage title={c.name} line={`${c.agent}’s client`} foot={foot} big>
       <div className="ma-glass ma-pad va-facts is-glass ma-rise">

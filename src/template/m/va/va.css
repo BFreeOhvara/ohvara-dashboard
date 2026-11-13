@@ -222,3 +222,15 @@
 .va-rowcall { position: absolute; right: 10px; bottom: 6px; width: 44px; height: 44px; border-radius: 50%; border: 0; display: grid; place-items: center; background: color-mix(in srgb, white 55%, transparent); color: var(--sh-fi-sage, inherit); cursor: pointer; }
 :root:not([data-theme="light"]) .va-rowcall { background: color-mix(in srgb, white 16%, transparent); color: white; }
 @media (prefers-reduced-motion: reduce) { .va-pill, .ma-layer.va-call .va-pad { animation: none !important; } }
+
+/* ── P986: Add is the main way to bring someone in; the keypad is a small button beside End (for carrier menus) ── */
+.va-addmain { grid-column: 1 / span 2; justify-self: stretch; display: flex; align-items: center; gap: 12px; min-height: 78px; margin: 0 8px; padding: 0 18px; border: 0; border-radius: 39px; background: var(--ma-deep-ink); color: var(--ma-deep); font: inherit; text-align: left; cursor: pointer; transition: transform .2s var(--ma-ease); }
+.va-addmain:active { transform: scale(.97); }
+.va-addmain:disabled { cursor: default; opacity: .85; }
+.va-addmain.is-sage { background: color-mix(in srgb, var(--sh-f-sage) 85%, transparent); color: var(--sh-fi-sage); }
+.va-addmain > span { display: flex; flex-direction: column; min-width: 0; }
+.va-addmain b { font-size: 17px; font-weight: 800; }
+.va-addmain small { font-size: 12px; font-weight: 600; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.va-padbtn { justify-self: center; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 10px; border: 0; background: none; color: inherit; font: inherit; font-size: 14px; font-weight: 600; opacity: .8; cursor: pointer; }
+.va-clientfoot { margin-top: 0; width: 100%; }
+.va-clientfoot > * { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }

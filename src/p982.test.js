@@ -75,8 +75,8 @@ test('Sign out is red; Help says "Message Ohvara support" in both apps (no names
   assert.doesNotMatch(me, /Message Brayden or Jordan/)
 })
 
-test('VA phone: a phone button on Today and on Calendar rows; minimise to a green pill and back', () => {
-  assert.ok(read('./template/m/va/VToday.jsx').includes('onClick={vc.openPhone}'))
+test('VA phone: a phone button on Calendar rows (P986: no phone icon on Today); minimise to a green pill and back', () => {
+  assert.ok(!read('./template/m/va/VToday.jsx').includes('vc.openPhone')) // P986: the header phone icon is gone
   assert.ok(read('./template/m/va/VCalendar.jsx').includes('className="va-rowcall ma-press"'))
   assert.ok(call.includes('{call && !call.end && mini && <CallPill'))
   assert.ok(call.includes('onMin={() => setMini(true)}'))
@@ -84,9 +84,9 @@ test('VA phone: a phone button on Today and on Calendar rows; minimise to a gree
   assert.match(vcss, /\.va-pill \{[^}]*position: fixed; z-index: 140;[^}]*background: var\(--sh-sage\)/)
 })
 
-test('call screen: 3×2 grid in order, keypad swaps into the same spot with Hide, Add (+) and Notes sheets', () => {
+test('call screen: grid in order (P986: Add is the wide main button, the keypad a small button by End), keypad swaps into the same spot with Hide, Add (+) and Notes sheets', () => {
   const grid = call.slice(call.indexOf('<div className="va-call-grid">'))
-  const order = ["btn('spk'", "btn('mute'", "btn('hold'", "btn('pad'", "btn('add'", "btn('notes'"].map(k => grid.indexOf(k))
+  const order = ["btn('spk'", "btn('mute'", "btn('hold'", 'className={`va-addmain', "btn('notes'", 'className="va-padbtn"'].map(k => grid.indexOf(k))
   assert.ok(order.every((n, i) => n > 0 && (i === 0 || n > order[i - 1])), String(order))
   assert.ok(call.includes('? <Pad onKey={k => { act({ type: \'tone\', key: k }); srv(\'dtmf\', { digits: k }) }} />'))
   assert.ok(call.includes('className="va-hide" onClick={() => act({ type: \'pad\' })}>Hide</button>'))

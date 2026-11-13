@@ -38,7 +38,7 @@ export function ANotif() {
   const tap = it => { READ.add([it.id]); go(it.to) }
   const markAll = <button type="button" className="ma-textbtn ma-press" onClick={() => READ.add(items.map(i => i.id))} disabled={!left}><CheckCheck size={18} aria-hidden="true" />Mark all read</button>
   return (
-    <SubPage className="is-notif" big title="Notifications" line={left ? `${left} new` : 'You’re all caught up'} close="Close notifications" left={markAll}>
+    <SubPage className="is-notif" arrowRight big title="Notifications" line={left ? `${left} new` : 'You’re all caught up'} close="Close notifications" left={markAll}>
       {groups.map(g => (
         <section key={g.key} className="ma-notes">
           <p className="ma-cap is-out">{g.label}</p>

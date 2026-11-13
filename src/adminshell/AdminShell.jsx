@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { lazy, Suspense, useEffect, useMemo } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import '../template/template.css'
 import { NoteProvider, AccountProvider, Empty } from '../template/kit'
@@ -13,6 +13,13 @@ import { useDataMode } from '../hooks/useDataMode'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { withProducts } from './products955'
+import { usePhone } from '../template/m/phone'
+
+// P986 — below 768 px (and in the native app) an admin gets the admin phone app (src/adminshell/m), same addresses
+// and data; 768 px and up is the desktop admin exactly as it was. Loaded only on a phone, so its styles never reach
+// the desktop.
+const AdminApp = lazy(() => import('./m/AdminApp'))
+function AdmFrame() { return usePhone() ? <Suspense fallback={null}><AdminApp /></Suspense> : <AdminFrame /> }
 
 // P849 — the Admin portal: the rebuilt admin pages (src/adminshell) on sample info, the same as the agent and VA
 // shells until the backend step. Two mounts: the real admin URLs (ShellSwap passes the real name, the real sign-out
@@ -96,7 +103,7 @@ export default function AdminShell({ account, preview = false }) {
         <NoteProvider>
           <Data key={real ? 'real' : 'sample'}>
             <Routes>
-              <Route element={<AdminFrame />}>{admRouteEls({ preview, wrap: el => <Page preview={preview}>{el}</Page> })}</Route>
+              <Route element={<AdmFrame />}>{admRouteEls({ preview, wrap: el => <Page preview={preview}>{el}</Page> })}</Route>
               <Route path="*" element={<Navigate to={ap('overview', null, preview)} replace />} />
             </Routes>
           </Data>

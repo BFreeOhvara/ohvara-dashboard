@@ -152,8 +152,10 @@ export function VaCallProvider({ schedule = [], children }) {
   const value = useMemo(() => ({
     call, act, srv, rl, item, start, takeHold, holdCount, gateOf, nowMs, mini,
     openPhone: () => (call && !call.end ? setMini(false) : setPhone(true)),
+    // P986: a client's Call button (the header phone is gone): their open booked call, else a call to them.
+    callClient: client => (call && !call.end ? setMini(false) : dial({ client })),
     openBrief: it => setBrief(it), needResult: it => { const p = { ref: it.ref, name: it.name, clientId: it.row?.client_id || null, at: Date.now() }; writePending(p); setPending(p) },
-  }), [call, srv, rl, item, start, takeHold, holdCount, gateOf, nowMs, mini])
+  }), [call, srv, rl, item, start, takeHold, holdCount, gateOf, nowMs, mini, dial])
 
   const holdNow = useTick(holdCount > 0)
   const longest = Math.round((holdNow - heldAt) / 1000) + 100
@@ -322,14 +324,18 @@ function CallScreen({ call, act, srv, rl, item, onMin }) {
               {btn('spk', 'Speaker', Volume2, call.speaker, () => act({ type: 'speaker' }))}
               {btn('mute', 'Mute', call.muted ? MicOff : Mic, call.muted, () => { rl?.mute?.(!call.muted); act({ type: 'mute' }) })}
               {btn('hold', call.held ? 'Resume' : 'Hold', call.held ? Play : Pause, call.held, () => { srv(call.held ? 'resume' : 'hold', { party: partyOf(who) }); act({ type: 'hold' }) })}
-              {btn('pad', 'Keypad', Grid3x3, false, () => act({ type: 'pad' }), { press: false })}
-              {btn('add', merged ? 'Added' : ringing ? 'Calling…' : 'Add', merged ? Check : Plus, merged, () => setSheet('add'), { press: false, tone: merged ? 'sage' : null, aria: added ? `${added.name} is ${merged ? 'on the call' : 'ringing'}` : 'Add someone to the call', disabled: !!added })}
+              {/* P986: Add (carrier search) is the main way to bring someone in: a wide button under the three */}
+              <button type="button" className={`va-addmain ma-press${merged ? ' is-sage' : ''}`} aria-label={added ? `${added.name} is ${merged ? 'on the call' : 'ringing'}` : 'Add a carrier or someone else to the call'} onClick={() => setSheet('add')} disabled={!!added}>
+                {merged ? <Check size={22} aria-hidden="true" /> : <Plus size={22} aria-hidden="true" />}
+                <span><b>{merged ? 'Added' : ringing ? 'Calling…' : 'Add'}</b><small>{added ? added.name : 'Carrier or another number'}</small></span>
+              </button>
               {btn('notes', 'Notes', NotebookPen, !!call.notes, () => setSheet('notes'), { press: false })}
             </div>
           )}
       </div>
       <div className="va-call-endrow">
-        <span aria-hidden="true" />
+        {/* P986: the keypad stays, smaller and to the side (for carrier menus) */}
+        {call.pad ? <span aria-hidden="true" /> : <button type="button" className="va-padbtn" onClick={() => act({ type: 'pad' })}><Grid3x3 size={18} aria-hidden="true" />Keypad</button>}
         <button type="button" className="va-end ma-press" aria-label="End call" onClick={end}><PhoneOff size={32} aria-hidden="true" /></button>
         {call.pad ? <button type="button" className="va-hide" onClick={() => act({ type: 'pad' })}>Hide</button> : <span aria-hidden="true" />}
       </div>

@@ -34,16 +34,19 @@ export function BackArrow({ label = 'Back', className = '' }) {
     </button>
   )
 }
-export function SubPage({ title, line, foot, children, className = '', right, close, big = false, left, bare = false, pin = false }) {
+// P986: `arrowRight` (Notifications, which slide in from the LEFT): the close arrow sits top-RIGHT, still pointing
+// left, the way the panel leaves (swipe left).
+export function SubPage({ title, line, foot, children, className = '', right, close, big = false, left, bare = false, pin = false, arrowRight = false }) {
   return (
     <div className={`ma-subpage${big ? ' is-big' : ''}${pin ? ' is-pin' : ''} ${className}`}>
       <div className="ma-scroll ma-sub-scroll" data-ma-scroll>
         <div className="ma-sub-b">
           {!pin && (
             <div className="ma-sub-h">
-              <BackArrow label={close || 'Back'} />
+              {!arrowRight && <BackArrow label={close || 'Back'} />}
               {left}
               {right && <span className="ma-sub-r">{right}</span>}
+              {arrowRight && <span className="ma-sub-r"><BackArrow label={close || 'Back'} className="is-right" /></span>}
             </div>
           )}
           {!bare && !pin && <div className="ma-bigt"><h1>{title}</h1>{line && <small>{line}</small>}</div>}
