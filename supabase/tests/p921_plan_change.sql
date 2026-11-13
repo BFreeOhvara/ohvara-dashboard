@@ -1,4 +1,4 @@
--- p921_plan_change — pgTAP checks for p921_plan_change.sql: moving up charges the prorated difference now and opens
+-- p921_plan_change — pgTAP checks for p921_plan_change.sql: moving up charges the price difference now (P990/273: no days) and opens
 -- the band only once paid; declined → nothing changes and nothing retries; moving down waits for the bill date, then
 -- caps the spend; undo; a second upgrade charges only the new difference; founding prices; the spend cap.
 --
@@ -61,11 +61,11 @@ select lives_ok($$ select public.lead_spend_set(20000, 0, pg_temp.a()) $$, 'b2 t
 select is(pg_temp.tier(pg_temp.a()), 'growth', 'b3 the plan no longer follows the spend');
 
 -- ── c. moving up: charged now, the band opens when it's paid ───────────────
-select is((public.billing_plan_change('pro', null, pg_temp.a()))->>'amount_cents', '75000', 'c1 Growth → Pro on Nov 16: $750.00 for 15 days');
+select is((public.billing_plan_change('pro', null, pg_temp.a()))->>'amount_cents', '150000', 'c1 Growth → Pro on Nov 16: the difference, $1,500.00 (P990: no days)');
 select is(pg_temp.tier(pg_temp.a()), 'growth', 'c2 still Growth while the charge is going through');
 select throws_ok($$ select public.lead_spend_set(30000, 0, pg_temp.a()) $$, 'P0001', null, 'c3 the Pro band isn''t open before it''s paid');
 select throws_ok($$ select public.billing_plan_change('pro', null, pg_temp.a()) $$, 'P0001', 'Your last plan change is still going through. Try again in a minute.', 'c4 one change at a time');
-select is((pg_temp.up(pg_temp.a())).note, 'Upgrade to Pro, 15 days', 'c5 the charge''s label');
+select is((pg_temp.up(pg_temp.a())).note, 'Upgrade to Pro, the difference from Growth', 'c5 the charge''s label');
 
 -- declined → nothing changes, and it isn't retried
 select is((pg_temp.settle(pg_temp.a(), 'failed'))->>'status', 'failed', 'c6 the card is declined');
@@ -76,7 +76,7 @@ select is(public.lead_spend_retry(pg_temp.a()), 0, 'c10 Fix card doesn''t retry 
 select is(public.lead_spend_charge_failed(pg_temp.a()), false, 'c11 a declined upgrade never stops leads');
 
 -- again, paid → Pro opens, spend lands where the confirm said
-select is((public.billing_plan_change('pro', 25000, pg_temp.a()))->>'amount_cents', '75000', 'c12 switching again charges again');
+select is((public.billing_plan_change('pro', 25000, pg_temp.a()))->>'amount_cents', '150000', 'c12 switching again charges again');
 select is((select string_agg(status, ',' order by status) from public.lead_spend_charges where agent_id = pg_temp.a() and kind = 'plan_upgrade'), 'cancelled,due', 'c13 the declined one is replaced, never charged');
 select is((pg_temp.settle(pg_temp.a(), 'paid'))->>'status', 'paid', 'c14 paid');
 select is(pg_temp.tier(pg_temp.a()), 'pro', 'c15 now Pro');
@@ -101,12 +101,12 @@ select is(pg_temp.tier(pg_temp.b()) || ' ' || pg_temp.spend(pg_temp.b()), 'start
 select pg_temp.day('2026-12-16');
 select public.lead_spend_set(15000, 0, pg_temp.c());
 select public.billing_plan_change('starter', null, pg_temp.c());
-select is((public.billing_plan_change('pro', null, pg_temp.c()))->>'amount_cents', '77419', 'e1 Growth → Pro with Starter pending: Pro − Growth for 16 of 31 days (Dec 16)');
+select is((public.billing_plan_change('pro', null, pg_temp.c()))->>'amount_cents', '150000', 'e1 Growth → Pro with Starter pending: Pro − Growth (P990: no days)');
 select pg_temp.settle(pg_temp.c(), 'paid');
 select is(pg_temp.tier(pg_temp.c()) || ' ' || pg_temp.next(pg_temp.c()), 'pro -@-', 'e2 the upgrade cancels the pending downgrade');
-select is(public.billing_plan_quote_for(pg_temp.b(), 'pro')->>'amount_cents', '118710', 'e3 a second upgrade, Starter → Pro on Dec 16 (Dec 1 to Jan 1, 31 days, 16 left): (2,999 − 699) × 16 ÷ 31');
+select is(public.billing_plan_quote_for(pg_temp.b(), 'pro')->>'amount_cents', '230000', 'e3 a second upgrade, Starter → Pro on Dec 16: 2,999 − 699 (P990: no days)');
 update public.agent_billing_plans set founding_version = 1, founding_until = '2027-12-01' where agent_id = pg_temp.b();
-select is(public.billing_plan_quote_for(pg_temp.b(), 'growth')->>'amount_cents', '41290', 'e4 founding (v1 book): proration uses the locked prices, (1,797 − 997) × 16 ÷ 31');
+select is(public.billing_plan_quote_for(pg_temp.b(), 'growth')->>'amount_cents', '80000', 'e4 founding (v1 book): the difference uses the locked prices, 1,797 − 997');
 
 select * from finish();
 rollback;

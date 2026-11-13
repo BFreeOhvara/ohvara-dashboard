@@ -17,7 +17,7 @@
 //                                                       (billing_card_saved: brand + last 4 only). Leads need one.
 //     { action: 'pay_now' }                             after a card update: failed charges back to due, charged now.
 //     { action: 'pause', paused }                       lead_spend_pause.
-//     { action: 'plan_change', tier, daily_cents? }     P921 billing_plan_change. Up: the prorated difference is
+//     { action: 'plan_change', tier, daily_cents? }     P921 billing_plan_change. Up: the price difference (P990, no days) is
 //                                                       charged now (a 'plan_upgrade' charge, run straight away) and
 //                                                       the plan changes only when it's paid; declined → nothing
 //                                                       changes. Down: from the next bill. Same plan: Undo.
@@ -390,7 +390,7 @@ export async function handle(req: Request, store: Store, stripe: Stripe | null, 
         return json({ ...q, status: mine?.status ?? q.status ?? 'due', failure: mine?.failure ?? null, skipped: charged?.skipped ?? null })
       }
       case 'product_add': {
-        // P955: add Leads or Servicing in Billing (charged now: setup when due, the days left, the first days of leads);
+        // P955: add Leads or Servicing in Billing (charged now: setup when due, the full first month or the difference from Servicing (P990), the first days of leads);
         // Reactivation is added with no charge. Leads needs the sign-up details saved first (states, hours).
         if (!['leads', 'servicing', 'reactivation'].includes(body.product)) return json({ error: 'Pick a product' }, 400)
         const leads = body.product === 'leads'

@@ -93,22 +93,22 @@ select is((public.billing_signup_start('starter', 6000, pg_temp.d(), '{leads,rea
 select is(pg_temp.run(pg_temp.d(), 'paid'), 1, 'd6 paid');
 select is((public.agent_membership_due(pg_temp.d()))->>'membership_cents', '69900', 'd7 monthly: Starter only');
 
--- ── e. add Leads to Ben's servicing account (Nov 19: 20 of 30 days left) ────
+-- ── e. add Leads to Ben's servicing account (Nov 19; P990: the difference from Servicing, same billing day) ────
 select pg_temp.day('2026-11-19');
 select throws_ok($$ select public.billing_product_add('leads', 'starter', 6000, pg_temp.b()) $$, 'P0001', 'Finish your details first', 'e1 Leads needs states and hours first');
 select set_config('request.jwt.claims', '{"sub":"a9550000-0000-4000-8000-00000000000b","role":"authenticated"}', true), set_config('role', 'authenticated', true);
 select lives_ok($$ select public.save_signup_details(jsonb_build_object('states', jsonb_build_array('TX', 'OK', 'LA'), 'licensed', true,
   'timezone', 'America/Chicago', 'working_hours', jsonb_build_array(jsonb_build_object('weekday', 1, 'start', '09:00', 'end', '17:00')),
   'live_transfers', false)) $$, 'e2 a servicing account can save the Leads details');
-select is((public.billing_product_quote('leads', 'starter', 6000))->>'total_cents', (29900 + 46600 + 12000 + 1440)::text, 'e3 quote: setup + 20/30 of Starter + 2 days');
+select is((public.billing_product_quote('leads', 'starter', 6000))->>'total_cents', (29900 + 20000 + 12000 + 1440)::text, 'e3 quote: setup + (Starter − Servicing) + 2 days');
 select throws_ok($$ select public.billing_product_add('leads', 'starter', 6000) $$, '42501', null, 'e4 agents can''t make the charge themselves (lead-spend does)');
 reset role;
 select set_config('request.jwt.claims', '', true);
 select is((public.billing_product_add('leads', 'starter', 6000, pg_temp.b()))->>'status', 'due', 'e5 the add charge');
 select is((pg_temp.last(pg_temp.b(), 'product_add')).note,
-  'Added Starter plan · setup $299.00 · 20 days left this month $466.00 · first 2 days: $120.00 to your ads · $14.40 booking desk', 'e6 its words');
+  'Added Starter plan · setup $299.00 · the difference from Servicing $200.00 · first 2 days: $120.00 to your ads · $14.40 booking desk', 'e6 its words');
 select is(pg_temp.run(pg_temp.b(), 'paid'), 1, 'e7 paid');
-select is((pg_temp.pl(pg_temp.b())).picked, '{leads,servicing,reactivation}'::text[], 'e8 Leads is on');
+select ok('leads' = any((pg_temp.pl(pg_temp.b())).picked) and not 'servicing' = any((pg_temp.pl(pg_temp.b())).picked), 'e8 Leads is on; Servicing stops (included)');
 select ok(public.leads_active(pg_temp.b()) and (pg_temp.pl(pg_temp.b())).tier_key = 'starter', 'e9 leads active on Starter');
 select is((select count(*)::int from public.lead_spend_charges where agent_id = pg_temp.b() and kind = 'nightly' and status = 'paid'), 2, 'e10 the first two days paid');
 select throws_ok($$ select public.billing_product_quote('leads', 'starter', 6000, pg_temp.b()) $$, 'P0001', 'You already have it', 'e11 not twice');

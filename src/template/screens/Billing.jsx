@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { paths } from '../paths'
-import { Layers, CreditCard, Check, PauseCircle, PlayCircle, LogOut, Phone, CalendarClock, Clock, CircleAlert, Wallet, CalendarCheck2, Users, BadgeCheck, Target, SlidersHorizontal, Clock3, MapPin, RotateCcw } from 'lucide-react'
+import { Layers, CreditCard, Check, PauseCircle, PlayCircle, LogOut, Phone, CalendarClock, Clock, CircleAlert, Wallet, CalendarCheck2, Users, BadgeCheck, Target, SlidersHorizontal, Clock3, MapPin, RotateCcw, ArrowUpCircle, ShieldCheck } from 'lucide-react'
 import { useSampleBilling, useSampleActions, useSampleAppointments } from '../data'
 import { Chip, Drawer, Field, SampleTag, Seg, useNote } from '../kit'
 import { Select } from '../Select'
@@ -20,6 +20,8 @@ import { StatesDrawer } from '../YourStates'
 import { useAgentStates, statesText } from '../useStates'
 import { dayWords } from '../adStates'
 import { ProductDrawers, PlanProductRows, PlanProductActions } from '../Products955'
+import { billState } from '../productsView'
+import { billDay } from '../../lib/planChange'
 import { useProductPanel } from '../useProductPanel'
 import { useProducts } from '../useProducts'
 import { PRICES } from '../../lib/priceBook.js'
@@ -40,10 +42,10 @@ function NotOn({ add = 'leads' }) {
 // P910: rebuilt simple for the final model: plan, daily spend + 12%, the paid-ahead days, card on file, next charge,
 // setup fee, founding lock; the results (spent, booked, shows, sold, cost per sale) as colour-coded tiles. One paid day
 // is always in hand: each evening the day after tomorrow is charged (spendPlan.js nightly).
-// P917: looks like real billing: Your plan (current plan, daily spend, Change plan opens the spend slider), Payment
+// P917: looks like real billing: Your plan (current plan, daily spend, Change plan opens the spend slider; P990: Edit plan), Payment
 // method (brand, last 4, expiry, Update card) with the next charge, Charges (nightly lead spend, monthly plan, setup
 // fee: date, amount, status), Paid ahead, Results, How you take leads, Pause or cancel. Founding lock in the plan.
-// P921: plan changes are paid fairly. Moving up charges the prorated difference now (the band opens once it's paid;
+// P921: plan changes are paid fairly. P990: moving up charges the price difference now, no day-counting (the band opens once it's paid;
 // declined: nothing changes, Fix card); moving down starts on the next bill date, with Undo. The plan is saved
 // (planOf), not worked out from the spend. ?upgrade=declined previews a declined upgrade, ?plan=down a scheduled move down.
 const money = usd()
@@ -187,8 +189,8 @@ function PlanSpend({ tier, daily, onDaily, dirty, ok, onSave, onReset, forDay })
 }
 
 // P920 — Other plans: each other plan with its spend range and monthly price, and Switch to {plan}. Switching asks first.
-// P921: the confirm says what it costs and when: moving up, the prorated difference now and the full price on the bill
-// date (src/lib/planChange.js); moving down, from the bill date with no refund. A scheduled move down shows its date.
+// P921/P990: the confirm says what it costs and when: moving up, the price difference today and the full price every
+// month on the same billing day (src/lib/planChange.js); moving down, from the bill date with no refund. A scheduled move down shows its date.
 const money00 = v => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const centsTiers = () => TIERS.map(t => ({ ...t, monthly_cents: Math.round(t.monthly * 100) }))
 const dayOf = iso => new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -229,7 +231,7 @@ function OtherPlans({ tierNow, daily, month, pending, onSwitch }) {
           </li>
         ))}
       </ul>
-      <p className="pb-note">Moving up: you pay the difference for the days left this month, and the bigger range opens once it{'’'}s paid. Moving down: it starts with your next bill; no refund for this month.</p>
+      <p className="pb-note">Moving up: you pay the difference between the two plans today, and the bigger range opens once it{'’'}s paid. Your billing day stays the same. Moving down: it starts with your next bill; no refund for this month.</p>
     </div>
   )
 }
@@ -311,7 +313,7 @@ export default function Billing() {
   const st = useAgentStates()
   // P955: what they bought. Without Leads there's no plan by spend, no nightly charge, no paid-ahead days, no booking
   // desk, results or hours here: Servicing pays its month, Reactivation pays per delivered appointment (P957).
-  const { has } = useProducts()
+  const { has, picked } = useProducts()
   const leads = has('leads')
   // P959: what "Your own leads" has charged ($20 per delivered appointment or live call, once paid)
   const ownRows = chargesOf(b).filter(c => c.kind === 'reactivation' || c.kind === 'reactivation_delivery')
@@ -325,6 +327,24 @@ export default function Billing() {
   const unpaid = leads ? n.ahead.find(d => d.status === 'failed') : null
   const running = !b.paused && !b.cancel && !noCard
   const face = cardOf(b.card)
+  // P990: which plan state (lead plan / Servicing only / none) and the boxes for it: no blank boxes.
+  const state = billState(picked)
+  // ?edit=1 (the phone's Edit plan) opens the edit drawer for the plan they have.
+  const [sp] = useSearchParams()
+  const wantEdit = sp.get('edit') === '1'
+  useEffect(() => { if (!wantEdit) return; if (state === 'lead') setPanel('plan'); else if (state === 'servicing') setProd('manage-servicing') }, [wantEdit, state]) // eslint-disable-line react-hooks/exhaustive-deps
+  const renew = b.planMonth?.next ? `Every month on the ${billDay(b.planMonth.next)}` : null
+  const hero = state === 'lead'
+    ? [{ k: 'plan', label: 'Current plan', big: tierNow.label, name: true },
+       { k: 'price', label: 'Plan price', big: money(tierNow.monthly), unit: ' / month' },
+       { k: 'renew', label: 'Renews', big: b.nextBill || 'With your first charge', name: true, sub: renew },
+       { k: 'spend', label: 'Daily lead spend', big: money(daily), unit: ' / day', sub: `+ ${feeWords}` }]
+    : state === 'servicing'
+      ? [{ k: 'plan', label: 'Current plan', big: 'Servicing', name: true },
+         { k: 'price', label: 'Plan price', big: money(PRICES.servicingOnly), unit: ' / month' },
+         { k: 'renew', label: 'Renews', big: b.nextBill || 'With your first month', name: true, sub: renew }]
+      : [{ k: 'plan', label: 'Current plan', big: has('reactivation') ? 'Reactivation only' : 'None', name: true },
+         { k: 'price', label: has('reactivation') ? 'You pay' : 'Plan price', big: has('reactivation') ? '$20' : '$0', unit: has('reactivation') ? ' per booked' : ' / month' }]
   const save = () => {
     if (!spendOk('paid', spend)) return
     setSpend(spend)
@@ -338,7 +358,7 @@ export default function Billing() {
     if (r.direction === 'up' && r.result === 'failed') { note(`Your card was declined. Nothing changed: you’re still on ${tierNow.label}. Sample only`); return }
     if (r.direction === 'up') {
       setDraft({ daily: start })
-      note(`You’re on ${to.label}. Paid ${money00(r.chargeCents / 100)} for the ${r.left} days left this month, then ${money(to.monthly)} on ${b.nextBill}. Sample only, nothing was charged`)
+      note(`You’re on ${to.label}. Charged today ${money00(r.chargeCents / 100)}, the difference · then ${money(to.monthly)} every month on the ${billDay(r.nextBill)}. Sample only, nothing was charged`)
       return
     }
     if (r.direction === 'down') note(`Your plan changes to ${to.label} on ${b.nextBill}. You keep ${tierNow.label} until then. Sample only`)
@@ -369,43 +389,30 @@ export default function Billing() {
         </section>
       )}
 
-      {/* P917: billing that looks like billing. The plan, with Change plan (the spend slider in a drawer) */}
-      {leads && <section className="fx-tile is-fill is-blue fx-s7 bl-plan" style={{ '--i': 0 }} aria-label="Your plan">
-        <header className="fx-tile-h"><span className="tp-grow"><h2>Your plan</h2><p>Month to month. Cancel anytime</p></span><SampleTag /></header>
-        <div className="bl-plan-hero">
-          <span><small>Current plan</small><b className="bl-plan-name">{tierNow.label}</b></span>
-          <span><small>Plan price</small><b className="tp-money">{money(tierNow.monthly)}<small> / month</small></b></span>
-          <span><small>Daily lead spend</small><b className="tp-money">{money(daily)}<small> / day + {feeWords}</small></b></span>
+      {/* P990: the plan card follows what the agent has. Lead plan: plan, price, renew date, daily spend; Edit plan.
+          Servicing only: Servicing, $499, renew date; Upgrade plan + Edit plan. No plan: None (or Reactivation only);
+          Upgrade plan + Add servicing. */}
+      <section className="fx-tile is-fill is-blue fx-s7 bl-plan" style={{ '--i': 0 }} aria-label="Your plan" data-state={state}>
+        <header className="fx-tile-h"><span className="tp-grow"><h2>Your plan</h2><p>{state === 'none' ? 'Nothing monthly. Add a plan any time' : 'Month to month. Cancel anytime'}</p></span><SampleTag /></header>
+        <div className={`bl-plan-hero is-${hero.length}`}>
+          {hero.map(h => <span key={h.k} data-box={h.k}><small>{h.label}</small><b className={h.name ? 'bl-plan-name' : 'tp-money'}>{h.big}{h.unit && <small>{h.unit}</small>}</b>{h.sub && <em className="bl-plan-sub">{h.sub}</em>}</span>)}
         </div>
         <dl className="bl-rows">
-          <div><dt>Next plan bill</dt><dd><b>{b.nextBill || 'With your first charge'}</b><small>Covers the team, servicing, portal and app</small></dd></div>
-          {pendingTo && <div data-row="plan-next"><dt>Plan change</dt><dd><b>Changes to {pendingTo.label} on {b.planNext.on}</b><small>{money(pendingTo.monthly)} a month from then. You keep {tierNow.label} until then</small><button type="button" className="tp-btn ov-ghost bl-undo" onClick={undo}>Undo</button></dd></div>}
+          {leads && pendingTo && <div data-row="plan-next"><dt>Plan change</dt><dd><b>Changes to {pendingTo.label} on {b.planNext.on}</b><small>{money(pendingTo.monthly)} a month from then. You keep {tierNow.label} until then</small><button type="button" className="tp-btn ov-ghost bl-undo" onClick={undo}>Undo</button></dd></div>}
           {/* P949: the one campaign setting agents change themselves */}
-          <div data-row="states"><dt>Your states</dt><dd><b>{statesText(st.states)}</b><small>{st.waiting ? `Changing ${dayWords(st.waiting.starts)}` : 'Your leads only come from these states'}</small></dd></div>
+          {leads && <div data-row="states"><dt>Your states</dt><dd><b>{statesText(st.states)}</b><small>{st.waiting ? `Changing ${dayWords(st.waiting.starts)}` : 'Your leads only come from these states'}</small></dd></div>}
           <PlanProductRows onManage={manage} charged={ownCharged} />
         </dl>
         <div className="tp-row tp-wrap bl-plan-acts">
-          <button type="button" className="tp-primary fx-accent" onClick={() => setPanel('plan')}><SlidersHorizontal size={15} />Change plan</button>
-          <button type="button" className="tp-btn ov-ghost" data-open="states" onClick={() => setPanel('states')}><MapPin size={15} />Your states</button>
-          <PlanProductActions onAdd={setProd} onManage={manage} />
-          {b.pending && <small className="bl-pending">{b.pending.starts}</small>}
+          {state !== 'lead' && <button type="button" className="tp-primary fx-accent" data-act="upgrade" onClick={() => setProd('leads')}><ArrowUpCircle size={15} />Upgrade plan</button>}
+          {state === 'lead' && <button type="button" className="tp-primary fx-accent" data-act="edit" onClick={() => setPanel('plan')}><SlidersHorizontal size={15} />Edit plan</button>}
+          {state === 'servicing' && <button type="button" className="tp-btn ov-ghost" data-act="edit" onClick={() => manage('servicing')}><SlidersHorizontal size={15} />Edit plan</button>}
+          {state === 'none' && <button type="button" className="tp-btn ov-ghost" data-act="add-servicing" onClick={() => setProd('servicing')}><ShieldCheck size={15} />Add servicing</button>}
+          {leads && <button type="button" className="tp-btn ov-ghost" data-open="states" onClick={() => setPanel('states')}><MapPin size={15} />Your states</button>}
+          <PlanProductActions onAdd={setProd} onManage={manage} noServicing />
+          {leads && b.pending && <small className="bl-pending">{b.pending.starts}</small>}
         </div>
-      </section>}
-
-      {!leads && <section className="fx-tile is-fill is-blue fx-s7 bl-plan" style={{ '--i': 0 }} aria-label="Your plan">
-        <header className="fx-tile-h"><span className="tp-grow"><h2>Your plan</h2><p>Month to month. Cancel anytime</p></span><SampleTag /></header>
-        <div className="bl-plan-hero">
-          <span><small>Current plan</small><b className="bl-plan-name">{has('servicing') ? 'Servicing' : 'Your own leads'}</b></span>
-          <span><small>Plan price</small><b className="tp-money">{money(has('servicing') ? PRICES.servicingOnly : 0)}<small> / month</small></b></span>
-          <span><small>Daily lead spend</small><b className="tp-money">$0<small> / day</small></b><NotOn /></span>
-        </div>
-        <dl className="bl-rows">
-          <PlanProductRows onManage={manage} charged={ownCharged} />
-        </dl>
-        <div className="tp-row tp-wrap bl-plan-acts">
-          <PlanProductActions onAdd={setProd} onManage={manage} />
-        </div>
-      </section>}
+      </section>
 
       {/* Payment method and the next charge */}
       <section className="fx-tile fx-s5 bl-pay" style={{ '--i': 1 }} aria-label="Payment method">
@@ -481,7 +488,7 @@ export default function Billing() {
         <header className="fx-tile-h"><span className="tp-grow"><h2>Your hours</h2><p>Booked calls land and live calls ring inside these hours. Outside them, we book callers for your next open time.</p></span></header>
         <p className="bl-hours"><Clock3 size={16} aria-hidden="true" /><b>{liveHoursText(b.take.hours)}</b></p>
         <div className="tp-row tp-wrap bl-take-save">
-          <p className="pb-note tp-grow">{money(dailyTotal(b.spend))} a day plus the {feeWords}, charged a day ahead. Change the spend with Change plan.</p>
+          <p className="pb-note tp-grow">{money(dailyTotal(b.spend))} a day plus the {feeWords}, charged a day ahead. Change the spend with Edit plan.</p>
           <Link to={`${paths.settings()}?tab=calls`} className="tp-btn ov-ghost">Change your hours</Link>
         </div>
       </section>
@@ -496,11 +503,12 @@ export default function Billing() {
       </section>
       </>}
 
-      <Drawer open={panel === 'plan'} onClose={() => setPanel(null)} title="Change plan" sub={`Now ${tierNow.label}, ${money(tierNow.monthly)} a month, ${money(daily)} a day. The slider stays inside this plan`}>
+      <Drawer open={panel === 'plan'} onClose={() => setPanel(null)} title="Edit plan" sub={`Now ${tierNow.label}, ${money(tierNow.monthly)} a month, ${money(daily)} a day. The slider stays inside this plan`}>
         <div className="bl910">
           <PlanSpend tier={tierNow} daily={dailyTotal(spend)} onDaily={d => setDraft({ daily: d })} dirty={dailyTotal(spend) !== daily} ok={spendOk('paid', spend)}
             onSave={() => { save(); setPanel(null) }} onReset={() => setDraft({ daily: Math.max(PAID_MIN_DAILY, daily) })} forDay={n.forDay} />
           <OtherPlans tierNow={tierNow} daily={daily} month={b.planMonth || { today: '2026-11-02', start: '2026-11-01', next: '2026-12-01' }} pending={b.planNext} onSwitch={switchPlan} />
+          <p className="pb-note bl-edit-cancel">Want to stop? <button type="button" className="tp-link" data-act="cancel-plan" onClick={() => setPanel('cancel')} disabled={!!b.cancel}>Cancel your plan</button></p>
         </div>
       </Drawer>
       <ProductDrawers panel={prod} close={closeProd} />

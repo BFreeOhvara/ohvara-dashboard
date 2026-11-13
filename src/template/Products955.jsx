@@ -11,7 +11,7 @@ import { deskParts } from '../lib/bookingDesk'
 import { DeskInfo } from '../components/agent/DeskInfo'
 import { SignupDetails } from '../components/agent/SignupDetails'
 import { emptyDetails, fromSaved, detailsMissing, NOT_TAKING } from '../lib/signupDetails'
-import { stateOf, costOf, canRemove, removeWords, quoteLines, cents, dayWords, bandRange, clampDaily, failWords, addResultWords } from './productsView'
+import { stateOf, costOf, canRemove, removeWords, quoteLines, chargeSentence, cents, dayWords, bandRange, clampDaily, failWords, addResultWords } from './productsView'
 import '../components/agent/signupCheckout.css'
 import './bill910.css'
 import './products955.css'
@@ -30,6 +30,7 @@ function QuoteRows({ q, err }) {
   if (err) return <p className="pr-err" role="alert"><CircleAlert size={15} aria-hidden="true" />{err}</p>
   if (!q) return <div className="pr-quote" aria-busy="true"><span className="pr-skel" style={{ height: 14, width: '70%' }} /><span className="pr-skel" style={{ height: 14, width: '50%' }} /></div>
   return (
+    <>
     <dl className="pr-quote" data-testid="pr-quote">
       {quoteLines(q).map(r => (
         <div key={r.key} className={`pr-q${r.key === 'total' ? ' is-total' : ''}`} data-line={r.key}>
@@ -38,6 +39,8 @@ function QuoteRows({ q, err }) {
         </div>
       ))}
     </dl>
+    <p className="pr-renew" data-testid="pr-renew">{chargeSentence(q)}</p>
+    </>
   )
 }
 
@@ -292,7 +295,7 @@ export function PlanProductRows({ onManage, charged = '' }) {
 }
 
 // The plan card's quiet adds and the one removal that has no other home: Add servicing, Import leads, Remove Leads.
-export function PlanProductActions({ onAdd, onManage }) {
+export function PlanProductActions({ onAdd, onManage, noServicing = false }) {
   const { b, picked } = useProducts()
   const [listBusy, startList] = useStartList()
   const sv = stateOf(b, 'servicing')
@@ -300,7 +303,7 @@ export function PlanProductActions({ onAdd, onManage }) {
   const ld = stateOf(b, 'leads')
   return (
     <>
-      {sv.kind === 'off' && <button type="button" className="tp-btn ov-ghost" onClick={() => onAdd('servicing')} data-add="servicing"><ShieldCheck size={15} aria-hidden="true" />Add servicing</button>}
+      {!noServicing && sv.kind === 'off' && ld.kind === 'off' && <button type="button" className="tp-btn ov-ghost" onClick={() => onAdd('servicing')} data-add="servicing"><ShieldCheck size={15} aria-hidden="true" />Add servicing</button>}
       {rx.kind === 'off' && <button type="button" className="tp-btn ov-ghost" disabled={listBusy} onClick={startList} data-import="own"><RotateCcw size={15} aria-hidden="true" />Import leads</button>}
       {ld.kind === 'on' && picked.length > 1 && canRemove(b, 'leads') && <button type="button" className="pr-quiet" onClick={() => onManage('leads')} data-manage="leads">Remove Leads</button>}
     </>

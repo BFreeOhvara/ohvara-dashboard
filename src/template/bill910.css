@@ -68,6 +68,13 @@
 .bl910 .bl-plan-hero b { font-family: var(--font-mono); font-size: 22px; font-weight: 600; color: var(--ov-hi); letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bl910 .bl-plan-hero b small { font-size: 12px; font-weight: 500; }
 .bl910 .bl-plan-hero .bl-plan-name { font-family: var(--font-display); }
+/* P990: the boxes follow the plan state: 4 (lead plan), 3 (Servicing only), 2 (no plan) */
+.bl910 .bl-plan-hero.is-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.bl910 .bl-plan-hero.is-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.bl910 .bl-plan-hero .bl-plan-sub { font-style: normal; font-size: 12px; color: var(--ov-mid); }
+.bl910 .bl-edit-cancel { margin-top: 14px; }
+.bl910 .bl-edit-cancel .tp-link { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-weight: 600; min-height: 0; }
+.bl910 .bl-edit-cancel .tp-link:disabled { opacity: .5; cursor: default; }
 .bl910 .bl-plan-acts { margin-top: auto; padding-top: 6px; align-items: center; }
 .bl910 .bl-pending { font-size: 12.5px; color: var(--ov-mid); }
 
@@ -101,8 +108,9 @@
 .bl910 .bl-ch-none { font-size: 13px; color: var(--ov-mid); padding: 12px 2px; }
 .bl910 .bl-take-save { align-items: center; gap: 10px; }
 @media (max-width: 999px) { .bl910 .bl-plan-hero b { font-size: 19px; } }
+@media (max-width: 1279px) { .bl910 .bl-plan-hero.is-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) {
-  .bl910 .bl-plan-hero { grid-template-columns: minmax(0, 1fr); }
+  .bl910 .bl-plan-hero, .bl910 .bl-plan-hero.is-4, .bl910 .bl-plan-hero.is-2 { grid-template-columns: minmax(0, 1fr); }
   .bl910 .bl-plan-hero > span { flex-direction: row; align-items: baseline; justify-content: space-between; gap: 10px; }
   .bl910 .bl-charges > li { grid-template-columns: auto minmax(0, 1fr) auto; row-gap: 4px; }
   .bl910 .bl-charges > li > .tp-chip { grid-column: 2 / -1; justify-self: start; }

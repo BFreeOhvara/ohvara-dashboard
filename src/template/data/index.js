@@ -17,7 +17,7 @@ import { SUPPORT_THREAD } from '../support911.js'
 import { SAMPLE_DEEDSTONE } from '../deedstone.js'
 import { SAMPLE_REACTIVATION } from '../reactivation.js'
 import { norm, afterRemove, PRODUCTS, canServe } from '../../lib/products.js'
-import { pickedOf, productsWord, sampleQuote } from '../productsView.js'
+import { pickedOf, productsWord, sampleQuote, dayWords } from '../productsView.js'
 import { weekShare } from '../weekPace.js'
 
 // The one door to sample info for the clickable template. Screens read only through the named functions below.
@@ -629,7 +629,7 @@ function useActionsSample() {
     })),
     // Lead spend (N-A-23): a change starts at midnight; a tier change starts with the next bill.
     setSpend: spend => set(s => ({ ...s, billing: { ...s.billing, pending: { spend, starts: startsText('Wed, Nov 4') }, spend } })),
-    // P921: Change plan. Up: the prorated difference is charged now (sample: paid, or declined with ?upgrade=declined:
+    // P921/P990: Change plan. Up: the price difference is charged now (no day-counting; same billing day) (sample: paid, or declined with ?upgrade=declined:
     // nothing changes); the plan and band change once it's paid. Down: from the next bill. Back to the plan they're
     // on: Undo a scheduled move down. Returns what happened, for the note.
     changePlan: (toKey, daily) => {
@@ -638,12 +638,12 @@ function useActionsSample() {
         const b = s.billing
         const m = b.planMonth
         const tiers = TIERS.map(t => ({ ...t, monthly_cents: Math.round(t.monthly * 100) }))
-        const c = planChange({ tiers, fromKey: b.tier, toKey, today: m.today, nextBill: m.next, monthStart: m.start, pending: b.planNext })
+        const c = planChange({ tiers, fromKey: b.tier, toKey, nextBill: m.next, pending: b.planNext })
         out = c
         if (c.direction === 'undo' || c.direction === 'same') return { ...s, billing: { ...b, planNext: null } }
         if (c.direction === 'down') return { ...s, billing: { ...b, planNext: { key: toKey, on: b.nextBill || shortDate(m.next) } } }
         if (c.direction !== 'up') return s
-        const row = { id: `ch-up-${(b.charges || []).length + 1}`, at: 'Today', label: upgradeLabel(c.to.label, c.left), kind: 'plan', amount: c.chargeCents / 100 }
+        const row = { id: `ch-up-${(b.charges || []).length + 1}`, at: 'Today', label: upgradeLabel(c.to.label, c.from.label), kind: 'plan', amount: c.chargeCents / 100 }
         if (param('upgrade') === 'declined') {
           out = { ...c, result: 'failed' }
           return { ...s, billing: { ...b, upgradeFailed: { to: c.to.label, amount: c.chargeCents / 100 }, charges: [{ ...row, status: 'declined' }, ...(b.charges || [])] } }
@@ -659,7 +659,8 @@ function useActionsSample() {
     addCard: () => set(s => ({ ...s, billing: { ...s.billing, card: { label: 'Visa ending 4242', brand: 'Visa', last4: '4242', exp: '08/28', onFile: true } } })),
     setProducts: products => set(s => ({ ...s, billing: { ...s.billing, products } })),
     // P955: Billing → Your products (sample: nothing is charged). The quote is the server's shape (productsView.js
-    // sampleQuote); add charges the setup if due + the plan for the days left + the first 2 days of leads; ?pay=declined
+    // sampleQuote); add charges the setup if due + the full first month (or, Leads while Servicing runs, the difference;
+    // Servicing then stops) + the first 2 days of leads; a new monthly plan renews on today's date (P990); ?pay=declined
     // previews a declined card. Remove waits for the next bill date (Reactivation at once); Keep undoes it.
     quoteProduct: async q => { await wait(250); return sampleQuote(state.billing, q) },
     addProduct: async ({ product, tier = null, daily = null }) => {
@@ -675,13 +676,15 @@ function useActionsSample() {
       }
       set(s => {
         const bb = s.billing
-        const now = norm([...pickedOf(bb), product])
-        const nx = Array.isArray(bb.next) ? norm([...bb.next, product]) : null
+        const drop = q.upgrade ? k => k !== 'servicing' : () => true
+        const now = norm([...pickedOf(bb).filter(drop), product])
+        const nx = Array.isArray(bb.next) ? norm([...bb.next.filter(drop), product]) : null
+        const fresh = product !== 'reactivation' && !q.upgrade
         const same = nx && nx.join() === now.join()
         const id = Date.now()
         const rows = product === 'reactivation' ? [] : [
           q.setup_cents > 0 && { id: `ch-su-${id}`, at: 'Today', label: 'Setup fee, one time', kind: 'setup', amount: q.setup_cents / 100, status: 'paid' },
-          { id: `ch-pl-${id}`, at: 'Today', label: q.prorated ? `${q.label}, ${q.days_left} days left this month` : `${q.label}, first month`, kind: 'plan', amount: q.plan_cents / 100, status: 'paid' },
+          { id: `ch-pl-${id}`, at: 'Today', label: q.upgrade ? `${q.label}, the difference from Servicing` : `${q.label}, first month`, kind: 'plan', amount: q.plan_cents / 100, status: 'paid' },
           q.spend_cents > 0 && { id: `ch-ld-${id}`, at: 'Today', label: 'First 2 days of leads', kind: 'lead', amount: (q.spend_cents + q.fee_cents) / 100, spend: q.spend_cents / 100, fee: q.fee_cents / 100, status: 'paid' },
         ].filter(Boolean)
         return {
@@ -691,6 +694,7 @@ function useActionsSample() {
             ...bb, picked: now, products: productsWord(now), next: same ? null : nx, nextFrom: same ? null : bb.nextFrom,
             ...(product === 'leads' ? { tier: q.tier, spend: { daily: (q.daily_cents || 10000) / 100 }, leadsSetupPaid: true } : {}),
             ...(product !== 'reactivation' ? { setupPaid: bb.setupPaid || 'Today' } : {}),
+            ...(fresh ? { planMonth: { ...bb.planMonth, start: q.bill_from, next: q.bill_to }, nextBill: dayWords(q.bill_to) } : {}),
             charges: [...rows, ...(bb.charges || [])],
           },
         }

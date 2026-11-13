@@ -173,6 +173,7 @@
 /* Buttons. */
 .ma-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 0 18px; border-radius: 999px; border: 0; font-weight: 700; font-size: 15px; cursor: pointer; text-align: center; }
 .ma-btn.is-solid { background: var(--ma-solid); color: var(--ma-solid-ink); }
+.ma-plan-acts { display: flex; gap: 10px; margin: 12px 0 4px; } /* P990: Upgrade plan / Edit plan / Add servicing */
 .ma-btn.is-white { background: color-mix(in srgb, white 94%, transparent); color: var(--sh-fi-sky); box-shadow: 0 6px 16px -8px rgba(0, 0, 0, .35); }
 .ma-btn.is-soft { background: var(--ma-glass); border: 1px solid var(--ma-glass-b); color: var(--ma-ink); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
 .ma-btn.is-grow { flex: 1; }

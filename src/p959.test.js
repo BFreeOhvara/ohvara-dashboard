@@ -30,7 +30,8 @@ test('no reactivate wording on the agent screens', () => {
 
 test('Billing keeps its full layout for an agent without Leads: $0 tiles with a quiet Add link', () => {
   const b = read('src/template/screens/Billing.jsx')
-  assert.match(b, /\{!leads && <section[^>]*aria-label="Your plan"/)
+  // P990: one plan card for every state (data-state lead / servicing / none)
+  assert.match(b, /<section[^>]*aria-label="Your plan" data-state=\{state\}/)
   for (const w of ['aria-label="Paid ahead"', 'aria-label="Booking desk"', 'aria-label="Results"', 'Not on your plan']) assert.ok(b.includes(w), w)
 })
 

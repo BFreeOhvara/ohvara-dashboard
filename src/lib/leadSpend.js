@@ -13,7 +13,7 @@
 //         payNow(db) / pauseSpend(db, bool)  lead-spend pay_now / pause
 //         planState(db) / planQuote(db, tier) P921 my_plan_state / billing_plan_quote: the plan, a scheduled
 //                                            downgrade, the billing month, an upgrade going through or declined
-//         changePlan(db, { tier, daily })    P921 lead-spend plan_change: up = the prorated difference charged now
+//         changePlan(db, { tier, daily })    P921 lead-spend plan_change: up = the price difference charged now (P990)
 //                                            (result 'paid' | 'failed' | 'due'); down = from the next bill; same = Undo
 // Admin:  adminBilling(db, agentId), setupSet, adjustBalance, savePriceBook. P914: no pilot, so the pilot switch,
 //         the VA cost line and pilot → paid are gone (their functions refuse, migration 252_no_pilot.sql).

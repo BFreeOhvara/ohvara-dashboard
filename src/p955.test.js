@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs'
 import { PRODUCTS, ORDER, norm, has, monthly, label, navFor, suggestion, afterRemove, signupNeeds } from './lib/products.js'
 import { PRICES } from './lib/priceBook.js'
 import { REACT_DEFAULTS } from './lib/reactivation.js'
-import { pickedOf, productsWord, stateOf, canRemove, removeWords, quoteLines, sampleQuote, tabsFor, failWords, addResultWords, clampDaily, bandRange, dayWords, costOf } from './template/productsView.js'
+import { pickedOf, productsWord, stateOf, canRemove, removeWords, quoteLines, chargeSentence, billState, nextMonth, sampleQuote, tabsFor, failWords, addResultWords, clampDaily, bandRange, dayWords, costOf } from './template/productsView.js'
 
 const keys = s => [...s].sort()
 
@@ -101,38 +101,56 @@ test('removeWords: next bill date for monthly products, at once for Reactivation
   assert.deepEqual(removeWords(b, 'reactivation').lines[0], 'Lists already started keep calling, and each appointment or live call is still charged.')
 })
 
-test('sampleQuote: prorated in a running month, full month otherwise; setup once', () => {
+test('P990 sampleQuote: no days. Nothing monthly: full price today, renews today next month. Leads on Servicing: the difference', () => {
   const m = { today: '2026-11-02', start: '2026-11-01', next: '2026-12-01' }
-  const sv = sampleQuote({ picked: ['leads'], planMonth: m, setupPaid: 'Mon, Sep 28', leadsSetupPaid: true }, { product: 'servicing' })
-  assert.equal(sv.setup_cents, 0)
-  assert.equal(sv.prorated, true)
-  assert.equal(sv.days_left, 29)
-  assert.equal(sv.plan_cents, Math.round(49900 * 29 / 30))
-  assert.equal(sv.total_cents, sv.plan_cents)
+  const now = new Date(2026, 10, 13, 12)
+  assert.throws(() => sampleQuote({ picked: ['leads'], planMonth: m, setupPaid: 'Mon, Sep 28', leadsSetupPaid: true }, { product: 'servicing' }, now), e => e.code === 'included', 'a lead plan includes Servicing')
   const rx = { picked: ['reactivation'], planMonth: m, setupPaid: null, leadsSetupPaid: false }
-  const sv2 = sampleQuote(rx, { product: 'servicing' })
-  assert.equal(sv2.setup_cents, 29900)
-  assert.equal(sv2.prorated, false)
-  assert.equal(sv2.plan_cents, 49900)
-  const ld = sampleQuote(rx, { product: 'leads', tier: 'growth', daily: 100 })
+  const sv = sampleQuote(rx, { product: 'servicing' }, now)
+  assert.equal(sv.setup_cents, 29900)
+  assert.equal(sv.prorated, false)
+  assert.equal(sv.plan_cents, 49900, 'Nov 13: $499, not $482.37')
+  assert.equal(sv.bill_from, '2026-11-13')
+  assert.equal(sv.bill_to, '2026-12-13')
+  assert.equal(chargeSentence({ ...sv, setup_cents: 0, total_cents: 49900 }), 'Charged today $499 · then $499 every month on the 13th.')
+  const ld = sampleQuote(rx, { product: 'leads', tier: 'growth', daily: 100 }, now)
   assert.equal(ld.setup_cents, 29900)
   assert.equal(ld.plan_cents, 149900)
   assert.equal(ld.days.length, 2)
   assert.equal(ld.spend_cents, 20000)
   assert.equal(ld.fee_cents, 2400)
   assert.equal(ld.total_cents, 29900 + 149900 + 20000 + 2400)
+  const svc = { picked: ['servicing'], planMonth: m, setupPaid: 'Mon, Nov 1', leadsSetupPaid: false }
+  const upq = sampleQuote(svc, { product: 'leads', tier: 'growth', daily: 100 }, now)
+  assert.equal(upq.upgrade, true)
+  assert.equal(upq.plan_cents, 149900 - 49900, 'Servicing → Growth: the difference')
+  assert.equal(upq.bill_to, '2026-12-01', 'same billing day')
   assert.equal(sampleQuote(rx, { product: 'reactivation' }).total_cents, 0)
+  assert.equal(nextMonth('2027-01-31'), '2027-02-28', 'the 31st renews on the last day of a short month')
+  assert.equal(nextMonth('2026-12-13'), '2027-01-13')
 })
 
-test('quoteLines: setup, the plan (days left or first month), first days of leads, total', () => {
-  const q = { label: 'Growth', setup_cents: 29900, plan_cents: 144900, monthly_cents: 149900, prorated: true, days_left: 29, bill_to: '2026-12-01', days: ['a', 'b'], spend_cents: 20000, fee_cents: 2400, total_cents: 197200 }
+test('P990 quoteLines: setup, the first month (or the difference), first days of leads, total; no days left', () => {
+  const q = { label: 'Growth', setup_cents: 29900, plan_cents: 149900, monthly_cents: 149900, prorated: false, bill_to: '2026-12-13', days: ['a', 'b'], spend_cents: 20000, fee_cents: 2400, total_cents: 202200 }
   const rows = quoteLines(q)
   assert.deepEqual(rows.map(r => r.key), ['setup', 'plan', 'leads', 'total'])
-  assert.equal(rows[1].label, 'Growth, 29 days left this month')
+  assert.equal(rows[1].label, 'Growth, first month')
   assert.equal(rows[2].cents, 22400)
-  assert.equal(rows[3].cents, 197200)
-  assert.equal(quoteLines({ ...q, prorated: false, setup_cents: 0, days: [] })[0].label, 'Growth, first month')
+  assert.equal(rows[3].label, 'Charged today')
+  assert.equal(chargeSentence(q), 'Charged today $2,022 · then $1,499 every month on the 13th.')
+  const u = quoteLines({ ...q, upgrade: true, from_label: 'Servicing', from_cents: 49900, plan_cents: 100000, setup_cents: 0, days: [] })
+  assert.equal(u[0].label, 'Growth, the difference from Servicing')
+  assert.match(u[0].sub, /Servicing stops/)
+  assert.doesNotMatch(JSON.stringify(rows), /days left/)
   assert.deepEqual(quoteLines({ total_cents: 0, days: [], setup_cents: 0, plan_cents: 0, monthly_cents: 0 }).map(r => r.key), ['total'])
+})
+
+test('P990 billState: lead plan, Servicing only, none', () => {
+  assert.equal(billState(['leads', 'reactivation']), 'lead')
+  assert.equal(billState(['leads', 'servicing']), 'lead')
+  assert.equal(billState(['servicing']), 'servicing')
+  assert.equal(billState(['reactivation']), 'none')
+  assert.equal(billState([]), 'none')
 })
 
 test('failure words always say nothing was charged', () => {

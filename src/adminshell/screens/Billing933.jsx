@@ -197,7 +197,7 @@ export function RecentCharges() {
 
 const SAMPLE = [
   { id: 's1', at: '2026-11-09T20:00:00', agent: 'Dana Ruiz', kind: 'nightly', for_day: '2026-11-11', cents: 11200, spend_cents: 10000, fee_cents: 1200, status: 'paid' },
-  { id: 's6', at: '2026-11-09T16:40:00', agent: 'Marcus Lee', kind: 'product_add', products: ['servicing'], note: 'Added Servicing · 20 days left this month $332.67', cents: 33267, setup_cents: 0, plan_cents: 33267, status: 'paid' },
+  { id: 's6', at: '2026-11-09T16:40:00', agent: 'Marcus Lee', kind: 'product_add', products: ['servicing'], note: 'Added Servicing · first month $499.00', cents: 49900, setup_cents: 0, plan_cents: 49900, status: 'paid' },
   { id: 's2', at: '2026-11-09T14:12:00', agent: 'Marcus Lee', kind: 'signup', cents: 202200, spend_cents: 20000, fee_cents: 2400, setup_cents: 29900, plan_cents: 149900, status: 'paid' },
   { id: 's3', at: '2026-11-09T09:30:00', agent: 'Brayden', kind: 'live_check', cents: 100, refunded_cents: 100, status: 'paid' },
   { id: 's4', at: '2026-11-08T20:00:00', agent: 'Sam Patel', kind: 'nightly', for_day: '2026-11-10', cents: 5600, spend_cents: 5000, fee_cents: 600, status: 'failed' },

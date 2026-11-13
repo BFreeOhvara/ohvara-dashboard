@@ -11,8 +11,9 @@ test('Billing has no "Your products" box; the plan card carries the product line
   const p = read('src/template/Products955.jsx')
   assert.doesNotMatch(b, /ProductsCard/)
   assert.doesNotMatch(p, /Your products|aria-label="Your products"/)
-  assert.equal((b.match(/<PlanProductRows/g) || []).length, 2, 'both plan cards (Leads, no Leads) show the product lines')
-  assert.equal((b.match(/<PlanProductActions/g) || []).length, 2)
+  // P990: one plan card for every state
+  assert.equal((b.match(/<PlanProductRows/g) || []).length, 1, 'the plan card shows the product lines')
+  assert.equal((b.match(/<PlanProductActions/g) || []).length, 1)
   assert.match(b, /<ProductDrawers panel=\{prod\}/)
 })
 

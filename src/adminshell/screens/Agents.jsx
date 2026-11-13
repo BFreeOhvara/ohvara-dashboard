@@ -66,7 +66,7 @@ function AgentCosts({ id }) {
 // change the daily spend (up to the max, or raise the max for this one agent), pause lead spend, and comp the account.
 // P914: no pilot, every agent pays from day one. Sample until the billing backend is wired.
 // P921: a scheduled move down shows with its date (it starts with the next bill); the last move up shows what it
-// charged (the difference for the days left in the month, charged at once).
+// charged (P990: the full price difference between the plans, charged at once; billing day unchanged).
 function PlanBudget({ a }) {
   const { data: st } = useAdmSettings()
   const { setAgentSpend, setAgentPaused, setComped, setMaxDaily } = useAdmActions()
@@ -116,7 +116,7 @@ function PlanBudget({ a }) {
           : a.lastUpgrade ? `Moved up to ${PLANS[a.lastUpgrade.to].label} ${a.lastUpgrade.on}, ${cents(a.lastUpgrade.amount)} for ${a.lastUpgrade.days} days` : 'None scheduled'],
       ].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       {b.failed && <p className="adm-warn">{b.failed.what} {money(b.failed.amount)} failed {b.failed.when}: {b.failed.why}. Tomorrow's ads don't run until it goes through; it retries at {hourText(st.billing.retryHour)}.</p>}
-      <DField label="Daily lead spend" hint={`${money(PAID_MIN_DAILY)} to ${money(max)} a day${raised ? ' (raised for this agent)' : ''}. Moving up a plan is charged the difference for the days left this month; moving down starts with the next bill.`}>
+      <DField label="Daily lead spend" hint={`${money(PAID_MIN_DAILY)} to ${money(max)} a day${raised ? ' (raised for this agent)' : ''}. Moving up a plan is charged the price difference today (billing day stays); moving down starts with the next bill.`}>
         <div className="adm-spend">
           <input className="tp-money" inputMode="numeric" aria-label="Daily lead spend in dollars" value={draft} onChange={e => setDraft(e.target.value.replace(/[^0-9]/g, ''))} />
           <button type="button" className="tp-primary fx-accent" disabled={bad || want === a.spend} onClick={saveSpend}>Save</button>
