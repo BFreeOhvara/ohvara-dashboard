@@ -39,12 +39,12 @@
 .va-trow { min-height: 58px; }
 
 /* ---- Calendar ---- */
-.va-day { gap: 3px; }
-.va-count { min-width: 22px; padding: 1px 6px; border-radius: 999px; font-size: 11px; font-weight: 800; line-height: 16px; text-align: center; background: color-mix(in srgb, var(--sh-f-sky) 82%, transparent); color: var(--sh-fi-sky); }
-.va-count.is-past { background: var(--ma-soft); color: var(--ma-ink2); }
-.ma-day.is-picked .va-count { background: var(--ma-solid-ink); color: var(--ma-solid); }
+/* P983: the month is the agent app's (MonthDay: bars per call, hatched day off). The picked day is the agent app's
+   outlined rounded square, not a solid block; today keeps a softer ring while another day is picked. (Hook is va-mday: the desktop vaDesk.css already styles .va .va-day.) */
+.ma-day.va-mday.is-picked { color: var(--ma-ink); box-shadow: inset 0 0 0 2px var(--ma-ink); }
+.ma-day.va-mday.is-picked:not(.is-blocked) { background: transparent; }
+.ma-day.va-mday.is-today:not(.is-picked) { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ma-ink) 30%, transparent); }
 .va-off { font-size: 10px; font-weight: 800; letter-spacing: .02em; color: var(--ma-ink2); }
-.ma-day.va-day.is-off { background: repeating-linear-gradient(135deg, transparent 0 5px, var(--ma-line) 5px 7px); }
 .va-legend { gap: 6px 16px; }
 .va-legend-off::before { content: ''; width: 16px; height: 10px; border-radius: 3px; background: repeating-linear-gradient(135deg, transparent 0 3px, var(--ma-ink3) 3px 4px); }
 .va-legend.is-sheet { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; margin-top: 14px; font-size: 12px; font-weight: 600; color: var(--ma-ink2); }

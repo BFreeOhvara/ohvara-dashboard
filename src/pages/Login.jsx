@@ -224,7 +224,10 @@ export default function Login() {
       <header className="lg-top">
         <span className="lg-brand">
           <OhvaraMark height={36} back="var(--sh-mark-back)" front="var(--sh-mark-front)" />
-          <span className="lg-brand-name">Ohvara Portal</span>
+          {/* P983: the app is just "Ohvara"; the desktop page keeps "Ohvara Portal". */}
+          {isNativeApp()
+            ? <span className="lg-brand-name">Ohvara</span>
+            : <><span className="lg-brand-name lg-name-web">Ohvara Portal</span><span className="lg-brand-name lg-name-phone">Ohvara</span></>}
         </span>
       </header>
       <main className="lg-main">

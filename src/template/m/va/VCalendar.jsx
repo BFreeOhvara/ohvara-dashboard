@@ -5,6 +5,7 @@ import { useFulSchedule, useFulShift } from '../../ful/data'
 import { whyShort } from '../../ful/callSteps'
 import { fp } from '../../ful/paths'
 import { rise } from '../AppKit'
+import MonthDay from '../MonthDay'
 import { monthName, shiftMonth, dayWords } from '../appModel'
 import { useVaCall } from './vaStore'
 import { useVaNow, dayOfItem, minOfItem } from './useVaNow'
@@ -14,6 +15,8 @@ import { monthCells, stateOf, forLine, STATE_TONE, STATE_TAG } from './vaModel'
 // P977 — no pop-up: the picked day's calls sit under the month as the agent app's "Coming up" rows (time, name,
 // what · for {agent}, coloured by result, past faded), with a red Now line today. Today is picked on open; tapping
 // another day swaps the rows (soft fade). A call opens its brief (or the result sheet if it's owed one).
+// P983 — the month is the agent app's: the same day box (MonthDay), a thin coloured bar per call by status (max 3),
+// the picked day an outlined rounded square (not a solid block), a day off hatched.
 const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const LEGEND = [['sky', 'To call'], ['sage', 'Done'], ['butter', 'No answer'], ['apricot', 'Needs a result']]
 
@@ -31,6 +34,8 @@ export default function VCalendar({ route }) {
   const offDates = (shift.dayOffs || []).map(o => o.date)
   const cells = monthCells(ym[0], ym[1], { byDate, todayIso, offDates })
   const list = (byDate[day] || []).slice().sort((a, b) => minOfItem(a, tz) - minOfItem(b, tz))
+  // One bar per call, in time order, coloured by where it stands (the legend's tones).
+  const tonesOf = items => (items || []).slice().sort((a, b) => minOfItem(a, tz) - minOfItem(b, tz)).map(i => STATE_TONE[stateOf(i, nowMs)])
   const go = by => setYm(shiftMonth(ym[0], ym[1], by))
   const pick = iso => setPicked(iso === todayIso ? null : iso)
   const goToday = () => { setYm([Number(todayIso.slice(0, 4)), Number(todayIso.slice(5, 7))]); setPicked(null) }
@@ -69,22 +74,17 @@ export default function VCalendar({ route }) {
 
       <div className="ma-month ma-rise" style={rise(0)}>
         <div className="ma-month-h">
-          <button type="button" className="ma-round is-soft ma-press" aria-label="Last month" onClick={() => go(-1)}><ChevronLeft size={18} aria-hidden="true" /></button>
+          <button type="button" className="ma-round is-soft is-sm ma-press" aria-label="Last month" onClick={() => go(-1)}><ChevronLeft size={18} aria-hidden="true" /></button>
           <b>{monthName(ym[1])}</b>
-          <button type="button" className="ma-round is-soft ma-press" aria-label="Next month" onClick={() => go(1)}><ChevronRight size={18} aria-hidden="true" /></button>
+          <button type="button" className="ma-round is-soft is-sm ma-press" aria-label="Next month" onClick={() => go(1)}><ChevronRight size={18} aria-hidden="true" /></button>
         </div>
         <div className="ma-dow">{DOW.map(d => <small key={d}>{d}</small>)}</div>
         <div className="ma-days">
-          {cells.map(c => {
-            const cls = [c.inMonth ? '' : 'is-out', c.today ? 'is-today' : '', c.past ? 'is-past' : '', c.off ? 'is-off' : '', day === c.iso ? 'is-picked' : ''].filter(Boolean).join(' ')
-            return (
-              <button key={c.iso} type="button" className={`ma-day va-day ma-press ${cls}`} disabled={!c.inMonth} aria-pressed={day === c.iso}
-                aria-label={`${dayWords(c.iso, todayIso)}${c.off ? ', day off' : c.count ? `, ${c.count} call${c.count === 1 ? '' : 's'}` : ''}`} onClick={() => pick(c.iso)}>
-                <b>{c.n}</b>
-                {c.off ? <small className="va-off">Off</small> : c.count > 0 && <small className={`va-count${c.past ? ' is-past' : ''}`}>{c.count}</small>}
-              </button>
-            )
-          })}
+          {cells.map(c => (
+            <MonthDay key={c.iso} cell={c} className="va-mday" tones={c.inMonth ? tonesOf(byDate[c.iso]) : []} today={c.today} past={c.past} picked={day === c.iso}
+              off={c.off} offMark={<small className="va-off">Off</small>} onPick={pick}
+              label={`${dayWords(c.iso, todayIso)}${c.off ? ', day off' : c.count ? `, ${c.count} call${c.count === 1 ? '' : 's'}` : ''}`} />
+          ))}
         </div>
         <div className="ma-legend va-legend">{LEGEND.map(([t, w]) => <span key={t}><i className={`is-${t}`} aria-hidden="true" />{w}</span>)}<span className="va-legend-off">Day off</span></div>
       </div>

@@ -1,6 +1,6 @@
 {
   "appId": "com.ohvara.portal",
-  "appName": "Ohvara Portal",
+  "appName": "Ohvara",
   "webDir": "dist",
   "backgroundColor": "#080810",
   "android": {

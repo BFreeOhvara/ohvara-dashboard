@@ -88,6 +88,7 @@ html.lg-root[data-theme="light"] body { color-scheme: light; }
 /* ---------- top: the bird + name ---------- */
 .lg-top { display: flex; align-items: center; padding: 28px 40px 0; }
 .lg-brand { display: inline-flex; align-items: center; gap: 11px; }
+.lg-name-phone { display: none; }
 .lg-brand-name { font-family: var(--font-display); font-size: 19px; font-weight: 600; letter-spacing: -0.01em; color: var(--sh-ink); }
 
 /* ---------- middle: story | card | flow sample ---------- */
@@ -270,4 +271,27 @@ html.lg-root[data-theme="light"] body { color-scheme: light; }
   .lg-main { padding: 18px 10px 0; }
   .lg-card { padding: 22px 16px 18px; }
   .lg-card h2 { font-size: 26px; }
+}
+
+/* ---------- phones (P983): logo and the "Every lead called in seconds." line up top, the sign-in card in the
+   lower half (thumb reach), Privacy · Terms · Help at the very bottom. The name is just "Ohvara". When the keyboard
+   opens the page shrinks (Capacitor resize: native) and the card's own scroll keeps the focused field in view. ---------- */
+@media (max-width: 767.98px) {
+  .lg-name-web { display: none; }
+  .lg-page .lg-name-phone { display: inline; }
+  .lg-top { padding-top: 26px; }
+  .lg-main { flex: 1 0 auto; gap: 18px; padding-top: 0; }
+  .lg-side--story { order: 1; flex: 1 0 auto; display: flex; flex-direction: column; justify-content: center; padding: 18px 8px 4px; }
+  .lg-mid { order: 2; }
+  .lg-foot--phone { margin-top: 0; padding: 18px 0 16px; }
+  .lg-card { padding: 22px 20px 16px; }
+  .lg-card h2 { font-size: 26px; }
+  .lg-join { margin-top: 14px; }
+}
+@media (max-width: 767.98px) and (max-height: 720px) {
+  .lg-lede { display: none; }
+  .lg-top { padding-top: 18px; }
+}
+@media (max-width: 370px) {
+  .lg-card { padding: 20px 16px 16px; }
 }

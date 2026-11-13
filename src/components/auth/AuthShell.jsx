@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Eye, EyeOff, Check, Lock } from 'lucide-react'
 import { OhvaraMark } from '../ui/OhvaraMark'
 import { SUPPORT_EMAIL } from './authUtils'
+import { isNativeApp } from '../../lib/native'
 import './auth.css'
 
 // Prompt 781 — the shell every signed-out page shares: sign in, create
@@ -14,7 +15,8 @@ export function Brand() {
   return (
     <div className="sx-brand">
       <OhvaraMark height={44} back="var(--sx-hi)" front="var(--sx-mark-front)" />
-      <span className="sx-brand-name">Ohvara Portal</span>
+      {/* P983: the app is just "Ohvara"; the website keeps "Ohvara Portal". */}
+      <span className="sx-brand-name">{isNativeApp() ? 'Ohvara' : 'Ohvara Portal'}</span>
     </div>
   )
 }

@@ -8,6 +8,7 @@ import { paths } from '../paths'
 import { HoursDrawer, BlockDrawer } from '../screens/Calendar'
 import { BookCall } from '../TemplateFrame'
 import { BottomSheet, rise } from './AppKit'
+import MonthDay from './MonthDay'
 import { monthGrid, trimGrid, shiftMonth, monthName, minutesOf, dayWords, shortDay, stageOf, TONE } from './appModel'
 
 // P967 — the Calendar is a real month: arrows, Mon to Sun, a box per day with a coloured bar per call (booked sky,
@@ -80,13 +81,10 @@ export default function ACalendar() {
           {cells.map(c => {
             const items = c.inMonth ? byDay[c.iso] || [] : []
             const off = blockedIso.has(c.iso)
-            const cls = [c.inMonth ? '' : 'is-out', c.iso === todayIso ? 'is-today' : '', c.iso < todayIso ? 'is-past' : '', items.length ? 'has-calls' : '', off ? 'is-blocked' : '', day === c.iso ? 'is-picked' : ''].filter(Boolean).join(' ')
             return (
-              <button key={c.iso} type="button" className={`ma-day ma-press ${cls}`} disabled={!c.inMonth}
-                aria-label={`${dayWords(c.iso, todayIso)}${items.length ? `, ${items.length} call${items.length === 1 ? '' : 's'}` : ''}${off ? ', blocked' : ''}`} onClick={() => setDay(c.iso)}>
-                <b>{c.n}</b>
-                <span className="ma-bars">{off ? <Ban size={11} aria-hidden="true" /> : items.slice(0, 3).map(e => <i key={e.id} className={`is-${e.tone}`} />)}</span>
-              </button>
+              <MonthDay key={c.iso} cell={c} tones={items.map(e => e.tone)} today={c.iso === todayIso} past={c.iso < todayIso} picked={day === c.iso}
+                off={off} offMark={<Ban size={11} aria-hidden="true" />} onPick={setDay}
+                label={`${dayWords(c.iso, todayIso)}${items.length ? `, ${items.length} call${items.length === 1 ? '' : 's'}` : ''}${off ? ', blocked' : ''}`} />
             )
           })}
         </div>

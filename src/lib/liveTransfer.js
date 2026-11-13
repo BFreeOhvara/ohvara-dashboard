@@ -90,9 +90,9 @@ export function transferLink(url) {
 
 // The Setup push test: what each failure means and how to fix it (N-H-17). Appointments still come in.
 export const TEST_FIX = {
-  no_app: { title: 'Get the Ohvara app', steps: ['Install Ohvara Portal from the App Store or Google Play.', 'Sign in with this account.', 'Allow notifications when it asks, then run the test from the app.'] },
+  no_app: { title: 'Get the Ohvara app', steps: ['Install Ohvara from the App Store or Google Play.', 'Sign in with this account.', 'Allow notifications when it asks, then run the test from the app.'] },
   no_device: { title: 'Your phone isn’t set up for alerts', steps: ['Open the Ohvara app on your phone and sign in.', 'Allow notifications when it asks.', 'Run the test again.'] },
-  denied: { title: 'Notifications are off for Ohvara', steps: ['Open your phone’s Settings → Notifications → Ohvara Portal.', 'Turn on Allow Notifications.', 'iPhone: turn on Time Sensitive Notifications. Android: open “Live calls” and turn on Override Do Not Disturb.', 'Run the test again.'] },
+  denied: { title: 'Notifications are off for Ohvara', steps: ['Open your phone’s Settings → Notifications → Ohvara.', 'Turn on Allow Notifications.', 'iPhone: turn on Time Sensitive Notifications. Android: open “Live calls” and turn on Override Do Not Disturb.', 'Run the test again.'] },
   push_failed: { title: 'The test alert didn’t reach your phone', steps: ['Check your phone has signal or Wi-Fi.', 'Open the Ohvara app once so it refreshes its alert address.', 'Run the test again.'] },
   answered_no: { title: 'You tapped No', steps: ['Run the test again and tap Yes on the alert.'] },
   no_answer: { title: 'You didn’t answer the test alert', steps: ['Run the test again and tap Yes within 30 seconds.', 'If no alert showed, turn on Time Sensitive (iPhone) or Override Do Not Disturb (Android) for Ohvara.'] },

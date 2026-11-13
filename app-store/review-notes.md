@@ -10,7 +10,7 @@ then paste both into App Review Information → Sign-in. Don't reset them while 
 ---
 
 PURPOSE AND AUDIENCE
-Ohvara Portal is the work app for Ohvara's licensed life insurance agents and the virtual assistants (VAs) who work their bookings. It is not for the public: accounts are created by invitation only, so we are requesting Unlisted App Distribution (Guideline 3.2). Agents see their leads, clients, calendar and billing; VAs handle policy servicing and can make calls from the app.
+Ohvara is the work app for Ohvara's licensed life insurance agents and the virtual assistants (VAs) who work their bookings. It is not for the public: accounts are created by invitation only, so we are requesting Unlisted App Distribution (Guideline 3.2). Agents see their leads, clients, calendar and billing; VAs handle policy servicing and can make calls from the app.
 
 SIGN IN
 Two demo accounts are in the Sign-in fields: an Agent and a VA (Fulfillment). They hold sample data only; nothing they do reaches real people, calls, texts or payments.
