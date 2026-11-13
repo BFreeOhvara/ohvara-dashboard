@@ -14,11 +14,11 @@ test('every lesson is complete: steps, do and don\'t, a picture, and a 3 to 5 qu
     assert.ok(l.check.length >= 3 && l.check.length <= 5, `${l.id} has ${l.check.length} questions`)
     for (const c of l.check) assert.ok(Number.isInteger(c.answer) && c.answer >= 0 && c.answer < c.options.length, `${l.id}: ${c.q}`)
   }
-  assert.ok(LESSONS.length >= 17)
+  assert.ok(LESSONS.length >= 16) // P976: 16 after the 4 lead lessons went
 })
 
 test('the spec\'s jobs all have a lesson', () => {
-  for (const id of ['desk', 'inbound', 'speed', 'booking', 'transfer', 'reminders', 'callbacks', 'checkins', 'packets', 'payments', 'changes', 'saves', 'carrier', 'optout', 'never', 'escalate', 'logging']) {
+  for (const id of ['desk', 'inbound', 'speed', 'reminders', 'callbacks', 'packets', 'payments', 'changes', 'saves', 'carrier', 'optout', 'never', 'escalate', 'logging']) {
     assert.ok(LESSONS.some(l => l.id === id), id)
   }
 })
@@ -94,13 +94,13 @@ test('summary: passed, left, next and complete', () => {
 
 test('every "?" task opens a real lesson', () => {
   for (const k of Object.keys(HELP)) assert.ok(helpLesson(k), k)
-  assert.equal(helpLesson('booking'), 'booking')
+  assert.equal(helpLesson('booking'), null) // P976: the lead lessons are gone
   assert.equal(helpLesson('lapse_save'), 'saves')
   assert.equal(helpLesson('nope'), null)
 })
 
 test('"How do I…?" search finds the right lesson first', () => {
-  assert.equal(searchLessons('how do I book an appointment')[0].id, 'booking')
+  assert.equal(searchLessons('move a call')[0].id, 'speed')
   assert.equal(searchLessons('someone says stop')[0].id, 'optout')
   assert.equal(searchLessons('cancel old policy')[0].id, 'carrier') // P931: the cancel call (was 'carrier confirms')
   assert.equal(searchLessons('merge the client')[0].id, 'carrier')

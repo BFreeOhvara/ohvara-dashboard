@@ -106,24 +106,6 @@ export const TOURS = {
     done: 'You rebooked a call.',
     steps: [openOnCalendar('Harold Nguyen', 'Open Harold Nguyen\'s booked call.'), ...moveIt],
   },
-  checkins: {
-    start: 'calendar',
-    done: 'You opened a client\'s callback and started it.',
-    steps: [
-      openOnCalendar('Denise Walker2:30', 'Open a client\'s callback. Lead replies go to the AI caller, so only clients reach you.'),
-      { sel: `${REC} .cp-why, ${REC} .fx-rec-b`, say: 'Why they asked for a call.', act: 'look' },
-      { sel: `${REC}`, text: 'Start call', say: 'Press Start call at the booked time.', act: 'click' },
-    ],
-  },
-  fromai: {
-    start: 'calendar',
-    done: 'You read why a callback was booked and started it.',
-    steps: [
-      openOnCalendar('Denise Walker2:30', 'Open a callback on your Calendar.'),
-      { sel: `${REC} .cp-why, ${REC} .fx-rec-b`, say: 'Why it was booked, in one line. Read it before you call.', act: 'look' },
-      { sel: `${REC}`, text: 'Start call', say: 'Press Start call at the booked time.', act: 'click' },
-    ],
-  },
   inbound: {
     start: 'overview',
     done: 'You opened the phone and found your calls.',

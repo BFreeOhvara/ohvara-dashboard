@@ -19,7 +19,7 @@ test('lessons follow a VA\'s day: start of shift first, the next call and its br
   // each call type, most common first: hand-off (welcome), cancel the old policy, save, change request, callback
   for (const [a, b] of [['welcome', 'carrier'], ['carrier', 'saves'], ['saves', 'changes'], ['changes', 'callbacks']]) assert.ok(at(a) < at(b), `${a} before ${b}`)
   assert.ok(at('callbacks') < at('inbound'), 'calls that come in after the booked call types')
-  assert.ok(at('inbound') < at('escalate') && at('fromai') < at('escalate'), 'coverage questions go to the agent after calls coming in')
+  assert.ok(at('inbound') < at('escalate'), 'coverage questions go to the agent after calls coming in')
   assert.ok(at('escalate') < at('logging'), 'after the call comes after the calls')
   assert.ok(at('logging') < at('timeoff'), 'time off and pay after the call')
 })

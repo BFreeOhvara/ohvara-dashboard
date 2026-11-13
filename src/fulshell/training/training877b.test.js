@@ -6,7 +6,7 @@ import { LESSONS } from './lessons.js'
 import { emptyProgress, lessonStates, summary, recordTry, recordAttempt, assignLesson, scoreCheck, matchesTry, endsInQuiz } from './model.js'
 import { FUL } from '../../template/ful/paths.js'
 
-const QUIZ = ['never', 'optout', 'inbound', 'booking', 'transfer', 'carrier', 'escalate']
+const QUIZ = ['never', 'optout', 'inbound', 'carrier', 'escalate']
 
 test('checks only on the lessons where a mistake costs money or breaks a rule', () => {
   assert.deepEqual(LESSONS.filter(endsInQuiz).map(l => l.id).sort(), [...QUIZ].sort())

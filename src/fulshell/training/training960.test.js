@@ -25,6 +25,6 @@ test('the player draws no caption of its own over the video, and the page has on
 })
 
 test('every lesson has a captions file listed', () => {
-  assert.equal(Object.keys(VIDEOS.lessons).length, 20)
+  assert.equal(Object.keys(VIDEOS.lessons).length, 16) // P976: the 4 lead lessons went
   for (const [id, v] of Object.entries(VIDEOS.lessons)) assert.ok(v.captions, `${id} lists captions`)
 })
