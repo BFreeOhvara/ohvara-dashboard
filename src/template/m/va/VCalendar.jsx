@@ -9,6 +9,7 @@ import MonthDay from '../MonthDay'
 import { monthName, shiftMonth, dayWords } from '../appModel'
 import { useVaCall } from './vaStore'
 import { useVaNow, dayOfItem, minOfItem } from './useVaNow'
+import { zoneName, theirTime } from '../zoneTime'
 import { monthCells, stateOf, forLine, STATE_TONE, STATE_TAG } from './vaModel'
 
 // P975 — Calendar: a real month (a box per day with a call-count pill, today ringed, past faded, days off marked).
@@ -91,7 +92,7 @@ export default function VCalendar({ route }) {
 
       <div className="va-dayh ma-rise" style={rise(1)}>
         <b>{dayWords(day, todayIso)}</b>
-        <small>{dayOff ? 'day off' : list.length ? `${list.length} call${list.length === 1 ? '' : 's'}` : 'no calls'}</small>
+        <small>{dayOff ? 'day off' : list.length ? `${list.length} call${list.length === 1 ? '' : 's'}` : 'no calls'} · {zoneName(tz)} time</small>
       </div>
       <div key={day} className="ma-coming va-daylist" aria-live="polite">
         {list.map((i, n) => {
@@ -101,7 +102,7 @@ export default function VCalendar({ route }) {
               {n === nowAt && nowLine}
               <button type="button" className={`ma-up is-${STATE_TONE[st]} ma-press${isPast(i) ? ' is-past' : ''}`} aria-label={`${i.time}, ${i.name}, ${forLine(whyShort(i), i.agent)}, ${STATE_TAG[st]}`} onClick={() => openCall(i)}>
                 <span className="ma-up-when"><b>{i.time}</b>{st !== 'todo' && <small>{STATE_TAG[st]}</small>}</span>
-                <span className="ma-grow"><b>{i.name}</b><small>{forLine(whyShort(i), i.agent)}</small></span>
+                <span className="ma-grow"><b>{i.name}</b><small>{forLine(whyShort(i), i.agent)}{theirTime(i, tz) ? ` · ${theirTime(i, tz)} theirs` : ''}</small></span>
               </button>
               {st !== 'done' && <button type="button" className="va-rowcall ma-press" aria-label={`Call ${i.name}`} onClick={() => vc.start(i)}><Phone size={18} aria-hidden="true" /></button>}
             </div>

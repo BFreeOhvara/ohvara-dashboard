@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Bell, Search, ChevronRight, ShieldCheck, Wallet, FileUp } from 'lucide-react'
-import { useSampleOverview, useSampleNeeds, useSampleLeads, useSampleClients, useSampleBilling, useDataSource } from '../data'
+import { useSampleOverview, useSampleNeeds, useSampleLeads, useSampleClients, useSampleBilling, useDataSource, useSampleSettings } from '../data'
+import { PhoneClock } from './zone'
+import { whenBoth, theirTime } from './zoneTime'
 import { useClientStatusOf, useCheckSettings, todayFor } from '../checkSettings'
 import { checkLists } from '../../lib/clientCheck.js'
 import { resultsFor } from '../agentView'
@@ -111,6 +113,7 @@ export default function AHome() {
   const now = useNow(o)
   // P974: servicing-only agents (Clients in the bar): Needs you and Up next are about clients only.
   const clientsOnly = !navKeys.has('leads')
+  const { data: zoneSet } = useSampleSettings() // P989: the live clock in the agent's zone
   const appts = clientsOnly ? o.todayAppts.filter(a => a.kind === 'client') : o.todayAppts
   const next = clientsOnly
     ? (o.nextAppt?.kind === 'client' ? o.nextAppt : appts.filter(a => minutesOf(a.time) > now).sort((a, b) => minutesOf(a.time) - minutesOf(b.time))[0] || null)
@@ -137,7 +140,7 @@ export default function AHome() {
       </header>
 
       <div className="ma-hello ma-rise" style={rise(0)}>
-        <span>{o.today}</span>
+        <PhoneClock tz={zoneSet?.timeZone} />
         <h1>{greeting(hour)}, {o.name}</h1>
       </div>
 
@@ -149,7 +152,7 @@ export default function AHome() {
               <span className="ma-grow ma-next-who">
                 <span className="ma-next-k"><i aria-hidden="true" />Up next · {untilWords(minutesOf(next.time) - now)}</span>
                 <b>{next.who}</b>
-                <span className="ma-next-when">{next.time} · {next.label}</span>
+                <span className="ma-next-when">{whenBoth(next, zoneSet?.timeZone)} · {next.label}</span>
               </span>
               <Ini name={next.who} size={54} className="ma-next-av" />
             </div>
@@ -179,7 +182,7 @@ export default function AHome() {
             <Link key={a.id} to={toOf(a)} state={{ tab: 'home' }} className="ma-trow">
               <span className="ma-time">{a.time}</span>
               <i className={`ma-dot is-${toneOf(a)}`} aria-hidden="true" />
-              <span className="ma-grow"><b>{a.who}</b><small>{a.label}</small></span>
+              <span className="ma-grow"><b>{a.who}</b><small>{a.label}{theirTime(a, zoneSet?.timeZone) ? ` · ${theirTime(a, zoneSet?.timeZone)} theirs` : ''}</small></span>
               <ChevronRight size={18} className="ma-chev" aria-hidden="true" />
             </Link>
           ))}

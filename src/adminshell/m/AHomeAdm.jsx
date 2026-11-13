@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Bell, Search, ChevronRight, CalendarOff, CreditCard, UserPlus, CheckCircle2 } from 'lucide-react'
-import { useAdmDay, useAdmDesk, useAdmPeriod, useAdmMoney, useAdmAgents, useAdmActions, useAdmSource, useAdmRota, PERIODS } from '../data'
+import { useAdmDay, useAdmDesk, useAdmPeriod, useAdmMoney, useAdmAgents, useAdmActions, useAdmSource, useAdmRota, useAdmSettings, PERIODS } from '../data'
+import { PhoneClock } from '../../template/m/zone'
+import { minuteOf } from '../../lib/callSlots'
 import { useNote, useAccount } from '../../template/kit'
 import { useApp, Ini, rise, SubPage } from '../../template/m/AppKit'
 import { greetingOf, firstName } from '../../template/m/va/vaModel'
@@ -14,7 +16,6 @@ import { useMessageTo } from './useAdm'
 // card (this month, the change vs last month, the last 4 weeks, each owner's half and the payday; tap for the money
 // breakdown); Needs you (days off, failed cards, unassigned leads, each with two buttons; "All clear" when empty); the
 // green Team on shift card; today across all agents; agents to watch.
-const dateOf = iso => new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' })
 const shortPay = p => String(p || '').replace(/^(\w{3}), \w{3} (\d+)$/, '$1 $2')
 
 export default function AHomeAdm() {
@@ -27,7 +28,8 @@ export default function AHomeAdm() {
   const { data: last } = useAdmPeriod('last')
   const { data: m } = useAdmMoney()
   const { data: agents } = useAdmAgents()
-  const nowMin = new Date().getHours() * 60 + new Date().getMinutes()
+  const { data: zoneSet } = useAdmSettings() // P989: the clock and greeting in the admin's own zone
+  const nowMin = minuteOf(new Date().toISOString(), zoneSet?.tz || 'America/Chicago')
   const weeks = m.weeks.slice(-4)
   const bars = barsOf(weeks.map(w => w.revenue))
   const halves = halvesOf(month.split, me)
@@ -45,7 +47,7 @@ export default function AHomeAdm() {
       </div>
 
       <div className="ma-hello ma-rise" style={rise(0)}>
-        <span>{dateOf(day.todayIso)}</span>
+        <PhoneClock tz={zoneSet?.tz} />
         <h1>{greetingOf(nowMin)}, {me?.name || firstName(account?.name) || 'there'}</h1>
       </div>
 

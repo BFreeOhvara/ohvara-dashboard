@@ -26,16 +26,17 @@ export const useApp = () => useContext(AppCtx)
 // otherwise 26 px. `bare` drops the title block (the client screen's hero carries the name).
 // P982 — the back arrow is back (tap OR swipe): a plain chevron, no circle, top-left of the title row, inside the
 // scroller so it scrolls away with the title. `pin` (a chat): the arrow + name stay at the top on a soft fade instead.
-export function BackArrow({ label = 'Back', className = '' }) {
+export function BackArrow({ label = 'Back', className = '', pointRight = false }) {
   const app = useApp()
+  const Chev = pointRight ? ChevronRight : ChevronLeft
   return (
-    <button type="button" className={`ma-back ma-press ${className}`} aria-label={label} onClick={app.back}>
-      <ChevronLeft size={30} strokeWidth={2.3} aria-hidden="true" />
+    <button type="button" className={`ma-back ma-press ${className}`} aria-label={label} onClick={app.back} data-point={pointRight ? 'right' : 'left'}>
+      <Chev size={30} strokeWidth={2.3} aria-hidden="true" />
     </button>
   )
 }
-// P986: `arrowRight` (Notifications, which slide in from the LEFT): the close arrow sits top-RIGHT, still pointing
-// left, the way the panel leaves (swipe left).
+// P986: `arrowRight` (Notifications, which slide in from the LEFT): the close arrow sits top-RIGHT.
+// P989: and points RIGHT, the mirror of the left-pointing back arrow on Search and every other sub-screen.
 export function SubPage({ title, line, foot, children, className = '', right, close, big = false, left, bare = false, pin = false, arrowRight = false }) {
   return (
     <div className={`ma-subpage${big ? ' is-big' : ''}${pin ? ' is-pin' : ''} ${className}`}>
@@ -46,7 +47,7 @@ export function SubPage({ title, line, foot, children, className = '', right, cl
               {!arrowRight && <BackArrow label={close || 'Back'} />}
               {left}
               {right && <span className="ma-sub-r">{right}</span>}
-              {arrowRight && <span className="ma-sub-r"><BackArrow label={close || 'Back'} className="is-right" /></span>}
+              {arrowRight && <span className="ma-sub-r"><BackArrow label={close || 'Back'} className="is-right" pointRight /></span>}
             </div>
           )}
           {!bare && !pin && <div className="ma-bigt"><h1>{title}</h1>{line && <small>{line}</small>}</div>}

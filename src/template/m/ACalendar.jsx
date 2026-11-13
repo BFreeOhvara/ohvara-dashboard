@@ -10,6 +10,7 @@ import { BookCall } from '../TemplateFrame'
 import { BottomSheet, rise } from './AppKit'
 import MonthDay from './MonthDay'
 import { monthGrid, trimGrid, shiftMonth, monthName, minutesOf, dayWords, shortDay, stageOf, TONE } from './appModel'
+import { zoneName, theirTime } from './zoneTime'
 
 // P967 — the Calendar is a real month: arrows, Mon to Sun, a box per day with a coloured bar per call (booked sky,
 // follow up butter, client sage, to mark apricot, closed stone), today ringed, past days faded. A day opens as a
@@ -91,13 +92,13 @@ export default function ACalendar() {
         <div className="ma-legend">{LEGEND.map(([t, w]) => <span key={t}><i className={`is-${t}`} aria-hidden="true" />{w}</span>)}</div>
       </div>
 
-      <p className="ma-cap is-out ma-rise" style={rise(1)}>Coming up</p>
+      <p className="ma-cap is-out ma-rise" style={rise(1)}>Coming up · {zoneName(settings.timeZone)} time</p>
       <div className="ma-coming ma-rise" style={rise(1)}>
         {coming.length
           ? coming.map(e => (
             <button key={e.id} type="button" className={`ma-up is-${e.tone} ma-press`} onClick={() => open(e)}>
               <span className="ma-up-when"><b>{shortDay(e.on, todayIso)}</b><small>{e.time}</small></span>
-              <span className="ma-grow"><b>{e.who}</b><small>{e.label}</small></span>
+              <span className="ma-grow"><b>{e.who}</b><small>{e.label}{theirTime(e, settings.timeZone) ? ` · ${theirTime(e, settings.timeZone)} theirs` : ''}</small></span>
             </button>
           ))
           : <p className="ma-empty is-glass">Nothing booked yet. Our team fills open times inside your hours.</p>}
@@ -112,7 +113,7 @@ export default function ACalendar() {
 
       <BottomSheet open={!!day} onClose={() => setDay(null)} label={day ? dayWords(day, todayIso) : 'Day'} tall>
         {day && <>
-          <div className="ma-day-h"><b>{dayWords(day, todayIso)}</b><small>{list.length ? `${list.length} call${list.length === 1 ? '' : 's'}` : 'no calls'}</small></div>
+          <div className="ma-day-h"><b>{dayWords(day, todayIso)}</b><small>{list.length ? `${list.length} call${list.length === 1 ? '' : 's'}` : 'no calls'} · {zoneName(settings.timeZone)} time</small></div>
           <div className="ma-agenda">
             {list.map((e, i) => (
               <div key={e.id}>
@@ -120,7 +121,7 @@ export default function ACalendar() {
                 <div className={`ma-slot${past(e) ? ' is-past' : ''}`}>
                   <span className="ma-slot-t">{e.time}</span>
                   <button type="button" className={`ma-up is-${e.tone} ma-press`} onClick={() => open(e)}>
-                    <span className="ma-grow"><b>{e.who}</b><small>{e.label}</small></span>
+                    <span className="ma-grow"><b>{e.who}</b><small>{e.label}{theirTime(e, settings.timeZone) ? ` · ${theirTime(e, settings.timeZone)} theirs` : ''}</small></span>
                     <span className="ma-tag">{TAGS[e.tone]}</span>
                   </button>
                 </div>

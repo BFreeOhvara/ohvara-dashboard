@@ -48,7 +48,8 @@ test('both frames keep the stack in the address state and go back one screen at 
 
 test('back arrow: a plain chevron (no circle), in the title row so it scrolls away; chats pin it on a soft fade', () => {
   assert.ok(kit.includes('export function BackArrow'))
-  assert.ok(kit.includes('<ChevronLeft size={30}'))
+  // P989: the same chevron; Notifications' close arrow points right (pointRight), every other one left.
+  assert.ok(kit.includes('const Chev = pointRight ? ChevronRight : ChevronLeft') && kit.includes('<Chev size={30}'))
   assert.match(css, /\.ma-back \{[^}]*background: none;/)
   assert.ok(kit.includes('className="ma-pinh"'))
   assert.match(css, /\.ma-pinh \{[^}]*linear-gradient\(180deg/)

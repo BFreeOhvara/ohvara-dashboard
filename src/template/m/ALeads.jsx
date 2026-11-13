@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Upload, Users, Link2, PhoneForwarded, ChevronRight, MessageSquareWarning, StickyNote, CalendarX } from 'lucide-react'
-import { useSampleLeads, useSampleLead, useSampleActions, useSampleBilling, useSampleAppointments, useDataSource } from '../data'
+import { useSampleLeads, useSampleLead, useSampleActions, useSampleBilling, useSampleAppointments, useDataSource, useSampleSettings } from '../data'
+import { whenBoth, theirTime } from './zoneTime'
 import { CantMakeIt } from '../screens/Calendar'
 import { useNote } from '../kit'
 import { NoShowUndo } from '../LeadOutcome'
@@ -125,6 +126,7 @@ function LeadScreen({ id }) {
   const [draft, setDraft] = useState('')
   const [cant, setCant] = useState(false)
   const { data: appts } = useSampleAppointments()
+  const { data: zoneSet } = useSampleSettings() // P989: the lead's own time beside yours
   const now = clockNow()
   const st = stageOf(lead, now) || 'booked'
   const status = agentStatusOf(lead)
@@ -150,6 +152,7 @@ function LeadScreen({ id }) {
         <i className="ma-glow" aria-hidden="true" />
         <div className="ma-hero-top"><span>{kind}</span><span className="ma-tag">{tag}</span></div>
         <b>{st === 'mark' || st === 'booked' ? (lead.appt || whenOf(lead, st)) : whenOf(lead, st)}</b>
+        {(st === 'mark' || st === 'booked') && appt && theirTime(appt, zoneSet?.timeZone) && <span className="ma-hero-place">{whenBoth(appt, zoneSet?.timeZone)}</span>}
         <span className="ma-hero-place">{placeOf(lead)}</span>
       </div>
 

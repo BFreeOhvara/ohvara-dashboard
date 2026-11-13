@@ -6,7 +6,7 @@ import { admPageOf, isAdminPreviewPath, PREVIEW_BASE } from '../paths.js'
 export const ADM_TABS = ['home', 'agents', 'team', 'messages', 'you']
 export const ADM_LABEL = { home: 'Home', agents: 'Agents', team: 'Team', messages: 'Messages', you: 'You' }
 // Sub-screens opened with ?s= over the current tab (the agent and VA apps' way). t = the record's id.
-export const ADM_SUBS = ['notif', 'search', 'money', 'agent', 'va', 'thread', 'unassigned', 'ai', 'leads', 'lead', 'clients', 'client', 'reports', 'bugs', 'bug', 'setup', 'payouts', 'plans', 'settings']
+export const ADM_SUBS = ['notif', 'search', 'money', 'agent', 'va', 'thread', 'unassigned', 'ai', 'leads', 'lead', 'clients', 'client', 'reports', 'bugs', 'bug', 'setup', 'payouts', 'plans', 'settings', 'profile']
 // Screens with their own bottom (a chat box or Message + Call): the tab bar slides away under them.
 export const ADM_OWN_BAR = ['thread', 'search', 'agent', 'va', 'lead', 'client', 'bug']
 // Which tab a sub-screen belongs to when it's opened from an address (not from a tab).

@@ -16,6 +16,8 @@ import { AppAbout } from '../../../components/native/AppAbout'
 import { SUPPORT_THREAD } from '../../support911'
 import { useApp, SubPage, Row, Ini, Toggle, SignOutButton, rise } from '../AppKit'
 import { PRIVACY_URL } from '../ASettings'
+import { ZonePicker } from '../zone'
+import { zoneName, shiftWords } from '../zoneTime'
 
 // P975 — Me: a dark card (you, hours this pay period, earned so far, next payday), two tiles (Ask for a day off,
 // Training), then Hours and pay, Theme (a switch), Settings, Help. P977: "Edit profile" at the top right of the card
@@ -42,7 +44,6 @@ export default function VMe() {
     <div className="ma-tabpage">
       <h1 className="ma-h1 ma-rise">Me</h1>
       <div className="ma-plan ma-rise" style={rise(0)}>
-        <i className="ma-glow va-glow" aria-hidden="true" />
         <div className="ma-plan-me">
           <Ini name={name} tone="sage" size={58} photo={photo} className="is-ring" />
           <span className="ma-grow"><b>{name}</b><small>Fulfillment · Ohvara team</small></span>
@@ -124,8 +125,9 @@ export function VPay() {
 }
 
 // P977 — Settings: a list of sections, each its own screen (?s=settings&t=<section>).
-const SECTIONS = { account: 'Account', alerts: 'Notifications', shifts: 'Shifts', privacy: 'Privacy and security' }
+const SECTIONS = { account: 'Account', alerts: 'Notifications', shifts: 'Shifts', privacy: 'Privacy and security', zone: 'Time zone' }
 const THEME_WORD = { light: 'Light', dark: 'Dark', system: 'Match my phone' }
+
 export function VSettings({ section }) {
   const app = useApp()
   const { data: s } = useFulSettings()
@@ -137,9 +139,9 @@ export function VSettings({ section }) {
   return (
     <SubPage title="Settings" big>
       <div className="ma-glass ma-list ma-set ma-sections ma-rise">
-        <Row onClick={() => go('account')} lead={<span className="ma-sym is-sky"><User size={16} aria-hidden="true" /></span>} title="Account" sub={`Theme · ${THEME_WORD[pref] || 'Match my phone'}`} />
+        <Row onClick={() => go('account')} lead={<span className="ma-sym is-sky"><User size={16} aria-hidden="true" /></span>} title="Account" sub={`${zoneName(s.timeZone)} · ${THEME_WORD[pref] || 'Match my phone'}`} />
         <Row onClick={() => go('alerts')} lead={<span className="ma-sym is-coral"><Bell size={16} aria-hidden="true" /></span>} title="Notifications" sub={on ? `${on} of ${(s.notifications || []).length} come to your phone` : 'Only in the bell'} />
-        <Row onClick={() => go('shifts')} lead={<span className="ma-sym is-sage"><CalendarDays size={16} aria-hidden="true" /></span>} title="Shifts" sub={`${(shift.shift?.text || '8:00 AM to 6:00 PM').replace(/:00/g, '')} Central`} />
+        <Row onClick={() => go('shifts')} lead={<span className="ma-sym is-sage"><CalendarDays size={16} aria-hidden="true" /></span>} title="Shifts" sub={shiftWords(shift.shift?.text, s.timeZone)} />
         <Row onClick={() => go('privacy')} lead={<span className="ma-sym is-stone"><Shield size={16} aria-hidden="true" /></span>} title="Privacy and security" sub="Password, privacy policy" />
       </div>
     </SubPage>
@@ -159,9 +161,13 @@ function VSection({ k }) {
   const [panel, setPanel] = useState(null)
   const DeleteDialog = account?.DeleteDialog
   const flip = (key, field, v) => { const next = alerts.map(n => (n.key === key ? { ...n, [field]: v } : n)); setAlerts(next); saveSettings({ notifications: next }) }
+  if (k === 'zone') return <ZonePicker tz={s.timeZone} onPick={tz => { saveSettings({ timeZone: tz }); note(`Time zone: ${zoneName(tz)}`) }} />
   if (k === 'account') {
     return (
       <>
+        <div className="ma-glass ma-list ma-set ma-rise">
+          <Row onClick={() => app.openSub('settings', { t: 'zone' })} title="Time zone" right={<span className="ma-val">{zoneName(s.timeZone)}</span>} />
+        </div>
         <p className="ma-cap is-out">Theme</p>
         <div className="ma-glass ma-list ma-set ma-rise" role="radiogroup" aria-label="Theme">
           {Object.entries(THEME_WORD).map(([key, l]) => (
@@ -195,7 +201,7 @@ function VSection({ k }) {
     return (
       <>
         <div className="ma-glass ma-list ma-set ma-rise">
-          <div className="ma-row"><span className="ma-grow"><b>Shift hours</b><small>Set by the team</small></span><span className="ma-val">{(shift.shift?.text || '8:00 AM to 6:00 PM').replace(/:00/g, '')} Central</span></div>
+          <div className="ma-row"><span className="ma-grow"><b>Shift hours</b><small>Set by the team</small></span><span className="ma-val">{shiftWords(shift.shift?.text, s.timeZone)}</span></div>
           <Row onClick={() => app.goTab('rota')} title="See the schedule" sub="Who works which day" />
           <Row onClick={() => (off.notSet ? note('Days off open once your schedule is set') : setPanel('off'))} title="Ask for a day off" right={<span className="ma-val">{off.notSet ? 'Not yet' : `${off.left} left`}</span>} />
         </div>

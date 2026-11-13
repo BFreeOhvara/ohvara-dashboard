@@ -55,7 +55,6 @@ export default function AAccount() {
       <h1 className="ma-h1 ma-rise">Account</h1>
 
       <div className="ma-plan ma-rise" style={rise(0)}>
-        <i className="ma-glow is-sky" aria-hidden="true" />
         <div className="ma-plan-me">
           <Ini name={name} tone="sky" size={58} photo={s.profile?.photo} className="is-ring" />
           <span className="ma-grow"><b>{name}</b><small>{[sinceOf(b), states.length ? states.join(', ') : null].filter(Boolean).join(' · ')}</small></span>

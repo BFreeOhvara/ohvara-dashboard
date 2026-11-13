@@ -127,6 +127,7 @@ test('fixes: no phone icon in the VA header, Add is the main call button, notifi
   assert.doesNotMatch(call, /btn\('pad', 'Keypad'/)
   for (const f of ['./template/m/ANotes.jsx', './template/m/va/VSubs.jsx', './adminshell/m/ASubsAdm.jsx']) assert.match(src(f), /is-notif"[^>]*arrowRight|arrowRight[^>]*is-notif/)
   const css = src('./template/m/app.css')
-  assert.match(css, /\.ma-signout \{[^}]*border: 0; background: none;[^}]*box-shadow: none; \}/)
+  // P989: Sign out is a real glass button again (red text only, no red fill or border) — see p989.test.js.
+  assert.match(css, /\.ma-signout \{[^}]*border: 1px solid var\(--ma-glass-b\); background: var\(--ma-glass\);/)
   assert.match(css, /\.ma-back\.is-right \{ margin-left: 0; margin-right: -12px; \}/)
 })

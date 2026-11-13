@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
 import { Bell, Search, Phone, PhoneIncoming, ChevronRight } from 'lucide-react'
-import { useFulDay, useFulSchedule, useFulShift } from '../../ful/data'
+import { useFulDay, useFulSchedule, useFulShift, useFulSettings } from '../../ful/data'
+import { PhoneClock } from '../zone'
+import { shiftWords } from '../zoneTime'
 import { whyShort } from '../../ful/callSteps'
 import { useAccount } from '../../kit'
 import { useApp, Ini, rise } from '../AppKit'
@@ -28,7 +30,7 @@ export default function VToday() {
   const done = today.filter(i => i.done).length
   const saved = today.filter(i => i.done && i.row?.outcome === 'saved').length
   const pct = today.length ? Math.round((done / today.length) * 100) : 0
-  const dateLine = new Date(nowMs).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: tz })
+  const { data: zoneSet } = useFulSettings() // P989: the live clock in the VA's own zone
   const off = (shift.dayOffs || []).some(o => o.date === todayIso)
   const onShift = !shift.notSet && shift.onToday && !off
 
@@ -44,17 +46,17 @@ export default function VToday() {
       </div>
 
       <div className="ma-hello ma-rise" style={rise(0)}>
-        <span>{dateLine}</span>
+        <PhoneClock tz={zoneSet?.timeZone || tz} />
         <h1>{greetingOf(nowMin)}, {firstName(account?.name) || 'there'}</h1>
       </div>
 
       <section className="va-shift is-sage ma-rise" style={rise(1)} aria-label="Your shift">
         <div className="va-shift-top">
-          <b><i className={onShift ? 'is-live' : ''} aria-hidden="true" />{shift.notSet ? 'Schedule not set up yet' : onShift ? `On shift · ${(shift.shift?.text || '8:00 AM to 6:00 PM').replace(/:00/g, '')}` : 'Off today'}</b>
+          <b><i className={onShift ? 'is-live' : ''} aria-hidden="true" />{shift.notSet ? 'Schedule not set up yet' : onShift ? `On shift · ${shiftWords(shift.shift?.text, zoneSet?.timeZone || tz)}` : 'Off today'}</b>
           <span>{done} of {today.length} done</span>
         </div>
         <div className="va-bar" role="progressbar" aria-label="Calls done today" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}><i style={{ width: `${pct}%` }} /></div>
-        <small>{shift.notSet ? 'Shifts are 8 AM to 6 PM Central' : withYou(shift.mates || [])}</small>
+        <small>{shift.notSet ? `Shifts are ${shiftWords(null, zoneSet?.timeZone || tz)}` : withYou(shift.mates || [])}</small>
       </section>
 
       {vc.holdLine && (

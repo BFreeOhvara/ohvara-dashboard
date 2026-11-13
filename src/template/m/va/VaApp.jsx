@@ -4,7 +4,8 @@ import { Home, CalendarDays, Users, MessageCircle } from 'lucide-react'
 import { useTheme } from '../../../hooks/useTheme'
 import { useIsTestAccount } from '../../../hooks/useIsTestAccount'
 import { useAccount } from '../../kit'
-import { useFulSchedule, useFulStatus, useFulSource, useFulFeed } from '../../ful/data'
+import { useFulSchedule, useFulStatus, useFulSource, useFulFeed, useFulSettings, useFulActions } from '../../ful/data'
+import { PhoneZone } from '../zone'
 import { fp } from '../../ful/paths'
 import { DataLoading, DataError } from '../../DataState'
 import { AppCtx, Ini, useStill } from '../AppKit'
@@ -64,6 +65,9 @@ export default function VaApp() {
 }
 
 function Frame() {
+  const { data: zoneSet } = useFulSettings() // P989: the VA's own time zone (profiles.timezone)
+  const { saveSettings: saveZone } = useFulActions()
+  const zoneReal = useFulSource() !== 'sample'
   const loc = useLocation()
   const navigate = useNavigate()
   const navType = useNavigationType()
@@ -156,6 +160,7 @@ function Frame() {
     <AppCtx.Provider value={app}>
       <div className={`tp fx ma va${still ? ' is-still' : ''}${route.sub ? ' has-sub' : ''}`} ref={frameRef}>
         <div className="tp-sky" aria-hidden="true" />
+        {!body && <PhoneZone tz={zoneSet?.timeZone} save={tz => saveZone({ timeZone: tz })} real={zoneReal} />}
         {body
           ? <main className="ma-solo">{body}</main>
           : (

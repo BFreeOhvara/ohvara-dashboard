@@ -3,7 +3,8 @@ import { useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { Home, Inbox, CalendarDays, MessageCircle, Users } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { useIsTestAccount } from '../../hooks/useIsTestAccount'
-import { useSampleLeads, useSampleThreads, useSampleClients, useDataSource, useDataStatus } from '../data'
+import { useSampleLeads, useSampleThreads, useSampleClients, useDataSource, useDataStatus, useSampleSettings, useSampleActions } from '../data'
+import { PhoneZone } from './zone'
 import { useAccount } from '../kit'
 import { useNavKeys } from '../useProducts'
 import { useClientStatusOf } from '../checkSettings'
@@ -87,6 +88,8 @@ function Frame() {
   const source = useDataSource()
   const isTest = useIsTestAccount() // P929: no sample line on test accounts
   const status = useDataStatus()
+  const { data: zoneSet } = useSampleSettings() // P989: the agent's time zone (profiles.timezone)
+  const { saveSettings: saveZone } = useSampleActions()
   const navKeys = useNavKeys() // P955: tabs for what they bought; P974: Clients in Leads' place when servicing only
   const tabs = tabsFromNav(navKeys)
   const route = routeForTabs(routeOf(loc.pathname, loc.search), tabs)
@@ -196,6 +199,7 @@ function Frame() {
     <AppCtx.Provider value={app}>
       <div className={`tp fx ma${still ? ' is-still' : ''}${route.sub ? ' has-sub' : ''}`} ref={frameRef}>
         <div className="tp-sky" aria-hidden="true" />
+        {!body && <PhoneZone tz={zoneSet?.timeZone} save={tz => saveZone({ timeZone: tz })} real={source === 'real'} />}
         {body
           ? <main className="ma-solo">{body}</main>
           : (

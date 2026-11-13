@@ -16,6 +16,7 @@ import { BottomSheet, Ini } from '../AppKit'
 import { CARRIER_CATALOG, findCarrier, matchCarriers } from '../../../lib/carriers/catalog'
 import { CallCtx } from './vaStore'
 import { useVaNow } from './useVaNow'
+import { whenBoth } from '../zoneTime'
 import { OUTCOMES, outcomePlan, carrierLine, draftWords, firstName, callTimer, holdTitle, forLine } from './vaModel'
 
 // P975 — the call, the heart of the VA app. One call at a time, on the SAME engine as the desktop VA phone
@@ -183,7 +184,7 @@ function BriefSheet({ it, onClose, onStart, gate, tz }) {
       {it && <>
         <div className="va-brief-h">
           <Ini name={it.name} tone="sky" size={48} />
-          <span className="ma-grow"><b>{it.name}</b><small>{it.time} · {whyShort(it)}</small></span>
+          <span className="ma-grow"><b>{it.name}</b><small>{whenBoth(it, tz)} · {whyShort(it)}</small></span>
         </div>
         <div className="va-facts">
           <span><small>Agent</small><b>{it.agent || 'Not given'}</b></span>

@@ -2,7 +2,8 @@ import { useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import { useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { Home, Briefcase, Users, MessageCircle } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
-import { useAdmFeed, useAdmSource, useAdmMeta } from '../data'
+import { useAdmFeed, useAdmSource, useAdmMeta, useAdmSettings, useAdmActions } from '../data'
+import { PhoneZone } from '../../template/m/zone'
 import { ap } from '../paths'
 import { DataLoading, DataError } from '../../template/DataState'
 import { AppCtx, Ini, useStill } from '../../template/m/AppKit'
@@ -16,7 +17,7 @@ import AHomeAdm, { AMoney } from './AHomeAdm'
 import AAgents, { AAgent } from './AAgents'
 import ATeam, { AVa } from './ATeam'
 import AMsgs, { AThreadAdm } from './AMsgs'
-import AYou, { AUnassigned, AAi, ALeadsAll, ALeadAdm, AClientsAll, AClientAdm, AReports, ABugs, ABug, ASetupView, APayouts, APlans, ASettingsAdm } from './AYou'
+import AYou, { AUnassigned, AAi, ALeadsAll, ALeadAdm, AClientsAll, AClientAdm, AReports, ABugs, ABug, ASetupView, APayouts, APlans, ASettingsAdm, AProfileAdm } from './AYou'
 import { ANotif, ASearch } from './ASubsAdm'
 import '../../template/glass.css'
 import '../../template/flow.css'
@@ -60,7 +61,8 @@ function SubScreen({ route }) {
     case 'setup': return <ASetupView />
     case 'payouts': return <APayouts />
     case 'plans': return <APlans />
-    case 'settings': return <ASettingsAdm />
+    case 'settings': return <ASettingsAdm section={route.id} />
+    case 'profile': return <AProfileAdm />
     default: return null
   }
 }
@@ -73,6 +75,8 @@ export default function AdminApp() {
   const still = useStill()
   const source = useAdmSource()
   const meta = useAdmMeta()
+  const { data: zoneSet } = useAdmSettings() // P989: the admin's own time zone (profiles.timezone)
+  const { setTz } = useAdmActions()
   const route = admRouteOf(loc.pathname, loc.search)
   const tab = route.tab
   const idx = Math.max(0, ADM_TABS.indexOf(tab))
@@ -153,6 +157,7 @@ export default function AdminApp() {
     <AppCtx.Provider value={app}>
       <div className={`tp fx ma va am${still ? ' is-still' : ''}${route.sub ? ' has-sub' : ''}`} ref={frameRef}>
         <div className="tp-sky" aria-hidden="true" />
+        {!body && <PhoneZone tz={zoneSet?.tz} save={setTz} real={source === 'real'} />}
         {body
           ? <main className="ma-solo">{body}</main>
           : (

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Repeat } from 'lucide-react'
-import { useFulShift, useFulSource } from '../../ful/data'
+import { useFulShift, useFulSource, useFulSettings } from '../../ful/data'
+import { shiftWords } from '../zoneTime'
 import { DayOffDrawer } from '../../ful/Shift'
 import { useTimeOff } from '../../ful/useTimeOff'
 import { MY_SWAPS } from '../../ful/p879'
@@ -18,6 +19,7 @@ const TONES = ['sky', 'butter', 'apricot', 'stone']
 
 export default function VRota() {
   const { data: s } = useFulShift()
+  const { data: me } = useFulSettings()
   const real = useFulSource() === 'real'
   const off = useTimeOff()
   const note = useNote()
@@ -30,7 +32,7 @@ export default function VRota() {
 
   return (
     <div className="ma-tabpage">
-      <div className="ma-top ma-rise"><span className="ma-grow"><h1>Schedule</h1><small>Who is on shift · 8 AM to 6 PM Central</small></span></div>
+      <div className="ma-top ma-rise"><span className="ma-grow"><h1>Schedule</h1><small>Who is on shift · {shiftWords(s.shift?.text, me.timeZone)}</small></span></div>
 
       <div className="va-weeks ma-rise" role="tablist" aria-label="Week" style={rise(0)}>
         {WEEK.map((w, i) => <button key={w} type="button" role="tab" aria-selected={week === i} className={`va-week ma-press${week === i ? ' is-on' : ''}`} onClick={() => setWeek(i)}>{w}</button>)}

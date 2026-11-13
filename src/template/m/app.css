@@ -363,7 +363,7 @@
 /* P982: the back arrow is back: a plain chevron (no circle), 44 px target, top-left of the title row. */
 .ma-back { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; margin-left: -12px; border: 0; padding: 0; background: none; color: var(--ma-ink); cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .ma-back:focus-visible { outline: 2px solid var(--ma-focus); border-radius: 12px; }
-/* P986: Notifications come in from the left, so their close arrow sits top-right (still pointing left). */
+/* P986/P989: Notifications come in from the left; their close arrow sits top-right and points right. */
 .ma-back.is-right { margin-left: 0; margin-right: -12px; }
 .ma-bigt { display: flex; flex-direction: column; gap: 2px; margin: 0 4px 16px; min-width: 0; }
 .ma-bigt h1 { font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.12; overflow-wrap: anywhere; }
@@ -674,8 +674,9 @@ body:has(.ma) .tp-note-toast svg { color: inherit; }
 .ma-editbtn { position: relative; align-self: flex-start; flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; min-height: 44px; margin: -4px -6px 0 0; padding: 0 11px; border-radius: 999px; border: 1px solid color-mix(in srgb, white 16%, transparent); background: color-mix(in srgb, white 12%, transparent); color: inherit; font: inherit; font-size: 12.5px; font-weight: 800; white-space: nowrap; cursor: pointer; }
 .ma-editbtn:active { background: color-mix(in srgb, white 22%, transparent); }
 .ma-sections .ma-row { min-height: 64px; }
-/* P986: Sign out is plain red text in every app: no fill, no border, no shadow. */
-.ma-signout { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 54px; margin-top: 16px; border-radius: 999px; border: 0; background: none; backdrop-filter: none; -webkit-backdrop-filter: none; color: var(--ma-ink); font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: none; }
+/* P989: Sign out is a real button again (the app's glass secondary button, as before P986) with red text only:
+   no red fill, no red border. The red colour is set in the P982 block below. */
+.ma-signout { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 54px; margin-top: 16px; border-radius: 999px; border: 1px solid var(--ma-glass-b); background: var(--ma-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); color: var(--ma-ink); font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: var(--ma-shadow); }
 .ma-quiet-danger { display: block; margin: 40px auto 0; min-height: 44px; padding: 0 16px; border: 0; background: none; font: inherit; font-size: 14px; font-weight: 600; color: var(--sh-f-coral); cursor: pointer; }
 [data-theme="light"] .ma-quiet-danger { color: color-mix(in srgb, var(--sh-f-coral) 70%, var(--sh-fi-coral)); }
 .va-thread.is-pinned { position: relative; }
@@ -699,3 +700,13 @@ body:has(.ma) .tp-note-toast svg { color: inherit; }
 .ma-pinh-t small { font-size: 12.5px; color: var(--ma-ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ma-signout { color: var(--sh-f-coral); }
 [data-theme="light"] .ma-signout { color: color-mix(in srgb, var(--sh-f-coral) 70%, var(--sh-fi-coral)); }
+
+/* ── P989: the live clock on Home (date · time zone) and the travel prompt ─────────────────────────────────────── */
+.ma-clock { font-size: 14px; font-weight: 600; color: var(--ma-ink2); font-variant-numeric: tabular-nums; }
+.ma-clock i { font-style: normal; }
+.ma-clock b { font-weight: 700; color: var(--ma-ink); }
+.ma-zask { display: flex; flex-direction: column; gap: 10px; padding: 6px 4px 8px; }
+.ma-zask h2 { font-size: 22px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
+.ma-zask p { font-size: 15px; line-height: 1.4; color: var(--ma-ink2); margin-bottom: 6px; }
+.ma-zask .ma-btn { width: 100%; }
+.ma-both { display: block; font-size: 12.5px; font-weight: 600; color: var(--ma-ink2); }

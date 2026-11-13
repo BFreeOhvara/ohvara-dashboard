@@ -103,7 +103,6 @@
 .va-about { font-size: 12px; font-weight: 700; color: var(--ma-ink3); }
 
 /* ---- Me ---- */
-.va-glow { background: radial-gradient(circle, color-mix(in srgb, var(--sh-f-sage) 42%, transparent), transparent 70%); }
 .va-you-h { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .va-you-h b { font-size: 18px; font-weight: 800; }
 .va-field { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; font-size: 13px; font-weight: 700; color: var(--ma-ink2); }
