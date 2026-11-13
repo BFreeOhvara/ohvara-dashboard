@@ -295,6 +295,10 @@
 .ma-week b { font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
 .ma-week b.is-good { color: color-mix(in srgb, var(--sh-f-sage) 70%, var(--sh-fi-sage)); }
 .ma:not(:is([data-theme="light"] *)) .ma-week b.is-good { color: var(--sh-f-sage); }
+/* P991: the delivered tile says its pace (green ahead, plain on pace, orange behind). */
+.ma-week b.is-warn { color: color-mix(in srgb, var(--sh-f-apricot) 70%, var(--sh-fi-apricot)); }
+.ma:not(:is([data-theme="light"] *)) .ma-week b.is-warn { color: var(--sh-f-apricot); }
+.ma-week small.ma-pace { font-size: 11.5px; font-weight: 600; opacity: .85; }
 .ma-suggest { margin-top: 14px; }
 
 /* ── Tab page heads ─────────────────────────────────────────────────────────────────────────────────────── */

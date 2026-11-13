@@ -12,6 +12,8 @@ import './chart936.css'
 // kind:   'bar' (default) or 'area' (one smooth line with a gradient under it; band = { lo, hi } draws a range)
 // tone:   'plain' or 'fill' (on a coloured card: every colour is drawn from the card's own ink)
 // tip:    row => [[label, text, color?]] to replace the tooltip lines; format formats numbers (axis and tooltip)
+// overlay: extra Recharts elements drawn over an area chart (P991: this week's dashed "so far" line and projected point);
+// reach:  the highest value the overlay draws, so the y-axis has room for it
 
 const reduced = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
@@ -58,15 +60,15 @@ export function ChartKey({ series, className = '' }) {
 }
 
 export default function Chart({ data, series, kind = 'bar', stacked = false, tone = 'plain', height = 160, label, format = n => String(n),
-  yAxis = true, legend = true, band = null, tip = null, compact = false, className = '' }) {
+  yAxis = true, legend = true, band = null, tip = null, compact = false, className = '', overlay = null, reach = 0 }) {
   const raw = useId()
   const uid = `ox${raw.replace(/[^a-zA-Z0-9]/g, '')}`
   const anim = !reduced()
   const rows = useMemo(() => data.map(d => (d.later ? { ...d, ...Object.fromEntries(series.map(s => [s.key, null])) } : d)), [data, series])
   const top = useMemo(() => {
     const sums = rows.filter(r => !r.later).map(r => (stacked ? series.reduce((t, s) => t + (r[s.key] || 0), 0) : Math.max(0, ...series.map(s => r[s.key] || 0))))
-    return Math.max(band?.hi || 0, ...sums, 0)
-  }, [rows, series, stacked, band])
+    return Math.max(band?.hi || 0, reach || 0, ...sums, 0)
+  }, [rows, series, stacked, band, reach])
   const domainTop = top > 0 ? top * 1.12 : 1
   const axisFmt = n => (n === 0 ? '0' : format(n))
   const cats = rows.length
@@ -123,6 +125,7 @@ export default function Chart({ data, series, kind = 'bar', stacked = false, ton
                 <Area key={s.key} type="monotone" dataKey={s.key} stroke={s.color} strokeWidth={2.5} fill={`url(#${uid}-${s.key})`} connectNulls={false}
                   dot={false} activeDot={{ r: 5, strokeWidth: 2, stroke: 'var(--ox-dot-ring)', fill: s.color }} isAnimationActive={anim} animationDuration={900} animationEasing="ease-out" />
               ))}
+              {overlay}
             </AreaChart>
           ) : (
             <BarChart {...common} barCategoryGap="28%">

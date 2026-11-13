@@ -177,6 +177,10 @@
 .mx-tiles b { font-size: 26px; line-height: 1.1; }
 .mx-tiles small { font-size: 16px; }
 .mx-tiles em { font-style: normal; font-size: 14px; color: var(--ov-faint); }
+/* P991: the pace under Delivered: green ahead, plain on pace, orange behind. */
+.mx-tiles em.mx-pace { font-weight: 600; color: var(--ov-mid); }
+.mx-tiles em.mx-pace.is-up { color: var(--ov-up); }
+.mx-tiles em.mx-pace.is-warn { color: var(--ov-warn); }
 .mx-tiles .mx-link { min-height: 32px; font-size: 16px; }
 
 /* Clients ------------------------------------------------------------------------------------------------------ */

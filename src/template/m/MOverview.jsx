@@ -5,7 +5,8 @@ import { Avatar } from '../kit'
 import { laneOf } from '../stages'
 import { useClientStatusOf } from '../checkSettings'
 import { clientStatus } from '../../lib/clientCheck.js'
-import { dailyTotal, rangeWords, deliveredRange, deliveredOf } from '../spendPlan'
+import { dailyTotal, rangeWords } from '../spendPlan'
+import { useDeliveredPace } from '../useDeliveredPace'
 import { usd } from '../motion'
 import { CallBtn, NeedList, Sec } from './bits'
 import { mp } from './mpaths'
@@ -31,8 +32,8 @@ export default function MOverview() {
   const toOf = a => (a.kind === 'client' ? mp.client(a.ref) : mp.lead(a.ref))
   const later = o.todayAppts.filter(a => next && a.id !== next.id && a.time !== next.time && !a.inText.startsWith('now'))
   // P923: Delivered this week = booked appointments + live calls that reached the agent (spendPlan deliveredRange).
-  const wk = deliveredRange(bill.expected)
-  const dl = deliveredOf({ booked: bill.booked, live: bill.live || 0 })
+  // P991: and its pace against how much of the week has passed (On pace / Ahead of pace / Behind pace).
+  const { wk, dl, pace } = useDeliveredPace()
   const prot = clients.filter(c => statusOf(c) === 'protected').length
   const hour = Number(o.clock.time.split(':')[0]) % 12 + (o.clock.ampm === 'PM' ? 12 : 0)
   const hello = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
@@ -75,7 +76,7 @@ export default function MOverview() {
 
       <Sec title="This week">
         <ul className="mx-tiles is-three">
-          <li aria-label={`${dl.total} delivered: ${dl.booked} booked, ${dl.live} live calls. About ${rangeWords(wk)} a week`}><CalendarCheck size={18} aria-hidden="true" /><b className="tp-num">{dl.total}</b><small>delivered</small><em>{dl.booked} booked</em><em>{dl.live} live call{dl.live === 1 ? '' : 's'}</em><em>about {rangeWords(wk)}</em></li>
+          <li aria-label={`${dl.total} delivered: ${dl.booked} booked, ${dl.live} live calls. ${pace.word}. About ${rangeWords(wk)} a week`}><CalendarCheck size={18} aria-hidden="true" /><b className="tp-num">{dl.total}</b><small>delivered</small><em>{dl.booked} booked</em><em>{dl.live} live call{dl.live === 1 ? '' : 's'}</em><em className={`mx-pace is-${pace.tone}`}>{pace.word}</em><em>about {rangeWords(wk)} a week</em></li>
           <li><ShieldCheck size={18} aria-hidden="true" /><b className="tp-num">{prot}</b><small>protected</small><em>{clients.length} clients</em></li>
           {has('leads') && <li><Wallet size={18} aria-hidden="true" /><b className="tp-money">{money(dailyTotal(bill.spend))}</b><small>a day</small><Link to={mp.billing()} className="mx-link">Change</Link></li>}
         </ul>

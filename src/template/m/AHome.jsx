@@ -7,7 +7,8 @@ import { whenBoth, theirTime } from './zoneTime'
 import { useClientStatusOf, useCheckSettings, todayFor } from '../checkSettings'
 import { checkLists } from '../../lib/clientCheck.js'
 import { resultsFor } from '../agentView'
-import { dailyTotal, deliveredOf } from '../spendPlan'
+import { dailyTotal } from '../spendPlan'
+import { useDeliveredPace } from '../useDeliveredPace'
 import { usd } from '../motion'
 import { paths } from '../paths'
 import { targetOf } from '../../lib/deedstoneCall'
@@ -123,7 +124,8 @@ export default function AHome() {
   const toneOf = a => { const p = personOf(a); return a.kind === 'client' ? 'sage' : (p && TONE[stageOf(p, clockNow())]) || 'sky' }
   const later = appts.filter(a => (!next || a.id !== next.id) && minutesOf(a.time) > now).sort((a, b) => minutesOf(a.time) - minutesOf(b.time))
   const needClients = clients.filter(c => statusOf(c) === 'needs_attention').length
-  const dl = deliveredOf({ booked: bill.booked, live: bill.live || 0 })
+  // P991: delivered this week and its pace against how much of the week has passed.
+  const { dl, pace } = useDeliveredPace()
   const prot = clients.filter(c => statusOf(c) === 'protected').length
   const hour = Math.floor(now / 60)
   const first = next ? next.who.split(' ')[0] : ''
@@ -202,7 +204,7 @@ export default function AHome() {
       <AddLeadsCard className="ma-suggest" />
 
       <div className="ma-week ma-rise" style={rise(4)}>
-        <div><b className="is-good">{dl.total}</b><small>delivered</small></div>
+        <div aria-label={`${dl.total} delivered this week, ${pace.word.toLowerCase()}`}><b className={pace.key === 'ahead' || pace.key === 'above' || pace.key === 'in' ? 'is-good' : pace.key === 'behind' ? 'is-warn' : undefined}>{dl.total}</b><small>delivered</small><small className={`ma-pace is-${pace.tone}`}>{pace.word}</small></div>
         <div><b>{prot}/{clients.length}</b><small>protected</small></div>
         {has('leads')
           ? <button type="button" onClick={() => app.open(paths.billing())}><b className="tp-money">{money(dailyTotal(bill.spend))}</b><small>a day on leads</small></button>

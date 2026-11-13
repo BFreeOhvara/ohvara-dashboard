@@ -18,6 +18,7 @@ import { SAMPLE_DEEDSTONE } from '../deedstone.js'
 import { SAMPLE_REACTIVATION } from '../reactivation.js'
 import { norm, afterRemove, PRODUCTS, canServe } from '../../lib/products.js'
 import { pickedOf, productsWord, sampleQuote } from '../productsView.js'
+import { weekShare } from '../weekPace.js'
 
 // The one door to sample info for the clickable template. Screens read only through the named functions below.
 // Every read returns { data, isLoading: false, error: null }, the shape react-query hooks give, and record fields
@@ -259,6 +260,9 @@ const sampleAgent = () => {
 // P878: preview the paid plan with ?plan=paid, no card with ?card=none (P909), a declined nightly charge with ?billing=failed.
 const param = k => (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get(k) : null)
 const WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+// P991: preview the Delivered card's pace on Friday noon (the sample clock is Monday 2:14 PM): booked + live calls.
+const PACE_PREVIEW = { ahead: [9, 4], on: [4, 2], behind: [2, 1] }[param('pace')] || null
+const PACE_NOW = PACE_PREVIEW ? '2026-11-06T12:00' : SAMPLE_NOW
 export const DEFAULT_WEEK = Object.fromEntries(WEEK.map(d => [d, { on: !['Sat', 'Sun'].includes(d), start: '9:00 AM', end: d === 'Fri' ? '5:00 PM' : '6:00 PM' }]))
 // P955: what the sample agent bought. Default Leads + Reactivation (the screens as before); preview the other kinds with
 // ?products=reactivation (reactivation only), ?products=servicing (servicing only) or a mix (?products=servicing,reactivation).
@@ -325,7 +329,8 @@ const seed = {
     planNext: param('plan') === 'down' ? { key: 'starter', on: 'Tue, Dec 1' } : null, upgradeFailed: null,
     take: { mode: param('take') === 'appts' ? 'appts' : 'both', hours: DEFAULT_LIVE_HOURS, tz: 'America/Chicago' },
     // P923: live = live calls that reached the agent this week (bought.week.transferred); delivered = booked + live.
-    booked: sampleAgent().none ? 0 : 4, live: sampleAgent().none ? 0 : 2, usual: 5,
+    // P991: ?pace=ahead | on | behind previews the card on Friday noon with 13, 6 or 3 delivered.
+    booked: sampleAgent().none ? 0 : (PACE_PREVIEW?.[0] ?? 4), live: sampleAgent().none ? 0 : (PACE_PREVIEW?.[1] ?? 2), usual: 5,
     nightly: {
       // P910: one paid day ahead. Today (Mon) and tomorrow (Tue) are paid; tonight charges the day after tomorrow
       // (Wed). ?billing=failed: last night's charge for Tue was declined, so Tue runs no ads unless it's paid first.
@@ -444,12 +449,15 @@ function bookedChart(thisWeek) {
   const delivered = a.none ? 0 : thisWeek
   if (a.days < 14) {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-    return { mode: 'days', range: 'This week, day by day', empty: delivered === 0, prev: null,
+    return { mode: 'days', range: 'This week, day by day', empty: delivered === 0, prev: null, prevSoFar: null, share: weekShare(PACE_NOW),
       points: days.map((d, i) => [d, i === 0 ? delivered : 0, i > 0]) }
   }
   const all = [...a.weeks.map(([w, b, l]) => [w, b + (l || 0)]), ['Nov 2', delivered]]
   const weeks = a.days < 56 ? all : all.slice(-8)
-  return { mode: 'weeks', range: a.days < 56 ? 'Since you joined' : 'Last 8 weeks', empty: false, prev: all.length > 1 ? all[all.length - 2][1] : null, points: weeks }
+  // P991: share = how much of this week has passed; prevSoFar = last week by this time (the sample spreads it evenly).
+  const share = weekShare(PACE_NOW)
+  const prev = all.length > 1 ? all[all.length - 2][1] : null
+  return { mode: 'weeks', range: a.days < 56 ? 'Since you joined' : 'Last 8 weeks', empty: false, prev, prevSoFar: prev == null ? null : Math.round(prev * share), share, points: weeks }
 }
 
 function useOverviewSample() {
