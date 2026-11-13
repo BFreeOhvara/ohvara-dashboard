@@ -204,7 +204,7 @@ const seedPayouts = [
 const seedThreads = [
   // P911: Ohvara Support, pinned at the top of Messages: the admin team answers here as Ohvara Support.
   { id: SUPPORT_THREAD, support: true, client_id: null, agent_id: null, unread: 1, messages: [
-    { id: 's1', from: 'support', text: 'Welcome to Ohvara Support. Anything about your shifts, pay or the app, write here. Brayden or Jordan answers, usually the same day.', at: 'Mon, 8:00 AM' },
+    { id: 's1', from: 'support', text: 'Welcome to Ohvara Support. Anything about your shifts, pay or the app, write here. We answer, usually the same day.', at: 'Mon, 8:00 AM' },
     { id: 's2', from: 'support', text: 'Days off go through Settings › Shift. For anything else, this is the place.', at: 'Today, 8:05 AM' },
   ] },
   { id: 'th-1', client_id: 'fc-gloria', agent_id: 'ag-dana', unread: 2, messages: [

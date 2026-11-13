@@ -81,7 +81,7 @@ function Inbox({ realSupport = null, sendReal = null }) {
           : <div className="tp-conv-h"><Avatar name={t.name} /><span className="tp-grow"><b>Ohvara fulfillment · about {t.name}</b><small>Your Ohvara team. The client doesn't see this.</small></span><Link to={paths.client(t.client_id)} className="tp-link">Open client<ArrowUpRight size={14} /></Link></div>}
         <div className="tp-conv-b">
           {t.messages.map(m => <div key={m.id} className={`tp-bub${m.from === 'me' ? ' me' : ''}`}>{m.text}<small>{m.from === 'me' ? 'You' : sup ? SUPPORT_NAME : 'Fulfillment'} · {m.at}</small></div>)}
-          {sup && t.messages.length === 0 && <p className="tp-sub">Write to the Ohvara admin team. Brayden or Jordan answers, usually the same day.</p>}
+          {sup && t.messages.length === 0 && <p className="tp-sub">Write to Ohvara Support. We answer, usually the same day.</p>}
         </div>
         <form className="tp-conv-f" onSubmit={send}>
           <input className="tp-input" aria-label={sup ? `Message ${SUPPORT_NAME}` : `Message fulfillment about ${first}`} placeholder={sup ? `Message ${SUPPORT_NAME}…` : `Message fulfillment about ${first}…`} value={text} onChange={e => setText(e.target.value)} />

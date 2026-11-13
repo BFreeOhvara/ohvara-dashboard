@@ -14,3 +14,7 @@ export function pinSupport(threads = [], matches = () => true) {
 
 // An empty Ohvara Support line (a new account, or real data with no messages yet).
 export const emptySupport = () => ({ id: SUPPORT_THREAD, support: true, client_id: null, name: SUPPORT_NAME, unread: 0, messages: [] })
+
+// P987 — agents, VAs, leads and clients never see an admin's own name. Anything an admin wrote or did shows as
+// Ohvara Support; admins still see each other's names.
+export const shownName = (name, role, viewerRole) => (role === 'admin' && viewerRole !== 'admin' ? SUPPORT_NAME : name)

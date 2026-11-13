@@ -86,7 +86,7 @@ function SwapSheet({ open, onClose, shift, onAsk, real }) {
   return (
     <BottomSheet open={open} onClose={onClose} label="Swap a shift">
       <p className="ma-sheet-t">Swap a shift</p>
-      <p className="ma-sheet-s">Pick your shift and who takes it. They say yes, then Brayden or Jordan confirms.</p>
+      <p className="ma-sheet-s">Pick your shift and who takes it. They say yes, then Ohvara confirms.</p>
       {!mine.length && <p className="ma-empty is-box">No shifts of yours to swap in the next two weeks.</p>}
       {mine.length > 0 && <>
         <p className="ma-cap">Your shift</p>

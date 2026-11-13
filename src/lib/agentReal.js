@@ -2,6 +2,7 @@
 // Pure functions only, so they can be tested without a database. Times become wall-clock strings on the agent's
 // clock ('YYYY-MM-DDTHH:MM'), the same form the lifecycle rules (template/leadLifecycle.js) use for the sample.
 import { whenLabel } from '../template/leadLifecycle.js'
+import { SUPPORT_NAME } from '../template/support911.js'
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -76,7 +77,7 @@ export function eventRow(e, tz) {
   return {
     id: e.id, kind: e.kind === 'reminder' ? 'text_sent' : e.kind, step: d.step || (e.kind === 'reminder' ? 'reminder' : undefined),
     at: wallOf(e.at, tz), label: e.label || '', state: e.state === 'scheduled' ? 'scheduled' : 'done',
-    text: d.text || d.body || undefined, by: e.actor_name || (role === 'auto' ? 'Automatic' : role === 'you' ? 'You' : 'Our team'), role,
+    text: d.text || d.body || undefined, by: (e.actor_role === 'admin' ? SUPPORT_NAME : e.actor_name) || (role === 'auto' ? 'Automatic' : role === 'you' ? 'You' : 'Our team'), role,
     note: d.note || undefined, summary: d.summary || undefined,
   }
 }

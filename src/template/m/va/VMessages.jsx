@@ -5,7 +5,7 @@ import { useVaNow } from './useVaNow'
 import { useOptionalAuth } from '../../../hooks/useAuth'
 import { useStandingThreads, useDmMessages, useSendDm, useMarkDmRead } from '../../../hooks/useDirectMessages'
 import { whenText } from '../../../lib/fulReal'
-import { isSupport, emptySupport, SUPPORT_THREAD } from '../../support911'
+import { isSupport, emptySupport, SUPPORT_THREAD, shownName } from '../../support911'
 import { useApp, SubPage, Ini, rise } from '../AppKit'
 import { useKeyboard } from '../useKeyboard'
 import { runsOf } from '../appModel'
@@ -19,11 +19,11 @@ import { useVaThreads, dmStore, VaStandingCtx } from './vaStore'
 // then the agent threads. A thread opens as the agent app's chat: bubbles at most 80 %, tails, send inside the field,
 // drag down to drop the keyboard. Real: support and VA DMs are standing threads (direct_messages).
 const titleOf = t => (isSupport(t) ? 'Ohvara support' : t.va ? t.name : t.agent)
-const aboutOf = t => (isSupport(t) ? 'Brayden and Jordan · schedule, pay, anything' : t.va ? 'VA' : `Agent · about ${t.name}`)
+const aboutOf = t => (isSupport(t) ? 'Ohvara Support · schedule, pay, anything' : t.va ? 'VA' : `Agent · about ${t.name}`)
 const toneOf = t => (isSupport(t) ? 'stone' : t.va ? 'sage' : 'sky')
 const whoOf = (t, m) => (m.from === 'me' ? 'You' : t.va ? firstName(t.name) : isSupport(t) ? 'Ohvara' : firstName(t.agent))
 const lastOf = t => t.last || t.messages?.at(-1)
-const emptyLine = t => (isSupport(t) ? 'Write to Brayden or Jordan' : t.va ? `Say hi to ${firstName(t.name)}` : 'No messages yet')
+const emptyLine = t => (isSupport(t) ? 'Write to Ohvara Support' : t.va ? `Say hi to ${firstName(t.name)}` : 'No messages yet')
 
 export default function VMessages() {
   const app = useApp()
@@ -86,7 +86,7 @@ function DmThread({ t }) {
   const sendDm = useSendDm(t.dm.agentId, t.dm.peerKey, me)
   const markDm = useMarkDmRead(me)
   useEffect(() => { if (t.unread > 0) markDm.mutate(t.dm) }, [t.id]) // eslint-disable-line react-hooks/exhaustive-deps
-  const msgs = useMemo(() => (q.data || []).map(m => ({ id: m.id, from: m.sender_id === me ? 'me' : m.sender_name || 'Ohvara', text: m.body, at: whenText(m.created_at, nowMs, tz) })), [q.data, me, nowMs, tz])
+  const msgs = useMemo(() => (q.data || []).map(m => ({ id: m.id, from: m.sender_id === me ? 'me' : shownName(m.sender_name, m.sender_role) || 'Ohvara', text: m.body, at: whenText(m.created_at, nowMs, tz) })), [q.data, me, nowMs, tz])
   return <ChatView t={t} msgs={msgs} onSend={v => sendDm.mutate(v)} />
 }
 
@@ -115,7 +115,7 @@ function ChatView({ t, msgs, onSend, offline = false }) {
   )
   return (
     <div className="ma-chatwrap" ref={root}>
-      <SubPage title={titleOf(t)} line={isSupport(t) ? 'Brayden and Jordan · schedule, pay, anything' : t.va ? 'Just the two of you' : `About ${t.name} · the client doesn't see this`} pin foot={foot} className="is-chat">
+      <SubPage title={titleOf(t)} line={isSupport(t) ? 'Ohvara Support · schedule, pay, anything' : t.va ? 'Just the two of you' : `About ${t.name} · the client doesn't see this`} pin foot={foot} className="is-chat">
         <div className="ma-chat">
           {msgs.map((m, i) => {
             const mine = m.from === 'me'

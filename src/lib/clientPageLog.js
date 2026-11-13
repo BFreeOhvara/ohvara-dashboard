@@ -5,6 +5,7 @@
 // newest first, with id, subject, client_key, lead_id, policy_id, agent_id, occurred_at, channel
 // (text | call), direction (out | in), body, call_result (a key), sender_type (va | system | agent |
 // lead | client), sender_name, source, kind, attempts, label, text_status, has_recording, is_sample.
+import { SUPPORT_NAME } from '../template/support911.js'
 
 const DEFAULT_ZONE = 'America/Chicago'
 
@@ -53,6 +54,7 @@ export function callResultText(key) {
 const SENDER = { va: 'Fulfillment', system: 'Automatic', agent: 'Agent', lead: 'The lead', client: 'The client' }
 export function senderText(r) {
   const base = SENDER[r?.sender_type] || ''
+  if (r?.sender_type === 'admin' || r?.sender_role === 'admin') return SUPPORT_NAME
   const name = (r?.sender_name || '').trim()
   if (name && (r?.sender_type === 'va' || r?.sender_type === 'agent')) return `${name} · ${base}`
   return name || base
@@ -159,7 +161,7 @@ const EVENT_TITLE = {
 }
 export function normalizeEvent(e) {
   const reason = typeof e.detail?.reason === 'string' ? e.detail.reason.trim() : ''
-  const who = (e.actor_name || '').trim()
+  const who = e.actor_role === 'admin' ? SUPPORT_NAME : (e.actor_name || '').trim()
   return {
     id: e.id,
     at: e.at,

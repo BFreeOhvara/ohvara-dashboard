@@ -14,6 +14,7 @@ import { DEFAULT_TIMEZONE } from '../../../lib/timezones'
 import {
   REASON_MAX, checkFollowUp, earliestFollowUp, checkReason, savedLine, isOutcomeMissing, outcomeErrorText, isFollowUpDue, canSubmitForServicing, submitForServicingPath,
 } from '../../../lib/leadOutcomes'
+import { SUPPORT_NAME } from '../../../template/support911'
 
 // Inbound detail (/agent/inbounds/:id): who they are, a timeline of what we did and what happens next,
 // the outcome buttons, the text thread (read only) and notes. Mockup:
@@ -230,7 +231,7 @@ function Notes({ l, events, tz, sample }) {
         <div className="pv-nlist">
           {notes.map(n => (
             <p key={n.id} className="pv-nitem">
-              <span className="pv-cap"><b>{n.actor_role === 'agent' ? 'You' : n.actor_name || 'Our team'}</b> &middot; {dateText(n.at, tz)}, {timeText(n.at, tz)}</span>
+              <span className="pv-cap"><b>{n.actor_role === 'agent' ? 'You' : n.actor_role === 'admin' ? SUPPORT_NAME : n.actor_name || 'Our team'}</b> &middot; {dateText(n.at, tz)}, {timeText(n.at, tz)}</span>
               {n.detail?.note}
             </p>
           ))}

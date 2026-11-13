@@ -17,7 +17,7 @@ const FAQ = [
   ['Who works my clients?', 'Our team does: the review call, the carrier and every change after. You see where each one stands under Clients.'],
   ['When am I charged?', 'Lead spend is charged each night, one day ahead. Your plan, card and receipts are in Billing.'],
   ['Can I change the hours I take calls?', 'Yes. Settings, then Hours you take calls. We only book inside those hours.'],
-  ['How do I reach a person?', 'Message Ohvara Support here. Brayden or Jordan answers, usually the same day.'],
+  ['How do I reach a person?', 'Message Ohvara Support here. We answer, usually the same day.'],
 ]
 
 export function AHelp() {

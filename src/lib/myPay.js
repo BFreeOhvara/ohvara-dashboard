@@ -21,12 +21,12 @@ export const isVerified = c => c.status === 'verified' || c.status === 'verified
 // What a rep sees for each status: never transcripts, recordings or quotes.
 export function cancelView(c) {
   if (c.status === 'verified') return { kind: 'verified', label: 'Verified', note: 'Carrier confirmed on the call' }
-  if (c.status === 'verified_by_admin') return { kind: 'verified', label: 'Verified', note: 'Brayden listened · paid' }
+  if (c.status === 'verified_by_admin') return { kind: 'verified', label: 'Verified', note: 'Ohvara listened · paid' }
   if (c.status === 'checking') return { kind: 'checking', label: 'Checking', note: 'AI is listening · a few minutes' }
-  if (c.status === 'not_paid') return { kind: 'off', label: 'Not paid', note: 'Brayden listened · not paid' }
+  if (c.status === 'not_paid') return { kind: 'off', label: 'Not paid', note: 'Ohvara listened · not paid' }
   // P779 — past the weekly cap the server holds a confirmed cancel for a listen (over_cap).
   const why = c.reason === 'no_recording' ? 'No recording' : c.reason === 'over_cap' ? 'Over the weekly cap' : 'Not clear on the call'
-  return { kind: 'listen', label: 'Needs a listen', note: `${why} · with Brayden` }
+  return { kind: 'listen', label: 'Needs a listen', note: `${why} · with Ohvara` }
 }
 
 // Totals for a set of cancels (void rows are never fetched).

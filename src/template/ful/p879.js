@@ -64,8 +64,8 @@ export const HOLIDAYS = [
 
 // ---------- My call quality (N-F-20 VA view, N-F-21) ----------
 export const MY_QA = [
-  { id: 'qa-1', call: 'Gloria Santos · cancel the old policy', when: 'Thu 2:10 PM', score: 90, by: 'Brayden', notes: 'Great hold hand-off. Say the confirmation number back.', dispute: null },
-  { id: 'qa-4', call: 'Tom Alvarez · speed to lead', when: 'Wed 10:20 AM', score: 70, by: 'Jordan', notes: 'Consent line was missed.', dispute: null },
+  { id: 'qa-1', call: 'Gloria Santos · cancel the old policy', when: 'Thu 2:10 PM', score: 90, by: 'Ohvara Support', notes: 'Great hold hand-off. Say the confirmation number back.', dispute: null },
+  { id: 'qa-4', call: 'Tom Alvarez · speed to lead', when: 'Wed 10:20 AM', score: 70, by: 'Ohvara Support', notes: 'Consent line was missed.', dispute: null },
 ]
 export const canDispute = r => !r.dispute // once per score
 

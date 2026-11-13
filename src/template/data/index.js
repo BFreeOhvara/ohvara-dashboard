@@ -193,7 +193,7 @@ const seedThreads = [
   // P911: Ohvara Support, pinned at the top of Messages: the admin team (Brayden and Jordan) answers here as Ohvara
   // Support. It can't be deleted or hidden. Matches Dana's line in admin Messages.
   { id: SUPPORT_THREAD, support: true, client_id: null, name: 'Ohvara Support', unread: 1, messages: [
-    { id: 's1', from: 'team', text: 'Welcome to Ohvara Support. Anything about your account, billing or leads, write here. Brayden or Jordan answers, usually the same day.', at: 'Mon, Oct 26, 9:00 AM' },
+    { id: 's1', from: 'team', text: 'Welcome to Ohvara Support. Anything about your account, billing or leads, write here. We answer, usually the same day.', at: 'Mon, Oct 26, 9:00 AM' },
     { id: 's2', from: 'me', text: 'Can I take more live transfers next week? I have Tuesday and Thursday open.', at: 'Mon, Nov 2, 10:02 AM' },
     { id: 's3', from: 'team', text: 'Got it. We’ll look at your hours and come back to you today.', at: 'Mon, Nov 2, 10:20 AM' }] },
   { id: 'thread-1', client_id: 'sample-client-1', name: 'Gloria Santos', unread: 1, messages: [

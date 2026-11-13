@@ -373,7 +373,7 @@ export const LESSONS = [
     steps: [
       'Coverage, price, advice, or "should I…?" questions: the client\'s agent, with Send to agent or a message on the client.',
       'Agents talk to you on the client\'s thread in Messages. Agents don\'t call VAs, and you don\'t call agents\' personal numbers.',
-      'Wording, consent, a phone or text problem, a bug, or anything legal: the Ohvara team (Brayden or Jordan, both admins). Message the team or email support.',
+      'Wording, consent, a phone or text problem, a bug, or anything legal: the Ohvara team. Message Ohvara Support or email support.',
       'An upset caller who asks for a manager: stay calm, take their details, and message the team straight away.',
       'Anything that sounds like a threat, a complaint to a regulator, or a legal claim: stop, note exactly what was said, and tell the team at once.',
     ],
@@ -387,9 +387,9 @@ export const LESSONS = [
     donts: ['Don\'t argue with an upset caller', 'Don\'t promise what someone else will do', 'Don\'t sit on a complaint'],
     portal: { shot: 'messages', clicks: [{ spot: 'thread', text: 'Each client has a thread with their agent' }] },
     check: [
-      ok('A client asks if they have enough cover. Who answers?', ['You', 'Their agent', 'Brayden', 'The carrier'], 1, 'Coverage questions go to the agent.'),
+      ok('A client asks if they have enough cover. Who answers?', ['You', 'Their agent', 'Ohvara Support', 'The carrier'], 1, 'Coverage questions go to the agent.'),
       ok('A caller says they\'re reporting us to the state. You:', ['Hang up', 'Note exactly what was said and tell the team at once', 'Offer a discount', 'Ignore it'], 1, 'Legal or regulator: tell the team at once.'),
-      ok('Who are the admins you can escalate to?', ['Only Brayden', 'Brayden and Jordan', 'Any agent', 'The carrier'], 1, 'Jordan is a full admin, same as Brayden.'),
+      ok('A bug in the app, or a question about consent wording. Who do you tell?', ['Only the agent', 'Ohvara Support', 'The client', 'The carrier'], 1, 'Wording, consent, phone or text problems and bugs go to Ohvara Support.'),
       ok('How do agents reach you about a client?', ['They call your cell', 'On the client\'s thread in Messages', 'By email only', 'They don\'t'], 1, 'On the client\'s thread.'),
     ],
   },

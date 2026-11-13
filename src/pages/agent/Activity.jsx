@@ -16,6 +16,7 @@ import { SUBSTATUS_LABEL, tabOf, useNow } from '../../lib/agentBookings'
 import { excludeTestAccounts } from '../../lib/testAccounts'
 import { slideOut } from '../../lib/daySlide'
 import { inboundPath } from '../../lib/inbounds'
+import { SUPPORT_NAME } from '../../template/support911'
 
 // Activity (Prompt 690) — what actually happened, earliest first (P741). My Pipeline
 // shows where each client stands NOW; this is the history behind it: every
@@ -52,7 +53,7 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
 // "Sam from Fulfillment" when we know who did it, else just the team.
 function who(e) {
   if (e.actor_role === 'fulfillment' && e.actor_name) return `${firstName(e.actor_name)} from Fulfillment`
-  if (e.actor_role === 'admin') return 'Admin'
+  if (e.actor_role === 'admin') return SUPPORT_NAME
   return 'Fulfillment'
 }
 

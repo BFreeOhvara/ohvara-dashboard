@@ -143,7 +143,7 @@ export default function Today() {
               <ul className="fs-paybits">
                 <li><b className="tp-num">{d.totals.verified}</b><small>verified</small></li>
                 <li><b className="tp-num">{d.totals.checking}</b><small>being checked</small></li>
-                <li><b className="tp-num">{d.totals.listen}</b><small>with Brayden</small></li>
+                <li><b className="tp-num">{d.totals.listen}</b><small>with Ohvara</small></li>
               </ul>
             </div>
           )}

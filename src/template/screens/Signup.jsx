@@ -53,7 +53,7 @@ export default function Signup() {
           )}
           {licensed === 'yes' && step === 'details' && (
             <form className="tp-stack" onSubmit={submit} noValidate>
-              <Field label="Full name"><input className={bad('name') ? 'tp-danger' : ''} value={f.name} onChange={set('name')} autoComplete="name" placeholder="Jordan Example" /></Field>
+              <Field label="Full name"><input className={bad('name') ? 'tp-danger' : ''} value={f.name} onChange={set('name')} autoComplete="name" placeholder="Alex Example" /></Field>
               <Field label="Email"><input className={bad('email') ? 'tp-danger' : ''} type="email" value={f.email} onChange={set('email')} autoComplete="email" placeholder="you@example.com" /></Field>
               <Field label="Mobile number" hint="Live calls and alerts come to this phone."><PhoneInput invalid={bad('phone')} value={f.phone} onChange={d => setF({ ...f, phone: d })} autoComplete="tel-national" /></Field>
               <Field label="Password" hint="At least 8 characters."><input className={bad('password') ? 'tp-danger' : ''} type="password" value={f.password} onChange={set('password')} autoComplete="new-password" /></Field>

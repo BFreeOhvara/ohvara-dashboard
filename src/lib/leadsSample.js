@@ -9,7 +9,7 @@ const lead = (id, first_name, last_name, phone, state, hours, status, qa = {}) =
 })
 
 let leads = [
-  lead('s1', 'Jordan', 'Placeholder', '+15550100123', 'TX', 1, 'assigned',
+  lead('s1', 'Jamie', 'Placeholder', '+15550100123', 'TX', 1, 'assigned',
     { homeowner: true, mortgage_balance_band: '$100k–$250k', age_band: '45–54', smoker: false, best_time: 'Morning' }),
   lead('s2', 'Maximiliana-Alexandrina', 'Featherstonehaugh-Worthington', '+15550100124', 'FL', 3, 'contacted',
     { homeowner: true, mortgage_balance_band: '$250k–$500k', age_band: '55–64', smoker: true, best_time: 'Evening' }),

@@ -118,7 +118,7 @@ function Shift({ open, onClose, d }) {
     <Drawer open center onClose={onClose} title="Active or away" sub="Calls are booked inside your shift.">
       <div className="fs-shift">
         <span className="fx-kpi-ic"><Clock3 size={17} aria-hidden="true" /></span>
-        <span className="tp-grow"><b>{d.shiftText || 'No shift saved yet'}</b><small>{d.shiftText ? 'Your shift, set by Brayden' : 'Ask Brayden to set your shift'}</small></span>
+        <span className="tp-grow"><b>{d.shiftText || 'No shift saved yet'}</b><small>{d.shiftText ? 'Your shift, set by Ohvara' : 'Ask Ohvara Support to set your shift'}</small></span>
       </div>
       <p className="tp-sub">A switch to go away mid-shift is coming soon. Until then, message the team if you need to step away.</p>
       <Link to={FUL.messages} className="tp-btn ov-ghost" onClick={onClose}>Message the team</Link>

@@ -167,8 +167,8 @@ export function problemEmail(to: string, p: { period_start: string; period_end: 
   return {
     to,
     subject: `There's a problem with your pay for ${week}`,
-    html: wrap('There\'s a problem with your pay', `<p style="margin:0">Your ${money(p.amount_cents)} for ${esc(week)} didn't go out. ${esc(reason)}</p><p style="margin:12px 0 0">Open Payout settings to fix it, or message Brayden.</p>`, appUrl),
-    text: `Your ${money(p.amount_cents)} for ${week} didn't go out. ${reason}\n\nOpen Payout settings to fix it, or message Brayden: ${appUrl}/fulfillment/pay?settings=1`,
+    html: wrap('There\'s a problem with your pay', `<p style="margin:0">Your ${money(p.amount_cents)} for ${esc(week)} didn't go out. ${esc(reason)}</p><p style="margin:12px 0 0">Open Payout settings to fix it, or message Ohvara Support.</p>`, appUrl),
+    text: `Your ${money(p.amount_cents)} for ${week} didn't go out. ${reason}\n\nOpen Payout settings to fix it, or message Ohvara Support: ${appUrl}/fulfillment/pay?settings=1`,
   }
 }
 

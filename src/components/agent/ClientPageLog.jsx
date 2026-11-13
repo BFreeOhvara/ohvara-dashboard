@@ -8,6 +8,7 @@ import { LoadError, DayDivider, ChatBubbleGroup, Composer } from './AgentUI'
 import {
   CONTACT_FILTERS, filterContactRows, contactCounts, dualTime, policyChoice, groupThread,
 } from '../../lib/clientPageLog'
+import { SUPPORT_NAME } from '../../template/support911'
 import './clientPageLog.css'
 
 // The client page's three cards (client-page.contact-log-card, .team-thread, .client-activity). The
@@ -152,7 +153,7 @@ function Thread({ policyId, tz }) {
             return (
               <ChatBubbleGroup
                 key={g.key} mine={mine} messages={g.msgs} time={mine ? clock(tail.created_at) : null}
-                caption={mine ? null : `${firstWord(head.sender_name) || 'Someone'}${ROLE[head.sender_role] ? ` · ${ROLE[head.sender_role]}` : ''} · ${clock(head.created_at)}`}
+                caption={mine ? null : head.sender_role === 'admin' ? `${SUPPORT_NAME} · ${clock(head.created_at)}` : `${firstWord(head.sender_name) || 'Someone'}${ROLE[head.sender_role] ? ` · ${ROLE[head.sender_role]}` : ''} · ${clock(head.created_at)}`}
               />
             )
           })}

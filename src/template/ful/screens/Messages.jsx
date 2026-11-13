@@ -51,7 +51,7 @@ export default function Messages() {
           : <div className="tp-conv-h"><Avatar name={t.name} /><span className="tp-grow"><b>{t.name}</b><small className="ful-thread-agent">Agent: {t.agent}</small><small>Between you and the agent. The client doesn't see this.</small></span><Link to={fp('clients', t.client_id)} className="tp-link">Open client<ArrowUpRight size={14} /></Link></div>}
         <div className="tp-conv-b">
           {t.messages.map(m => <div key={m.id} className={`tp-bub${m.from === 'me' ? ' me' : ''}`}>{m.text}<small>{m.from === 'me' ? 'You' : sup ? SUPPORT_NAME : t.agent} · {m.at}</small></div>)}
-          {sup && t.messages.length === 0 && <p className="tp-sub">{offline ? 'Writing to Ohvara Support from here starts once it’s switched on for VAs.' : 'Write to the Ohvara admin team. Brayden or Jordan answers, usually the same day.'}</p>}
+          {sup && t.messages.length === 0 && <p className="tp-sub">{offline ? 'Writing to Ohvara Support from here starts once it’s switched on for VAs.' : 'Write to Ohvara Support. We answer, usually the same day.'}</p>}
         </div>
         <form className="tp-conv-f" onSubmit={send}>
           <input className="tp-input" aria-label={sup ? `Message ${SUPPORT_NAME}` : `Message ${agentFirst} about ${t.name.split(' ')[0]}`} placeholder={sup ? `Message ${SUPPORT_NAME}…` : `Message ${agentFirst} about ${t.name.split(' ')[0]}…`} value={text} onChange={e => setText(e.target.value)} />

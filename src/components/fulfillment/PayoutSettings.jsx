@@ -101,7 +101,7 @@ export function PayoutSettingsView({
       {/* 2. Payout schedule (read-only) */}
       <SettingsCard icon={CalendarDays} title="Payout schedule" sub="Set by Ohvara for everyone" right={<SettingsChip tone="info">Weekly</SettingsChip>}>
         <Row k="When" v="Every Monday, for the week before (Mon to Sun)" />
-        <Row k="After" v="Brayden approves your hours · usually lands in 1–2 business days" />
+        <Row k="After" v="Ohvara approves your hours · usually lands in 1–2 business days" />
       </SettingsCard>
 
       {/* 3. Your details */}
