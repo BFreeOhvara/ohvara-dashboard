@@ -18,24 +18,27 @@ function set(next) {
 }
 const subscribe = f => { subs.add(f); return () => subs.delete(f) }
 const snap = () => state
-const key = (name, id) => `${name}|${id}`
+// P984: the phone version keeps its own place and seen parts (name|id|phone); a lesson watched on either counts once.
+const key = (name, id, variant) => (variant === 'phone' ? `${name}|${id}|phone` : `${name}|${id}`)
+const other = (name, id, variant) => key(name, id, variant === 'phone' ? null : 'phone')
 const seeded = (name, id, duration) => (SEED_WATCHED[name]?.includes(id) ? { ...emptySeen(duration), pct: 1, watched: true } : null)
 
-export function useVideoProgress(name, id, duration) {
+export function useVideoProgress(name, id, duration, variant = null) {
   const s = useSyncExternalStore(subscribe, snap)
-  const v = s[key(name, id)] || seeded(name, id, duration) || emptySeen(duration)
+  const own = s[key(name, id, variant)] || seeded(name, id, duration) || emptySeen(duration)
+  const v = !own.watched && s[other(name, id, variant)]?.watched ? { ...own, watched: true } : own
   const seen = useCallback((from, to) => {
-    const k = key(name, id)
+    const k = key(name, id, variant)
     const cur = state[k]
     const next = markSeen(cur, from, to, duration)
     if (cur && next.seen.length === cur.seen.length && Math.abs((cur.pos || 0) - to) < 2) return
     set({ ...state, [k]: { ...next, pos: to } })
-  }, [name, id, duration])
+  }, [name, id, duration, variant])
   const savePos = useCallback(pos => {
-    const k = key(name, id)
+    const k = key(name, id, variant)
     const cur = state[k] || emptySeen(duration)
     if (Math.abs((cur.pos || 0) - pos) >= 1) set({ ...state, [k]: { ...cur, pos } })
-  }, [name, id, duration])
+  }, [name, id, duration, variant])
   return { ...v, seen, savePos }
 }
 
@@ -44,6 +47,9 @@ export function useWatchedMap(name) {
   const s = useSyncExternalStore(subscribe, snap)
   const out = {}
   for (const id of SEED_WATCHED[name] || []) out[id] = seeded(name, id, 0)
-  for (const [k, v] of Object.entries(s)) { const [n, id] = k.split('|'); if (n === name) out[id] = v }
+  for (const [k, v] of Object.entries(s)) {
+    const [n, id] = k.split('|')
+    if (n === name && !(out[id]?.watched && !v.watched)) out[id] = v // either version watched counts
+  }
   return out
 }

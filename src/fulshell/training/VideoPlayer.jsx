@@ -10,15 +10,15 @@ const SPEEDS = [1, 1.25, 1.5]
 const PREFS = 'ful-training-video-prefs:v1'
 const loadPrefs = () => { try { return { cc: true, speed: 1, ...JSON.parse(localStorage.getItem(PREFS) || '{}') } } catch { return { cc: true, speed: 1 } } }
 
-export default function VideoPlayer({ lessonId, who, start = null, onEnded = null }) {
-  const v = useMemo(() => videoFor(lessonId, import.meta.env), [lessonId])
+export default function VideoPlayer({ lessonId, who, start = null, onEnded = null, variant = null }) {
+  const v = useMemo(() => videoFor(lessonId, import.meta.env, variant), [lessonId, variant])
   const ref = useRef(null)
   const last = useRef(0)
   const [prefs, setPrefs] = useState(loadPrefs)
   const [loaded, setLoaded] = useState({ url: null, cues: null })
   const [broken, setBroken] = useState(false)
   const [started, setStarted] = useState(false)
-  const prog = useVideoProgress(who, lessonId, v?.duration || 1)
+  const prog = useVideoProgress(who, lessonId, v?.duration || 1, v?.variant || null)
   const [firstPos] = useState(() => start ?? resumeAt(prog, v?.duration || 0)) // fixed when the lesson opens
 
   useEffect(() => { try { localStorage.setItem(PREFS, JSON.stringify(prefs)) } catch { /* fine */ } }, [prefs])
@@ -83,7 +83,7 @@ export default function VideoPlayer({ lessonId, who, start = null, onEnded = nul
   const pct = Math.round((prog.pct || 0) * 100)
   return (
     <section className="fx-tile tr-video" style={{ '--i': 0 }} aria-label="Lesson video">
-      <div className="tr-vid">
+      <div className={`tr-vid${v.variant === 'phone' ? ' is-phone' : ''}`}>
         <video ref={ref} src={v.url} poster={v.posterUrl || undefined} controls playsInline preload="metadata"
           onLoadedMetadata={onMeta} onTimeUpdate={onTime} onPlay={() => setStarted(true)} onSeeked={() => { last.current = ref.current?.currentTime || 0 }}
           onPause={() => prog.savePos(ref.current?.currentTime || 0)} onEnded={() => { prog.savePos(0); onEnded?.() }} onError={() => setBroken(true)}

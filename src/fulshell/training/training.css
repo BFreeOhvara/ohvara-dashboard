@@ -157,6 +157,7 @@
    captions, then the chapters. Shell tokens only. */
 .fx-tile.tr-video { gap: 12px; }
 .tr-vid { position: relative; border-radius: 14px; overflow: hidden; background: #000; aspect-ratio: 16 / 9; border: 1px solid var(--fx-edge, var(--ov-line)); }
+.tr-vid.is-phone { aspect-ratio: 9 / 16; width: min(100%, calc(min(72vh, 680px) * 9 / 16)); margin-inline: auto; } /* P984: the phone version is portrait, kept on screen */
 .tr-vid video { display: block; width: 100%; height: 100%; object-fit: contain; background: #000; }
 /* P960: the captions are the video's own text track (one source, same in the page, fullscreen and on phones). */
 .tr-vid video::cue { background: rgb(0 0 0 / .72); color: rgb(255 255 255 / .74); font-family: var(--font-display); font-weight: 600; line-height: 1.3; }

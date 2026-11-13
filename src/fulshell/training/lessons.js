@@ -33,7 +33,7 @@ export const LESSONS = [
     why: 'Clients call during carrier hours. If nobody is clocked in, a call waits, and a waiting client gets let down.',
     steps: [
       'Shifts run 8:00 AM to 6:00 PM Central, the hours the carriers are open.',
-      'Two or three VAs are on each day. It is a rotation, so it is not always the same people. Check the Schedule for who is on with you.',
+      'Other VAs are on with you, on a rotation, so it is not always the same people. Check the Schedule for who is on with you.',
       'Clock in on your Schedule, up to 15 minutes either side of your shift. A quick device check runs (microphone, speaker, notifications, network), then you are Available and calls can ring you.',
       'Two missed rings in a row set you to Away. Set yourself back to Available when you are back at the desk.',
       'Clock out when you finish.',
@@ -405,7 +405,6 @@ export const LESSONS = [
       'For a cancellation call: press Cancelled once the carrier confirms. A note is optional. No answer can carry a short note.',
       'Write notes an agent can act on: what they asked, what you agreed, what happens next. Facts, not opinions.',
       'Missed something? Use Log a call in the + menu to add the result to one of today\'s calls.',
-      'Calls dialed from your own phone while portal calling is off still get logged here: the call screen keeps the time and your notes.',
     ],
     script: null,
     dos: ['Log before the next call', 'Write who, what and next step'],

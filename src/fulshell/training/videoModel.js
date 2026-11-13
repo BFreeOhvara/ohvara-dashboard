@@ -15,13 +15,17 @@ export function videoBase(env = {}) {
   return b.endsWith('/') ? b : `${b}/`
 }
 
-export function videoFor(id, env) {
-  const v = VIDEOS.lessons?.[id]
+// P984: a lesson can also have a phone version (videos.json lessons[id].phone, portrait), recorded in the VA phone app.
+// The phone app asks for 'phone' and falls back to the desktop video when a lesson has no phone version.
+export function videoFor(id, env, variant = null) {
+  const d = VIDEOS.lessons?.[id]
+  const v = variant === 'phone' && d?.phone ? { ...d, ...d.phone, variant: 'phone' } : d
   if (!v) return null
   const base = videoBase(env)
   return { ...v, url: base + v.src, posterUrl: v.poster ? base + v.poster : null, captionsUrl: v.captions ? base + v.captions : null }
 }
 export const hasVideo = id => !!VIDEOS.lessons?.[id]
+export const hasPhoneVideo = id => !!VIDEOS.lessons?.[id]?.phone
 export const fmtTime = s => { const n = Math.max(0, Math.round(s || 0)); return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}` }
 
 // "Seen" is a set of 2-second buckets, so skipping ahead does not count as watching.

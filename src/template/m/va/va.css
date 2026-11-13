@@ -110,6 +110,10 @@
 .va-field input { width: 100%; min-height: 48px; padding: 0 14px; border-radius: 14px; border: 1px solid var(--ma-line); background: var(--ma-glass-hi); font: inherit; font-size: 16px; font-weight: 600; color: var(--ma-ink); outline: none; }
 .va-field input:focus { box-shadow: 0 0 0 3px var(--ma-focus); }
 .va-video { border-radius: 20px; overflow: hidden; background: black; }
+/* P984: the phone version of a lesson video is portrait; keep it whole on screen, centred */
+.va-video .tr-vid { position: relative; }
+.va-video .tr-vid.is-phone { aspect-ratio: 9 / 16; width: min(100%, calc(min(70vh, 680px) * 9 / 16)); margin-inline: auto; }
+.va-video .tr-vid video { display: block; width: 100%; height: 100%; object-fit: contain; background: black; }
 .ma-row.is-locked { opacity: .5; cursor: default; }
 
 /* ---- Call brief ---- */
