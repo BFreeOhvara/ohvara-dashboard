@@ -3,7 +3,10 @@
 // repo (ohvara-reels/training-video builds them); ./videos.json lists them. No imports beyond JSON on purpose.
 import VIDEOS from './videos.json' with { type: 'json' }
 
-export const WATCHED_AT = 0.9 // about 90% of a video seen counts as watched
+// P985: watched = played to the end (not ~90% any more). Until then nobody can move past the furthest point they have
+// really played to; afterwards (or once the lesson is done) they can move anywhere.
+export const END_SLACK = 1.5 // within this many seconds of the end counts as the end
+const RUN_ON = 3 // playback starting this close after the furthest point carries it on
 const BUCKET = 2 // seconds per "seen" bucket
 
 // Where the files are served from (P896): the public Supabase Storage bucket `training` on the live project, so every
@@ -28,19 +31,63 @@ export const hasVideo = id => !!VIDEOS.lessons?.[id]
 export const hasPhoneVideo = id => !!VIDEOS.lessons?.[id]?.phone
 export const fmtTime = s => { const n = Math.max(0, Math.round(s || 0)); return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}` }
 
-// "Seen" is a set of 2-second buckets, so skipping ahead does not count as watching.
-export const emptySeen = duration => ({ pos: 0, seen: [], pct: 0, watched: false, duration })
+// "Seen" is a set of 2-second buckets, so skipping ahead does not count as watching. `furthest` is the furthest second
+// reached by real playback that ran on from what was already watched (P985).
+export const emptySeen = duration => ({ pos: 0, seen: [], pct: 0, watched: false, furthest: 0, duration })
+// Older saves have no `furthest`: take the parts seen without a gap from the start.
+export function furthestOf(s, duration = Infinity) {
+  if (!s) return 0
+  if (Number.isFinite(s.furthest)) return s.furthest
+  const seen = new Set(s.seen || [])
+  let b = 0
+  while (seen.has(b)) b++
+  return Math.min(duration || Infinity, b * BUCKET)
+}
+const pctOf = (seen, duration) => Math.min(1, seen.length / Math.max(1, Math.ceil(duration / BUCKET)))
 export function markSeen(state, from, to, duration) {
   const s = state || emptySeen(duration)
   if (!(to > from) || to - from > 3) return s // a seek, not playback
-  const seen = new Set(s.seen)
-  for (let b = Math.floor(from / BUCKET); b <= Math.floor(to / BUCKET); b++) seen.add(b)
-  const buckets = Math.max(1, Math.ceil(duration / BUCKET))
-  const pct = Math.min(1, seen.size / buckets)
-  return { ...s, seen: [...seen].sort((a, b) => a - b), pct, watched: s.watched || pct >= WATCHED_AT, duration }
+  const set = new Set(s.seen)
+  for (let b = Math.floor(from / BUCKET); b <= Math.floor(to / BUCKET); b++) set.add(b)
+  const seen = [...set].sort((a, b) => a - b)
+  const far = furthestOf(s, duration)
+  // The store saves about every 2 s of playback, so `from` can sit a little past the last saved furthest point.
+  const furthest = from <= far + RUN_ON ? Math.max(far, Math.min(to, duration)) : far
+  return { ...s, seen, pct: pctOf(seen, duration), furthest, watched: !!s.watched || furthest >= duration - END_SLACK, duration }
 }
-// Resume where they left off, unless that was the very end (then start again).
-export const resumeAt = (state, duration) => (state && state.pos > 3 && state.pos < duration - 8 ? state.pos : 0)
+// The video played to its end (the player's `ended`), whatever the file's exact length.
+export const finishSeen = (state, duration) => ({ ...(state || emptySeen(duration)), furthest: duration, watched: true, pos: 0, duration })
+// How far they may move: anywhere once watched (or `free`: the lesson is already done), else up to `furthest`.
+export const seekLimit = (state, duration, free = false) => (free || state?.watched ? Infinity : furthestOf(state, duration))
+export const clampSeek = (state, t, duration, free = false) => Math.max(0, Math.min(t, seekLimit(state, duration, free)))
+// Resume where they left off, unless that was the very end (then start again); never past where they may move.
+export const resumeAt = (state, duration, free = false) => {
+  const p = state && state.pos > 3 && state.pos < duration - 8 ? state.pos : 0
+  return clampSeek(state, p, duration, free)
+}
+// Two saves of the same video (this device and the server): furthest and watched only move forward, seen parts add up,
+// the spot is the newer one's.
+export function mergeSeen(a, b, duration) {
+  if (!a) return b || null
+  if (!b) return a
+  const seen = [...new Set([...(a.seen || []), ...(b.seen || [])])].sort((x, y) => x - y)
+  const newer = (b.at || 0) > (a.at || 0) ? b : a
+  return {
+    ...a, seen, pct: pctOf(seen, duration), duration,
+    furthest: Math.max(furthestOf(a, duration), furthestOf(b, duration)),
+    watched: !!a.watched || !!b.watched,
+    pos: newer.pos || 0, at: Math.max(a.at || 0, b.at || 0),
+  }
+}
+// A server row (va_training_video) as a saved state, and back.
+export const fromRow = (r, duration) => ({
+  pos: Number(r.pos) || 0, seen: (r.seen || []).map(Number), pct: pctOf(r.seen || [], duration), watched: !!r.watched,
+  furthest: Number(r.furthest) || 0, duration, at: Date.parse(r.updated_at) || 0,
+})
+export const toRow = (id, variant, s, duration) => ({
+  p_lesson: id, p_variant: variant === 'phone' ? 'phone' : 'desktop', p_pos: Math.round((s.pos || 0) * 10) / 10,
+  p_furthest: Math.round(furthestOf(s, duration) * 10) / 10, p_seen: s.seen || [], p_watched: !!s.watched,
+})
 
 // The "?" on a task opens the lesson's video at the moment that task is shown (videos.json helpAt), if there is one.
 export const helpTime = (lessonId, task) => {

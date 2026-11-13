@@ -167,15 +167,20 @@
 .tr-vkind { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ov-mid); }
 .tr-vpct { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ov-mid); }
 .tr-vpct .tr-bar { width: 72px; margin: 0; }
-.tr-speed { display: inline-flex; gap: 4px; }
-.tr-speed .fx-pillbtn, .tr-ccbtn { min-height: 30px; padding: 0 10px; font-size: 12.5px; }
-.tr-speed .fx-pillbtn.is-on, .tr-ccbtn.is-on { color: var(--sh-ci, var(--ov-hi)); background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); }
+.tr-ccbtn { min-height: 30px; padding: 0 10px; font-size: 12.5px; }
+.tr-ccbtn.is-on { color: var(--sh-ci, var(--ov-hi)); background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); }
 .tr-ccbtn { display: inline-flex; align-items: center; gap: 6px; }
 .tr-chap summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ov-mid); padding: 4px 2px; }
 .tr-chap summary:hover { color: var(--ov-hi); }
 .tr-chap ol { list-style: none; margin: 6px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 2px 8px; }
 .tr-chap .fx-mrow { width: 100%; gap: 10px; font-size: 13px; color: var(--ov-hi); text-align: left; }
 .tr-chap .tp-num { color: var(--ov-mid); font-size: 12px; min-width: 34px; }
+.tr-chap .fx-mrow.is-shut { color: var(--ov-mid); opacity: .6; cursor: not-allowed; } /* P985: a part not reached yet */
+/* P985: "Watch to unlock the rest" when they try to move past the furthest point */
+.tr-vid-hint { position: absolute; left: 50%; top: 12px; transform: translate(-50%, -6px); display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; color: #fff; background: rgb(0 0 0 / .72); pointer-events: none; opacity: 0; transition: opacity .18s ease, transform .18s ease; white-space: nowrap; }
+.tr-vid-hint.is-on { opacity: 1; transform: translate(-50%, 0); }
+.tr-cta .tp-primary.is-shut { opacity: .55; cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) { .tr-vid-hint { transition: none; } }
 .tr-video.is-missing p { display: flex; align-items: center; gap: 8px; }
 .tr-hasvid { color: var(--ov-mid); }
 .tr-hasvid.is-seen { color: var(--accent); }

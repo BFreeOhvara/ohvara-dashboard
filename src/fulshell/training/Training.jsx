@@ -141,9 +141,9 @@ export function TrainingTile({ i = 2 }) {
   )
 }
 
-function Home({ lessons, t, who }) {
+function Home({ lessons, t, who, live }) {
   const [q, setQ] = useState('')
-  const seen = useWatchedMap(who)
+  const seen = useWatchedMap(who, live)
   const hits = useMemo(() => searchLessons(q, lessons), [q, lessons])
   const byId = Object.fromEntries(t.states.map(s => [s.id, s]))
   const next = lessons.find(l => l.id === t.sum.next)
@@ -305,7 +305,7 @@ function Quiz({ lesson, onSubmit, onBack, last }) {
   )
 }
 
-function Lesson({ lesson, lessons, t, who }) {
+function Lesson({ lesson, lessons, t, who, live }) {
   const navigate = useNavigate()
   const [sp] = useSearchParams()
   const [mode, setMode] = useState('read')
@@ -329,6 +329,9 @@ function Lesson({ lesson, lessons, t, who }) {
   const tour = hasTour(lesson.id)
   const mustPractise = tour && !locked && !st.practised
   const ended = () => { if (mustPractise) setNext(true) }
+  // P985: Practice opens only once the video has played to the end (on the desk or the phone; a done lesson stays open).
+  const watchedMap = useWatchedMap(who, live)
+  const videoDone = !vid || st.state === 'passed' || !!watchedMap[lesson.id]?.watched
   return (
     <div className="tp-page fx-page fx-ovl tr-lesson">
       <div className="fx-ovl-main">
@@ -345,7 +348,7 @@ function Lesson({ lesson, lessons, t, who }) {
           <Quiz lesson={lesson} last={i === lessons.length - 1} onSubmit={answers => t.submit(lesson.id, answers)} onBack={done} />
         ) : (
           <>
-            <VideoPlayer lessonId={lesson.id} who={who} start={startAt} onEnded={ended} />
+            <VideoPlayer lessonId={lesson.id} who={who} start={startAt} onEnded={ended} free={st.state === 'passed'} />
             {next && mustPractise && <PracticeNext lesson={lesson} who={who} onWait={() => setNext(false)} />}
             {/* P897: a lesson with a video shows only the video (plus its check or Try it and progress); the written
                 steps, script and picture are for lessons without one. */}
@@ -406,7 +409,9 @@ function Lesson({ lesson, lessons, t, who }) {
                 <p>{st.state === 'passed' ? 'Mark talks you through it again. Your lesson stays done.' : `Mark talks you through it in a practice copy of the portal. You do the clicks.${quiz ? ' Then take the check.' : ' This lesson counts once you finish.'}`}</p>
                 <PracticeSteps lesson={lesson} />
                 <p className="fx-calm tr-practice-why">Nothing real changes: no calls, no texts.{vid && st.state !== 'passed' ? ' It starts by itself when the video ends.' : ''}</p>
-                <button type="button" className="tp-primary fx-accent" onClick={() => practise(lesson, who)}><PlayCircle size={16} />{st.state === 'passed' ? 'Practice again' : 'Start practice'}</button>
+                {videoDone
+                  ? <button type="button" className="tp-primary fx-accent" onClick={() => practise(lesson, who)}><PlayCircle size={16} />{st.state === 'passed' ? 'Practice again' : 'Start practice'}</button>
+                  : <button type="button" className="tp-primary fx-accent is-shut" aria-disabled="true" title="Practice opens when the video ends" onClick={() => document.querySelector('.tr-vid video')?.focus()}><Lock size={16} />Finish the video first</button>}
               </>
             ) : !quiz ? (
               <>
@@ -457,5 +462,5 @@ export default function Training() {
   if (id && !lesson) {
     return <div className="tp-page fx-page"><section className="fx-tile"><p className="fx-calm">That lesson isn’t here. <Link to={fp('training')}>See all lessons</Link></p></section></div>
   }
-  return lesson ? <Lesson key={`${lesson.id}-${sp.get('t') || ''}`} lesson={lesson} lessons={lessons} t={t} who={account.name} /> : <Home lessons={lessons} t={t} who={account.name} />
+  return lesson ? <Lesson key={`${lesson.id}-${sp.get('t') || ''}`} lesson={lesson} lessons={lessons} t={t} who={account.name} live={!!account.live} /> : <Home lessons={lessons} t={t} who={account.name} live={!!account.live} />
 }

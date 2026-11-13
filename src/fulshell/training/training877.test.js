@@ -1,13 +1,13 @@
-// P877 — training videos: watched at ~90% of real playback (skips don't count), resume, the "?" moment, captions.
+// P877 — training videos: watched once really played to the end (P985; skips don't count), resume, the "?" moment, captions.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { markSeen, emptySeen, resumeAt, cueAt, videoBase, fmtTime, WATCHED_AT, videoFor, hasVideo, helpTime } from './videoModel.js'
+import { markSeen, emptySeen, resumeAt, cueAt, videoBase, fmtTime, END_SLACK, videoFor, hasVideo, helpTime } from './videoModel.js'
 import VIDEOS from './videos.json' with { type: 'json' }
 import { LESSONS, HELP } from './lessons.js'
 
 const play = (s, from, to, dur, step = 0.25) => { let x = s; for (let t = from; t < to; t += step) x = markSeen(x, t, Math.min(to, t + step), dur); return x }
 
-test('watching about 90% counts as watched; a skip does not', () => {
+test('watching to the end counts as watched (P985: not ~90% any more); a skip does not', () => {
   const dur = 100
   let s = emptySeen(dur)
   s = markSeen(s, 0, 80, dur) // a jump of 80 s is a seek, not playback
@@ -16,7 +16,8 @@ test('watching about 90% counts as watched; a skip does not', () => {
   assert.ok(s.pct > 0.78 && s.pct < 0.84)
   assert.equal(s.watched, false)
   s = play(s, 80, 90, dur)
-  assert.ok(s.pct >= WATCHED_AT)
+  assert.equal(s.watched, false)
+  s = play(s, 90, dur - END_SLACK, dur)
   assert.equal(s.watched, true)
 })
 
@@ -29,9 +30,9 @@ test('watched stays watched; rewatching the same part adds nothing', () => {
 })
 
 test('resume where they left off, but not at the very start or end', () => {
-  assert.equal(resumeAt({ pos: 42 }, 180), 42)
+  assert.equal(resumeAt({ pos: 42, furthest: 60 }, 180), 42) // P985: and never past the furthest point
   assert.equal(resumeAt({ pos: 2 }, 180), 0)
-  assert.equal(resumeAt({ pos: 176 }, 180), 0)
+  assert.equal(resumeAt({ pos: 176, furthest: 180 }, 180), 0)
   assert.equal(resumeAt(null, 180), 0)
 })
 

@@ -1,38 +1,65 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Play, Captions, CaptionsOff, CircleCheck, Clapperboard, ListVideo, VideoOff } from 'lucide-react'
-import { cueMarkup, fmtTime, resumeAt, videoFor, WATCHED_AT } from './videoModel.js'
+import { Play, Captions, CaptionsOff, CircleCheck, Clapperboard, ListVideo, Lock, VideoOff } from 'lucide-react'
+import { useAccount } from '../../template/kit'
+import { clampSeek, cueMarkup, fmtTime, furthestOf, resumeAt, videoFor } from './videoModel.js'
 import { useVideoProgress } from './videoStore.js'
 
 // P877 — the lesson video at the top of a lesson: the browser's own controls, our captions (word-timed, from the same
-// script the voice reads, on by default, toggle; P960: one text track on the video itself, the only caption source), speed 1x / 1.25x / 1.5x, chapters, resume where you left off, and
-// "watched" once about 90% has really been played. `start` (seconds) comes from the "?" on a task.
-const SPEEDS = [1, 1.25, 1.5]
+// script the voice reads, on by default, toggle; P960: one text track on the video itself, the only caption source),
+// chapters, resume where you left off. P985: no skipping ahead and no speeding up. They can go back freely, but never
+// past the furthest point they have really played to (a drag, key, chapter or remote forward snaps back there, with
+// "Watch to unlock the rest"); always normal speed. Watched = played to the end; then (or once the lesson is done,
+// `free`) they can move anywhere. Their spot is saved per person, per lesson, per version, on the server when signed in
+// (./videoStore.js). `start` (seconds) comes from the "?" on a task, and is held to what they may reach.
 const PREFS = 'ful-training-video-prefs:v1'
-const loadPrefs = () => { try { return { cc: true, speed: 1, ...JSON.parse(localStorage.getItem(PREFS) || '{}') } } catch { return { cc: true, speed: 1 } } }
+const loadPrefs = () => { try { const p = JSON.parse(localStorage.getItem(PREFS) || '{}'); return { cc: p.cc !== false } } catch { return { cc: true } } }
+const AHEAD = 0.75 // a little past the furthest point is just playback catching up
+const FORWARD_KEYS = new Set(['ArrowRight', 'End', 'PageDown', 'l', 'L'])
 
-export default function VideoPlayer({ lessonId, who, start = null, onEnded = null, variant = null }) {
+export default function VideoPlayer({ lessonId, who, start = null, onEnded = null, variant = null, free = false }) {
   const v = useMemo(() => videoFor(lessonId, import.meta.env, variant), [lessonId, variant])
+  const account = useAccount()
   const ref = useRef(null)
   const last = useRef(0)
   const [prefs, setPrefs] = useState(loadPrefs)
   const [loaded, setLoaded] = useState({ url: null, cues: null })
   const [broken, setBroken] = useState(false)
   const [started, setStarted] = useState(false)
-  const prog = useVideoProgress(who, lessonId, v?.duration || 1, v?.variant || null)
-  const [firstPos] = useState(() => start ?? resumeAt(prog, v?.duration || 0)) // fixed when the lesson opens
+  const [hint, setHint] = useState(false)
+  const dur = v?.duration || 1
+  const prog = useVideoProgress(who, lessonId, dur, v?.variant || null, !!account?.live)
+  const open = free || !!prog.watched
+  const savedFar = furthestOf(prog, dur)
+  // The furthest point reached, kept live while playing (the store saves every couple of seconds).
+  const far = useRef(0)
+  const openRef = useRef(open)
+  useEffect(() => { far.current = Math.max(far.current, savedFar) }, [savedFar])
+  useEffect(() => { openRef.current = open }, [open])
+  const limit = () => (openRef.current ? Infinity : Math.max(far.current, savedFar))
 
-  useEffect(() => { try { localStorage.setItem(PREFS, JSON.stringify(prefs)) } catch { /* fine */ } }, [prefs])
-  // Start where they left off (or at the "?" moment), even if the file's details loaded before this ran.
-  const placed = useRef(false)
+  // Where it opens: their spot (or the "?" moment), never past what they may reach. Follows the server copy until they
+  // press play (a new device learns their spot a moment after opening).
+  const target = start != null ? clampSeek(prog, start, dur, free) : resumeAt(prog, dur, free)
+  const [firstPos, setFirstPos] = useState(target)
+  if (!started && target !== firstPos) setFirstPos(target)
+  const placed = useRef(null)
   useEffect(() => {
     const el = ref.current
     if (!el || !firstPos) return undefined
-    const go = () => { if (placed.current) return; placed.current = true; el.currentTime = firstPos; last.current = firstPos }
+    const go = () => { if (placed.current === firstPos) return; placed.current = firstPos; el.currentTime = firstPos; last.current = firstPos }
     if (el.readyState >= 1) go()
     el.addEventListener('loadedmetadata', go)
     return () => el.removeEventListener('loadedmetadata', go)
   }, [firstPos])
-  useEffect(() => { if (ref.current) ref.current.playbackRate = prefs.speed }, [prefs.speed, started])
+
+  const hintT = useRef(null)
+  const nudge = () => { setHint(true); clearTimeout(hintT.current); hintT.current = setTimeout(() => setHint(false), 2600) }
+  useEffect(() => () => clearTimeout(hintT.current), [])
+  // Leaving the lesson saves the spot.
+  const savePos = prog.savePos
+  useEffect(() => { const el = ref.current; return () => { if (el && el.currentTime > 0 && !el.ended) savePos(el.currentTime) } }, [savePos])
+
+  useEffect(() => { try { localStorage.setItem(PREFS, JSON.stringify(prefs)) } catch { /* fine */ } }, [prefs])
   useEffect(() => {
     if (!v?.captionsUrl) return undefined
     let live = true
@@ -71,34 +98,52 @@ export default function VideoPlayer({ lessonId, who, start = null, onEnded = nul
       </section>
     )
   }
-  const seek = s => { const el = ref.current; if (!el) return; el.currentTime = s; last.current = s; el.play().catch(() => {}) }
-  const onMeta = () => { const el = ref.current; if (el) el.playbackRate = prefs.speed }
+  const seek = s => {
+    const el = ref.current
+    if (!el) return
+    if (s > limit() + AHEAD) { nudge(); return }
+    el.currentTime = s; last.current = s; el.play().catch(() => {})
+  }
+  const normal = () => { const el = ref.current; if (el) { el.defaultPlaybackRate = 1; if (el.playbackRate !== 1) el.playbackRate = 1 } }
   const onTime = () => {
     const el = ref.current
     if (!el) return
     const now = el.currentTime
-    if (!el.paused && !el.seeking) prog.seen(last.current, now)
+    if (!el.paused && !el.seeking) {
+      if (now > last.current && now - last.current <= 3 && last.current <= far.current + 1) far.current = Math.max(far.current, now)
+      prog.seen(last.current, now)
+    }
     last.current = now
   }
+  // Any move forward past the furthest point (drag, keys, the native forward controls, a remote) snaps back.
+  const onSeeking = () => {
+    const el = ref.current
+    if (!el) return
+    const lim = limit()
+    if (el.currentTime > lim + AHEAD) { el.currentTime = lim; last.current = lim; nudge() }
+  }
+  const onKey = e => { if (!openRef.current && FORWARD_KEYS.has(e.key)) { e.preventDefault(); e.stopPropagation(); nudge() } }
   const pct = Math.round((prog.pct || 0) * 100)
+  const lim = open ? Infinity : savedFar
   return (
     <section className="fx-tile tr-video" style={{ '--i': 0 }} aria-label="Lesson video">
-      <div className={`tr-vid${v.variant === 'phone' ? ' is-phone' : ''}`}>
+      <div className={`tr-vid${v.variant === 'phone' ? ' is-phone' : ''}`} onKeyDownCapture={onKey}>
         <video ref={ref} src={v.url} poster={v.posterUrl || undefined} controls playsInline preload="metadata"
-          onLoadedMetadata={onMeta} onTimeUpdate={onTime} onPlay={() => setStarted(true)} onSeeked={() => { last.current = ref.current?.currentTime || 0 }}
-          onPause={() => prog.savePos(ref.current?.currentTime || 0)} onEnded={() => { prog.savePos(0); onEnded?.() }} onError={() => setBroken(true)}
-          aria-label={`Video: ${v.title}, ${fmtTime(v.duration)}`} />
+          controlsList="noplaybackrate nodownload" disablePictureInPicture
+          onLoadedMetadata={normal} onRateChange={normal} onTimeUpdate={onTime} onPlay={() => { normal(); setStarted(true) }} onSeeking={onSeeking}
+          onSeeked={() => { last.current = ref.current?.currentTime || 0 }}
+          onPause={() => { const el = ref.current; if (el && !el.ended) prog.savePos(el.currentTime || 0) }}
+          onEnded={() => { far.current = Infinity; prog.finish(); onEnded?.() }} onError={() => setBroken(true)}
+          aria-label={`Video: ${v.title}, ${fmtTime(v.duration)}${open ? '' : '. Watch it through to move ahead.'}`} />
         {!started && firstPos > 0 && <span className="tr-vid-resume" aria-hidden="true"><Play size={13} />{start != null ? `Starts at ${fmtTime(firstPos)}` : `Resumes at ${fmtTime(firstPos)}`}</span>}
+        <span className={`tr-vid-hint${hint ? ' is-on' : ''}`} role="status" aria-live="polite">{hint ? <><Lock size={13} aria-hidden="true" />Watch to unlock the rest</> : null}</span>
       </div>
       <div className="tr-vbar">
         <span className="tr-vkind">{v.kind === 'walkthrough' ? <><Clapperboard size={14} aria-hidden="true" />Portal walkthrough</> : <><ListVideo size={14} aria-hidden="true" />Explainer</>} · <span className="tp-num">{fmtTime(v.duration)}</span></span>
         <span className="tp-grow" />
         {prog.watched
           ? <i className="fx-delta is-up"><CircleCheck size={12} aria-hidden="true" />Watched</i>
-          : <small className="tr-vpct" aria-label={`${pct}% watched. ${Math.round(WATCHED_AT * 100)}% counts as watched.`}><span className="tr-bar" aria-hidden="true"><i style={{ '--w': prog.pct || 0 }} /></span><span className="tp-num">{pct}%</span></small>}
-        <div className="tr-speed" role="radiogroup" aria-label="Speed">
-          {SPEEDS.map(s => <button key={s} type="button" role="radio" aria-checked={prefs.speed === s} className={`fx-pillbtn${prefs.speed === s ? ' is-on' : ''}`} onClick={() => setPrefs(p => ({ ...p, speed: s }))}>{s}x</button>)}
-        </div>
+          : <small className="tr-vpct" aria-label={`${pct}% watched. Watch to the end to finish it.`}><span className="tr-bar" aria-hidden="true"><i style={{ '--w': prog.pct || 0 }} /></span><span className="tp-num">{pct}%</span></small>}
         <button type="button" className={`fx-pillbtn tr-ccbtn${prefs.cc ? ' is-on' : ''}`} aria-pressed={prefs.cc} onClick={() => setPrefs(p => ({ ...p, cc: !p.cc }))}>
           {prefs.cc ? <Captions size={15} aria-hidden="true" /> : <CaptionsOff size={15} aria-hidden="true" />}Captions
         </button>
@@ -106,7 +151,16 @@ export default function VideoPlayer({ lessonId, who, start = null, onEnded = nul
       {v.chapters?.length > 0 && (
         <details className="tr-chap">
           <summary>In this video · {v.chapters.length} parts</summary>
-          <ol>{v.chapters.map(c => <li key={`${c.t}-${c.label}`}><button type="button" className="fx-mrow" onClick={() => seek(c.t)}><span className="tp-num">{fmtTime(c.t)}</span><span className="tp-grow">{c.label}</span></button></li>)}</ol>
+          <ol>{v.chapters.map(c => {
+            const shut = c.t > lim + AHEAD
+            return (
+              <li key={`${c.t}-${c.label}`}>
+                <button type="button" className={`fx-mrow${shut ? ' is-shut' : ''}`} aria-disabled={shut || undefined} title={shut ? 'Watch to unlock' : undefined} onClick={() => seek(c.t)}>
+                  <span className="tp-num">{fmtTime(c.t)}</span><span className="tp-grow">{c.label}</span>{shut && <Lock size={12} aria-label="Locked" />}
+                </button>
+              </li>
+            )
+          })}</ol>
         </details>
       )}
     </section>

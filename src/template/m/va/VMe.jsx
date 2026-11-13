@@ -280,7 +280,8 @@ export function VTraining() {
 export function VLesson({ id }) {
   const account = useAccount()
   const lessons = useLessons()
-  const watched = useWatchedMap(account?.name)
+  const watched = useWatchedMap(account?.name, !!account?.live)
+  const { states } = useTraining(account?.name)
   const [ended, setEnded] = useState(false)
   const l = lessons.find(x => x.id === id)
   if (!l) return <SubPage title="Training"><p className="ma-empty">This lesson isn’t here any more.</p></SubPage>
@@ -288,7 +289,7 @@ export function VLesson({ id }) {
   return (
     <SubPage title={l.title} line={`${l.minutes} min`}>
       {hasVideo(l.id)
-        ? <div className="va-video ma-rise"><VideoPlayer lessonId={l.id} who={account?.name} variant="phone" onEnded={() => setEnded(true)} /></div>
+        ? <div className="va-video ma-rise"><VideoPlayer lessonId={l.id} who={account?.name} variant="phone" onEnded={() => setEnded(true)} free={states.find(x => x.id === l.id)?.state === 'passed'} /></div>
         : <div className="ma-empty is-box ma-rise"><GraduationCap size={22} aria-hidden="true" /><b>Video coming soon</b><span>Read the lesson on the VA desk for now.</span></div>}
       {done && <div className="ma-glass ma-pad ma-rise va-lesson-done" role="status"><p className="ma-cap"><Check size={14} aria-hidden="true" /> Video watched</p><p>Practise this on the desk when you’re next on.</p></div>}
       <div className="ma-glass ma-pad ma-rise" style={rise(1)}><p className="ma-cap">What it covers</p><p>{l.job}</p></div>
