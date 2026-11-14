@@ -1,13 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { PhoneIncoming, CalendarDays, GripVertical, Search, Wallet, RotateCcw, Clock, MapPin, Check, X, ClipboardCheck, Users, Link2, MessageSquareWarning, PhoneForwarded, Inbox } from 'lucide-react'
-import { useDataSource, useSampleLeads, useSampleLead, useSampleBilling, useSampleActions, useSampleSettings } from '../data'
+import { PhoneIncoming, CalendarDays, GripVertical, Search, Wallet, RotateCcw, Clock, MapPin, Check, X, ClipboardCheck, Users, Link2, MessageSquareWarning, PhoneForwarded, Inbox, CalendarX2 } from 'lucide-react'
+import { useDataSource, useSampleLeads, useSampleLead, useSampleBilling, useSampleActions, useSampleSettings, useSampleAppointments } from '../data'
+import { CantMakeIt } from './Calendar'
 import { Avatar, Chip, Seg, Drawer, Empty, useNote } from '../kit'
 import { stageChip, OutcomeDrawer, OutcomePrompt, NoShowUndo } from '../LeadOutcome'
 import { RecordDrawer, Stepper, Block } from '../Record'
 import { SpendSliders } from '../PlanBuilder'
 import { LANES, laneOf } from '../stages'
-import { agentCallTask, confirmedByText, atLabel, clockNow } from '../leadLifecycle'
+import { agentCallTask, confirmedByText, atLabel, clockNow, needsOutcome } from '../leadLifecycle'
 import { agentStatusOf, agentStatus, leadMessages, notInterestedLine, closedReason, needsResult, resultsFor, canMove, isLiveCall, liveCalls, RESULT_LABEL, RESULT_STATUS } from '../agentView'
 import { LiveCalls } from '../LiveCall'
 import { useResultDrag } from '../ResultDrag'
@@ -117,6 +118,12 @@ export function LeadDrawer({ id, onClose, extra = null }) {
   const [outcome, setOutcome] = useState(null)
   const [prompt, setPrompt] = useState(params.get('outcome') === '1')
   const [panel, setPanel] = useState(null)
+  // P1002: "Can't make it" on the lead itself (the phone had it there; on desktop it was only on a Calendar call). The
+  // Calendar passes its own `extra`, so this shows only when the drawer is opened from Leads.
+  const { data: appts } = useSampleAppointments()
+  const [cant, setCant] = useState(false)
+  const appt = extra === null ? appts.find(a => a.kind !== 'client' && a.ref === id) : null
+  const canCant = !!appt && ['booked', 'showed'].includes(lead.stage) && !needsOutcome(lead, clockNow())
   useEffect(() => {
     if (params.get('outcome') || params.get('call')) setParams({}, { replace: true })
   }, [params, setParams])
@@ -145,6 +152,7 @@ export function LeadDrawer({ id, onClose, extra = null }) {
         <button type="button" className="tp-btn ov-ghost" disabled={closed} onClick={() => setPanel('team')}><Users size={14} />Ask our team to call</button>
         {lead.stage === 'follow_up' && <button type="button" className="tp-btn ov-ghost" disabled={lead.linkSent} onClick={() => { sendBookingLink(lead.id); note(`Booking link sent. ${lead.first_name} picks a time on your calendar`) }}><Link2 size={14} />{lead.linkSent ? 'Link sent' : 'Send booking link'}</button>}
         {extra}
+        {canCant && <button type="button" className="tp-btn ov-ghost" onClick={() => setCant(true)}><CalendarX2 size={14} />Can{'’'}t make it</button>}
         <span className="tp-grow" />
         {canMove(lead, 'sold') && <button type="button" className={`tp-btn is-res is-${agentStatus('sold').tone}`} onClick={() => setOutcome('sold')}><Check size={14} />Sold</button>}
         {canMove(lead, 'not_interested') && <button type="button" className={`tp-btn is-res is-${agentStatus('not_interested').tone}`} onClick={() => setOutcome('not_interested')}><X size={14} />Not interested</button>}
@@ -175,6 +183,7 @@ export function LeadDrawer({ id, onClose, extra = null }) {
       {prompt && <OutcomePrompt lead={lead} onClose={() => setPrompt(false)} />}
       <AskTeamDrawer open={panel === 'team'} lead={lead} onClose={() => setPanel(null)} onSend={why => { askTeamToCall(lead.id, why); note(`Our team calls ${lead.first_name}. You see it here`) }} />
       <FeedbackDrawer open={panel === 'feedback'} lead={lead} onClose={() => setPanel(null)} />
+      {cant && appt && <CantMakeIt appt={appt} lead={lead} onClose={() => setCant(false)} />}
     </RecordDrawer>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { User, Bell, Radio, CreditCard, SunMoon, Mail, LogOut, Trash2, ChevronRight, KeyRound, BadgeCheck, Rocket } from 'lucide-react'
+import { User, Bell, Radio, CreditCard, SunMoon, Mail, LogOut, Trash2, ChevronRight, KeyRound, BadgeCheck, Rocket, ShieldCheck, X } from 'lucide-react'
+import { CarrierSelect } from '../CarrierSelect'
 import { SetupProgress } from '../SetupProgress'
 import { useLaunchView } from '../launchView'
 import { useSampleSettings, useSampleActions, useSampleBilling, useSampleClients, useSampleLeads, useSampleOverview } from '../data'
@@ -25,6 +26,7 @@ import { AppAbout } from '../../components/native/AppAbout'
 // switches; the carrier-email forwarding address that sat under it has its own Email tab, so no section is long.
 const TABS = [['profile', 'Profile', User], ['setup', 'Your setup', Rocket], ['licence', 'Licence', BadgeCheck], ['alerts', 'Notifications', Bell], ['email', 'Email', Mail], ['calls', 'Hours and calls', Radio], ['billing', 'Billing', CreditCard], ['look', 'Appearance', SunMoon]]
 const NEEDS = ['ringing', 'showed']
+const PRIVACY_URL = 'https://ohvara.com/privacy'
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
 
 // Discard / Save under every section. Save is off until something changed.
@@ -96,6 +98,10 @@ export default function Settings() {
   // Saved values and the drafts the forms edit
   const [profile, setProfile] = useState(s.profile)
   const [pDraft, setPDraft] = useState(s.profile)
+  // P1002: the carriers the agent writes with (the phone's editor): what they saved, else the carriers their clients are with.
+  const { data: clientRows } = useSampleClients()
+  const carriersSaved = Array.isArray(s.profile?.carriers) ? s.profile.carriers : [...new Set(clientRows.map(c => c.carrier_name).filter(Boolean))].sort()
+  const [cs, setCs] = useState(carriersSaved)
   const [tz, setTz] = useState(s.timeZone)
   const [alerts, setAlerts] = useState(s.notifications)
   const [cDraft, setCDraft] = useState({ week: s.week })
@@ -145,12 +151,22 @@ export default function Settings() {
               <Field label="Plan" hint="Change your lead spend on the Billing page"><input value={pDraft.plan} readOnly /></Field>
               <Field label="Time zone" hint="The clock on your Overview uses it"><TimeZoneSelect value={tz} onChange={setTz} /></Field>
             </div>
+            <div className="fx-form-grid">
+              <Field label="Carriers you write with" hint="Our team uses them when they set up or save a policy">
+                <div className="fx-carriers">
+                  {cs.map(c => <span key={c} className="fx-carrier"><b>{c}</b><button type="button" aria-label={`Remove ${c}`} onClick={() => setCs(cs.filter(x => x !== c))}><X size={13} aria-hidden="true" /></button></span>)}
+                  {!cs.length && <span className="tp-sub">No carriers yet.</span>}
+                </div>
+                <CarrierSelect label="Add a carrier" value="" onChange={v => { if (v && !cs.includes(v)) setCs([...cs, v].sort()) }} />
+              </Field>
+            </div>
             <div className="fx-form-row">
               <button type="button" className="tp-btn ov-ghost" onClick={() => setPanel('password')}><KeyRound size={15} />Change password</button>
+              <a className="tp-btn ov-ghost" href={PRIVACY_URL} target="_blank" rel="noreferrer"><ShieldCheck size={15} />Privacy policy</a>
               <span className="tp-grow" />
               <button type="button" className="tp-btn ov-ghost tp-danger" onClick={() => (DeleteDialog ? setPanel('delete') : note('Delete my account works once you sign in for real'))}><Trash2 size={15} />Delete my account</button>
             </div>
-            <FormFoot dirty={!same(pDraft, profile) || tz !== s.timeZone} onDiscard={() => { setPDraft(profile); setTz(s.timeZone) }} onSave={() => { setProfile(pDraft); if (tz !== s.timeZone) saveSettings({ timeZone: tz }); note('Profile saved') }} />
+            <FormFoot dirty={!same(pDraft, profile) || tz !== s.timeZone || !same(cs, carriersSaved)} onDiscard={() => { setPDraft(profile); setTz(s.timeZone); setCs(carriersSaved) }} onSave={() => { setProfile(pDraft); if (tz !== s.timeZone) saveSettings({ timeZone: tz }); if (!same(cs, carriersSaved)) saveSettings({ profile: { ...(s.profile || {}), carriers: cs } }); note('Profile saved') }} />
           </>}
 
           {tab === 'licence' && <LicenceCard />}

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Search, Plus, MessageSquare, MapPin, Users, UserPlus, Archive, CalendarCheck, Check, ShieldCheck, ShieldAlert, Wrench } from 'lucide-react'
-import { useDataSource, useSampleClients, useSampleClient, useSampleThreads, useSampleActions } from '../data'
+import { Search, Plus, MessageSquare, MapPin, Users, UserPlus, Archive, CalendarCheck, Check, ShieldCheck, ShieldAlert, Wrench, Send, Inbox, Copy, ChevronRight } from 'lucide-react'
+import { useDataSource, useSampleClients, useSampleClient, useSampleThreads, useSampleActions, useSampleActivity, useSampleLeads } from '../data'
+import { clientTimeline, leadOfClient } from '../m/appModel'
 import { Avatar, Chip, Drawer, Money, Empty, Switch, useNote } from '../kit'
 import { RecordDrawer, Block } from '../Record'
 import { paths } from '../paths'
@@ -142,9 +143,13 @@ function ClientDrawer({ id, onClose, today, settings, onLapsed }) {
   const { data: c } = useSampleClient(id)
   const { data: threads } = useSampleThreads()
   const { sendMessage } = useSampleActions()
+  const { data: act } = useSampleActivity()
+  const { data: leads } = useSampleLeads()
+  const navigate = useNavigate()
   const answer = useAnswer()
   const note = useNote()
   const [msg, setMsg] = useState('')
+  const [appLink, setAppLink] = useState(false)
   const name = fullName(c)
   const st = clientStatusOf(c, today, settings)
   const { tone, label, sub } = clientStatus(st)
@@ -158,6 +163,11 @@ function ClientDrawer({ id, onClose, today, settings, onLapsed }) {
     ['Draft date', c.draft_day ? `The ${ordinal(Number(c.draft_day))} of each month` : 'Not given'], [c.added ? 'Added by you' : 'Sold', dateWord(c.submitted) || 'Not given'],
     ...(Number(c.monthly_premium) > 0 ? [['Monthly premium', <Money key="p" v={c.monthly_premium} />]] : []), ['Notes', c.notes || 'None']]
   const onTrack = st === 'working' || (st === 'closed' && c.track?.closed)
+  // P1002: what the phone already had. A timeline of what happened, the lead this client came from, and their app link.
+  const timeline = clientTimeline(c, act, stagesOf(c))
+  const from = leadOfClient(c, leads)
+  const link = `${window.location.origin}/template/d/client?c=${c.id}`
+  const copyLink = async () => { setAppLink(false); try { await navigator.clipboard.writeText(link); note('Link copied') } catch { note('Couldn’t copy the link') } }
   return (
     <RecordDrawer label={name} kicker={`Client · since ${c.submitted}`} tone={tone} onClose={onClose}
       hero={<>
@@ -169,6 +179,7 @@ function ClientDrawer({ id, onClose, today, settings, onLapsed }) {
       actions={<>
         <CallOrCopy phone={c.client_phone} target={null} closed={st === 'closed'} /> {/* P929: no Call on a desktop */}
         <span className="tp-grow" />
+        {st !== 'closed' && <button type="button" className="tp-btn ov-ghost" onClick={() => setAppLink(true)}><Send size={14} aria-hidden="true" />Send app link</button>}
         {st !== 'closed' && !c.fixing && !due && <button type="button" className="tp-btn ov-ghost" onClick={() => onLapsed(c)}>Lapsed</button>}
       </>}>
       {due && (
@@ -188,6 +199,16 @@ function ClientDrawer({ id, onClose, today, settings, onLapsed }) {
       <Block title="Details" aside={next ? <span className="ck-next">Next check {shortDate(next.askOn)}</span> : null}>
         <dl className="fx-facts">{facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       </Block>
+      <Block title="Timeline" sub={`What has happened on ${c.client_first_name}’s policy`}>
+        {timeline.length
+          ? <ol className="tp-tl fx-tl ck-tl">{timeline.map(e => <li key={e.id} className="done"><i /><div><b>{e.text}</b>{e.at && <small>{e.at}</small>}</div></li>)}</ol>
+          : <p className="tp-sub">Nothing yet.</p>}
+      </Block>
+      <Block title={`Where ${c.client_first_name} came from`}>
+        {from
+          ? <button type="button" className="tp-btn ov-ghost fx-self" onClick={() => navigate(paths.lead(from.id))}><Inbox size={14} aria-hidden="true" />{from.first_name} {from.last_name}, your lead{from.created || from.came ? ` · came in ${from.created || from.came}` : ''}<ChevronRight size={14} aria-hidden="true" /></button>
+          : <p className="tp-mid">{c.added ? 'You added this client. From your own book.' : 'Not from an Ohvara lead. Submitted by you.'}</p>}
+      </Block>
       <Block title="Messages" sub="You and the team on this client">
         {thread?.messages?.length
           ? <ol className="tp-tl fx-tl ck-tl">{thread.messages.map(m => <li key={m.id} className="done"><i /><div><b>{m.from === 'me' ? 'You' : 'Our team'}</b><span>{m.text}</span><small>{m.at}</small></div></li>)}</ol>
@@ -195,6 +216,11 @@ function ClientDrawer({ id, onClose, today, settings, onLapsed }) {
         <textarea className="tp-input fx-ta" aria-label="Message the team" placeholder="Write a message" value={msg} onChange={e => setMsg(e.target.value)} />
         {msg.trim() && <button type="button" className="tp-primary sm fx-accent fx-self" onClick={send}>Send</button>}
       </Block>
+      <Drawer open={appLink} onClose={() => setAppLink(false)} title="Send app link" sub={`${c.client_first_name}’s own page: their policy, and changes that go straight to our team`}
+        footer={<button type="button" className="tp-primary fx-accent" onClick={copyLink}><Copy size={14} aria-hidden="true" />Copy link</button>}>
+        <p className="tp-mid">Texting it to {c.client_first_name} starts when texting is live. Until then, copy the link and send it yourself.</p>
+        <p className="tp-sub" style={{ wordBreak: 'break-all' }}>{link}</p>
+      </Drawer>
     </RecordDrawer>
   )
 }

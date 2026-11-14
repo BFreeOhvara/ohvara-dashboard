@@ -1,7 +1,8 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import '../leads873.css'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Phone, MapPin, ChevronRight, Clock, ClipboardCheck, CalendarX2, Settings2, Ban } from 'lucide-react'
+import { Phone, MapPin, ChevronRight, Clock, ClipboardCheck, CalendarX2, Settings2, Ban, CalendarDays } from 'lucide-react'
+import { MonthDrawer } from '../MonthDrawer1002'
 import { useSampleAppointments, useSampleLeads, useSampleClients, useSampleSettings, useSampleActions, useSampleBlocks, useWeek, AGENT_TZ, onAgentClock } from '../data'
 import { Drawer, Empty, Chip, Field, useNote } from '../kit'
 import { Select } from '../Select'
@@ -230,6 +231,7 @@ export default function Calendar() {
           week and opens today. Hours and Block a day are the agent's own buttons after it. */}
       <CalBar week={wk} keys={WEEKS.map(w => w.key)} onWeek={k => { if (view != null) close(); setWk(k) }} counts={WEEKS.map(w => events.filter(e => weekIsos(w.key).includes(e.on)).length)}
         clock={`Your time (${zoneAbbr(tz)}) · client times beside theirs`} todayOn={view != null && view === TODAY} onToday={goToday}>
+        <button type="button" className="fx-pillbtn" onClick={() => setPanel('month')}><CalendarDays size={14} aria-hidden="true" />Month</button>
         <button type="button" className="fx-pillbtn" onClick={() => setPanel('hours')}><Settings2 size={14} aria-hidden="true" />Hours</button>
         <button type="button" className="fx-pillbtn" onClick={() => setPanel('block')}><Ban size={14} aria-hidden="true" />Block a day</button>
       </CalBar>
@@ -270,6 +272,7 @@ export default function Calendar() {
       </div>
 
       <CallDrawer open={open} onClose={() => setOpen(null)} />
+      <MonthDrawer open={panel === 'month'} onClose={() => setPanel(null)} events={events} todayIso={now.slice(0, 10)} lookOf={lookOf} onOpen={e => setOpen(e)} />
       <HoursDrawer key={panel === 'hours' ? 'h-open' : 'h'} open={panel === 'hours'} onClose={() => setPanel(null)} settings={settings} appts={raw} />
       <BlockDrawer key={panel === 'block' ? 'b-open' : 'b'} open={panel === 'block'} onClose={() => setPanel(null)} appts={raw} blocked={blocked} />
     </div>

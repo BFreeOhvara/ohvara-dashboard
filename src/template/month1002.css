@@ -1,0 +1,17 @@
+/* P1002: the desktop Month drawer (MonthDrawer1002.jsx). Tokens only. */
+.mo-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.mo-head b { font-size: 15px; }
+.mo-arrow { width: 36px; height: 36px; padding: 0; display: grid; place-items: center; }
+.mo-dow, .mo-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.mo-dow small { text-align: center; opacity: 0.7; font-size: 11px; padding-bottom: 4px; }
+.mo-day { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 4px; min-height: 52px; padding: 6px 2px; border: 1px solid var(--ov-line); border-radius: 10px; background: transparent; color: inherit; cursor: pointer; font: inherit; }
+.mo-day:hover:not(:disabled) { border-color: currentColor; }
+.mo-day b { font-size: 13px; font-weight: 600; }
+.mo-day.is-out { opacity: 0.25; cursor: default; border-style: dashed; }
+.mo-day.is-past { opacity: 0.55; }
+.mo-day.is-today { border-width: 2px; }
+.mo-day.is-picked { border-color: currentColor; background: color-mix(in srgb, currentColor 10%, transparent); }
+.mo-dots { display: flex; align-items: center; gap: 3px; min-height: 10px; }
+.mo-dots small { font-size: 10px; opacity: 0.7; }
+.mo-legend { display: flex; gap: 14px; margin: 10px 0 14px; font-size: 12px; opacity: 0.8; }
+.mo-legend span { display: inline-flex; align-items: center; gap: 6px; }

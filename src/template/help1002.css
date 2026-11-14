@@ -1,0 +1,9 @@
+/* P1002: Common questions in the desktop Help drawer. Tokens only. */
+.fx-faq { margin-top: 14px; }
+.fx-faq h3 { margin: 0 0 6px; font-size: 13px; }
+.fx-faq details { border-top: 1px solid var(--ov-line); }
+.fx-faq summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 2px; cursor: pointer; font-weight: 600; list-style: none; }
+.fx-faq summary::-webkit-details-marker { display: none; }
+.fx-faq summary svg { flex: none; transition: transform 0.15s; }
+.fx-faq details[open] summary svg { transform: rotate(180deg); }
+.fx-faq p { margin: 0 2px 12px; opacity: 0.85; }

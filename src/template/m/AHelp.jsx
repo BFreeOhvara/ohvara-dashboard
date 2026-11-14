@@ -9,17 +9,11 @@ import { AppAbout } from '../../components/native/AppAbout'
 import { isSupport } from '../support911'
 import { useApp, SubPage, Row, rise } from './AppKit'
 import { useThreadList } from './AMessages'
+import { FAQ } from '../helpFaq'
 
 // P972 — Help as its own screen (it was the portal's drawer): message Ohvara Support first, then a call with the
 // team, report a problem, get the phone app, and short answers to what agents ask most. P974: the app's version sits at
 // the very foot here, small and grey, for support (it's no longer on Account or Settings).
-const FAQ = [
-  ['How do I tell you how a call went?', 'Open Leads, tap Mark on the call and pick one result. Our team handles what comes next.'],
-  ['Who works my clients?', 'Our team does: the review call, the carrier and every change after. You see where each one stands under Clients.'],
-  ['When am I charged?', 'Lead spend is charged each night, one day ahead. Your plan, card and receipts are in Billing.'],
-  ['Can I change the hours I take calls?', 'Yes. Settings, then Hours you take calls. We only book inside those hours.'],
-  ['How do I reach a person?', 'Message Ohvara Support here. We answer, usually the same day.'],
-]
 
 export function AHelp() {
   const app = useApp()

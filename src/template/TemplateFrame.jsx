@@ -3,8 +3,10 @@ import { Link, NavLink, useLocation, useOutlet } from 'react-router-dom'
 import {
   Home, PhoneIncoming, CalendarDays, Users, History, CreditCard, Settings, Search, Bell, Plus, Sun, Moon, MessageSquare,
   PhoneCall, Radio, ChevronRight, LogOut, ShieldCheck, FileUp, TriangleAlert, Wallet, CalendarCheck, Clock3,
-  Smartphone, CircleHelp, StickyNote, Mail, Keyboard, Bug,
+  Smartphone, CircleHelp, StickyNote, Mail, Keyboard, Bug, ChevronDown,
 } from 'lucide-react'
+import { FAQ } from './helpFaq'
+import './help1002.css'
 import { useTheme } from '../hooks/useTheme'
 import { useIsTestAccount } from '../hooks/useIsTestAccount'
 import {
@@ -243,6 +245,11 @@ export function Help({ open, onClose, onBug, onTalk }) {
         <li><a href={`mailto:${SUPPORT_EMAIL}`} className="fx-mrow"><Mail size={17} aria-hidden="true" /><span className="tp-grow"><b>Email support</b><small>{SUPPORT_EMAIL}</small></span><ChevronRight size={15} aria-hidden="true" /></a></li>
         <li className="fx-mrow"><Keyboard size={17} aria-hidden="true" /><span className="tp-grow"><b>Search anything</b><small>Press Ctrl K (Cmd K on a Mac)</small></span></li>
       </ul>
+      {/* P1002: the phone's Common questions */}
+      <div className="fx-faq">
+        <h3>Common questions</h3>
+        {FAQ.map(([q, a]) => <details key={q}><summary>{q}<ChevronDown size={16} aria-hidden="true" /></summary><p>{a}</p></details>)}
+      </div>
     </Drawer>
   )
 }

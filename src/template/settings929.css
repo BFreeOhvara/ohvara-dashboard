@@ -5,3 +5,10 @@
 .tp .fx-set .fx-ptabs .fx-ptab { flex: none; }
 .tp .fx-set .fx-panel { overflow-x: hidden; }
 .tp .fx-set .fx-panel > .fx-form { min-width: 0; }
+
+/* P1002: the Carriers you write with list on Profile (the phone's editor, on desktop). */
+.fx-carriers { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.fx-carrier { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; border-radius: 999px; border: 1px solid var(--ov-line); font-size: 13px; }
+.fx-carrier b { font-weight: 600; }
+.fx-carrier button { display: grid; place-items: center; width: 22px; height: 22px; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
+.fx-carrier button:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
