@@ -489,7 +489,15 @@ export const TRACKING = [
   { id: 'tn-3', number: '(512) 555-0188', label: 'Landing page', to: 'the VA desk', calls: 4 },
 ]
 
+// P999: people who made an account and did nothing (no plan, no uploads, no booked lead). Kept out of every admin
+// list, number and to-do; the Agents pages show them only under "Signed up, not active".
+const seedIdle = [
+  mkAgent('ag-idle1', 'Corey Lane', { city: 'Boise', state: 'ID', phone: '', spend: 0, active: false, servicing: false, states: [], joined: 'Nov 12', lastOn: 'Nov 12', idle: true, billing: {} }),
+  mkAgent('ag-idle2', 'Tamsin Pryor', { city: 'Reno', state: 'NV', phone: '', spend: 0, active: false, servicing: false, states: [], joined: 'Nov 13', lastOn: 'Never', idle: true, billing: {} }),
+]
+
 let state = {
+  idleSignups: seedIdle,
   agents: seedAgents, vas: seedVas, invites: seedInvites, leads: seedLeads, clients: seedClients, steps: seedSteps, calls: seedCalls,
   rota: seedRota, dayOff: seedDayOff, cancels: seedCancels, runs: seedRuns, revenue: seedRevenue, threads: seedThreads, feed: seedFeed,
   settings: seedSettings, bugs: seedBugs, audit: seedAudit, connect: seedConnect, setupFees: seedSetupFees, draws: seedDraws,
@@ -548,6 +556,11 @@ export function useAdmAgents() {
     const mine = s.leads.filter(l => l.agent_id === a.id)
     return { ...a, week: funnel(mine), clients: s.clients.filter(c => c.agent_id === a.id).length, planInfo: PLANS[a.plan] || NO_PLAN }
   }))
+}
+// P999: the "Signed up, not active" list (real: self-signups admin_agent_activity calls neither paying nor active).
+export function useAdmIdleSignups() {
+  const s = useS()
+  return okS(s, (s.idleSignups || []).map(a => ({ ...a, week: funnel([]), clients: 0, planInfo: NO_PLAN })))
 }
 export function useAdmVas() {
   const s = useS()

@@ -16,6 +16,8 @@
 //   { action: 'resend' } + Authorization     → { ok: true } | { error } — the banner's "Send again"
 import { createClient } from 'npm:@supabase/supabase-js'
 import { sendConfirmEmail, sha256Hex, appUrl } from '../_shared/confirmEmail.ts'
+import { clientIp } from '../_shared/ipLimit.ts'
+import { overLimit } from '../_shared/rateHit.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -51,6 +53,8 @@ Deno.serve(async req => {
     if (body.action === 'reset') {
       const email = String(body.email ?? '').trim().toLowerCase()
       if (!EMAIL_RE.test(email)) return json({ error: "Enter your account's email" }, 400)
+      // P999: 5 resets per IP and 3 per email an hour. Over the limit gets the same answer and sends nothing.
+      if (await overLimit(db, 'reset-ip', clientIp(req), 5, 3600) || await overLimit(db, 'reset-email', email, 3, 3600)) return json({ ok: true })
       const { data: rows } = await db.from('profiles')
         .select('id, email_confirm_pending, is_active').ilike('email', likeEscape(email)).limit(1)
       const p = rows?.[0]
@@ -64,7 +68,10 @@ Deno.serve(async req => {
       if (p && mayReset && p.is_active !== false && !email.endsWith('@ohvara.internal')) {
         // Supabase's own recovery mail (its sender, its per-address limits), as before.
         const anon = createClient(URL_, Deno.env.get('SUPABASE_ANON_KEY')!, { auth: { persistSession: false } })
-        const { error } = await anon.auth.resetPasswordForEmail(email, { redirectTo: safeRedirect(body.redirect_to) })
+        const { error } = await anon.auth.resetPasswordForEmail(email, {
+          redirectTo: safeRedirect(body.redirect_to),
+          captchaToken: typeof body.captcha_token === 'string' && body.captcha_token ? body.captcha_token : undefined, // P999
+        })
         if (error) console.error('[account-email] reset:', error.status ?? '', error.code ?? error.name)
       }
       return json({ ok: true })

@@ -1,0 +1,181 @@
+/* P999 — signed-out screens on phones (PhoneAuth.jsx), from Brayden's approved mockup
+   (vault media/app-mockup/login-mockup.dc.html). The mockup's colours are this page's tokens, defined once here for
+   light (the mockup) and dark (the same layout on the shell's dark ground). Inside the card the shared sx-* fields
+   are fed these tokens and drop their visible labels (the placeholder is the label; screen readers keep the label).
+   Also the desktop page's "or" line and "Continue with Google / Apple" buttons (lg-social). */
+
+.pa-page {
+  --pa-bg: radial-gradient(130% 90% at 50% 0%, #FFFFFF 0%, #F4F3EF 45%, #E9E7E1 100%);
+  --pa-ink: #1F221F;
+  --pa-title: #13233F;
+  --pa-tag: #6B6A64;
+  --pa-card: #FFFFFF;
+  --pa-card-shadow: 0 24px 60px rgba(20, 35, 60, .12), 0 2px 6px rgba(20, 35, 60, .05);
+  --pa-field: #F6F7F5;
+  --pa-field-line: rgba(20, 30, 50, .08);
+  --pa-icon: #6A6E66;
+  --pa-ph: #8A8F86;
+  --pa-link: #2E609E;
+  --pa-btn: #2B63D9;
+  --pa-btn-ink: #FFFFFF;
+  --pa-rule: rgba(31, 34, 31, .12);
+  --pa-or: #7A7E76;
+  --pa-mid-ink: #42463F;
+  --pa-foot: #8A887F;
+  --pa-apple: #000000;
+  --pa-apple-ink: #FFFFFF;
+  --pa-google: #FFFFFF;
+  --pa-google-ink: #1F221F;
+  --pa-google-line: rgba(31, 34, 31, .14);
+  --pa-glow: rgba(60, 50, 30, .10);
+  --pa-mark-wing: #00BFA6;
+  --pa-mark-body: #0A1F44;
+  --pa-wm-wing: rgba(0, 191, 166, .10);
+  --pa-wm-body: rgba(10, 31, 68, .055);
+  --pa-wm-wing-2: rgba(0, 191, 166, .07);
+  --pa-wm-body-2: rgba(10, 31, 68, .04);
+
+  /* the shared field rules (auth.css) read these */
+  --sx-hi: var(--pa-ink);
+  --sx-soft: var(--pa-mid-ink);
+  --sx-mute: var(--pa-icon);
+  --sx-dim: var(--pa-icon);
+  --sx-faint: var(--pa-icon);
+  --sx-ph: var(--pa-ph);
+  --sx-field: var(--pa-field);
+  --sx-line: var(--pa-field-line);
+  --sx-line-soft: var(--pa-rule);
+  --sx-line-strong: var(--pa-google-line);
+  --sx-focus-line: var(--pa-btn);
+  --sx-focus-ring: color-mix(in srgb, var(--pa-btn) 18%, transparent);
+  --sx-teal: var(--pa-btn);
+  --sx-teal-hi: var(--pa-link);
+}
+html:not([data-theme="light"]) .pa-page {
+  --pa-bg: radial-gradient(130% 90% at 50% 0%, #1E211F 0%, #141614 45%, #0B0C0A 100%);
+  --pa-ink: #F2F3EE;
+  --pa-title: #F2F3EE;
+  --pa-tag: #A3A79F;
+  --pa-card: #1A1D1B;
+  --pa-card-shadow: 0 24px 60px rgba(0, 0, 0, .45), 0 2px 6px rgba(0, 0, 0, .3);
+  --pa-field: #232624;
+  --pa-field-line: rgba(242, 243, 238, .10);
+  --pa-icon: #A0A49D;
+  --pa-ph: #8B8F87;
+  --pa-link: #8DB4E8;
+  --pa-btn: #3F74E0;
+  --pa-rule: rgba(242, 243, 238, .12);
+  --pa-or: #A0A49D;
+  --pa-mid-ink: #C8CBC4;
+  --pa-foot: #A0A49D;
+  --pa-apple: #FFFFFF;
+  --pa-apple-ink: #000000;
+  --pa-google-line: rgba(242, 243, 238, .16);
+  --pa-glow: rgba(0, 0, 0, .25);
+  --pa-mark-body: #F2F3EE;
+  --pa-wm-wing: rgba(0, 191, 166, .08);
+  --pa-wm-body: rgba(242, 243, 238, .04);
+  --pa-wm-wing-2: rgba(0, 191, 166, .06);
+  --pa-wm-body-2: rgba(242, 243, 238, .03);
+}
+html.pa-root, html.pa-root body { background: #E9E7E1; }
+html.pa-root:not([data-theme="light"]), html.pa-root:not([data-theme="light"]) body { background: #0B0C0A; }
+
+.pa-page {
+  position: relative; min-height: 100vh; min-height: 100dvh; box-sizing: border-box; overflow-x: hidden;
+  display: flex; flex-direction: column; align-items: center;
+  padding: max(78px, calc(env(safe-area-inset-top, 0px) + 40px)) 16px calc(env(safe-area-inset-bottom, 0px) + 22px);
+  background: var(--pa-bg); color: var(--pa-ink);
+  font-family: 'Urbanist', system-ui, sans-serif;
+}
+.pa-bd { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.pa-wm { position: absolute; display: block; }
+.pa-wm--big { left: 70px; top: 300px; transform: rotate(-6deg); }
+.pa-wm--small { left: -90px; top: -40px; transform: rotate(14deg); }
+.pa-glow {
+  position: absolute; left: 50%; top: 50%; width: 560px; height: 420px; transform: translate(-50%, -40%);
+  border-radius: 50%; background: radial-gradient(closest-side, var(--pa-glow), transparent);
+}
+
+.pa-head { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.pa-name { font-size: 36px; line-height: 1; font-weight: 800; letter-spacing: -0.04em; color: var(--pa-title); }
+.pa-tag { font-size: 15px; font-weight: 700; color: var(--pa-tag); }
+
+/* The bottom padding about matches the header's height, so the card sits in the middle of the screen (the mockup). */
+.pa-mid { position: relative; z-index: 1; flex: 1; width: 100%; max-width: 440px; display: flex; align-items: center; padding: 24px 0 min(110px, 11vh); }
+.pa-card {
+  width: 100%; box-sizing: border-box; border-radius: 30px; background: var(--pa-card); box-shadow: var(--pa-card-shadow);
+  padding: 22px 18px 18px;
+}
+.pa-card h2, .pa-title { margin: 0 0 4px; text-align: center; font-size: 25px; font-weight: 800; letter-spacing: -0.02em; color: var(--pa-ink); }
+.pa-card .sx-card-sub { text-align: center; color: var(--pa-mid-ink); font-size: 14.5px; margin: 6px 0 0; }
+
+/* Fields: 52 px, no visible label (it stays for screen readers), 10 px apart. */
+.pa-card .sx-field { margin-top: 10px; }
+.pa-card .sx-field--first { margin-top: 14px; }
+.pa-card .sx-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.pa-card .sx-box { height: 52px; border-radius: 16px; gap: 12px; padding: 0 14px 0 16px; }
+.pa-card .sx-box--eye { padding-right: 4px; }
+.pa-card .sx-input { font-weight: 600; }
+.pa-card .sx-eye { color: var(--pa-icon); }
+.pa-card .sx-alert { margin-top: 12px; }
+.pa-card .sx-note { margin-top: 12px; }
+
+.pa-forgot { display: flex; justify-content: flex-end; margin: 2px 4px 0; }
+.pa-forgot .sx-link { font-size: 13.5px; font-weight: 800; color: var(--pa-link); }
+
+.pa-card .sx-btn {
+  margin-top: 10px; height: 54px; border-radius: 27px; background: var(--pa-btn); color: var(--pa-btn-ink);
+  font-size: 16.5px; font-weight: 800; box-shadow: none;
+  transition: transform .2s cubic-bezier(.22, 1, .36, 1), opacity .15s;
+}
+.pa-card .sx-btn:active { transform: scale(.97); }
+.pa-card .sx-btn--ghost { background: transparent; color: var(--pa-ink); border: 1px solid var(--pa-google-line); }
+
+.pa-card .sx-checks { margin-top: 8px; }
+.pa-card .sx-check--terms { margin-top: 8px; padding-top: 4px; color: var(--pa-mid-ink); }
+.pa-card .sx-check-input:checked + .sx-check-box { background: var(--pa-btn); border-color: var(--pa-btn); }
+.pa-texts { margin: 4px 2px 0 32px; font-size: 12px; line-height: 1.45; color: var(--pa-or); }
+
+.pa-or { display: flex; align-items: center; gap: 10px; margin: 12px 6px 10px; }
+.pa-or span { flex: 1; height: 1px; background: var(--pa-rule, var(--sx-line-soft)); }
+.pa-or small { font-size: 12.5px; font-weight: 700; color: var(--pa-or, var(--sx-mute)); }
+.pa-social-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pa-sbtn {
+  height: 50px; border-radius: 25px; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  transition: transform .2s cubic-bezier(.22, 1, .36, 1);
+}
+.pa-sbtn:active { transform: scale(.97); }
+.pa-sbtn:disabled { opacity: .7; }
+.pa-sbtn--apple { border: none; background: var(--pa-apple); color: var(--pa-apple-ink); }
+.pa-sbtn--apple svg path { fill: var(--pa-apple-ink); }
+.pa-sbtn--google { border: 1px solid var(--pa-google-line); background: var(--pa-google); color: var(--pa-google-ink); }
+
+.pa-alt { margin: 14px 6px 0; text-align: center; font-size: 14px; font-weight: 600; color: var(--pa-mid-ink); }
+.pa-alt a, .pa-alt button { font: inherit; font-weight: 800; color: var(--pa-link); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: none; }
+.pa-small { display: block; margin-top: 6px; font-size: 12px; font-weight: 600; color: var(--pa-or); }
+
+.pa-foot { position: relative; z-index: 1; display: flex; justify-content: center; gap: 22px; font-size: 13px; font-weight: 700; }
+.pa-foot a { color: var(--pa-foot); text-decoration: none; min-height: 32px; display: inline-flex; align-items: center; }
+.pa-captcha { margin-top: 10px; display: flex; justify-content: center; }
+.pa-captcha:empty { display: none; }
+
+@keyframes pa-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.pa-rise { animation: pa-rise .8s cubic-bezier(.22, 1, .36, 1) both; }
+.pa-card.pa-rise { animation-delay: .08s; }
+@media (prefers-reduced-motion: reduce) { .pa-rise { animation: none; } }
+
+/* Desktop sign-in: "or", then Continue with Google / Apple under the email form, in the page's own tokens. */
+.lg-social .pa-or { margin: 18px 0 12px; }
+.lg-social .pa-or span { background: var(--sx-line-soft); }
+.lg-social .pa-or small { color: var(--sx-mute); }
+.lg-social-col { display: flex; flex-direction: column; gap: 10px; }
+.lg-sbtn {
+  height: 50px; border-radius: 999px; border: 1px solid var(--sx-line-strong); background: var(--sx-field); color: var(--sx-hi);
+  font: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 10px; transition: background .15s;
+}
+.lg-sbtn:hover { background: var(--sx-chip); }
+.lg-sbtn:disabled { opacity: .7; cursor: default; }
+.pa-center-ico { margin: 0 auto 12px; }

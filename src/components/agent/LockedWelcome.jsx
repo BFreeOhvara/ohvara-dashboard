@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
-  Check, CalendarPlus, CreditCard, Info, Phone, RefreshCw, ShieldCheck, Users,
+  Check, CalendarPlus, CreditCard, Info, Phone, RefreshCw, ShieldCheck, Users, Upload, ExternalLink,
 } from 'lucide-react'
 import { useBillingTiers } from '../../hooks/useBillingTiers'
 import { BOOK, pricesOf } from '../../lib/priceBook'
 import { SignupCheckout } from './SignupCheckout'
 import { formatWeekly } from '../../lib/billing'
-import { isNativeApp } from '../../lib/native'
+import { isNativeApp, openExternal, webUrl } from '../../lib/native'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { NativeBillingNote } from '../native/NativeBillingNote'
 import './lockedWelcome.css'
@@ -97,23 +97,31 @@ const lookAgain = portal => async () => {
   if (access?.unlocked) await portal.refreshAll()
 }
 
+// P999 — in the app, a new account picks what it wants and pays on the Ohvara website (Brayden, Nov 14: the app
+// opens the website for plans and checkout; nothing is sold inside the app). Each choice opens the portal's plans in
+// the browser sheet; back in the app, Check again opens the portal once the payment shows.
+const PICKS = [
+  ['leads', Phone, 'Leads', 'People to sell to, brought to you.'],
+  ['servicing', ShieldCheck, 'Servicing', 'We keep every policy you submit on the books.'],
+  ['reactivation', Upload, 'Your own leads', 'Upload the leads you already have and we work them.'],
+]
+const openPlans = pick => openExternal(webUrl(`/agent?pick=${pick}#plans`))
+
 function NativeLocked({ portal }) {
   return (
     <div className="lk">
-      <Hero chip="Account not active yet" title={welcomeLine(portal.profile)} line="Your account isn’t active yet. Once it is, check again and the app opens." />
-      <NativeBillingNote />
-      <CheckAgainButton onCheck={lookAgain(portal)} className="ov-ghost lk-btn lk-wide" />
-      <section className="ov-card lk-prodlist">
-        <div>
-          <span className="lk-tile"><ShieldCheck size={20} strokeWidth={2} aria-hidden="true" /></span>
-          <span className="lk-prodlist-t"><b>Servicing</b><span className="pv-sub">We keep every policy you submit on the books.</span></span>
-        </div>
-        <div>
-          <span className="lk-tile is-grey"><Phone size={20} strokeWidth={2} aria-hidden="true" /></span>
-          <span className="lk-prodlist-t"><b>Leads</b><span className="pv-sub">People to sell to, brought to you.</span></span>
-          <span className="pv-pill pv-p-quiet">Opens soon</span>
-        </div>
+      <Hero chip="Next step" title={welcomeLine(portal.profile)} line="Pick what you want to start with. You pay on the Ohvara website, then come back here." />
+      <section className="ov-card lk-prodlist lk-picks">
+        {PICKS.map(([key, Icon, title, line]) => (
+          <button type="button" key={key} className="lk-pick" onClick={() => openPlans(key)}>
+            <span className="lk-tile"><Icon size={20} strokeWidth={2} aria-hidden="true" /></span>
+            <span className="lk-prodlist-t"><b>{title}</b><span className="pv-sub">{line}</span></span>
+            <ExternalLink size={16} strokeWidth={2} aria-hidden="true" className="lk-pick-go" />
+          </button>
+        ))}
       </section>
+      <button type="button" className="ov-solid lk-btn lk-wide" onClick={() => openPlans('all')}>See plans on the Ohvara website</button>
+      <CheckAgainButton onCheck={lookAgain(portal)} className="ov-ghost lk-btn lk-wide" />
     </div>
   )
 }

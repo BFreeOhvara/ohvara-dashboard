@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { Mail, Lock, ShieldCheck, Loader2, ArrowRight, ArrowLeft, MailCheck, Check } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
@@ -7,6 +7,13 @@ import { supabase, setKeepSignedIn, keepSignedIn } from '../lib/supabase'
 import { isNativeApp, webUrl } from '../lib/native'
 import { CodeBoxes } from '../components/agent/AgentUI'
 import { AuField, PasswordField, AuCheck, AuAlert } from '../components/auth/AuthShell'
+import { PhoneAuthPage } from '../components/auth/PhoneAuth'
+import { usePhoneAuth } from '../components/auth/usePhoneAuth'
+import { SocialButtons } from '../components/auth/SocialButtons'
+import { Captcha } from '../components/auth/Captcha'
+import { TermsLine } from '../components/auth/TermsLine'
+import { parseAuthReturn, oauthErrorText, needsTerms, acceptTerms, OAUTH_ERROR_EVENT, takeOauthError, termsAgreedHere } from '../lib/oauth'
+import { failWait, noteFail, clearFails } from '../lib/signinBackoff'
 import { OhvaraMark } from '../components/ui/OhvaraMark'
 import { LIMIT_KEYS, limitNote, safeReturnPath } from '../lib/sessionLimits'
 import { keepSubmitVisible, EMAIL_RE, SUPPORT_EMAIL } from '../components/auth/authUtils'
@@ -100,7 +107,8 @@ function AppGlyph() {
 }
 
 export default function Login() {
-  const { signIn, signOut, session, profile, loading, mfaRequired } = useAuth()
+  const { signIn, signOut, session, profile, loading, mfaRequired, refreshProfile } = useAuth()
+  const phone = usePhoneAuth()
   const navigate = useNavigate()
   const [search] = useSearchParams()
   // Prompt 775 — Delete my account lands here; the note shows once.
@@ -115,7 +123,15 @@ export default function Login() {
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [keep, setKeep] = useState(() => keepSignedIn())
-  const [error, setError]       = useState('')
+  // P999: a Google / Apple sign-in that came back refused (web: in the address) shows on arrival.
+  const [error, setError]       = useState(() => {
+    const r = parseAuthReturn(window.location.href)
+    if (r?.error) {
+      try { window.history.replaceState(null, '', window.location.pathname) } catch { /* fine */ }
+      return oauthErrorText(r.error)
+    }
+    return takeOauthError()
+  })
   const [wrong, setWrong]       = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [forgotMode, setForgotMode]   = useState(() => search.get('forgot') === '1') // /signup's "Reset your password" link
@@ -126,6 +142,19 @@ export default function Login() {
   const [code, setCode] = useState('')
   const [codeError, setCodeError] = useState('')
   const [verifying, setVerifying] = useState(false)
+  // P999: the bot check (on once its key is set), Google / Apple errors, and the one-time terms step.
+  const [captcha, setCaptcha] = useState('')
+  const captchaApi = useRef(null)
+  const [agree, setAgree] = useState(false)
+  const [agreeErr, setAgreeErr] = useState(false)
+  const [accepting, setAccepting] = useState(false)
+
+  // The app's link handler announces a refused Apple / Google sign-in.
+  useEffect(() => {
+    const on = e => setError(e.detail || oauthErrorText('failed'))
+    window.addEventListener(OAUTH_ERROR_EVENT, on)
+    return () => window.removeEventListener(OAUTH_ERROR_EVENT, on)
+  }, [])
 
   // Marks <html> while mounted so overscroll shows the page colour in either theme.
   useEffect(() => {
@@ -138,7 +167,7 @@ export default function Login() {
 
   // Role redirect — held while the two-step code is still owed.
   useEffect(() => {
-    if (loading || !profile || mfaRequired) return
+    if (loading || !profile || mfaRequired || needsTerms(profile)) return
     if (profile.role === 'admin')            navigate('/admin',               { replace: true })
     else if (profile.role === 'agent') {
       try { sessionStorage.removeItem(LIMIT_KEYS.back) } catch { /* storage blocked */ }
@@ -157,14 +186,21 @@ export default function Login() {
     e?.preventDefault()
     setError(''); setWrong(false)
     if (!identifier.trim() || !password) { setWrong(true); return setError('Enter your email and password.') }
+    // P999: after 5 wrong passwords for this email, a wait that doubles (30 s, 1 min, 2 min … 15 min).
+    const wait = failWait(identifier)
+    if (wait) return setError(`Too many tries. Wait ${wait} and try again, or reset your password.`)
     setSubmitting(true)
     try {
-      setKeepSignedIn(keep)
-      await signIn(identifier.trim(), password)
+      setKeepSignedIn(keep || phone)
+      await signIn(identifier.trim(), password, captcha)
+      clearFails(identifier)
     } catch (err) {
       const m = err.message || ''
-      if (/invalid login credentials/i.test(m) || !m) { setWrong(true); setError(WRONG) }
+      if (/invalid login credentials/i.test(m) || !m) { noteFail(identifier); setWrong(true); setError(WRONG) }
+      else if (/captcha/i.test(m)) setError('We couldn’t check you’re a person. Try again.')
+      else if (/rate limit|too many/i.test(m)) setError('Too many tries from here. Wait a few minutes and try again.')
       else setError(m)
+      captchaApi.current?.reset()
     } finally {
       setSubmitting(false)
     }
@@ -183,7 +219,7 @@ export default function Login() {
     setResetSending(true)
     try {
       const { error: fnError } = await supabase.functions.invoke('account-email', {
-        body: { action: 'reset', email, redirect_to: webUrl('/reset-password') },
+        body: { action: 'reset', email, redirect_to: webUrl('/reset-password'), captcha_token: captcha || undefined },
       })
       if (fnError) throw fnError
       setResetSent(true)
@@ -191,6 +227,7 @@ export default function Login() {
       setResetError('Couldn’t send the reset link. Try again.')
     } finally {
       setResetSending(false)
+      captchaApi.current?.reset()
     }
   }
 
@@ -219,7 +256,121 @@ export default function Login() {
     await signOut()
   }
 
+  async function finishTerms() {
+    if (!agree) { setAgreeErr(true); return }
+    setAccepting(true); setError('')
+    try { await acceptTerms(); await refreshProfile() } catch { setError('Couldn’t save that. Try again.') } finally { setAccepting(false) }
+  }
+
   const codeStep = session && mfaRequired && !loading
+  const termsStep = !codeStep && !loading && needsTerms(profile)
+  // Ticked on Create account before choosing Apple / Google: accept without asking again.
+  const autoTerms = useRef(false)
+  useEffect(() => {
+    if (!termsStep || autoTerms.current || !termsAgreedHere()) return
+    autoTerms.current = true
+    setAccepting(true)
+    acceptTerms().then(() => refreshProfile()).catch(() => {}).finally(() => setAccepting(false))
+  }, [termsStep, refreshProfile])
+
+  const label = termsStep ? 'Finish your account' : codeStep ? 'Two-step check' : forgotMode ? 'Reset your password' : 'Sign in'
+
+  const body = termsStep ? (
+    <>
+      <span className={`sx-big-ico sx-big-ico--ok${phone ? ' pa-center-ico' : ''}`}><ShieldCheck size={24} strokeWidth={2} /></span>
+      <h2>One more step</h2>
+      <p className="sx-card-sub">Agree to how Ohvara works, then pick what you want to start with.</p>
+      {error && <AuAlert>{error}</AuAlert>}
+      <TermsLine checked={agree} onChange={v => { setAgree(v); setAgreeErr(false) }} error={agreeErr} />
+      <button type="button" className="sx-btn" style={{ marginTop: 16 }} onClick={finishTerms} disabled={accepting}>
+        {accepting ? <Loader2 size={18} className="animate-spin" /> : <>Continue<ArrowRight size={17} strokeWidth={2.4} /></>}
+      </button>
+      <div className={phone ? 'pa-alt' : 'sx-center-note'}><button type="button" className="sx-link" onClick={switchAccount}>Use a different account</button></div>
+    </>
+  ) : codeStep ? (
+    <>
+      <span className={`sx-big-ico sx-big-ico--ok${phone ? ' pa-center-ico' : ''}`}><ShieldCheck size={24} strokeWidth={2} /></span>
+      <h2>Two-step check</h2>
+      <p className="sx-card-sub">Open your authenticator app and enter the 6-digit code for Ohvara.</p>
+      <div style={{ marginTop: 20 }}>
+        <CodeBoxes value={code} onChange={setCode} onComplete={verifyCode} autoFocus disabled={verifying} invalid={!!codeError} height={58} />
+      </div>
+      {codeError && <AuAlert>{codeError}</AuAlert>}
+      <button type="button" className="sx-btn" style={{ marginTop: 20 }} onClick={() => verifyCode()} disabled={verifying || code.length !== 6}>
+        {verifying ? <Loader2 size={18} className="animate-spin" /> : 'Verify'}
+      </button>
+      <div className={phone ? 'pa-alt' : 'sx-center-note'}><button type="button" className="sx-link" onClick={switchAccount}>Use a different account</button></div>
+    </>
+  ) : forgotMode ? (
+    <>
+      <button type="button" className="sx-link sx-link--back" onClick={() => { setForgotMode(false); setResetSent(false); setResetError('') }}>
+        <ArrowLeft size={16} strokeWidth={2.2} />Back to sign in
+      </button>
+      <h2 style={{ marginTop: 10 }}>{resetSent ? 'Check your email' : 'Reset your password'}</h2>
+      <p className="sx-card-sub">
+        {resetSent
+          ? <>We sent a link to <strong>{resetEmail.trim()}</strong>.</>
+          : 'Type the email you joined with and we’ll send you a link to set a new password.'}
+      </p>
+      {resetSent ? (
+        <>
+          <div className="sx-ok" role="status">
+            <span className="sx-ok-ico"><MailCheck size={22} strokeWidth={2} /></span>
+            <span>If that email has an Ohvara account, a reset link is on its way. It works for 1 hour.</span>
+          </div>
+          <button type="button" className="sx-btn sx-btn--ghost" style={{ marginTop: 16 }}
+            onClick={() => { setForgotMode(false); setResetSent(false) }}>Back to sign in</button>
+        </>
+      ) : (
+        <form onSubmit={handleReset} onFocus={keepSubmitVisible} noValidate>
+          {resetError && <AuAlert>{resetError}</AuAlert>}
+          <AuField first label="Email" icon={Mail} type="email" inputMode="email" name="email" autoComplete="email"
+            autoCapitalize="none" spellCheck={false} value={resetEmail} onChange={e => setResetEmail(e.target.value)}
+            placeholder={phone ? 'Email' : 'you@email.com'} autoFocus={!isNativeApp()} error={!!resetError} />
+          <Captcha onToken={setCaptcha} api={captchaApi} />
+          <button type="submit" className="sx-btn" style={{ marginTop: phone ? 12 : 20 }} disabled={resetSending}>
+            {resetSending ? <><Loader2 size={18} className="animate-spin" />Sending…</> : 'Send reset link'}
+          </button>
+        </form>
+      )}
+    </>
+  ) : (
+    <form onSubmit={handleSubmit} onFocus={keepSubmitVisible} noValidate>
+      <h2>Welcome back</h2>
+      {!phone && <p className="sx-card-sub">Sign in to your Ohvara account.</p>}
+      {deleted && <div className="sx-note" role="status">Your account was deleted. Thanks for working with Ohvara.</div>}
+      {limitText && <div className="sx-note" role="status">{limitText}</div>}
+      {error && <AuAlert>{error}</AuAlert>}
+      <AuField first label="Email" icon={Mail} type="text" inputMode="email" name="email" autoComplete="username"
+        autoCapitalize="none" autoCorrect="off" spellCheck={false} value={identifier}
+        onChange={e => setIdentifier(e.target.value)} placeholder={phone ? 'Email' : 'you@email.com'} autoFocus={!phone} error={wrong} />
+      <PasswordField label="Password" icon={Lock} name="password" autoComplete="current-password"
+        value={password} onChange={e => setPassword(e.target.value)} placeholder={phone ? 'Password' : 'Your password'} error={wrong} />
+      {phone
+        ? <div className="pa-forgot"><button type="button" className="sx-link" onClick={openForgot}>Forgot password?</button></div>
+        : <button type="button" className="sx-link sx-link--forgot" onClick={openForgot}>Forgot password?</button>}
+      {!phone && (
+        <div><AuCheck checked={keep} onChange={setKeep}>Keep me signed in</AuCheck></div>
+      )}
+      <Captcha onToken={setCaptcha} api={captchaApi} />
+      <button type="submit" className="sx-btn" disabled={submitting || (loading && !!session)}>
+        {submitting ? <><Loader2 size={18} className="animate-spin" />Signing in…</>
+          : loading && session ? 'Loading…'
+          : phone ? 'Sign in' : <>Sign in<ArrowRight size={17} strokeWidth={2.4} /></>}
+      </button>
+      <SocialButtons phone={phone} onError={setError} />
+      {phone ? (
+        <p className="pa-alt">New to Ohvara? <Link to="/signup">Create account</Link></p>
+      ) : (
+        <div className="sx-invite-note lg-join">
+          New agent? <Link to="/signup">Create an account</Link>
+          <small>VAs and admins join by invite from Ohvara.</small>
+        </div>
+      )}
+    </form>
+  )
+
+  if (phone) return <PhoneAuthPage label={label}>{body}</PhoneAuthPage>
 
   return (
     <div className="lg-page">
@@ -227,98 +378,16 @@ export default function Login() {
       <header className="lg-top">
         <span className="lg-brand">
           <OhvaraMark height={36} back="var(--sh-mark-back)" front="var(--sh-mark-front)" />
-          {/* P983: the app is just "Ohvara"; the desktop page keeps "Ohvara Portal". */}
-          {isNativeApp()
-            ? <span className="lg-brand-name">Ohvara</span>
-            : <><span className="lg-brand-name lg-name-web">Ohvara Portal</span><span className="lg-brand-name lg-name-phone">Ohvara</span></>}
+          <span className="lg-brand-name lg-name-web">Ohvara Portal</span><span className="lg-brand-name lg-name-phone">Ohvara</span>
         </span>
       </header>
       <main className="lg-main">
       <div className="lg-side lg-side--story"><Story /></div>
       <div className="lg-mid">
-      <section className="lg-card" aria-label={codeStep ? 'Two-step check' : forgotMode ? 'Reset your password' : 'Sign in'}>
-        {codeStep ? (
-          <>
-            <span className="sx-big-ico sx-big-ico--ok"><ShieldCheck size={24} strokeWidth={2} /></span>
-            <h2>Two-step check</h2>
-            <p className="sx-card-sub">Open your authenticator app and enter the 6-digit code for Ohvara.</p>
-            <div style={{ marginTop: 20 }}>
-              <CodeBoxes value={code} onChange={setCode} onComplete={verifyCode} autoFocus disabled={verifying} invalid={!!codeError} height={58} />
-            </div>
-            {codeError && <AuAlert>{codeError}</AuAlert>}
-            <button type="button" className="sx-btn" style={{ marginTop: 20 }} onClick={() => verifyCode()} disabled={verifying || code.length !== 6}>
-              {verifying ? <Loader2 size={18} className="animate-spin" /> : 'Verify'}
-            </button>
-            <div className="sx-center-note"><button type="button" className="sx-link" onClick={switchAccount}>Use a different account</button></div>
-          </>
-        ) : forgotMode ? (
-          <>
-            <button type="button" className="sx-link sx-link--back" onClick={() => { setForgotMode(false); setResetSent(false); setResetError('') }}>
-              <ArrowLeft size={16} strokeWidth={2.2} />Back to sign in
-            </button>
-            <h2 style={{ marginTop: 10 }}>{resetSent ? 'Check your email' : 'Reset your password'}</h2>
-            <p className="sx-card-sub">
-              {resetSent
-                ? <>We sent a link to <strong>{resetEmail.trim()}</strong>.</>
-                : 'Type the email you joined with and we’ll send you a link to set a new password.'}
-            </p>
-            {resetSent ? (
-              <>
-                <div className="sx-ok" role="status">
-                  <span className="sx-ok-ico"><MailCheck size={22} strokeWidth={2} /></span>
-                  <span>If that email has an Ohvara account, a reset link is on its way. It works for 1 hour.</span>
-                </div>
-                <button type="button" className="sx-btn sx-btn--ghost" style={{ marginTop: 16 }}
-                  onClick={() => { setForgotMode(false); setResetSent(false) }}>Back to sign in</button>
-              </>
-            ) : (
-              <form onSubmit={handleReset} onFocus={keepSubmitVisible} noValidate>
-                {resetError && <AuAlert>{resetError}</AuAlert>}
-                <AuField first label="Email" icon={Mail} type="email" inputMode="email" name="email" autoComplete="email"
-                  autoCapitalize="none" spellCheck={false} value={resetEmail} onChange={e => setResetEmail(e.target.value)}
-                  placeholder="you@email.com" autoFocus error={!!resetError} />
-                <button type="submit" className="sx-btn" style={{ marginTop: 20 }} disabled={resetSending}>
-                  {resetSending ? <><Loader2 size={18} className="animate-spin" />Sending…</> : 'Send reset link'}
-                </button>
-              </form>
-            )}
-          </>
-        ) : (
-          <form onSubmit={handleSubmit} onFocus={keepSubmitVisible} noValidate>
-            <h2>Welcome back</h2>
-            <p className="sx-card-sub">Sign in to your Ohvara account.</p>
-            {deleted && <div className="sx-note" role="status">Your account was deleted. Thanks for working with Ohvara.</div>}
-            {limitText && <div className="sx-note" role="status">{limitText}</div>}
-            {error && <AuAlert>{error}</AuAlert>}
-            <AuField first label="Email" icon={Mail} type="text" inputMode="email" name="email" autoComplete="username"
-              autoCapitalize="none" autoCorrect="off" spellCheck={false} value={identifier}
-              onChange={e => setIdentifier(e.target.value)} placeholder="you@email.com" autoFocus={!isNativeApp()} error={wrong} />
-            <PasswordField label="Password" icon={Lock} name="password" autoComplete="current-password"
-              value={password} onChange={e => setPassword(e.target.value)} placeholder="Your password" error={wrong} />
-            <button type="button" className="sx-link sx-link--forgot" onClick={openForgot}>Forgot password?</button>
-            {!isNativeApp() && (
-              <div><AuCheck checked={keep} onChange={setKeep}>Keep me signed in</AuCheck></div>
-            )}
-            <button type="submit" className="sx-btn" disabled={submitting || (loading && !!session)}>
-              {submitting ? <><Loader2 size={18} className="animate-spin" />Signing in…</>
-                : loading && session ? 'Loading…'
-                : <>Sign in<ArrowRight size={17} strokeWidth={2.4} /></>}
-            </button>
-            {/* P895: agents sign up themselves (Q57). DRAFT wording. The phone app never shows sign-up. */}
-            <div className="sx-invite-note lg-join">
-              {isNativeApp()
-                ? <>New agents sign up on the Ohvara website.</>
-                : <>New agent? <Link to="/signup">Create an account</Link></>}
-              <small>VAs and admins join by invite from Ohvara.</small>
-            </div>
-          </form>
-        )}
-      </section>
-      {!isNativeApp() && (
-        <a href="https://ohvara.com/app" className="lg-getapp">
-          <span className="lg-getapp-ico"><AppGlyph /></span>Get the phone app
-        </a>
-      )}
+      <section className="lg-card" aria-label={label}>{body}</section>
+      <a href="https://ohvara.com/app" className="lg-getapp">
+        <span className="lg-getapp-ico"><AppGlyph /></span>Get the phone app
+      </a>
       </div>
       <div className="lg-side lg-side--flow"><FlowSample /></div>
       </main>

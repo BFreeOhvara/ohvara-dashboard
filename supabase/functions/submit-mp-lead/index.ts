@@ -15,6 +15,7 @@
 // live in core.ts; this wires the database.
 import { createClient } from 'npm:@supabase/supabase-js'
 import { clientIp, handle, Limiter, MP_LEAD_TYPE, type Deps } from './core.ts'
+import { overLimit } from '../_shared/rateHit.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -54,7 +55,11 @@ Deno.serve(async req => {
   try { body = await req.json() } catch { return json({ error: 'Invalid request body' }, 400) }
   if (!body || typeof body !== 'object' || Array.isArray(body)) return json({ error: 'Invalid request body' }, 400)
   try {
-    const r = await handle(deps, body as Record<string, unknown>, clientIp(req.headers))
+    // P999: the in-memory limit resets per instance; this one holds across them. Over it gets the same answer as a
+    // good lead (core.ts never tells a bot it was dropped).
+    const ip = clientIp(req.headers)
+    if (await overLimit(db, 'mp-lead-ip', ip, 5, 3600)) return json({ ok: true })
+    const r = await handle(deps, body as Record<string, unknown>, ip)
     return json(r.body, r.status)
   } catch (err) {
     // Error text only: never the phone, name or IP.

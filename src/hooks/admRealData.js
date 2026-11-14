@@ -35,7 +35,7 @@ export async function loadAdmin(sb, clock) {
   const lastMonthStart = (() => { const [y, m] = clock.monthStartIso.split('-').map(Number); return m === 1 ? `${y - 1}-12-01` : `${y}-${String(m - 1).padStart(2, '0')}-01` })()
   const dayBefore = iso => new Date(Date.parse(`${iso}T12:00:00Z`) - 864e5).toISOString().slice(0, 10)
   const [profiles, leadSettings, onDuty, accounts, invites, leads, unassigned, policies, steps, threads, messages, bugs, audit, app, rc,
-    campaigns, costsWeek, costsMonth, costsLast, runs, ticks, dayOff, ghl, keySaved, launch, history] = await Promise.all([
+    campaigns, costsWeek, costsMonth, costsLast, runs, ticks, dayOff, ghl, keySaved, launch, history, activity] = await Promise.all([
     src('people', sb.rpc('admin_list_profiles'), [], failed),
     src('lead settings', sb.from('agent_lead_settings').select('agent_id, active, states'), [], failed),
     src('on duty', sb.rpc('on_duty_agents'), [], []),
@@ -63,12 +63,13 @@ export async function loadAdmin(sb, clock) {
     src('launch checks', sb.rpc('admin_launch_view'), [], []), // P915: the server's launch checks + last GoHighLevel send
     // P942: 91 days of leads for the Overview leads chart (This week / 30 days / 3 months) and the Leads board's All
     src('lead history', sb.from('leads').select(COLS_LEAD).in('lead_type', ['mortgage_protection', 'policy_help']).gte('created_at', new Date(Date.now() - 92 * 864e5).toISOString()).order('created_at').limit(5000), [], []),
+    src('agent activity', sb.rpc('admin_agent_activity'), [], []), // P999: hides sign-ups that did nothing
   ])
   const leadIds = [...leads, ...unassigned].map(l => l.id)
   const intake = leadIds.length ? await src('intake', sb.from('lead_intake').select('lead_id, routing, meta_option, agent_ref, campaign_id').in('lead_id', leadIds.slice(0, 300)), [], []) : []
   return {
     profiles, leadSettings, onDuty: (onDuty || []).map(r => r.agent_id || r.id).filter(Boolean), accounts, invites, leads, unassigned, intake, policies, steps,
-    threads, messages: (messages || []).slice().reverse(), bugs, audit, app, rc, campaigns, costsWeek, costsMonth, costsLast, runs, ticks, dayOff, ghl, keySaved, launch, history, failed: [...new Set(failed)],
+    threads, messages: (messages || []).slice().reverse(), bugs, audit, app, rc, campaigns, costsWeek, costsMonth, costsLast, runs, ticks, dayOff, ghl, keySaved, launch, history, activity, failed: [...new Set(failed)],
   }
 }
 

@@ -344,7 +344,12 @@ export function buildAdmState(raw = {}, { now = Date.now(), clock = realClock(no
   const profiles = (raw.profiles || []).filter(p => !p.deleted_at && !p.is_demo && !isTestProfile(p))
   const settings = raw.leadSettings || []
   const plansIdx = base.plans || {}
-  const agents = profiles.filter(p => p.role === 'agent').map(p => toAgent(p, { settings, onDuty: raw.onDuty || [], plans: plansIdx }))
+  // P999: a self-signup the server calls neither paying nor active is left out of every admin list and number (shown
+  // only under "Signed up, not active"). No activity answer = everyone shows (never hide a real agent on an error).
+  const activity = Object.fromEntries((raw.activity || []).map(r => [r.agent_id, r]))
+  const idle = p => p.signup_source === 'self' && !!activity[p.id] && !activity[p.id].paying && !activity[p.id].active
+  const agents = profiles.filter(p => p.role === 'agent' && !idle(p)).map(p => toAgent(p, { settings, onDuty: raw.onDuty || [], plans: plansIdx }))
+  const idleSignups = profiles.filter(p => p.role === 'agent' && idle(p)).map(p => ({ ...toAgent(p, { settings, onDuty: [], plans: plansIdx }), idle: true }))
   const vas = profiles.filter(p => p.role === 'fulfillment').map(p => toVa(p, { accounts: raw.accounts || [] }))
   const intake = Object.fromEntries((raw.intake || []).map(i => [i.lead_id, i]))
   const seen = new Set()
@@ -360,7 +365,7 @@ export function buildAdmState(raw = {}, { now = Date.now(), clock = realClock(no
   const dayOff = (raw.dayOff || []).filter(r => notTest(r.va_id)).map(r => ({ id: r.id, va_id: r.va_id, date: Number(String(r.off_date || '').slice(8, 10)) || null, reason: r.reason || '', asked: whenText(r.created_at, now), status: r.status || 'pending' }))
   const audit = (raw.audit || []).map(r => toAudit(r, now))
   const mapped = new Set((raw.campaigns || []).filter(c => c.agent_id).map(c => c.agent_id))
-  const agentProfiles = profiles.filter(p => p.role === 'agent')
+  const agentProfiles = profiles.filter(p => p.role === 'agent' && !idle(p))
   const ticks = raw.ticks || []
   const onboard = agentProfiles.filter(p => !ticks.some(t => t.agent_id === p.id && t.step === 'live'))
     .map(p => toOnboard(p, { settings, ticks, mapped, ghl: raw.ghl, launch: Object.fromEntries((raw.launch || []).map(r => [r.agent_id, r])), now }))
@@ -374,7 +379,7 @@ export function buildAdmState(raw = {}, { now = Date.now(), clock = realClock(no
   const connect = connectOf(raw.ghl, raw.keySaved, campaigns)
   connect.ads[0].spent = Math.round(weekSpend)
   return {
-    agents, vas, invites: (raw.invites || []).map(r => toInvite(r, now)), leads, clients, steps, calls,
+    agents, idleSignups, vas, invites: (raw.invites || []).map(r => toInvite(r, now)), leads, clients, steps, calls,
     rota: {}, dayOff, cancels: [], runs, revenue: [], threads: toThreads(raw.threads || [], raw.messages || [], me?.id, now),
     feed: audit.slice(0, 8).map(a => ({ id: `f-${a.id}`, who: a.who, text: `${a.what}${a.target ? `: ${a.target}` : ''}`, at: a.at, kind: 'team' })),
     settings: {

@@ -19,6 +19,8 @@
 // deactivated-account check run exactly as after an email sign-in.
 
 import { createClient } from 'npm:@supabase/supabase-js'
+import { clientIp } from '../_shared/ipLimit.ts'
+import { overLimit } from '../_shared/rateHit.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -37,11 +39,12 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return json({ error: 'Not found' }, 404)
 
-  let username = '', password = ''
+  let username = '', password = '', captchaToken = ''
   try {
     const body = await req.json()
     username = String(body?.username ?? '').trim()
     password = String(body?.password ?? '')
+    captchaToken = String(body?.captcha_token ?? '') // P999: passed on when Supabase's bot check is on
   } catch {
     return refuse()
   }
@@ -51,6 +54,9 @@ Deno.serve(async (req) => {
   const admin = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
     auth: { persistSession: false, autoRefreshToken: false },
   })
+  // P999: 10 tries per IP and per username in 10 minutes, then the same refusal as a wrong password.
+  const ip = clientIp(req)
+  if (await overLimit(admin, 'username-ip', ip, 10, 600) || await overLimit(admin, 'username-name', username, 10, 600)) return refuse()
   const { data: profile } = await admin
     .from('profiles')
     .select('email')
@@ -63,7 +69,7 @@ Deno.serve(async (req) => {
   const auth = createClient(url, Deno.env.get('SUPABASE_ANON_KEY')!, {
     auth: { persistSession: false, autoRefreshToken: false },
   })
-  const { data, error } = await auth.auth.signInWithPassword({ email, password })
+  const { data, error } = await auth.auth.signInWithPassword({ email, password, options: captchaToken ? { captchaToken } : undefined })
   if (error || !data.session) return refuse()
 
   return json({

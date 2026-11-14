@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ChevronRight, MessageCircle, AlertTriangle, CreditCard } from 'lucide-react'
-import { useAdmAgents, useAdmClients, useAdmLeads, useAdmAudit, useAdmDay, useAdmSource, PLANS, chargeFor } from '../data'
+import { useAdmAgents, useAdmIdleSignups, useAdmClients, useAdmLeads, useAdmAudit, useAdmDay, useAdmSource, PLANS, chargeFor } from '../data'
 import { chipsText, planLineOf, planPriceOf } from '../products955'
 import { useAdmReactivation } from '../reactivation952'
 import { useApp, SubPage, Ini, CallButton, rise } from '../../template/m/AppKit'
@@ -18,7 +18,9 @@ export default function AAgents() {
   const [filter, setFilter] = useState('all')
   const need = agents.filter(a => flagOf(a)).length
   const fresh = agents.filter(a => isNew(a, day.todayIso)).length
-  const groups = agentGroups(agents, filter, day.todayIso)
+  const { data: idle = [] } = useAdmIdleSignups()
+  // P999: sign-ups that did nothing sit behind the small link under the tiles.
+  const groups = filter === 'idle' ? [{ key: 'idle', label: 'Signed up, not active', items: idle }] : agentGroups(agents, filter, day.todayIso)
   const tiles = [['all', 'All agents', agents.length], ['need', 'Need you', need], ['new', 'New this week', fresh]]
   return (
     <div className="ma-tabpage">
@@ -30,6 +32,11 @@ export default function AAgents() {
           </button>
         ))}
       </div>
+      {idle.length > 0 && (
+        <button type="button" className={`am-idle ma-press${filter === 'idle' ? ' is-on' : ''}`} aria-pressed={filter === 'idle'} onClick={() => setFilter(filter === 'idle' ? 'all' : 'idle')}>
+          Signed up, not active ({idle.length})
+        </button>
+      )}
       {groups.map((g, gi) => (
         <div key={g.key} className="ma-rise" style={rise(gi + 1)}>
           <div className="ma-h2"><h2>{g.label}</h2><span>{g.items.length}</span></div>
@@ -63,7 +70,9 @@ export default function AAgents() {
 }
 
 export function AAgent({ id }) {
-  const { data: agents } = useAdmAgents()
+  const { data: listed } = useAdmAgents()
+  const { data: idle = [] } = useAdmIdleSignups()
+  const agents = [...listed, ...idle] // P999: a "Signed up, not active" row opens here too
   const { data: clients } = useAdmClients()
   const { data: leads } = useAdmLeads()
   const { data: audit } = useAdmAudit()

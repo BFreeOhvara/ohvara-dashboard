@@ -156,3 +156,10 @@
   .lk-note { flex-wrap: wrap; }
   .lk-note .ov-ghost { width: 100%; }
 }
+
+/* P999 — the app's pick list: each row opens the plans on the website. */
+.lk-picks { padding: 6px; }
+.lk-pick { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px; border: 0; border-radius: 14px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.lk-pick:active { background: var(--ov-hl, rgba(127,127,127,.08)); }
+.lk-pick .lk-prodlist-t { flex: 1; min-width: 0; }
+.lk-pick-go { flex: none; color: var(--ov-mute); }

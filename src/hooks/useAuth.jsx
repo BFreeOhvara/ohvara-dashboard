@@ -214,7 +214,7 @@ export function AuthProvider({ children }) {
     }
   }
 
-  async function signIn(identifier, password) {
+  async function signIn(identifier, password, captchaToken = '') {
     // Sign-in is by email (Prompt 720). An @ in the input means "use as-is".
     // Usernames survive only for the three legacy accounts that already have
     // one (testagent11, brayden11, testfulfill11); no screen mentions them.
@@ -225,12 +225,12 @@ export function AuthProvider({ children }) {
     const input = identifier.trim()
     let authData
     if (input.includes('@')) {
-      const { data, error } = await supabase.auth.signInWithPassword({ email: input, password })
+      const { data, error } = await supabase.auth.signInWithPassword({ email: input, password, options: captchaToken ? { captchaToken } : undefined })
       if (error) throw error
       authData = data
     } else {
       const { data: tokens, error: fnErr } = await supabase.functions.invoke('username-sign-in', {
-        body: { username: input, password },
+        body: { username: input, password, captcha_token: captchaToken || undefined },
       })
       if (fnErr || !tokens?.access_token) throw new Error('Invalid login credentials')
       const { data, error } = await supabase.auth.setSession(tokens)

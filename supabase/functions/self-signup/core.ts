@@ -6,6 +6,8 @@
 // email already has an account. The role is always 'agent'; nothing in the
 // request can change it, and an account made here has no upline.
 
+import { isDisposableEmail } from '../_shared/disposable.ts'
+
 export const ROLE = 'agent'
 // Which terms the person agreed to. Stamped on the account; the text lives elsewhere.
 export const TERMS_VERSION = '2026-10-30'
@@ -28,6 +30,8 @@ export const MSG = {
   terms: 'Agree to the terms to continue',
   tooMany: 'Too many tries. Try again in an hour.',
   failed: "Couldn't create your account. Try a different password, or try again later.",
+  disposable: 'Use an email address you keep. Throwaway addresses can’t make an account.',
+  captcha: 'We couldn’t check you’re a person. Try again.',
 }
 
 export type Account = {
@@ -65,6 +69,8 @@ export type Deps = {
   now(): Date
   sleep(ms: number): Promise<void>
   log(msg: string): void
+  // P999: Cloudflare Turnstile. Present only when TURNSTILE_SECRET is set; then every sign-up must pass it.
+  verifyCaptcha?: (token: string, ip: string | null) => Promise<boolean>
 }
 
 export type Result = { status: number; body: Record<string, unknown> }
@@ -125,6 +131,15 @@ export async function handle(deps: Deps, ip: string | null, body: Record<string,
   const fullName = typeof body.full_name === 'string' ? body.full_name.trim() : ''
   const bad = invalid(body, fullName, email)
   if (bad) return { status: 400, body: { error: bad } }
+  if (isDisposableEmail(email)) return { status: 400, body: { error: MSG.disposable } }
+  if (deps.verifyCaptcha) {
+    const token = typeof body.captcha_token === 'string' ? body.captcha_token : ''
+    let passed = false
+    try { passed = !!token && await deps.verifyCaptcha(token, ip) } catch (err) {
+      deps.log(`captcha check failed: ${err instanceof Error ? err.message : 'error'}`)
+    }
+    if (!passed) return { status: 400, body: { error: MSG.captcha } }
+  }
 
   const now = deps.now()
   // No address to count against: refused, same as being over the limit.

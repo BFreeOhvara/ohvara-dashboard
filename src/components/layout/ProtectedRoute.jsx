@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { needsTerms } from '../../lib/oauth'
 
 export function ProtectedRoute({ children, allowedRoles }) {
   const { session, profile, loading, mfaRequired } = useAuth()
@@ -15,6 +16,8 @@ export function ProtectedRoute({ children, allowedRoles }) {
   if (!session) return <Navigate to="/login" replace />
   // Prompt 720 — password done, two-step code not yet: Login shows the code step.
   if (mfaRequired) return <Navigate to="/login" replace />
+  // P999: a first Google / Apple sign-in agrees to the terms on /login before anything opens.
+  if (needsTerms(profile)) return <Navigate to="/login" replace />
 
   if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
     // Redirect to their own dashboard

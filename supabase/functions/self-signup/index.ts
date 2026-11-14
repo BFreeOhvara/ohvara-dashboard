@@ -12,7 +12,7 @@
 // Secrets: FORM_IP_SALT (required: with none, every sign-up is refused rather
 // than storing a guessable hash), SELF_SIGNUP_TEST_EMAILS (optional, comma-
 // separated, works while sign-up is closed), RESEND_API_KEY + INVITE_FROM_EMAIL
-// (the confirm link, same sender as invites).
+// (the confirm link, same sender as invites). TURNSTILE_SECRET (optional, P999: the bot check).
 import { createClient } from 'npm:@supabase/supabase-js'
 import { sendConfirmEmail } from '../_shared/confirmEmail.ts'
 import { clientIp, hashIp } from '../_shared/ipLimit.ts'
@@ -78,6 +78,19 @@ const deps: Deps = {
   now: () => new Date(),
   sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
   log: m => console.error('[self-signup]', m),
+}
+// P999: with TURNSTILE_SECRET set, every sign-up must carry a passing Cloudflare Turnstile token.
+const turnstileSecret = Deno.env.get('TURNSTILE_SECRET') ?? ''
+if (turnstileSecret) {
+  deps.verifyCaptcha = async (token, ip) => {
+    const form = new FormData()
+    form.append('secret', turnstileSecret)
+    form.append('response', token)
+    if (ip) form.append('remoteip', ip)
+    const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: form })
+    const j = await r.json().catch(() => ({}))
+    return j?.success === true
+  }
 }
 
 Deno.serve(async req => {

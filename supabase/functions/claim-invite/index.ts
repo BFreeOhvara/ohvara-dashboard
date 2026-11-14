@@ -25,6 +25,8 @@
 //       2026-07-15).
 
 import { createClient } from 'npm:@supabase/supabase-js'
+import { clientIp } from '../_shared/ipLimit.ts'
+import { overLimit } from '../_shared/rateHit.ts'
 import { sendConfirmEmail } from '../_shared/confirmEmail.ts'
 
 const corsHeaders = {
@@ -72,6 +74,10 @@ Deno.serve(async (req) => {
   const { action, token } = body
   if (!token || typeof token !== 'string') {
     return json({ error: 'Missing invite token' }, 400)
+  }
+  // P999: 30 invite checks/claims per IP an hour (a guessing guard; real people use one link a few times).
+  if (await overLimit(adminClient, 'invite-ip', clientIp(req), 30, 3600)) {
+    return json({ error: 'Too many tries. Try again in an hour.' }, 429)
   }
 
   const { invite, reason } = await fetchInvite(adminClient, token)

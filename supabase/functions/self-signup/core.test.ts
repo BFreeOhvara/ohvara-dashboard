@@ -250,3 +250,30 @@ test('anything else is an unknown action', async () => {
   assert.equal((await handle(fake().d, IP, { action: 'nope' })).status, 400)
   assert.equal((await handle(fake().d, IP, {})).status, 400)
 })
+
+test('P999: throwaway email domains are refused before anything is written', async () => {
+  for (const email of ['bot@mailinator.com', 'x@sub.yopmail.com', 'a@GuerrillaMail.com']) {
+    const f = fake()
+    const r = await handle(f.d, IP, { ...good, email })
+    assert.equal(r.status, 400)
+    assert.equal(r.body.error, MSG.disposable)
+    assert.equal(f.attempts.length, 0)
+    assert.equal(f.created.length, 0)
+  }
+})
+
+test('P999: with the bot check on, a missing or failing token is refused; a passing one goes through', async () => {
+  const seen: string[] = []
+  const verifyCaptcha = async (token: string) => { seen.push(token); return token === 'pass' }
+  const none = fake({ verifyCaptcha })
+  assert.equal((await handle(none.d, IP, good)).body.error, MSG.captcha)
+  assert.equal(none.created.length, 0)
+  const bad = fake({ verifyCaptcha })
+  assert.equal((await handle(bad.d, IP, { ...good, captcha_token: 'nope' })).body.error, MSG.captcha)
+  const broke = fake({ verifyCaptcha: async () => { throw new Error('down') } })
+  assert.equal((await handle(broke.d, IP, { ...good, captcha_token: 'pass' })).body.error, MSG.captcha)
+  const ok = fake({ verifyCaptcha })
+  assert.equal((await handle(ok.d, IP, { ...good, captcha_token: 'pass' })).status, 200)
+  assert.equal(ok.created.length, 1)
+  assert.deepEqual(seen, ['nope', 'pass'])
+})

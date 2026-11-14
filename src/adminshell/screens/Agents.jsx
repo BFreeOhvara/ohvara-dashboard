@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Search, MapPin, MessageSquare, PhoneIncoming, BookUser, Radio, ShieldOff, ShieldCheck, Send, X, Mail, Smartphone } from 'lucide-react'
-import { useAdmAgents, useAdmLeads, useAdmInvites, useAdmActions, useAdmCosts, useAdmSettings, PLANS, chargeFor } from '../data'
+import { useAdmAgents, useAdmIdleSignups, useAdmLeads, useAdmInvites, useAdmActions, useAdmCosts, useAdmSettings, PLANS, chargeFor } from '../data'
 import { Avatar, Chip, Drawer, Empty, Seg, Switch, useNote } from '../../template/kit'
 import { RecordDrawer, Block } from '../../template/Record'
 import { usd } from '../../template/motion'
@@ -133,7 +133,9 @@ function PlanBudget({ a }) {
 }
 
 function AgentDrawer({ id, onClose }) {
-  const { data: agents } = useAdmAgents()
+  const { data: listed } = useAdmAgents()
+  const { data: idle = [] } = useAdmIdleSignups()
+  const agents = [...listed, ...idle] // P999: a "Signed up, not active" row opens here too
   const { data: leads } = useAdmLeads()
   const { setAgentActive, setServicing, setAccess, setRole } = useAdmActions()
   const note = useNote()
@@ -199,6 +201,7 @@ export default function Agents() {
   const navigate = useNavigate()
   const { data: agents } = useAdmAgents()
   const { data: invites } = useAdmInvites()
+  const { data: idle = [] } = useAdmIdleSignups()
   const { setAgentActive, resendInvite, cancelInvite } = useAdmActions()
   const note = useNote()
   const [q, setQ] = useState('')
@@ -206,7 +209,7 @@ export default function Agents() {
   const [sort, setSort] = useState('sold')
   const n = q.trim().toLowerCase()
   const keep = a => (show === 'all' || (show === 'duty' && a.active) || (show === 'booking' && hasLeads(a) && !a.active) || (show === 'due' && a.billing.status === 'past_due') || (show === 'paused' && a.paused))
-  const list = agents.filter(a => keep(a) && (!n || `${a.name} ${a.email} ${a.phone} ${a.city}`.toLowerCase().includes(n)))
+  const list = (show === 'idle' ? idle : agents).filter(a => (show === 'idle' || keep(a)) && (!n || `${a.name} ${a.email} ${a.phone} ${a.city}`.toLowerCase().includes(n)))
     .sort((x, y) => (sort === 'name' ? x.name.localeCompare(y.name) : sort === 'spend' ? y.spend - x.spend : (y.week[sort] - x.week[sort]) || x.name.localeCompare(y.name)))
   const out = invites.filter(i => i.role === 'agent')
   const openAgent = id => navigate(ap('agents', id))
@@ -218,6 +221,8 @@ export default function Agents() {
           { key: 'all', label: 'All', count: agents.length }, { key: 'duty', label: 'Take transfers', count: agents.filter(a => a.active).length },
           { key: 'booking', label: 'Booking only', count: agents.filter(a => hasLeads(a) && !a.active).length }, { key: 'due', label: 'Past due', count: agents.filter(a => a.billing.status === 'past_due').length },
           { key: 'paused', label: 'Leads paused', count: agents.filter(a => a.paused).length },
+          // P999: people who signed up and did nothing; hidden from every other view.
+          ...(idle.length ? [{ key: 'idle', label: 'Signed up, not active', count: idle.length }] : []),
         ]} />
         <span className="tp-grow" />
         <Dropdown className="adm-dd-sm" label="Sort" value={sort} options={SORTS} onChange={setSort} />

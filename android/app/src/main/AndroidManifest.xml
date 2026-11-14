@@ -27,6 +27,13 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="ohvara" android:host="transfer" />
             </intent-filter>
+            <!-- P999: Sign in with Apple / Google comes back on ohvara://auth -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="ohvara" android:host="auth" />
+            </intent-filter>
         </activity>
 
         <!-- P880: our service draws the live-transfer push with Yes / No and passes everything else to

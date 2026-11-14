@@ -12,6 +12,7 @@
 // - Online / offline for the offline screen.
 // - Over-the-air web updates (ota.js).
 import { App } from '@capacitor/app'
+import { listenNativeOAuth } from './oauth'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { Keyboard } from '@capacitor/keyboard'
 import { Network } from '@capacitor/network'
@@ -92,4 +93,5 @@ export function bootNative() {
   Network.addListener('networkStatusChange', s => setOnline(s.connected))
 
   startOta()
+  listenNativeOAuth() // P999: Apple / Google sign-in comes back on ohvara://auth
 }
