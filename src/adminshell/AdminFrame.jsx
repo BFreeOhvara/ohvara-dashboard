@@ -4,13 +4,14 @@ import {
   Home, Users, Headset, PhoneIncoming, BookUser, Landmark, Plug, Settings, Search, Bell, Sun, Moon, MessageSquare, ChevronRight, LogOut,
   Ellipsis, CircleHelp, Mail, Keyboard, UserPlus, Shuffle, Bug, History, TriangleAlert, Wallet, CalendarDays, CalendarOff,
   ShieldCheck, PhoneForwarded, CircleDollarSign, CheckCircle2, Radio, Link2, Copy, Plus, Rocket, BadgeCheck, Hourglass,
-  PhoneCall, Scale,
+  PhoneCall, Scale, Smartphone,
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
 import { useIsTestAccount } from '../hooks/useIsTestAccount'
 import { Drawer, Avatar, Field, Seg, PillTabs, useAccount, useNote, initials } from '../template/kit'
 import ViewToggle from '../template/ViewToggle'
 import { ReportBug } from '../template/ReportBug'
+import { GetApp } from '../template/TemplateFrame'
 import { avatarHue } from '../template/avatarHue'
 import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit, useKeep } from '../template/motion'
 import { armEntrance } from './entrance'
@@ -114,7 +115,7 @@ function Help({ open, onClose, onBug }) {
 }
 
 // The avatar menu: theme, account pages, sign out (P919: no way back to the old admin pages).
-function AccountMenu({ open, onClose, theme, setTheme }) {
+function AccountMenu({ open, onClose, theme, setTheme, onApp }) {
   const account = useAccount()
   const note = useNote()
   useEffect(() => {
@@ -134,6 +135,8 @@ function AccountMenu({ open, onClose, theme, setTheme }) {
         <header className="fx-menu-h"><span className={`fx-av av-${avatarHue(name)}`}>{initials(name).toUpperCase()}</span><span className="tp-grow"><b>{name}</b><small>Admin · owner</small></span></header>
         <button type="button" className="fx-mrow" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}<b className="tp-grow">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</b></button>
         <ViewToggle />
+        {/* P1001: Get the phone app, as the agent and VA menus have it */}
+        <button type="button" className="fx-mrow" onClick={() => { onClose(); onApp() }}><Smartphone size={17} aria-hidden="true" /><b className="tp-grow">Get the phone app</b></button>
         <i className="fx-mline" />
         {links.map(([k, label, Icon]) => <Link key={k} to={ap(k)} className="fx-mrow" onClick={onClose}><Icon size={17} aria-hidden="true" /><b className="tp-grow">{label}</b><ChevronRight size={15} aria-hidden="true" /></Link>)}
         <i className="fx-mline" />
@@ -282,6 +285,7 @@ export default function AdminFrame() {
         <NavLink to={ap('numbers')} className="fx-ri tp-wig" aria-label="Deedstone numbers" data-tip="Deedstone numbers and VA pods" {...wig}><PhoneCall size={18} /></NavLink>
         <NavLink to={ap('compliance')} className="fx-ri tp-wig" aria-label="Compliance" data-tip="Compliance" {...wig}><Scale size={18} /></NavLink>
         <i className="fx-hair" />
+        <button type="button" className="fx-ri tp-wig" aria-label="Get the phone app" aria-expanded={panel === 'app'} data-tip="Get the phone app" {...wig} onClick={open('app')}><Smartphone size={18} /></button>
         <button type="button" className="fx-ri tp-wig" aria-label="Help and support" aria-expanded={panel === 'help'} data-tip="Help and support" {...wig} onClick={open('help')}><CircleHelp size={18} /></button>
         <NavLink to={ap('settings')} className="fx-ri tp-wig" aria-label="Settings" data-tip="Settings" {...wig}><Settings size={18} /></NavLink>
         <button type="button" className="fx-ri tp-wig" aria-label="Switch theme" data-tip={theme === 'dark' ? 'Light mode' : 'Dark mode'} {...wig} onClick={flipTheme}>{theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</button>
@@ -325,7 +329,8 @@ export default function AdminFrame() {
       <RouteLeadDrawer open={panel === 'route'} onClose={close} />
       <Help open={panel === 'help'} onClose={close} onBug={() => setPanel('bug')} />
       <ReportBug open={panel === 'bug'} onClose={close} role="Admin" />
-      <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} />
+      <AccountMenu open={panel === 'menu'} onClose={close} theme={theme} setTheme={setTheme} onApp={() => setPanel('app')} />
+      <GetApp open={panel === 'app'} onClose={close} />
       <MoreBelow page={layout} />
     </div>
   )

@@ -120,7 +120,7 @@ function SearchSuggest({ onPick }) {
           <div className="ma-glass ma-list">
             {watch.map(a => {
               const f = flagOf(a)
-              return <Row key={a.id} onClick={() => app.openSub('agent', { t: a.id })} lead={<Ini name={a.name} tone="sky" size={40} />} title={a.name} sub={<span className={f ? 'am-warn' : ''}>{f ? f.title : statusLine(a)}</span>} />
+              return <Row key={a.id} onClick={() => app.openSub('agent', { t: a.id })} lead={<Ini person name={a.name} size={40} />} title={a.name} sub={<span className={f ? 'am-warn' : ''}>{f ? f.title : statusLine(a)}</span>} />
             })}
           </div>
         </div>
@@ -129,7 +129,7 @@ function SearchSuggest({ onPick }) {
         <div className="ma-h2 am-sh2"><h2>VAs on shift now</h2><button type="button" className="ma-textbtn" onClick={() => app.goTab('team')}>Team</button></div>
         {day.onShift.length > 0 ? (
           <div className="ma-glass ma-list">
-            {day.onShift.map(v => <Row key={v.id} onClick={() => app.openSub('va', { t: v.id })} lead={<Ini name={v.name} tone="sage" size={40} />} title={v.name} sub="On shift now" />)}
+            {day.onShift.map(v => <Row key={v.id} onClick={() => app.openSub('va', { t: v.id })} lead={<Ini person name={v.name} size={40} />} title={v.name} sub="On shift now" />)}
           </div>
         ) : <p className="ma-empty is-glass">Nobody is on shift right now.</p>}
       </div>
@@ -162,7 +162,7 @@ export function AssignSheet({ leads, onClose, current = null }) {
       <div className="am-sheetlist">
         {list.map(a => (
           <button key={a.id} type="button" className={`ma-pick${a.id === current ? ' is-on' : ''}`} onClick={() => give(a)} disabled={a.id === current}>
-            <Ini name={a.name} tone="sky" size={40} />
+            <Ini person name={a.name} size={40} />
             <span className="ma-grow"><b>{a.name}{a.id === current ? ' · has it now' : ''}</b><small>{a.states?.join(', ')} · <span className="tp-money">{money(a.spend)}</span> a day</small></span>
           </button>
         ))}

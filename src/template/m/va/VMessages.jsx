@@ -20,24 +20,24 @@ import { useVaThreads, dmStore, VaStandingCtx } from './vaStore'
 // drag down to drop the keyboard. Real: support and VA DMs are standing threads (direct_messages).
 const titleOf = t => (isSupport(t) ? 'Ohvara support' : t.va ? t.name : t.agent)
 const aboutOf = t => (isSupport(t) ? 'Ohvara Support · schedule, pay, anything' : t.va ? 'VA' : `Agent · about ${t.name}`)
-const toneOf = t => (isSupport(t) ? 'stone' : t.va ? 'sage' : 'sky')
 const whoOf = (t, m) => (m.from === 'me' ? 'You' : t.va ? firstName(t.name) : isSupport(t) ? 'Ohvara' : firstName(t.agent))
 const lastOf = t => t.last || t.messages?.at(-1)
 const emptyLine = t => (isSupport(t) ? 'Write to Ohvara Support' : t.va ? `Say hi to ${firstName(t.name)}` : 'No messages yet')
 
 export default function VMessages() {
   const app = useApp()
-  const threads = useVaThreads()
+  // P1001: the phone matches the desktop (the reference): Ohvara support and the agent threads, no VA-to-VA chat.
+  const threads = useVaThreads().filter(t => !t.va)
   return (
     <div className="ma-tabpage">
-      <div className="ma-top ma-rise"><span className="ma-grow"><h1>Messages</h1><small>Ohvara, your team and agents</small></span></div>
+      <div className="ma-top ma-rise"><span className="ma-grow"><h1>Messages</h1><small>Ohvara and your agents</small></span></div>
       <div className="ma-threads ma-rise" style={rise(0)}>
         {threads.map(t => {
           const last = lastOf(t)
           const unread = t.unread > 0
           return (
             <button key={t.id} type="button" className={`ma-thread va-thread${unread ? ' is-unread' : ''}${isSupport(t) ? ' is-pinned' : ''}`} onClick={() => app.openSub('thread', { t: t.id })}>
-              <Ini name={titleOf(t)} tone={toneOf(t)} size={48} />
+              <Ini person name={titleOf(t)} size={48} />
               <span className="ma-grow">
                 <span className="ma-thread-top"><b>{titleOf(t)}</b><small>{shortAt(last?.at)}</small></span>
                 <small className="va-about">{aboutOf(t)}</small>

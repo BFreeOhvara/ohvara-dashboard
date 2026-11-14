@@ -1332,3 +1332,14 @@ button.fx-step:hover { color: var(--ov-hi); background: color-mix(in srgb, var(-
   color: var(--ov-badge-fg); background: var(--ov-badge-bg); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; opacity: 1;
   display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;
 }
+
+/* P1001 — one colour per person on every avatar shape: the account menu's (.fx-av), Settings' big one (.fx-prof-av),
+   the phone pages' "me" circle (.mx-me) and phone avatars of agents, VAs and admins (.ma-ini av-*), the same fill and
+   ink as the top-right circle (avatarHue: the person's user id when known). */
+:is(.fx-av, .fx-prof-av, .mx-me, .ma-ini).av-sky { --av: var(--sh-f-sky); --avi: var(--sh-fi-sky); }
+:is(.fx-av, .fx-prof-av, .mx-me, .ma-ini).av-apricot { --av: var(--sh-f-apricot); --avi: var(--sh-fi-apricot); }
+:is(.fx-av, .fx-prof-av, .mx-me, .ma-ini).av-sage { --av: var(--sh-f-sage); --avi: var(--sh-fi-sage); }
+:is(.fx-av, .fx-prof-av, .mx-me, .ma-ini).av-butter { --av: var(--sh-f-butter); --avi: var(--sh-fi-butter); }
+:is(.fx-av, .fx-prof-av, .mx-me, .ma-ini)[class*="av-"]:is(.av-sky, .av-apricot, .av-sage, .av-butter):not(.ov-support-av):not(.has-photo) {
+  color: var(--avi); background-color: var(--av);
+}

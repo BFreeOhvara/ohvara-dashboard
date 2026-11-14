@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom'
 import { ChevronRight, ChevronLeft, Phone, LogOut } from 'lucide-react'
 import { useSampleActions, useSampleAppointments, useSampleSettings, useSampleBilling } from '../data'
 import { useNote, useAccount } from '../kit'
+import { avatarHue, isSupportPerson } from '../avatarHue'
+import { SupportAvatar } from '../../components/ui/SupportAvatar'
 import { useExit, still } from '../motion'
 import { resultsFor, followUpPick } from '../agentView'
 import { whenLabel, clockNow } from '../leadLifecycle'
@@ -77,9 +79,13 @@ export function Toggle({ on, label, onChange, small = false, tone, disabled }) {
 }
 
 // Initials in a circle, or the agent's photo when they've added one (P974).
-export const Ini = ({ name, tone, size = 46, className = '', photo }) => (
-  <span className={`ma-ini${tone ? ` is-${tone}` : ''}${photo ? ' has-photo' : ''} ${className}`} style={{ '--s': `${size}px` }} aria-hidden="true">{photo ? <img src={photo} alt="" /> : initialsOf(name)}</span>
-)
+// P1001: `person` (an agent, VA or admin) = that person's one colour, the same as on the desktop (avatarHue, by user id
+// when known), never a role or status tone. Ohvara Support is always the logo.
+export const Ini = ({ name, tone, size = 46, className = '', photo, person = false, id = null }) => {
+  if (!photo && isSupportPerson(name)) return <SupportAvatar className={`ma-ini ${className}`} style={{ '--s': `${size}px` }} />
+  const look = person ? ` av-${avatarHue(name, id)}` : tone ? ` is-${tone}` : ''
+  return <span className={`ma-ini${look}${photo ? ' has-photo' : ''} ${className}`} style={{ '--s': `${size}px` }} aria-hidden="true">{photo ? <img src={photo} alt="" /> : initialsOf(name)}</span>
+}
 
 // A row in a glass list: something on the left, a title and a line, a chevron. A link, a button or plain.
 export function Row({ to, onClick, lead, title, sub, right, chev = true, className = '', state, label }) {

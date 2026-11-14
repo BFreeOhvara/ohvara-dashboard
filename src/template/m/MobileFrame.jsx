@@ -209,7 +209,7 @@ function Frame() {
                   const Page = TAB_PAGE[k]
                   const near = Math.abs(i - idx) <= 1 || k === 'home'
                   return (
-                    <section key={k} className={`ma-page${i === idx ? ' is-on' : ''}`} data-ma-tab={k} data-ma-scroll aria-hidden={i !== idx} inert={i !== idx ? '' : undefined} aria-label={TAB_LABEL[k]}>
+                    <section key={k} className={`ma-page${i === idx ? ' is-on' : ''}`} data-ma-tab={k} data-ma-scroll aria-hidden={i !== idx} inert={i !== idx || undefined} aria-label={TAB_LABEL[k]}>
                       {near || i === idx ? <Page /> : null}
                       {k === tab && !isTest && source === 'sample' && <p className="ma-sample">Sample info. Changes reset when you reload.</p>}
                     </section>
@@ -224,7 +224,7 @@ function Frame() {
           return (
             <div key={L.key} ref={top ? topRef : undefined}
               className={`ma-layer-r${top ? '' : ' is-under'}${top && enter ? ' is-enter' : ''}${top && leaving ? ' is-leaving' : ''}`}
-              aria-hidden={!top && !notif ? true : undefined} inert={!top && !notif ? '' : undefined}
+              aria-hidden={!top && !notif ? true : undefined} inert={(!top && !notif) || undefined}
               onClickCapture={top ? swipeR.onClickCapture : undefined}>
               <SubScreen route={L.route} root={!top} nested={L.nested} />
             </div>
@@ -239,7 +239,7 @@ function Frame() {
           </>
         )}
 
-        <nav className={`ma-tabbar${hideBar ? ' is-hidden' : ''}`} aria-label="Pages" ref={barRef} aria-hidden={hideBar} inert={hideBar ? '' : undefined} style={{ '--n': tabs.length, '--p': idx }}>
+        <nav className={`ma-tabbar${hideBar ? ' is-hidden' : ''}`} aria-label="Pages" ref={barRef} aria-hidden={hideBar} inert={hideBar || undefined} style={{ '--n': tabs.length, '--p': idx }}>
           <i className="ma-tab-hl" aria-hidden="true" />
           {tabs.map(k => {
             const Icon = TAB_ICON[k]
@@ -249,7 +249,7 @@ function Frame() {
             return (
               <button key={k} type="button" className={`ma-tab${on ? ' is-on' : ''}`} aria-label={label} aria-current={on ? 'page' : undefined} onClick={() => goTab(k)}>
                 {k === 'account'
-                  ? <Ini name={account.name} tone="sky" size={32} className="ma-tab-me" />
+                  ? <Ini person name={account.name} id={account.id} size={32} className="ma-tab-me" />
                   : <Icon size={25} strokeWidth={on ? 2.2 : 1.9} aria-hidden="true" />}
                 {badge > 0 && <span className="ma-badge is-tab">{badge}</span>}
               </button>

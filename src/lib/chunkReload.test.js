@@ -74,3 +74,27 @@ test('every crash panel reloads fresh and the panel is outside every motion gate
   assert.match(css, /\.ov-crash, \.ov-crash \* \{ animation: none !important/)
   assert.match(css, /\.ov-crash \{ opacity: 1 !important; visibility: visible !important/)
 })
+
+test('P1001: a stale tab reloads once onto the newer build, whatever the crash; same build or dev never reloads', async () => {
+  const { newerBuildLive, recoverFrom } = await import('./chunkReload.js')
+  const res = (version, ok = true) => async () => ({ ok, json: async () => ({ version }) })
+  assert.equal(await newerBuildLive('1.a', res('1.b')), true)
+  assert.equal(await newerBuildLive('1.a', res('1.a')), false)
+  assert.equal(await newerBuildLive('1.a', res('1.b', false)), false)
+  assert.equal(await newerBuildLive('dev', res('1.b')), false)
+  assert.equal(await newerBuildLive('1.a', async () => { throw new Error('offline') }), false)
+  let reloads = 0
+  const reload = () => { reloads++; return true }
+  assert.equal(await recoverFrom(new Error('Failed to fetch dynamically imported module: https://x/assets/a.js'), { newer: async () => false, reload }), true)
+  assert.equal(await recoverFrom(new Error('x is not a function'), { newer: async () => true, reload }), true)
+  assert.equal(await recoverFrom(new Error('x is not a function'), { newer: async () => false, reload }), false)
+  assert.equal(reloads, 2)
+})
+
+test('P1001: both crash boundaries go through recoverFrom and show "Updating" while they check', () => {
+  for (const p of ['../components/shared/ErrorBoundary.jsx', '../adminshell/AdminBoundary.js']) {
+    const s = src(p)
+    assert.match(s, /recoverFrom\(error\)/, p)
+    assert.match(s, /Updating to the latest version/, p)
+  }
+})

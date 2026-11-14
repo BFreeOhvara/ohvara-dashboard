@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { ChevronRight, Moon, UserPlus, Bot, Search, SlidersHorizontal, MessageCircle, Image as ImageIcon, Check, Settings2, Bug, Plug, Wallet, Tags, BarChart3, Users, ListChecks, Pencil, User, Bell, Shield, Lock } from 'lucide-react'
+import { ChevronRight, Moon, UserPlus, Bot, Search, SlidersHorizontal, MessageCircle, Image as ImageIcon, Check, Settings2, Bug, Plug, Wallet, Tags, BarChart3, Users, ListChecks, Pencil, User, Bell, Shield, Lock, Smartphone } from 'lucide-react'
 import { useThemePref } from '../../hooks/useTheme'
 import { useOptionalAuth } from '../../hooks/authContext'
 import { supabase } from '../../lib/supabase'
@@ -17,6 +17,8 @@ import { useAccount, useNote } from '../../template/kit'
 import { useTheme } from '../../hooks/useTheme'
 import { useApp, SubPage, Row, Ini, Toggle, SignOutButton, BottomSheet, rise } from '../../template/m/AppKit'
 import { useNoAutoKeyboard } from '../../template/m/useKeyboard'
+import { GetApp } from '../../template/TemplateFrame'
+import { isNativeApp } from '../../lib/native'
 import { firstName } from '../../template/m/va/vaModel'
 import {
   money, halvesOf, LEAD_FILTERS, LEAD_WORD, LEAD_TONE, LEAD_HINT, leadStage, leadKind, leadWhen, leadEvents, leadCounts, groupLeads, filterLeads, CLIENT_FILTERS, filterClients, BUG_WORD, BUG_TONE,
@@ -43,6 +45,7 @@ export default function AYou() {
   const { data: settings } = useAdmSettings()
   const { data: bugs } = useAdmBugs()
   const [theme, setTheme] = useTheme()
+  const [appOpen, setAppOpen] = useState(false)
   const ai = aiWeek()
   const mine = me ? month.split.find(o => o.id === me.id) : null
   const name = useAdmName() || ME.name
@@ -52,7 +55,7 @@ export default function AYou() {
       <h1 className="ma-h1 ma-rise">You</h1>
       <div className="ma-plan ma-rise" style={rise(0)}>
         <div className="ma-plan-me">
-          <Ini name={name} tone="sky" size={58} className="is-ring" photo={settings.profile?.photo || null} />
+          <Ini person name={name} size={58} className="is-ring" photo={settings.profile?.photo || null} />
           <span className="ma-grow"><b>{name}</b><small>Admin · Ohvara</small></span>
           <button type="button" className="ma-editbtn ma-press" onClick={() => app.openSub('profile')}><Pencil size={14} aria-hidden="true" />Edit profile</button>
         </div>
@@ -92,8 +95,11 @@ export default function AYou() {
           <Toggle on={theme === 'dark'} label="Dark theme" onChange={v => setTheme(v ? 'dark' : 'light')} />
         </div>
         <Row onClick={() => app.openSub('settings')} lead={<Sym tone="stone" Icon={Settings2} />} title="Settings" sub="Account, time zone, alerts, privacy" />
+        {/* P1001: Get the phone app, as the agent and VA phone pages have it (not inside the app itself) */}
+        {!isNativeApp() && <Row onClick={() => setAppOpen(true)} lead={<Sym tone="sky" Icon={Smartphone} />} title="Get the phone app" sub="Alerts the moment a lead comes in" />}
       </div>
       <SignOutButton />
+      <GetApp open={appOpen} onClose={() => setAppOpen(false)} />
     </div>
   )
 }
@@ -213,7 +219,7 @@ export function ALeadsAll() {
           <button type="button" className={`ma-pick${!agent ? ' is-on' : ''}`} onClick={() => { setAgent(null); setPick(false) }}><span className="ma-grow"><b>Every agent</b></span></button>
           {agents.map(a => (
             <button key={a.id} type="button" className={`ma-pick${agent === a.id ? ' is-on' : ''}`} onClick={() => { setAgent(a.id); setPick(false) }}>
-              <Ini name={a.name} tone="sky" size={36} /><span className="ma-grow"><b>{a.name}</b><small>{leads.filter(l => l.agent_id === a.id).length} leads</small></span>
+              <Ini person name={a.name} size={36} /><span className="ma-grow"><b>{a.name}</b><small>{leads.filter(l => l.agent_id === a.id).length} leads</small></span>
             </button>
           ))}
         </div>
@@ -335,8 +341,8 @@ export function AClientAdm({ id }) {
       </div>
       <p className="ma-cap is-out">People</p>
       <div className="ma-glass ma-list ma-rise" style={rise(4)}>
-        <div className="ma-row"><Ini name={c.agent} tone="sky" size={36} /><span className="ma-grow"><b>{c.agent}</b><small>Agent</small></span></div>
-        {c.va && <div className="ma-row"><Ini name={c.va} tone="sage" size={36} /><span className="ma-grow"><b>{c.va}</b><small>VA · notes from their calls are in the desktop’s client drawer</small></span></div>}
+        <div className="ma-row"><Ini person name={c.agent} size={36} /><span className="ma-grow"><b>{c.agent}</b><small>Agent</small></span></div>
+        {c.va && <div className="ma-row"><Ini person name={c.va} size={36} /><span className="ma-grow"><b>{c.va}</b><small>VA · notes from their calls are in the desktop’s client drawer</small></span></div>}
       </div>
     </SubPage>
   )
@@ -647,7 +653,7 @@ export function AProfileAdm() {
     <SubPage title="Edit profile" line="You">
       <div className="ma-form">
         <div className="ma-glass ma-pad ma-photo ma-rise">
-          <Ini name={me.name} tone="sky" size={72} photo={me.photo} className="is-ring" />
+          <Ini person name={me.name} size={72} photo={me.photo} className="is-ring" />
           <label className="ma-btn is-soft ma-press">{me.photo ? 'Change photo' : 'Add a photo'}<input type="file" accept="image/*" onChange={onPhoto} hidden /></label>
           {me.photo && <button type="button" className="ma-link-btn" onClick={() => setMe(x => ({ ...x, photo: null }))}>Remove</button>}
         </div>

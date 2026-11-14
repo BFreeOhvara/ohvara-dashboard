@@ -98,7 +98,8 @@ function Frame() {
   const enter = navType !== 'POP'
 
   // Badges: unread messages (Messages), new notifications (the bell on Today).
-  const threads = useVaThreads()
+  // P1001: count only the threads the Messages list shows (VA-to-VA chats are hidden there; desktop has none).
+  const threads = useVaThreads().filter(t => !t.va)
   const unread = threads.reduce((n, t) => n + (t.unread || 0), 0)
   const { data: feed } = useFulFeed()
   const seen = useSyncExternalStore(FEED_SEEN.sub, FEED_SEEN.get)
@@ -209,7 +210,7 @@ function Frame() {
             return (
               <button key={k} type="button" className={`ma-tab${on ? ' is-on' : ''}`} aria-label={`${VA_LABEL[k]}${badge ? `, ${badge} unread` : ''}`} aria-current={on ? 'page' : undefined} onClick={() => goTab(k)}>
                 {k === 'me'
-                  ? <Ini name={account?.name} tone="sage" size={32} className="ma-tab-me" />
+                  ? <Ini person name={account?.name} id={account?.id} size={32} className="ma-tab-me" />
                   : <Icon size={25} strokeWidth={on ? 2.2 : 1.9} aria-hidden="true" />}
                 {badge > 0 && <span className="ma-badge is-tab">{badge}</span>}
               </button>

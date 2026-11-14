@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { X, Check } from 'lucide-react'
 import { useStretchPill } from '../hooks/useStretchPill'
-import { hueFor } from './avatarHue'
+import { hueFor, avatarHue, isSupportPerson } from './avatarHue'
+import { SupportAvatar } from '../components/ui/SupportAvatar'
 import { useExit, still } from './motion'
 import { useIsTestAccount } from '../hooks/useIsTestAccount'
 
@@ -87,7 +88,10 @@ export function Drawer({ open, onClose, center = false, title: t, sub: s, childr
 
 export const initials = name => name.split(' ').map(w => w[0]).slice(0, 2).join('')
 // tone: a lead's or client's current stage tone (P843); without it the person's stable palette colour (P842).
-export const Avatar = ({ name, tone }) => <span className={`tp-av av-${hueFor(name, tone)}${tone ? ' is-status' : ''}`} aria-hidden="true">{initials(name)}</span>
+// P1001: Ohvara Support is the logo; everyone else one colour per person (avatarHue: their user id when known).
+export const Avatar = ({ name, tone, id = null }) => (isSupportPerson(name)
+  ? <SupportAvatar className="tp-av" />
+  : <span className={`tp-av av-${tone ? hueFor(name, tone) : avatarHue(name, id)}${tone ? ' is-status' : ''}`} aria-hidden="true">{initials(name)}</span>)
 export const Chip = ({ tone = 'blue', children }) => <span className={`tp-chip is-${tone}`}><i />{children}</span>
 // P929: test accounts never see a "sample" label.
 export const SampleTag = ({ children = 'Sample price' }) => (useIsTestAccount() ? null : <span className="tp-tag">{children}</span>)

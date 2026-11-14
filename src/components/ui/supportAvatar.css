@@ -1,0 +1,5 @@
+/* P1001 — Ohvara Support's logo avatar. Doubled class so it wins over every portal's avatar fill (flow.css .tp-av[class*="av-"],
+   app.css .ma-ini tones). The disc stays white in both themes so the navy piece always reads. */
+.ov-support-av.ov-support-av.ov-support-av { display: inline-flex; align-items: center; justify-content: center; overflow: hidden; color: #0A1F44;
+  background: #FFFFFF; box-shadow: inset 0 0 0 1px rgba(10, 31, 68, .14); }
+.ov-support-av.ov-support-av svg { width: auto; }

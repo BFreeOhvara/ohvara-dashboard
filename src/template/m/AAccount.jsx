@@ -56,7 +56,7 @@ export default function AAccount() {
 
       <div className="ma-plan ma-rise" style={rise(0)}>
         <div className="ma-plan-me">
-          <Ini name={name} tone="sky" size={58} photo={s.profile?.photo} className="is-ring" />
+          <Ini person name={name} size={58} photo={s.profile?.photo} className="is-ring" />
           <span className="ma-grow"><b>{name}</b><small>{[sinceOf(b), states.length ? states.join(', ') : null].filter(Boolean).join(' · ')}</small></span>
           <button type="button" className="ma-editbtn ma-press" onClick={() => app.open(`${paths.settings()}?set=profile`)}><Pencil size={14} aria-hidden="true" />Edit profile</button>
         </div>

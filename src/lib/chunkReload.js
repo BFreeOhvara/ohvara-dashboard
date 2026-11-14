@@ -58,6 +58,30 @@ export function reloadOnceFor() {
   return true
 }
 
+// P1001 — a tab still running an older build can crash in ways that are not a missing chunk (old code meeting new data
+// or a renamed export). The live build's version is in /ota/manifest.json (written by scripts/vite-ota.mjs on every
+// build). True when the site is on a different build than this tab. Never true in dev, offline or on any error.
+export const MANIFEST_URL = '/ota/manifest.json'
+export async function newerBuildLive(build = runningBuild(), fetcher = typeof fetch === 'function' ? fetch : null) {
+  if (build === 'dev' || !fetcher) return false
+  try {
+    const r = await fetcher(`${MANIFEST_URL}?${BUST_PARAM}=${Date.now()}`, { cache: 'no-store' })
+    if (!r?.ok) return false
+    const v = (await r.json())?.version
+    return typeof v === 'string' && v.length > 0 && v !== build
+  } catch {
+    return false
+  }
+}
+
+// Any crash: a missing chunk reloads straight away; anything else reloads only when the site is on a newer build
+// (still once per build, so a real bug shows the crash card instead of looping). Resolves true when it reloaded.
+export async function recoverFrom(err, { newer = newerBuildLive, reload = reloadOnceFor } = {}) {
+  if (isChunkError(err)) return reload()
+  if (await newer()) return reload()
+  return false
+}
+
 // The crash panels' Reload button: always a fresh fetch of the page (never the cached copy), no guard needed since a
 // person pressed it.
 export function reloadFresh() {

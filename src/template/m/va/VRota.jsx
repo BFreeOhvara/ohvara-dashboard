@@ -49,7 +49,7 @@ export default function VRota() {
                   {d.weekend
                     ? <span className="va-chip is-butter">No shifts · weekend</span>
                     : d.people.map(v => (
-                      <span key={v.id} className={`va-chip ${v.me ? 'is-me' : `is-${tone(v.id)}`}`}><Ini name={v.name} size={24} />{v.me ? 'You' : firstName(v.name)}</span>
+                      <span key={v.id} className={`va-chip ${v.me ? 'is-me' : `is-${tone(v.id)}`}`}><Ini person name={v.name} size={24} />{v.me ? 'You' : firstName(v.name)}</span>
                     ))}
                 </span>
                 {!d.weekend && d.youOff && <small className="va-youoff">{d.offAsked ? 'Your day off' : "You're off"}</small>}

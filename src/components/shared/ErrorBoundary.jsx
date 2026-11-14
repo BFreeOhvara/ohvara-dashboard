@@ -1,6 +1,6 @@
 import { Component } from 'react'
 import { AlertTriangle } from 'lucide-react'
-import { isChunkError, reloadOnceFor, reloadFresh } from '../../lib/chunkReload'
+import { recoverFrom, reloadFresh } from '../../lib/chunkReload'
 
 // Prompt 746 — a page that throws while rendering used to unmount the whole
 // React tree (no boundary anywhere): a completely blank screen. Two of these
@@ -25,28 +25,40 @@ export function CrashCard() {
   )
 }
 
+// P1001 — shown instead of the crash card while the page reloads onto the newest build.
+function Updating() {
+  return (
+    <div className="ov-crash" role="status" aria-live="polite">
+      <p className="ov-crash-text">Updating to the latest version…</p>
+    </div>
+  )
+}
+
 export class ErrorBoundary extends Component {
-  state = { error: null }
+  // checking: a crash is being matched against the live build before anything shows.
+  state = { error: null, checking: false }
 
   static getDerivedStateFromError(error) {
-    return { error }
+    return { error, checking: true }
   }
 
   componentDidCatch(error) {
     console.error(`[ErrorBoundary] ${window.location.pathname}: ${error?.message || error}`)
-    // A lazy route/component whose chunk is gone (a tab opened before a
-    // deploy): reload once to pick up the new build; a second failure shows
-    // the fallback.
-    if (isChunkError(error)) reloadOnceFor()
+    // P1001 — a tab opened before a deploy: a gone chunk reloads at once; any other crash reloads if the site is
+    // already on a newer build. Once per build (lib/chunkReload), so a real bug still shows the crash card.
+    const caught = error
+    recoverFrom(error).then(reloaded => {
+      if (!reloaded && this.state.error === caught) this.setState({ checking: false })
+    })
   }
 
   componentDidUpdate(prev) {
     // A new route clears a stuck error so the agent can click elsewhere.
-    if (this.state.error && prev.resetKey !== this.props.resetKey) this.setState({ error: null })
+    if (this.state.error && prev.resetKey !== this.props.resetKey) this.setState({ error: null, checking: false })
   }
 
   render() {
-    if (this.state.error) return <CrashCard />
+    if (this.state.error) return this.state.checking ? <Updating /> : <CrashCard />
     return this.props.children
   }
 }

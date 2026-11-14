@@ -45,7 +45,7 @@ export default function AAgents() {
               const f = flagOf(a)
               return (
                 <button key={a.id} type="button" className="ma-row am-needrow is-apricot ma-press" onClick={() => app.openSub('agent', { t: a.id })}>
-                  <Ini name={a.name} size={44} />
+                  <Ini person name={a.name} size={44} />
                   <span className="ma-grow"><b>{a.name}</b><small>{planLineOf(a, PLANS).label}{buysLeads(a) ? <> · <span className="tp-money">{money(a.spend)}</span> a day</> : ''}</small><small className="am-flagline">{f.title}</small></span>
                   <ChevronRight size={18} aria-hidden="true" />
                 </button>
@@ -55,7 +55,7 @@ export default function AAgents() {
               <div className="ma-glass ma-list">
                 {g.items.map(a => (
                   <button key={a.id} type="button" className="ma-row" onClick={() => app.openSub('agent', { t: a.id })}>
-                    <Ini name={a.name} tone="sky" size={44} />
+                    <Ini person name={a.name} size={44} />
                     <span className="ma-grow"><b>{a.name}</b><small>{planLineOf(a, PLANS).label}{buysLeads(a) ? <> · <span className="tp-money">{money(a.spend)}</span> a day</> : ''}</small><small>{statusLine(a)}</small></span>
                     <ChevronRight size={18} className="ma-chev" aria-hidden="true" />
                   </button>

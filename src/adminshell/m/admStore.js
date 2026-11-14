@@ -33,15 +33,9 @@ export const useLater = () => use(laterStore)
 export const JORDAN_THREAD = 'adm-jordan'
 export const TEAM_THREAD = 'adm-team'
 const now = () => `Today, ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
-const chatStore = small({
-  [JORDAN_THREAD]: { id: JORDAN_THREAD, name: 'Jordan', about: 'Admin · just the two of you', tone: 'sage', unread: 1, messages: [
-    { id: 'j1', from: 'them', who: 'Jordan', text: 'Ben says his new card comes Friday. I said we’d hold the lock a day.', at: 'Today, 9:14 AM' },
-  ] },
-  [TEAM_THREAD]: { id: TEAM_THREAD, name: 'Ohvara team', about: 'Group · admins and every VA', tone: 'sky', group: true, unread: 0, messages: [
-    { id: 't1', from: 'Maya Brooks', who: 'Maya', text: 'Morning all, I’m on till 6.', at: 'Today, 8:02 AM' },
-    { id: 't2', from: 'me', who: 'You', text: 'Thanks Maya. Keisha has the 12:15 Carla Jones call.', at: 'Today, 8:10 AM' },
-  ] },
-})
+// P1001: desktop is the reference and has no Jordan DM or team group, so the phone starts with none either. Only a
+// first message to someone with no line yet (start, below) adds a chat here.
+const chatStore = small({})
 export const useAdmChats = () => Object.values(use(chatStore))
 export const admChats = {
   send: (id, text) => chatStore.set(s => ({ ...s, [id]: { ...s[id], messages: [...s[id].messages, { id: `m${Date.now()}`, from: 'me', who: 'You', text, at: now() }] } })),

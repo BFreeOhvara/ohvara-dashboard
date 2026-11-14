@@ -45,7 +45,7 @@ export default function VMe() {
       <h1 className="ma-h1 ma-rise">Me</h1>
       <div className="ma-plan ma-rise" style={rise(0)}>
         <div className="ma-plan-me">
-          <Ini name={name} tone="sage" size={58} photo={photo} className="is-ring" />
+          <Ini person name={name} size={58} photo={photo} className="is-ring" />
           <span className="ma-grow"><b>{name}</b><small>Fulfillment · Ohvara team</small></span>
           <button type="button" className="ma-editbtn ma-press" onClick={() => app.openSub('profile')}><Pencil size={14} aria-hidden="true" />Edit profile</button>
         </div>
@@ -242,7 +242,7 @@ export function VProfile() {
     <SubPage title="Edit profile" line="You">
       <div className="ma-form">
         <div className="ma-glass ma-pad ma-photo ma-rise">
-          <Ini name={me.name} tone="sage" size={72} photo={me.photo} className="is-ring" />
+          <Ini person name={me.name} size={72} photo={me.photo} className="is-ring" />
           <label className="ma-btn is-soft ma-press">{me.photo ? 'Change photo' : 'Add a photo'}<input type="file" accept="image/*" onChange={onPhoto} hidden /></label>
           {me.photo && <button type="button" className="ma-link-btn" onClick={() => setMe(x => ({ ...x, photo: null }))}>Remove</button>}
         </div>

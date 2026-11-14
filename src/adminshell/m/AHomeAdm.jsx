@@ -91,7 +91,7 @@ export default function AHomeAdm() {
           const f = flagOf(a)
           return (
             <button key={a.id} type="button" className="ma-row" onClick={() => app.openSub('agent', { t: a.id })}>
-              <Ini name={a.name} tone="sky" size={42} />
+              <Ini person name={a.name} size={42} />
               <span className="ma-grow"><b>{a.name}</b><small className={f ? 'am-warn' : ''}>{f ? f.title : statusLine(a)}</small></span>
               <ChevronRight size={18} className="ma-chev" aria-hidden="true" />
             </button>

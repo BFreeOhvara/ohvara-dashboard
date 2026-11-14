@@ -207,7 +207,7 @@ export default function AdminApp() {
             return (
               <button key={k} type="button" className={`ma-tab${on ? ' is-on' : ''}`} aria-label={`${ADM_LABEL[k]}${badge ? `, ${badge} ${words}` : ''}`} aria-current={on ? 'page' : undefined} onClick={() => goTab(k)}>
                 {k === 'you'
-                  ? <Ini name={meName} tone="sky" size={32} className="ma-tab-me" />
+                  ? <Ini person name={meName} size={32} className="ma-tab-me" />
                   : <Icon size={25} strokeWidth={on ? 2.2 : 1.9} aria-hidden="true" />}
                 {badge > 0 && <span className="ma-badge is-tab">{badge}</span>}
               </button>

@@ -1,5 +1,5 @@
 {
   "ios": null,
-  "android": null,
+  "android": "https://ohvara.com/app?os=android",
   "push": { "ios": 3, "android": 1 }
 }

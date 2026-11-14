@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { AdminBoundary, AdminCrash, OVERVIEW_HREF } from './AdminBoundary.js'
+import { AdminBoundary, AdminCrash, AdminUpdating, OVERVIEW_HREF } from './AdminBoundary.js'
 import { askAgainUnlessMissing } from '../hooks/useVaShiftsPolicy.js'
 import { readShiftWeek, readShiftsToday, readDayOffRequests } from '../lib/vaShifts.js'
 import { readGhlSettings } from '../lib/ghlConnect.js'
@@ -27,6 +27,9 @@ test('a thrown render shows the crash panel with Reload and Go to Overview, not 
   const b = new AdminBoundary({ children: 'page' })
   assert.equal(b.render(), 'page')
   b.state = AdminBoundary.getDerivedStateFromError(new Error('boom'))
+  // P1001: first a short check against the live build ("Updating…"); when no reload happens, the panel.
+  assert.equal(b.render().type, AdminUpdating)
+  b.state = { ...b.state, checking: false }
   assert.equal(b.render().type, AdminCrash)
   // even a throw of nothing at all is caught
   assert.ok(AdminBoundary.getDerivedStateFromError(undefined).error)

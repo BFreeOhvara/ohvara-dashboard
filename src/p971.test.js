@@ -54,9 +54,9 @@ test('pages end just above the bar; Home has no "This week" caption', () => {
   assert.doesNotMatch(read('./template/m/AHome.jsx'), /This week, Mon to today/)
 })
 
-test('View all is the apricot button; the bar avatar is the Account card blue', () => {
+test('View all is the apricot button; the bar avatar is the person colour (P1001: one colour per person, from the user id)', () => {
   assert.match(read('./template/m/AHome.jsx'), /ma-pillbtn is-tone is-apricot/)
-  assert.match(read('./template/m/MobileFrame.jsx'), /<Ini name=\{account\.name\} tone="sky" size=\{32\} className="ma-tab-me" \/>/)
+  assert.match(read('./template/m/MobileFrame.jsx'), /<Ini person name=\{account\.name\} id=\{account\.id\} size=\{32\} className="ma-tab-me" \/>/)
 })
 
 test('Account: next charge is a short value plus when', () => {

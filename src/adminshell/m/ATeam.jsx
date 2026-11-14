@@ -44,7 +44,7 @@ export default function ATeam() {
           const pct = v.today.total ? Math.round((v.today.done / v.today.total) * 100) : 0
           return (
             <button key={v.id} type="button" className="ma-row am-varow" onClick={() => app.openSub('va', { t: v.id })}>
-              <span className="am-avdot"><Ini name={v.name} tone="sage" size={44} /><i className={v.onCall ? 'is-call' : v.today.late ? 'is-late' : 'is-on'} aria-hidden="true" /></span>
+              <span className="am-avdot"><Ini person name={v.name} size={44} /><i className={v.onCall ? 'is-call' : v.today.late ? 'is-late' : 'is-on'} aria-hidden="true" /></span>
               <span className="ma-grow">
                 <b>{v.name}</b>
                 <small>{v.onCall ? 'On a call' : v.today.late ? `${v.today.late} late` : 'On shift'} · {v.today.done} of {v.today.total} calls · 0 saves</small>
@@ -62,7 +62,7 @@ export default function ATeam() {
         {days.map(({ day: d, name }) => (
           <div key={d} className={`am-rday${d === day.today ? ' is-today' : ''}${d < day.today ? ' is-past' : ''}`}>
             <small>{name}</small><b>{d}</b>
-            <span className="am-rppl">{(rota.rota[d] || []).map(id => { const v = vas.find(x => x.id === id); return v ? <Ini key={id} name={v.name} tone="sage" size={26} /> : null })}</span>
+            <span className="am-rppl">{(rota.rota[d] || []).map(id => { const v = vas.find(x => x.id === id); return v ? <Ini person key={id} name={v.name} size={26} /> : null })}</span>
           </div>
         ))}
         {!days.length && <p className="ma-empty">The rota is on the desktop’s Team page.</p>}
@@ -121,7 +121,7 @@ function RotaSheet({ open, onClose }) {
       <div className="am-sheetlist">
         {vas.map(v => (
           <button key={v.id} type="button" className={`ma-pick${on.includes(v.id) ? ' is-on' : ''}`} aria-pressed={on.includes(v.id)} onClick={() => flip(v)} disabled={off(v.id)}>
-            <Ini name={v.name} tone="sage" size={40} />
+            <Ini person name={v.name} size={40} />
             <span className="ma-grow"><b>{v.name}</b><small>{off(v.id) ? 'Day off booked' : on.includes(v.id) ? 'On shift' : 'Off'}</small></span>
             <span className={`am-tick${on.includes(v.id) ? ' is-on' : ''}`} aria-hidden="true">{on.includes(v.id) ? '✓' : ''}</span>
           </button>

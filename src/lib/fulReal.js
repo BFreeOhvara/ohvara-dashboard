@@ -1,7 +1,12 @@
 // P852 — the Fulfillment (VA) portal on real data: pure mappers from the existing tables and RPCs to the record shapes
 // of the sample door (src/template/ful/data.js), so the screens read real rows without knowing it. No network here
 // (hooks/fulRealData.js fetches); every function is plain data in, plain data out, and node-tested.
+import { rememberPerson } from '../template/avatarHue.js'
 import { clockOf, dateOf, zoneOf, blockTime } from './callSlots.js'
+
+// P1001: each agent's avatar colour comes from their user id, so the VA sees the colour the agent sees on their own
+// portal. Remember name -> id as the agents load; returns the name.
+const seen = (id, name) => { rememberPerson(id, name); return name }
 
 export const DEFAULT_TZ = 'America/Chicago'
 const DAY = 864e5
@@ -53,7 +58,7 @@ export function toClient(p, nowMs, tz = DEFAULT_TZ) {
   const at = p.scheduled_call_at
   return {
     id: p.id, client_first_name: p.client_first_name || '', client_last_name: p.client_last_name || '', agent_id: p.agent_id,
-    agent: p.agent?.full_name || 'Agent', client_phone: p.client_phone || '', city: p.client_city || '', state: p.state || '',
+    agent: seen(p.agent_id, p.agent?.full_name) || 'Agent', client_phone: p.client_phone || '', city: p.client_city || '', state: p.state || '',
     carrier_name: p.carrier_name || '', product_name: p.product_name || '', policy_number: p.policy_number || '', monthly_premium: Number(p.monthly_premium) || 0,
     stage: done ? 'protected' : 'setting_up', attention: null, note: p.notes || '', calls: [],
     next_step: done ? '' : at ? `Cancellation call ${whenText(at, nowMs, tz)}` : 'Cancellation call to book',
@@ -121,7 +126,7 @@ export function toThreads(threads, messages, me, nowMs, tz = DEFAULT_TZ) {
   const by = new Map()
   for (const m of messages || []) { if (!by.has(m.policy_id)) by.set(m.policy_id, []); by.get(m.policy_id).push(m) }
   return (threads || []).map(t => ({
-    id: t.policy_id, client_id: t.policy_id, agent_id: t.agent_id, agent: t.agent_name || 'Agent', unread: t.unread_count || 0,
+    id: t.policy_id, client_id: t.policy_id, agent_id: t.agent_id, agent: seen(t.agent_id, t.agent_name) || 'Agent', unread: t.unread_count || 0,
     name: `${t.client_first_name || ''} ${t.client_last_name || ''}`.trim() || 'Client', last_at: t.last_at,
     messages: (by.get(t.policy_id) || []).slice().sort((a, b) => ms(a.created_at) - ms(b.created_at))
       .map(m => ({ id: m.id, from: m.sender_id === me ? 'me' : 'agent', text: m.body, at: whenText(m.created_at, nowMs, tz) })),
@@ -168,7 +173,7 @@ export function toPay({ cancels = [], payouts = [], rateCents = null, account = 
 // a VA can't book an agent whose licence we can't see.
 export function toAgents(roster, clients = []) {
   return (roster || []).map(a => ({
-    id: a.id, name: a.full_name || 'Agent', city: '', states: null, hours: 'Hours not connected yet', duty: false, tz: DEFAULT_TZ, open: 540, close: 1080, days: [1, 2, 3, 4, 5], appt: null,
+    id: a.id, name: seen(a.id, a.full_name) || 'Agent', city: '', states: null, hours: 'Hours not connected yet', duty: false, tz: DEFAULT_TZ, open: 540, close: 1080, days: [1, 2, 3, 4, 5], appt: null,
     clients: clients.filter(c => c.agent_id === a.id).length, real: true,
   }))
 }

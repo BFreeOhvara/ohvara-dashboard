@@ -3,6 +3,7 @@
 // the queries and hands the rows here. Anything with no backend yet comes back empty (a designed empty state), never
 // sample: GoHighLevel-fed pieces read as "not connected" (engine slots).
 import { PRICES } from './priceBook.js'
+import { rememberPerson } from '../template/avatarHue.js'
 import { tierOf } from '../template/spendPlan.js'
 import { isTestProfile } from './testAccounts.js'
 import { dailyCounts } from '../template/leadTrend.js'
@@ -52,7 +53,8 @@ export function fmtPhone(p) {
   const d = String(p || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '')
   return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : (p || '')
 }
-const nameOf = p => p?.full_name || p?.username || p?.email || 'No name'
+// P1001: every real agent / VA / admin the admin side loads is remembered by id, so their avatar is their colour.
+const nameOf = p => { const n = p?.full_name || p?.username || p?.email || 'No name'; rememberPerson(p?.id, n); return n }
 
 // ── people ───────────────────────────────────────────────────────────────────
 const PLAN_KEYS = new Set([...PRICES.tiers.map(t => t.key), 'servicing'])

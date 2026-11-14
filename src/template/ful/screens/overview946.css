@@ -110,3 +110,49 @@
 }
 
 .ov946-chart { margin-top: auto; }
+
+/* P1001 — desktop: the Overview holds still at one screen (no page scroll) at 1366x768, 1440x900 and 1920x1080, as
+   Leads/Messages/Settings do. The page takes the height left under the header; the hero shrinks first; Today's calls
+   scroll inside their own card when the day is long (the training card above them never shrinks). */
+@media (min-width: 1000px) and (min-height: 620px) {
+  .fx.tp-app.fs.is-overview { height: 100vh; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+  .fx.tp-app.fs.is-overview .fx-top { flex: none; position: relative; top: 0; }
+  .fx.tp-app.fs.is-overview .fx-col { flex: 1; min-height: 0; height: auto; }
+  .fx.tp-app.fs.is-overview .fx-main { flex: 1; min-height: 0; }
+  .fx.tp-app.fs.is-overview .fx-main > .ov946 { flex: 1 1 0; min-height: 0; grid-template-rows: minmax(0, 1fr); }
+  .fx.tp-app.fs.is-overview .ov946 .fx-ovl-main,
+  .fx.tp-app.fs.is-overview .ov946 .fs-ov-side { min-height: 0; overflow: hidden; }
+  .fx.tp-app.fs.is-overview .ov946-hero { flex: 1 1 0; }
+  .fx.tp-app.fs.is-overview .ov946-today { flex: 1 1 0; min-height: 120px; overflow: hidden; }
+  .fx.tp-app.fs.is-overview .ov946-cards { flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+    margin-right: -6px; padding: 1px 6px 2px 1px; scrollbar-width: thin; }
+}
+/* Short desktop windows (1366x768): a step tighter. The day strip under the hero goes (the page header already shows
+   booked, done and still to call), the three tiles lose the hours chart, and the call facts scroll inside the hero. */
+@media (min-width: 1000px) and (min-height: 620px) and (max-height: 820px) {
+  .fx.tp-app.fs.is-overview .ov946-hero { gap: 10px; }
+  .fx.tp-app.fs.is-overview .ov946-pulse { display: none; }
+  .fx.tp-app.fs.is-overview .ov946-next { gap: 12px; }
+  .fx.tp-app.fs.is-overview .ov946-when { gap: 8px; padding: 12px; }
+  .fx.tp-app.fs.is-overview .ov946-count { gap: 6px; }
+  .fx.tp-app.fs.is-overview .ov946-when .fs-count { font-size: 48px; }
+  .fx.tp-app.fs.is-overview .ov946-when .fs-cring { width: 60px; height: 60px; }
+  .fx.tp-app.fs.is-overview .ov946-acts .ov946-start { min-height: 40px; }
+  .fx.tp-app.fs.is-overview .ov946-who { min-height: 0; gap: 8px; }
+  .fx.tp-app.fs.is-overview .ov946-facts { grid-auto-rows: min-content; gap: 6px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+  .fx.tp-app.fs.is-overview .ov946-facts > div { padding: 7px 12px; gap: 2px; }
+  .fx.tp-app.fs.is-overview .ov946-facts dd { font-size: 13px; line-height: 1.3; }
+  .fx.tp-app.fs.is-overview .ov946-trio .fx-tile { gap: 4px; padding: 10px 14px; }
+  .fx.tp-app.fs.is-overview .ov946-trio .fx-huge { font-size: 30px; }
+  .fx.tp-app.fs.is-overview .ov946-trio .ov946-chart { display: none; }
+}
+/* 1440x900-class windows: the call facts a little tighter so the hero holds them; on any desktop height a long
+   note scrolls inside the facts instead of spilling out of the hero. */
+@media (min-width: 1000px) and (min-height: 620px) {
+  .fx.tp-app.fs.is-overview .ov946-who { min-height: 0; }
+  .fx.tp-app.fs.is-overview .ov946-facts { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+}
+@media (min-width: 1000px) and (min-height: 821px) and (max-height: 960px) {
+  .fx.tp-app.fs.is-overview .ov946-facts { gap: 6px; }
+  .fx.tp-app.fs.is-overview .ov946-facts > div { padding: 7px 14px; }
+}

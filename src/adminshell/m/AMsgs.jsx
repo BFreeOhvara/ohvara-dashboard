@@ -11,6 +11,7 @@ import { useAdmChats, admChats, isLocalChat, JORDAN_THREAD } from './admStore'
 // P986 — Messages, the same as the agent and VA apps: threads straight on the page, a chat opens from the right with
 // bubbles, tails and the send button inside the field. Jordan (the other admin) is pinned at the top, then the team
 // group, then every agent and VA line (what they see as "Ohvara Support": you answer as Ohvara Support).
+// P1001: Jordan and the team group are gone (desktop has neither); a chat started with someone new still pins first.
 const ROLE_WORD = { Agent: 'Agent · support line', Fulfillment: 'VA · support line' }
 const toneOfRole = r => (r === 'Fulfillment' ? 'sage' : 'sky')
 
@@ -27,14 +28,14 @@ export default function AMsgs() {
   const threads = useAllThreads()
   return (
     <div className="ma-tabpage">
-      <div className="ma-top ma-rise"><span className="ma-grow"><h1>Messages</h1><small>Jordan, the team, agents and VAs</small></span></div>
+      <div className="ma-top ma-rise"><span className="ma-grow"><h1>Messages</h1><small>Agents and VAs</small></span></div>
       <div className="ma-threads ma-rise" style={rise(0)}>
         {threads.map(t => {
           const last = t.messages?.at(-1)
           const unread = t.unread > 0
           return (
             <button key={t.id} type="button" className={`ma-thread va-thread${unread ? ' is-unread' : ''}${t.id === JORDAN_THREAD ? ' is-pinned' : ''}`} onClick={() => app.openSub('thread', { t: t.id })}>
-              <Ini name={t.name} tone={t.tone} size={48} />
+              <Ini person name={t.name} size={48} />
               <span className="ma-grow">
                 <span className="ma-thread-top"><b>{t.name}</b><small>{shortAt(last?.at)}</small></span>
                 <small className="va-about">{t.about}</small>
