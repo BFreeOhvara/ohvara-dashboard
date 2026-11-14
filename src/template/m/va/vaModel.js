@@ -11,9 +11,11 @@ import { emptySupport } from '../../support911.js'
 export const VA_TABS = ['today', 'calendar', 'rota', 'messages', 'me']
 export const VA_LABEL = { today: 'Today', calendar: 'Calendar', rota: 'Schedule', messages: 'Messages', me: 'Me' }
 // Sub-screens opened with ?s= over the current tab (the agent app's way), plus the real VA addresses they stand for.
-export const VA_SUBS = ['notif', 'search', 'settings', 'profile', 'pay', 'training', 'help', 'thread', 'client']
+export const VA_SUBS = ['notif', 'search', 'settings', 'profile', 'pay', 'training', 'help', 'thread', 'client', 'clients']
 // Screens with their own bottom: the tab bar slides away under them.
 export const VA_OWN_BAR = ['thread', 'search', 'client']
+// P1002: the Clients list has its own search too, so the bar slides away under it as well.
+export const VA_NO_BAR = [...VA_OWN_BAR, 'clients']
 
 const noSlash = p => (p.length > 1 ? p.replace(/\/$/, '') : p)
 const under = (p, base) => p === base || p.startsWith(`${base}/`)
@@ -35,7 +37,7 @@ export function vaRouteOf(pathname, search = '') {
   else if (p === FUL.more) r.tab = 'me'
   else if (p === FUL.pay) Object.assign(r, { tab: 'me', sub: 'pay' })
   else if (under(p, FUL.training)) Object.assign(r, { tab: 'me', sub: 'training', id: rest(p, FUL.training) })
-  else if (under(p, FUL.clients)) Object.assign(r, rest(p, FUL.clients) ? { sub: 'client', id: rest(p, FUL.clients) } : { sub: 'search' })
+  else if (under(p, FUL.clients)) Object.assign(r, rest(p, FUL.clients) ? { sub: 'client', id: rest(p, FUL.clients) } : { sub: 'clients' })
   const s = q.get('s')
   if (VA_SUBS.includes(s)) { r.sub = s; r.id = q.get('t') || q.get('c') || q.get('l') || null }
   return r

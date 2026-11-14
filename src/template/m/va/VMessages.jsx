@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowUp } from 'lucide-react'
-import { useFulActions } from '../../ful/data'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { ArrowUp, Search, X, Users } from 'lucide-react'
+import { useFulActions, useFulClients, useFulSource } from '../../ful/data'
 import { useVaNow } from './useVaNow'
 import { useOptionalAuth } from '../../../hooks/useAuth'
 import { useStandingThreads, useDmMessages, useSendDm, useMarkDmRead } from '../../../hooks/useDirectMessages'
@@ -9,7 +9,7 @@ import { isSupport, emptySupport, SUPPORT_THREAD, shownName } from '../../suppor
 import { useApp, SubPage, Ini, rise } from '../AppKit'
 import { useKeyboard } from '../useKeyboard'
 import { runsOf } from '../appModel'
-import { shortAt } from '../threadStore'
+import { shortAt, subscribeLocal, getLocal, sendLocal } from '../threadStore'
 import { firstName } from './vaModel'
 import { useVaThreads, dmStore, VaStandingCtx } from './vaStore'
 
@@ -27,10 +27,18 @@ const emptyLine = t => (isSupport(t) ? 'Write to Ohvara Support' : t.va ? `Say h
 export default function VMessages() {
   const app = useApp()
   // P1001: the phone matches the desktop (the reference): Ohvara support and the agent threads, no VA-to-VA chat.
-  const threads = useVaThreads().filter(t => !t.va)
+  const all = useVaThreads().filter(t => !t.va)
+  // P1002: search, as on the desktop ("Find a client or agent"). Ohvara support stays pinned whatever you type.
+  const [q, setQ] = useState('')
+  const n = q.trim().toLowerCase()
+  const threads = all.filter(t => isSupport(t) || !n || `${t.name} ${t.agent}`.toLowerCase().includes(n))
   return (
     <div className="ma-tabpage">
       <div className="ma-top ma-rise"><span className="ma-grow"><h1>Messages</h1><small>Ohvara and your agents</small></span></div>
+      <label className="ma-search is-small ma-rise"><Search size={18} aria-hidden="true" />
+        <input type="search" inputMode="search" aria-label="Find a thread" placeholder="Find a client or agent" value={q} onChange={e => setQ(e.target.value)} />
+        {q && <button type="button" className="ma-ib" aria-label="Clear" onClick={() => setQ('')}><X size={18} aria-hidden="true" /></button>}
+      </label>
       <div className="ma-threads ma-rise" style={rise(0)}>
         {threads.map(t => {
           const last = lastOf(t)
@@ -47,6 +55,7 @@ export default function VMessages() {
           )
         })}
       </div>
+      {n && threads.filter(t => !isSupport(t)).length === 0 && <p className="ma-empty is-glass">No thread. No client or agent by that name.</p>}
       <p className="ma-note">Agents write here about their clients. The client never sees these.</p>
     </div>
   )
@@ -61,9 +70,25 @@ export function VaStandingProvider({ children }) {
 
 export function VThread({ id }) {
   const threads = useVaThreads()
-  const t = threads.find(x => x.id === id) || (id === SUPPORT_THREAD ? { ...emptySupport(), empty: true } : null)
+  const { data: clients } = useFulClients()
+  const fresh = useSyncExternalStore(subscribeLocal, getLocal) // P1002: a chat started from a client who had none yet
+  const startedId = String(id || '').startsWith('new-') ? String(id).slice(4) : null
+  // Once the first message lands, the real thread (the client's own id) shows up in the list and takes over.
+  const t = threads.find(x => x.id === id) || (startedId && threads.find(x => !x.va && x.client_id === startedId))
+    || (id === SUPPORT_THREAD ? { ...emptySupport(), empty: true } : null)
+    || (startedId ? fresh.find(x => x.id === id) : null)
   if (!t) return <SubPage title="Messages"><p className="ma-empty">This chat isn’t here any more.</p></SubPage>
+  if (t.local) return <NewThread key={t.id} t={t} client={clients.find(x => x.id === t.client_id)} />
   return t.dm ? <DmThread key={t.id} t={t} /> : <LocalThread key={t.id} t={t} />
+}
+
+// A client with no chat yet (the desktop's Message button always works, Clients.jsx): writing starts it. Real data keys a
+// chat by the client's policy, so the first send creates it; the sample keeps it on this phone.
+function NewThread({ t, client }) {
+  const { sendMessage } = useFulActions()
+  const real = useFulSource() === 'real'
+  const send = (v, at) => { if (real) sendMessage(t.client_id, v); sendLocal(t.id, v, at) }
+  return <ChatView t={{ ...t, agent: client?.agent || t.agent || 'Agent' }} msgs={t.messages || []} onSend={send} />
 }
 
 // Sample threads, VA DMs on sample data and the agent threads (per client).
@@ -91,6 +116,7 @@ function DmThread({ t }) {
 }
 
 function ChatView({ t, msgs, onSend, offline = false }) {
+  const app = useApp()
   const [text, setText] = useState('')
   const end = useRef(null)
   const root = useRef(null)
@@ -115,7 +141,8 @@ function ChatView({ t, msgs, onSend, offline = false }) {
   )
   return (
     <div className="ma-chatwrap" ref={root}>
-      <SubPage title={titleOf(t)} line={isSupport(t) ? 'Ohvara Support · schedule, pay, anything' : t.va ? 'Just the two of you' : `About ${t.name} · the client doesn't see this`} pin foot={foot} className="is-chat">
+      <SubPage title={titleOf(t)} line={isSupport(t) ? 'Ohvara Support · schedule, pay, anything' : t.va ? 'Just the two of you' : `About ${t.name} · the client doesn't see this`} pin foot={foot} className="is-chat"
+        right={!isSupport(t) && !t.va && t.client_id ? <button type="button" className="ma-textbtn va-openclient ma-press" onClick={() => app.openSub('client', { c: t.client_id })}><Users size={16} aria-hidden="true" />Open client</button> : null}>
         <div className="ma-chat">
           {msgs.map((m, i) => {
             const mine = m.from === 'me'

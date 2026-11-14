@@ -1,15 +1,17 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Upload, Users, Link2, PhoneForwarded, ChevronRight, MessageSquareWarning, StickyNote, CalendarX } from 'lucide-react'
+import { Upload, Users, Link2, PhoneForwarded, ChevronRight, MessageSquareWarning, StickyNote, CalendarX, Search, X, PhoneIncoming } from 'lucide-react'
 import { useSampleLeads, useSampleLead, useSampleActions, useSampleBilling, useSampleAppointments, useDataSource, useSampleSettings } from '../data'
 import { whenBoth, theirTime } from './zoneTime'
 import { CantMakeIt } from '../screens/Calendar'
 import { useNote } from '../kit'
 import { NoShowUndo } from '../LeadOutcome'
 import { FeedbackDrawer } from '../Talk'
-import { agentStatusOf, leadMessages, resultsFor, isLiveCall, liveAt, notInterestedLine } from '../agentView'
-import { agentCallTask, atLabel, clockNow, timeLabel } from '../leadLifecycle'
-import { dailyTotal, deliveredOf } from '../spendPlan'
+import { agentStatusOf, leadMessages, resultsFor, isLiveCall, liveAt, liveCalls, liveFacts, notInterestedLine } from '../agentView'
+import { agentCallTask, atLabel, clockNow, timeLabel, dayLabel } from '../leadLifecycle'
+import { dailyTotal, deliveredOf, openSlotsPerWeek, spendOk, planOf, bandOf } from '../spendPlan'
+import { SpendSliders } from '../PlanBuilder'
+import { ReactivationCards } from '../Reactivate'
 import { usd } from '../motion'
 import { paths } from '../paths'
 import { targetOf } from '../../lib/deedstoneCall'
@@ -17,12 +19,15 @@ import { DeedstoneCallButton } from '../DeedstoneCall'
 import { AddLeadsCard, AddServicingCard } from '../Products955'
 import { useProducts } from '../useProducts'
 import { useStretchPill } from '../../hooks/useStretchPill'
-import { useApp, SubPage, Toggle, Ini, CallButton, BottomSheet, rise } from './AppKit'
-import { STAGES, TONE, TAG, stageOf, inStage } from './appModel'
+import { useApp, SubPage, Ini, CallButton, BottomSheet, rise } from './AppKit'
+import { TONE, TAG, stageOf } from './appModel'
+import { LANES, LANE_TONE, LANE_FROM, laneOfLead, leadMatches } from './p1002'
+import './p1002.css'
 
-// P967 — Leads: four stages (To mark · Booked · Follow up · Sold), a sliding highlight in each stage's colour, a
-// one-line hint, and every lead a full card in its stage's colour. Mark opens How did it go?. Sold has Show closed
-// (no shows and not sold, in grey). A lead opens as its own screen: a coloured hero, their text, what they told us,
+// P967 — Leads: a sliding highlight in each lane's colour, a one-line hint, and every lead a full card in its colour.
+// P1002: the lanes are the desktop's five (Booked · No show · Follow up · Not interested · Sold); live calls and imported
+// lists are pinned above them, and there is a search and the daily spend sheet. Mark opens How did it go?.
+// A lead opens as its own screen: a coloured hero, their text, what they told us,
 // what happened, and Call / How did it go? at the bottom.
 const nameOf = l => `${l.first_name} ${l.last_name}`
 const placeOf = l => [[l.city, l.state].filter(Boolean).join(', '), l.age_band].filter(Boolean).join(' · ')
@@ -37,8 +42,6 @@ export function whenOf(l, stage) {
   if (agentStatusOf(l) === 'no_show') return `No show${l.appt ? ` · ${l.appt}` : ''} · rebook text sent`
   return notInterestedLine(l).replace('Not interested', 'Not sold')
 }
-// Old lane links (?lane=no_show, …) land on the stage that holds them.
-const LANE_TO = { booked: 'booked', follow: 'follow', sold: 'sold', no_show: 'sold', not_interested: 'sold', mark: 'mark' }
 
 export default function ALeads() {
   const app = useApp()
@@ -47,17 +50,26 @@ export default function ALeads() {
   const { has } = useProducts()
   const money = usd()
   const [params, setParams] = useSearchParams()
-  const [closed, setClosed] = useState(() => ['no_show', 'not_interested'].includes(params.get('lane')))
+  const [q, setQ] = useState('')
+  const [spend, setSpend] = useState(false)
   const now = clockNow()
-  const staged = useMemo(() => leads.map(l => ({ l, stage: stageOf(l, now) })).filter(x => x.stage), [leads, now])
-  const counts = Object.fromEntries(STAGES.map(s => [s.key, staged.filter(x => x.stage === s.key).length]))
-  const fromUrl = LANE_TO[params.get('stage') || params.get('lane')]
-  const stage = fromUrl || (counts.mark ? 'mark' : 'booked')
-  const info = STAGES.find(s => s.key === stage)
-  const rows = staged.filter(x => inStage(x.stage, stage, closed))
+  // P1002: the desktop's five lanes (Booked · No show · Follow up · Not interested · Sold). A lead that needs its result
+  // sits in Booked with its Mark button; live calls and imported lists are pinned above the lanes, as on the desktop.
+  const shown = useMemo(() => leads.filter(l => leadMatches(l, q)), [leads, q])
+  const live = useMemo(() => liveCalls(shown), [shown])
+  const staged = useMemo(() => shown.map(l => ({ l, lane: laneOfLead(l), stage: stageOf(l, now) })).filter(x => x.lane), [shown, now])
+  const counts = Object.fromEntries(LANES.map(s => [s.key, staged.filter(x => x.lane === s.key).length]))
+  const lane = LANE_FROM[params.get('stage') || params.get('lane')] || 'booked'
+  const info = LANES.find(s => s.key === lane)
+  const rows = staged.filter(x => x.lane === lane).sort((a, b) => (b.stage === 'mark') - (a.stage === 'mark'))
   const pick = k => setParams(prev => { const p = new URLSearchParams(prev); p.set('stage', k); p.delete('lane'); return p }, { replace: true })
   const seg = useRef(null)
-  useStretchPill(seg, { activeKey: stage, selector: 'button.is-on' })
+  useStretchPill(seg, { activeKey: lane, selector: 'button.is-on' })
+  useEffect(() => {
+    // Scroll the lane strip only: scrollIntoView would also slide the whole page strip (.ma-viewport) sideways.
+    const box = seg.current, on = box?.querySelector('button.is-on')
+    if (box && on) box.scrollLeft = Math.max(0, on.offsetLeft - (box.clientWidth - on.offsetWidth) / 2)
+  }, [lane])
   const dl = deliveredOf({ booked: bill.booked, live: bill.live || 0 })
 
   return (
@@ -65,38 +77,89 @@ export default function ALeads() {
       <div className="ma-top ma-rise">
         <span className="ma-grow"><h1>Leads</h1><small>{dl.total} sent to you this week</small></span>
         <button type="button" className="ma-chip is-solid ma-press" onClick={() => app.openSub('import')}><Upload size={16} aria-hidden="true" />Import</button>
-        {has('leads') && <button type="button" className="ma-chip ma-press" onClick={() => app.open(paths.billing())}><span className="tp-money">{money(dailyTotal(bill.spend))}</span>/day</button>}
+        {has('leads') && <button type="button" className="ma-chip ma-press" aria-label="Change your daily lead spend" onClick={() => setSpend(true)}><span className="tp-money">{money(dailyTotal(bill.spend))}</span>/day</button>}
       </div>
 
-      <div className="ma-seg is-stages ma-rise" style={rise(0)} role="tablist" aria-label="Lead stages" ref={seg}>
-        {STAGES.map(s => (
-          <button key={s.key} type="button" role="tab" aria-selected={stage === s.key} className={`is-${TONE[s.key]}${stage === s.key ? ' is-on' : ''}`} onClick={() => pick(s.key)}>
+      <label className="ma-search is-small ma-rise" style={rise(0)}><Search size={18} aria-hidden="true" /><input type="search" aria-label="Find a lead" placeholder="Find by name, city or phone" value={q} onChange={e => setQ(e.target.value)} />{q && <button type="button" className="ma-ib" aria-label="Clear" onClick={() => setQ('')}><X size={18} aria-hidden="true" /></button>}</label>
+
+      {/* P1002: pinned above the lanes, as on the desktop: imported lists, then live calls */}
+      <div className="ma-embed ma-pinned"><ReactivationCards /></div>
+      {live.length > 0 && (
+        <section className="ma-live" aria-label={`Live calls, ${live.length}`}>
+          {live.map(l => <LiveCard key={l.id} l={l} />)}
+        </section>
+      )}
+
+      <div className="ma-seg is-stages is-lanes ma-rise" style={rise(1)} role="tablist" aria-label="Lead status" ref={seg}>
+        {LANES.map(s => (
+          <button key={s.key} type="button" role="tab" aria-selected={lane === s.key} className={`is-${LANE_TONE[s.key]}${lane === s.key ? ' is-on' : ''}`} onClick={() => pick(s.key)}>
             {s.label} <span>{counts[s.key]}</span>
           </button>
         ))}
       </div>
       <div className="ma-hintrow ma-rise" style={rise(1)}>
-        <p>{info.hint}</p>
-        {stage === 'sold' && <label className="ma-closed">Show closed<Toggle small tone="sage" on={closed} label="Show closed leads" onChange={setClosed} /></label>}
+        <p>{info.explain}</p>
       </div>
 
-      <ul className="ma-cards ma-rise" style={rise(2)} key={`${stage}-${closed}`}>
-        {rows.map(({ l, stage: st }, i) => (
-          <li key={l.id} className={`ma-lead is-${TONE[st]}`} style={{ animationDelay: `${Math.min(i, 8) * 0.03}s` }}>
-            <Link to={paths.lead(l.id)} state={{ tab: 'leads' }} className="ma-lead-open">
-              <Ini name={nameOf(l)} />
-              <span className="ma-grow"><b>{nameOf(l)}</b><small className="is-when">{whenOf(l, st)}</small><small>{placeOf(l)}</small></span>
-            </Link>
-            {st === 'mark'
-              ? <button type="button" className="ma-mark ma-press" onClick={() => app.markLead(l)}>Mark</button>
-              : <span className="ma-tag">{TAG[st]}</span>}
-          </li>
-        ))}
+      <ul className="ma-cards ma-rise" style={rise(2)} key={lane}>
+        {rows.map(({ l, stage: st }, i) => {
+          const tone = st === 'mark' ? TONE.mark : LANE_TONE[lane]
+          return (
+            <li key={l.id} className={`ma-lead is-${tone}`} style={{ animationDelay: `${Math.min(i, 8) * 0.03}s` }}>
+              <Link to={paths.lead(l.id)} state={{ tab: 'leads' }} className="ma-lead-open">
+                <Ini name={nameOf(l)} />
+                <span className="ma-grow"><b>{nameOf(l)}</b><small className="is-when">{whenOf(l, st)}</small><small>{placeOf(l)}</small></span>
+              </Link>
+              {st === 'mark'
+                ? <button type="button" className="ma-mark ma-press" onClick={() => app.markLead(l)}>Mark</button>
+                : <span className="ma-tag">{st === 'lost' ? info.label : TAG[st] || info.label}</span>}
+            </li>
+          )
+        })}
       </ul>
-      {!rows.length && <p className="ma-empty">{info.empty}</p>}
+      {!rows.length && <p className="ma-empty">{q.trim() ? 'No lead matches that search.' : info.empty}</p>}
       <AddLeadsCard compact className="ma-suggest" />
       <AddServicingCard leads={leads} className="ma-suggest" />
+
+      <SpendSheet open={spend} onClose={() => setSpend(false)} />
     </div>
+  )
+}
+
+// P1002: a live call, pinned above the lanes until the agent picks how it went (desktop LiveCall.jsx): what the AI
+// collected, and one button that opens the same result sheet as Mark.
+function LiveCard({ l }) {
+  const app = useApp()
+  const ringing = l.stage === 'ringing'
+  const at = liveAt(l)
+  const when = ringing ? 'Ringing now' : at ? (at.slice(0, 10) === clockNow().slice(0, 10) ? `Today, ${timeLabel(at)}` : `${dayLabel(at)}, ${timeLabel(at)}`) : 'Live call'
+  return (
+    <article className={`ma-livecard is-sky${ringing ? ' is-ringing' : ''}`} aria-label={`Live call, ${nameOf(l)}`}>
+      <header><span className="ma-livecard-k"><PhoneIncoming size={15} aria-hidden="true" />Live call</span><span className="ma-livecard-w">{ringing && <i aria-hidden="true" />}{when}</span></header>
+      <h3><Link to={paths.lead(l.id)} state={{ tab: 'leads' }}>{nameOf(l)}</Link></h3>
+      <dl>{liveFacts(l).map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+      <button type="button" className="ma-btn is-white is-tall ma-press" onClick={() => app.markLead(l)}>How did it go?</button>
+    </article>
+  )
+}
+
+// P1002: the daily lead spend from Leads (desktop SpendDrawer): the same sliders as Billing. Sample only, nothing is
+// charged.
+function SpendSheet({ open, onClose }) {
+  const { data: billing } = useSampleBilling()
+  const { data: settings } = useSampleSettings()
+  const { setSpend } = useSampleActions()
+  const note = useNote()
+  const [spend, setDraft] = useState({ daily: dailyTotal(billing.spend) })
+  return (
+    <BottomSheet open={open} onClose={onClose} label="Daily lead spend" tall className="ma-spendsheet">
+      <p className="ma-sheet-t">Daily lead spend</p>
+      <p className="ma-sheet-s">A change starts tomorrow at 12:00 AM your time</p>
+      <div className="ma-embed">
+        <SpendSliders spend={spend} onSpend={setDraft} plan={billing.plan} mode="both" id="leads-spend" openSlots={openSlotsPerWeek(settings.week)} band={{ tier: planOf(billing), ...bandOf(planOf(billing)) }} />
+      </div>
+      <button type="button" className="ma-btn is-solid is-tall is-grow ma-press" disabled={!spendOk(billing.plan, spend)} onClick={() => { setSpend(spend); note('Lead spend saved. Starts tomorrow. Sample only, nothing was charged'); onClose() }}>Save lead spend</button>
+    </BottomSheet>
   )
 }
 

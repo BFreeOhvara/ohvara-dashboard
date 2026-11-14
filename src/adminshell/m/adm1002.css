@@ -1,0 +1,118 @@
+/* P1002 — the admin phone's pages and tabs that came over from the desktop (Team tabs, Setup tickets, Deedstone,
+   Compliance, Help, Add a VA, Home numbers, Messages and Agents tools). Tokens only (--ma-*, --sh-*, tone tokens), light
+   and dark, 390 px wide, tap targets 44 px and up. Built on app.css / va.css / adm.css. */
+
+/* The fifth VA colour: the desktop's lilac (the phone's own tones stop at four) */
+.ma .is-lilac, .ma-layer .is-lilac { --tf: var(--sh-f-lilac); --ti: var(--sh-fi-lilac); --tc: var(--sh-cf-lilac); }
+.ma :is(.is-lilac), .ma-layer :is(.is-lilac) { --tcard: var(--tc); --tink: var(--sh-ci); --tbar: var(--tf); --ttint: color-mix(in srgb, var(--tf) 34%, transparent); }
+[data-theme="light"] .ma :is(.is-lilac), [data-theme="light"] .ma-layer :is(.is-lilac) { --tcard: color-mix(in srgb, var(--tf) 90%, transparent); --tink: var(--ti); --tbar: color-mix(in srgb, var(--tf) 72%, var(--ti)); --ttint: color-mix(in srgb, var(--tf) 62%, white); }
+
+/* Chips that switch a tab's content (Team, Compliance, Agents' filters) */
+.am-tabs { margin: 12px 0 4px; }
+.am-fchip { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }
+.am-fchip span { font-size: 12px; opacity: .8; }
+
+/* Team: Calendar */
+.am-vachips { margin: 12px 0 0; }
+.am-vachip i { width: 10px; height: 10px; border-radius: 5px; background: var(--tbar); flex: none; }
+.am-vachip.is-on i { background: currentColor; }
+.am-clock { margin: 8px 6px 0 !important; }
+.am-dayh { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 20px 6px 8px; }
+.am-dayh b { font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
+.am-dayh small { font-size: 13px; font-weight: 700; color: var(--ma-ink2); }
+.am-dayh.is-today b::after { content: ''; display: inline-block; width: 8px; height: 8px; margin-left: 8px; border-radius: 50%; background: var(--sh-f-sky); vertical-align: middle; }
+.am-callrow { min-height: 58px; }
+.am-callrow .ma-time { width: 74px; flex: none; }
+.am-callrow .ma-dot { flex: none; }
+.am-sheetgap { margin-top: 12px; }
+.am-wide { width: 100%; margin-top: 12px; }
+button.ma-textbtn.am-wide { justify-content: center; }
+
+/* Team: Time off */
+.am-allow { display: flex; align-items: flex-end; gap: 12px; }
+.am-allow-l { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 700; color: var(--ma-ink2); }
+.am-num { width: 100%; min-height: 48px; padding: 0 14px; border-radius: 14px; border: 1px solid var(--ma-line); background: var(--ma-glass-hi); color: var(--ma-ink); font: inherit; font-size: 18px; font-weight: 700; }
+.am-num:focus { outline: none; box-shadow: 0 0 0 3px var(--ma-focus); }
+.am-dayabbr { width: 44px; flex: none; font-size: 15px; }
+
+/* A row with a request and its button(s): the text wraps, the buttons keep their size */
+.am-reqrow { align-items: center; }
+.am-reqrow .ma-grow { min-width: 0; }
+.am-reqrow .ma-grow small { overflow-wrap: anywhere; }
+.am-reqbtns { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.am .ma-nb.am-nb, .am-reqrow .ma-nb, .am-reqbtns .ma-nb { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 14px; background: var(--ma-glass); border: 1px solid var(--ma-glass-b); color: var(--ma-ink); }
+.am .ma-nb.is-solidnb { background: var(--ma-solid); color: var(--ma-solid-ink); border-color: transparent; }
+.am-x { flex: none; }
+.am-okic { flex: none; color: color-mix(in srgb, var(--sh-f-sage) 60%, var(--sh-fi-sage)); }
+.ma:not(:is([data-theme="light"] *)) .am-okic { color: var(--sh-f-sage); }
+.am-badic { flex: none; color: color-mix(in srgb, var(--sh-f-coral) 70%, var(--sh-fi-coral)); }
+.ma:not(:is([data-theme="light"] *)) .am-badic { color: var(--sh-f-coral); }
+
+/* Facts that run the whole width */
+.va-facts > .is-wide { grid-column: 1 / -1; }
+
+/* Two buttons side by side (Limits / Add a number, Cancel / Save VAs, Go to Connect / See a sample) */
+.am-twobtn { display: flex; gap: 10px; margin: 12px 0; }
+.am-twobtn > * { flex: 1; min-width: 0; }
+
+/* Deedstone numbers */
+.am-numrow { align-items: flex-start; }
+.am-numrow .ma-grow { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.am-numrow .ma-grow > b { font-size: 17px; }
+.am-numend { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none; }
+.am-numend small { font-size: 12px; font-weight: 600; color: var(--ma-ink2); white-space: nowrap; }
+.am-meter { display: block; margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--ma-ink2); }
+.am-weekbars { display: flex; align-items: flex-end; justify-content: space-between; gap: 6px; height: 120px; }
+.am-weekbars > span { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; min-width: 0; }
+.am-weekbars i { display: block; width: 100%; max-width: 30px; border-radius: 6px 6px 3px 3px; background: color-mix(in srgb, var(--ma-ink) 22%, transparent); }
+.am-weekbars i.is-now { background: var(--sh-f-sky); }
+.am-weekbars small { font-size: 11px; font-weight: 700; color: var(--ma-ink2); }
+.am-steps { margin: 0; padding: 0 0 0 22px; display: flex; flex-direction: column; gap: 10px; }
+.am-steps b { display: block; font-size: 14px; }
+.am-steps small { display: block; font-size: 13px; color: var(--ma-ink2); line-height: 1.35; }
+
+/* Setup tickets */
+.am-tkrow { align-items: flex-start; }
+.am-tkrow .ma-grow { display: flex; flex-direction: column; min-width: 0; }
+.am-tkrow .ma-grow small { overflow-wrap: anywhere; }
+.am-tkbar { height: 6px; margin: 8px 0 6px; }
+.am-live { margin: 0 4px 6px; }
+.am-live .adm-livestatus { display: flex; align-items: flex-start; gap: 6px; margin: 0; color: var(--ma-ink2); font-size: 12px; font-weight: 600; line-height: 1.35; }
+.am-live .adm-livestatus svg { flex: none; margin-top: 2px; }
+
+/* Home: Leads this week (funnel and what the ads cost), On shift today, Revenue this week, Leads by day, Agents */
+.am-sub { margin: 0; font-size: 13px; font-weight: 600; color: var(--ma-ink2); }
+.am-subnote { display: block; margin-top: 12px; font-size: 12px; color: var(--ma-ink3); }
+.am-funnel { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; list-style: none; margin: 14px 0 0; padding: 0; }
+.am-funnel li { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 10px 10px 11px; border-radius: 16px; background: var(--ma-glass-hi); border: 1px solid var(--ma-glass-b); }
+.am-funnel b { font-size: 26px; font-weight: 800; line-height: 1.1; }
+.am-funnel small { font-size: 12px; font-weight: 700; color: var(--ma-ink2); line-height: 1.2; }
+.am-funnel span { font-size: 12px; font-weight: 700; color: var(--ma-ink3); }
+.am-funnel li.is-sold b { color: color-mix(in srgb, var(--sh-f-sage) 60%, var(--sh-fi-sage)); }
+.ma:not(:is([data-theme="light"] *)) .am-funnel li.is-sold b { color: var(--sh-f-sage); }
+.am-costs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--ma-line); }
+.am-costs div { min-width: 0; }
+.am-costs dt { font-size: 11px; font-weight: 700; color: var(--ma-ink3); }
+.am-costs dd { margin: 2px 0 0; font-size: 14px; font-weight: 700; }
+.am-onstat { flex: none; display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: var(--ma-ink2); white-space: nowrap; }
+.am-onstat.is-live { color: color-mix(in srgb, var(--sh-f-sky) 55%, var(--sh-fi-sky)); }
+.ma:not(:is([data-theme="light"] *)) .am-onstat.is-live { color: var(--sh-f-sky); }
+.am-rev { margin-top: 18px; }
+.am-rev .am-bars { gap: 4px; }
+.am-rev .am-bars > span { width: 17px; }
+.am-revnote { margin-top: 10px !important; }
+.am-trend { padding: 14px; }
+.am-trend .ox-trend-bar { flex-wrap: wrap; gap: 8px; }
+.am-trend .fx-sel.ox-trend-range { min-height: 44px; width: 100%; }
+.am-trend .ox-trend-plot { min-height: 170px; }
+.am-sold { display: flex; flex-direction: column; align-items: center; flex: none; min-width: 34px; }
+.am-sold b { font-size: 18px; font-weight: 800; line-height: 1.1; }
+.am-sold small { font-size: 11px; font-weight: 700; color: var(--ma-ink2); }
+.am .ma-row .ma-tag { flex: none; }
+.am .ma-row .ma-tag svg { vertical-align: -1px; }
+
+@media (max-width: 360px) {
+  .am-funnel b { font-size: 22px; }
+  .am-costs dd { font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) { .am-weekbars i { transition: none !important; } }

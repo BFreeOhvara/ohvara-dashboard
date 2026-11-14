@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { CalendarCheck, PhoneIncoming, FileCheck, CreditCard, ShieldAlert, MessageCircle, ShieldCheck, ArrowRightLeft, BadgeCheck, CircleAlert, BellOff, CheckCheck, FileX, Banknote, LifeBuoy } from 'lucide-react'
 import { useSampleActivity } from '../data'
-import { SubPage, rise } from './AppKit'
+import { paths } from '../paths'
+import { useApp, SubPage, rise } from './AppKit'
 import { NOTE_KIND, kindOfActivity, dayOf, groupByDay } from './appModel'
 import { useWho, useGo, useNotifItems, SEEN, READ, byTime } from './useNotes'
 
@@ -27,6 +28,7 @@ export function NoteRow({ it, unread, onClick, i = 0 }) {
 }
 
 export function ANotif() {
+  const app = useApp()
   const items = useNotifItems()
   const go = useGo()
   const read = useSyncExternalStore(READ.sub, READ.get)
@@ -51,9 +53,11 @@ export function ANotif() {
         <div className="ma-blank ma-rise">
           <span className="ma-blank-ic" aria-hidden="true"><BellOff size={30} /></span>
           <b>No notifications</b>
-          <small>New bookings, live calls and messages from the team show here.</small>
+          <small>New bookings, live calls and what needs you show here.</small>
         </div>
       )}
+      {/* P1002: the desktop bell's footer */}
+      <button type="button" className="ma-pillbtn ma-press" onClick={() => app.open(paths.activity())}>See all activity</button>
     </SubPage>
   )
 }

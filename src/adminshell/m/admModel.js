@@ -6,9 +6,11 @@ import { admPageOf, isAdminPreviewPath, PREVIEW_BASE } from '../paths.js'
 export const ADM_TABS = ['home', 'agents', 'team', 'messages', 'you']
 export const ADM_LABEL = { home: 'Home', agents: 'Agents', team: 'Team', messages: 'Messages', you: 'You' }
 // Sub-screens opened with ?s= over the current tab (the agent and VA apps' way). t = the record's id.
-export const ADM_SUBS = ['notif', 'search', 'money', 'agent', 'va', 'thread', 'unassigned', 'ai', 'leads', 'lead', 'clients', 'client', 'reports', 'bugs', 'bug', 'setup', 'payouts', 'plans', 'settings', 'profile']
+export const ADM_SUBS = ['notif', 'search', 'money', 'agent', 'va', 'thread', 'unassigned', 'ai', 'leads', 'lead', 'clients', 'client', 'reports', 'bugs', 'bug', 'setup', 'payouts', 'plans', 'settings', 'profile', 'tickets', 'ticket', 'deedstone', 'compliance', 'help']
 // Screens with their own bottom (a chat box or Message + Call): the tab bar slides away under them.
-export const ADM_OWN_BAR = ['thread', 'search', 'agent', 'va', 'lead', 'client', 'bug']
+export const ADM_OWN_BAR = ['thread', 'search', 'agent', 'va', 'lead', 'client', 'bug', 'ticket']
+// P1002: 'setup' is still the internal key of the Connect page (every connection, view only); the Setup TICKETS page is
+// 'tickets' (one ticket: 'ticket'), Deedstone numbers 'deedstone', Compliance 'compliance', Help and support 'help'.
 // Which tab a sub-screen belongs to when it's opened from an address (not from a tab).
 const HOME_OF = { money: 'home', agent: 'agents', va: 'team', thread: 'messages' }
 
@@ -17,7 +19,7 @@ const idOf = (pathname, base) => { const m = new RegExp(`^${base}/([^/]+)/?$`).e
 
 // Where an address lands in the app: { tab, sub, id }. The desktop admin addresses keep working on the phone:
 // /admin/agents/<id> is an agent, /admin/fulfillment/<id> a VA, /admin/inbounds is All leads, /admin/pipeline All clients,
-// /admin/billing Reports, /admin/bugs Bug reports, /admin/connect Setup, /admin/settings the You tab.
+// /admin/billing Reports, /admin/bugs Bug reports, /admin/connect Connect, /admin/setup Setup tickets, /admin/numbers Deedstone, /admin/compliance Compliance, /admin/settings the You tab.
 export function admRouteOf(pathname, search = '') {
   const q = new URLSearchParams(search || '')
   const page = admPageOf(pathname)
@@ -25,7 +27,7 @@ export function admRouteOf(pathname, search = '') {
   const rec = base => idOf(pathname, base)
   switch (page) {
     case 'agents': Object.assign(r, { tab: 'agents' }, rec('/admin/agents') ? { sub: 'agent', id: rec('/admin/agents') } : {}); break
-    case 'setup': r.tab = 'agents'; break
+    case 'setup': Object.assign(r, { tab: 'you', sub: rec('/admin/setup') ? 'ticket' : 'tickets', id: rec('/admin/setup') }); break
     case 'team': Object.assign(r, { tab: 'team' }, rec('/admin/fulfillment') ? { sub: 'va', id: rec('/admin/fulfillment') } : {}); break
     case 'leads': Object.assign(r, { tab: 'you', sub: rec('/admin/inbounds') ? 'lead' : 'leads', id: rec('/admin/inbounds') }); break
     case 'clients': Object.assign(r, { tab: 'you', sub: rec('/admin/pipeline') ? 'client' : 'clients', id: rec('/admin/pipeline') }); break
@@ -33,7 +35,9 @@ export function admRouteOf(pathname, search = '') {
     case 'bugs': Object.assign(r, { tab: 'you', sub: 'bugs' }); break
     case 'connect': Object.assign(r, { tab: 'you', sub: 'setup' }); break
     case 'messages': r.tab = 'messages'; break
-    case 'settings': case 'numbers': case 'compliance': r.tab = 'you'; break
+    case 'numbers': Object.assign(r, { tab: 'you', sub: 'deedstone' }); break
+    case 'compliance': Object.assign(r, { tab: 'you', sub: 'compliance' }); break
+    case 'settings': r.tab = 'you'; break
     default: break
   }
   const s = q.get('s')

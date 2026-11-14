@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { ChevronRight, Moon, UserPlus, Bot, Search, SlidersHorizontal, MessageCircle, Image as ImageIcon, Check, Settings2, Bug, Plug, Wallet, Tags, BarChart3, Users, ListChecks, Pencil, User, Bell, Shield, Lock, Smartphone } from 'lucide-react'
+import { ChevronRight, Moon, UserPlus, Bot, Search, SlidersHorizontal, MessageCircle, Image as ImageIcon, Check, Settings2, Bug, Plug, Wallet, Tags, BarChart3, Users, ListChecks, Pencil, User, Bell, Shield, Lock, Smartphone, Rocket, PhoneCall, Scale, CircleHelp } from 'lucide-react'
 import { useThemePref } from '../../hooks/useTheme'
 import { useOptionalAuth } from '../../hooks/authContext'
 import { supabase } from '../../lib/supabase'
@@ -9,7 +9,7 @@ import { ZonePicker } from '../../template/m/zone'
 import { zoneName } from '../../template/m/zoneTime'
 import {
   useAdmDay, useAdmAgents, useAdmVas, useAdmLeads, useAdmClients, useAdmBugs, useAdmActions, useAdmSettings, useAdmConnect,
-  useAdmPeriod, useAdmMoney, useAdmDraws, useAdmAgentResults, useAdmDesk, useAdmCosts, useAdmSource, PLANS, PERIODS, SETUP_FEE, ME,
+  useAdmPeriod, useAdmMoney, useAdmDraws, useAdmAgentResults, useAdmDesk, useAdmCosts, useAdmSource, useAdmSetup, PLANS, PERIODS, SETUP_FEE, ME,
 } from '../data'
 import { PRICES } from '../../lib/priceBook'
 import { SAMPLE_AI_CALLS, SAMPLE_CENTS_PER_MIN } from '../../lib/aiCaller'
@@ -27,10 +27,12 @@ import {
 import { useOwnerMe, useAdmName } from './useAdm'
 import { AssignSheet } from './ASubsAdm'
 import { useMessageTo } from './useAdm'
+import { AddVaSheet } from './AHelpAdm'
 
 // P986 — You: a dark card (you, Admin, your next payout and payday, how many agents), two tiles (Unassigned leads,
-// AI caller), then All leads, All clients, Reports, Bug reports, Setup, Payouts, Plans and prices, Theme, Settings,
-// and Sign out (P989: a glass button with red text). P989: Edit profile on the card, no glow. Everything here is the desktop admin's data; changes that need the desktop (plans,
+// AI caller), then All leads, All clients, Reports, Bug reports, Setup (the tickets), Connect (every connection, view
+// only; P1002: it was called Setup), Deedstone numbers, Compliance, Payouts, Plans and prices, Add a VA, Help and
+// support, Theme, Settings, and Sign out (P989: a glass button with red text). P989: Edit profile on the card, no glow. Everything here is the desktop admin's data; changes that need the desktop (plans,
 // prices, live switches, connections) say so instead of offering a switch.
 const shortPay = p => String(p || '').replace(/^(\w{3}), \w{3} (\d+)$/, '$1 $2')
 const Sym = ({ tone, Icon }) => <span className={`ma-sym is-${tone}`}><Icon size={16} aria-hidden="true" /></span>
@@ -46,6 +48,8 @@ export default function AYou() {
   const { data: bugs } = useAdmBugs()
   const [theme, setTheme] = useTheme()
   const [appOpen, setAppOpen] = useState(false)
+  const [addVa, setAddVa] = useState(false)
+  const { data: tickets } = useAdmSetup()
   const ai = aiWeek()
   const mine = me ? month.split.find(o => o.id === me.id) : null
   const name = useAdmName() || ME.name
@@ -84,11 +88,16 @@ export default function AYou() {
         <Row onClick={() => app.openSub('clients')} lead={<Sym tone="sage" Icon={Users} />} title="All clients" sub="Every policy we look after" />
         <Row onClick={() => app.openSub('reports')} lead={<Sym tone="butter" Icon={BarChart3} />} title="Reports" sub="This week and this month" />
         <Row onClick={() => app.openSub('bugs')} lead={<Sym tone="coral" Icon={Bug} />} title="Bug reports" sub={openBugs ? `${openBugs} open` : 'Nothing open'} />
-        <Row onClick={() => app.openSub('setup')} lead={<Sym tone="stone" Icon={Plug} />} title="Setup" sub="Every connection, view only" />
+        <Row onClick={() => app.openSub('tickets')} lead={<Sym tone="apricot" Icon={Rocket} />} title="Setup" sub={`${tickets.filter(c => c.stage !== 'live').length} open tickets · paid agents to live`} />
+        <Row onClick={() => app.openSub('setup')} lead={<Sym tone="stone" Icon={Plug} />} title="Connect" sub="Every connection, view only" />
+        <Row onClick={() => app.openSub('deedstone')} lead={<Sym tone="sage" Icon={PhoneCall} />} title="Deedstone numbers" sub="Lines and the VAs on each" />
+        <Row onClick={() => app.openSub('compliance')} lead={<Sym tone="butter" Icon={Scale} />} title="Compliance" sub="Do not call, complaints, legal holds" />
       </div>
       <div className="ma-glass ma-list ma-acct-list ma-rise" style={rise(3)}>
         <Row onClick={() => app.openSub('payouts')} lead={<Sym tone="sage" Icon={Wallet} />} title="Payouts" sub="Your split, VA pay, the bank" />
         <Row onClick={() => app.openSub('plans')} lead={<Sym tone="sky" Icon={Tags} />} title="Plans and prices" sub="View only" />
+        <Row onClick={() => setAddVa(true)} lead={<Sym tone="sage" Icon={UserPlus} />} title="Add a VA" sub="Invite someone to the Fulfillment team" />
+        <Row onClick={() => app.openSub('help')} lead={<Sym tone="coral" Icon={CircleHelp} />} title="Help and support" sub="Report a bug, bug reports, support mailbox" />
         <div className="ma-row ma-theme-row">
           <span className="ma-sym is-stone"><Moon size={16} aria-hidden="true" /></span>
           <span className="ma-grow"><b>Theme</b><small>{theme === 'dark' ? 'Dark' : 'Light'}</small></span>
@@ -100,6 +109,7 @@ export default function AYou() {
       </div>
       <SignOutButton />
       <GetApp open={appOpen} onClose={() => setAppOpen(false)} />
+      <AddVaSheet open={addVa} onClose={() => setAddVa(false)} />
     </div>
   )
 }
@@ -455,14 +465,14 @@ export function ABug({ id }) {
   )
 }
 
-// ── Setup: every connection, view only ───────────────────────────────────────────────────────────────────────────
+// ── Connect: every connection, view only (P1002: it was named Setup; Setup is now the tickets page) ───────────────
 export function ASetupView() {
   const { data: connect } = useAdmConnect()
   const { data: settings } = useAdmSettings()
   const [checked] = useState(() => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))
   const rows = connectionsOf({ connect, settings })
   return (
-    <SubPage title="Setup" line={`${rows.filter(r => r.on).length} of ${rows.length} connected · last checked ${checked}`} big>
+    <SubPage title="Connect" line={`${rows.filter(r => r.on).length} of ${rows.length} connected · last checked ${checked}`} big>
       <div className="ma-glass ma-list ma-rise">
         {rows.map(r => (
           <div key={r.key} className="ma-row am-conn">

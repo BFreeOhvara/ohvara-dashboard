@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { ChevronRight, MessageCircle, Pencil } from 'lucide-react'
 import { useAdmVas, useAdmDesk, useAdmRota, useAdmDay, useAdmActions, WEEK, NEXT_WEEK, dayName, SHIFT_MIN, SHIFT_MAX } from '../data'
 import { useTraining } from '../../fulshell/training/store'
@@ -7,25 +8,40 @@ import { useApp, SubPage, BottomSheet, Ini, CallButton, rise } from '../../templ
 import { firstName } from '../../template/m/va/vaModel'
 import { money, callSplit, callTag, CALL_GROUP, GROUP_ORDER, GROUP_TAG, GROUP_TONE } from './admModel'
 import { useMessageTo } from './useAdm'
+import { TeamCalendar, TimeOffTab, Holidays, HoursPay } from './ATeamMore'
+import { AddVaSheet } from './AHelpAdm'
 
 // P986 — Team: today's desk calls as one bar split by result (Done / No answer / Needs a result / To call) with the
 // on-hold line; the VAs on shift now (status dot, progress bar, calls done, saves); this week's rota with Edit rota;
-// training (who's fully trained, who's mid-way). A VA opens from the right: today's calls, hours this pay period,
+// training (who's fully trained, who's mid-way). P1002: the desktop's tabs as chips: Today (the above) · Calendar · Rota
+// (this week + Holidays) · Time off (+ Swaps and open shifts) · Hours & pay. A VA opens from the right: today's calls, hours this pay period,
 // earned so far, lessons done, today's calls with results, Message and Call.
+const TEAM_TABS = [['today', 'Today'], ['calendar', 'Calendar'], ['rota', 'Rota'], ['requests', 'Time off'], ['pay', 'Hours & pay']]
 export default function ATeam() {
   const app = useApp()
+  const [qs] = useSearchParams()
+  const [tab, setTab] = useState(() => (TEAM_TABS.some(t => t[0] === qs.get('tab')) ? qs.get('tab') : 'today'))
   const { data: vas } = useAdmVas()
   const { data: desk } = useAdmDesk()
   const { data: rota } = useAdmRota()
   const { data: day } = useAdmDay()
   const [edit, setEdit] = useState(false)
+  const [addVa, setAddVa] = useState(false)
   const sp = callSplit(desk)
   const on = vas.filter(v => v.onShift)
   const days = day.byDay // this week, Mon to Sun (the clock's week on real data)
   return (
     <div className="ma-tabpage">
-      <div className="ma-top ma-rise"><span className="ma-grow"><h1>Team</h1><small>{vas.length} VAs · {on.length} on shift now</small></span></div>
+      <div className="ma-top ma-rise"><span className="ma-grow"><h1>Team</h1><small>{vas.length} VAs · {on.length} on shift now</small></span><button type="button" className="ma-textbtn ma-press" onClick={() => setAddVa(true)}>Add a VA</button></div>
 
+      <div className="ma-chips am-tabs ma-rise" role="tablist" aria-label="Fulfillment team">
+        {TEAM_TABS.map(([k, w]) => <button key={k} type="button" role="tab" aria-selected={tab === k} className={`ma-fchip am-fchip${tab === k ? ' is-on' : ''}`} onClick={() => setTab(k)}>{w}</button>)}
+      </div>
+      <div key={tab}>
+      {tab === 'calendar' && <TeamCalendar />}
+      {tab === 'requests' && <TimeOffTab />}
+      {tab === 'pay' && <HoursPay />}
+      {tab === 'today' && <>
       <section className="ma-glass ma-pad am-calls ma-rise" style={rise(0)} aria-label="Today's calls">
         <div className="am-calls-h"><b>Today’s calls</b><span>{sp.done} of {sp.total} done</span></div>
         <div className="am-split" role="img" aria-label={GROUP_ORDER.map(k => `${sp.counts[k]} ${GROUP_TAG[k]}`).join(', ')}>
@@ -57,6 +73,8 @@ export default function ATeam() {
         {!on.length && <p className="ma-empty">Nobody is on shift right now. Shifts are 8 AM to 6 PM Central.</p>}
       </div>
 
+      </>}
+      {tab === 'rota' && <>
       <div className="ma-h2 ma-rise" style={rise(2)}><h2>This week</h2><button type="button" className="ma-textbtn" onClick={() => setEdit(true)}><Pencil size={15} aria-hidden="true" />Edit rota</button></div>
       <div className="ma-glass am-rota ma-rise" style={rise(2)}>
         {days.map(({ day: d, name }) => (
@@ -68,11 +86,17 @@ export default function ATeam() {
         {!days.length && <p className="ma-empty">The rota is on the desktop’s Team page.</p>}
       </div>
 
+      <Holidays />
+      </>}
+      {tab === 'today' && <>
       <div className="ma-h2 ma-rise" style={rise(3)}><h2>Training</h2></div>
       <div className="ma-glass ma-list ma-rise" style={rise(3)}>
         {vas.map(v => <TrainRow key={v.id} v={v} />)}
       </div>
+      </>}
+      </div>
       <RotaSheet open={edit} onClose={() => setEdit(false)} />
+      <AddVaSheet open={addVa} onClose={() => setAddVa(false)} />
     </div>
   )
 }

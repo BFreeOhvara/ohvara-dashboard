@@ -1,0 +1,97 @@
+/* P1002 — the agent phone's desktop-parity pieces: five Leads lanes, pinned live calls, the Home tiles (Lead mix, This
+   week, Your book), the week views on Calendar, a client's Messages / Notes / steps. Tokens only; every tap target is
+   44 px or more. Tones come from app.css (.is-sky, .is-apricot, ...: --tcard / --tink / --tbar / --ttint). */
+
+/* ── Leads: five lanes scroll sideways when they don't fit, no lane gets squeezed ── */
+.ma-seg.is-lanes { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; scroll-snap-type: x proximity; }
+.ma-seg.is-lanes::-webkit-scrollbar { display: none; }
+.ma-seg.is-lanes > button, .ma-page .ma-seg.is-lanes > button { flex: 0 0 auto; padding: 0 14px; scroll-snap-align: center; }
+.ma-pinned { margin-bottom: 0; }
+.ma-pinned:empty { display: none; }
+.ma-pinned .rx-cards { margin-bottom: 12px; }
+
+/* ── Live calls pinned above the lanes ── */
+.ma-live { display: flex; flex-direction: column; gap: 10px; margin: 0 0 14px; }
+.ma-livecard { position: relative; display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 22px; background: var(--tcard); color: var(--tink); box-shadow: 0 12px 26px -16px rgba(0, 0, 0, .4); }
+.ma-livecard > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 700; }
+.ma-livecard-k, .ma-livecard-w { display: inline-flex; align-items: center; gap: 6px; }
+.ma-livecard-w i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: ma1002Pulse 1.4s ease-in-out infinite; }
+.ma-livecard h3 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.ma-livecard h3 a { display: inline-flex; align-items: center; min-height: 44px; }
+.ma-livecard dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin: 0; }
+.ma-livecard dl div { min-width: 0; }
+.ma-livecard dt { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .75; }
+.ma-livecard dd { margin: 1px 0 0; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.ma-livecard .ma-btn { margin-top: 4px; width: 100%; }
+@keyframes ma1002Pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+.is-still .ma-livecard-w i { animation: none; }
+
+/* ── The spend sheet: the desktop's sliders inside a bottom sheet ── */
+.ma-spendsheet .ma-embed { margin-bottom: 14px; }
+.ma-spendsheet .ma-btn { width: 100%; }
+
+/* ── Home tiles ── */
+.ma-tile { margin-top: 14px; }
+.ma-tile-h { display: flex; align-items: center; gap: 8px; margin: -4px -6px 8px 0; }
+.ma-tile-h h2 { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+.ma-tile-h small { display: block; font-size: 13px; color: var(--ma-ink2); }
+.ma-tile-h .ma-ib { flex: 0 0 44px; }
+
+.ma-mix { display: flex; gap: 3px; height: 14px; margin: 6px 0 12px; }
+.ma-mix > i { flex-basis: 0; min-width: 8px; border-radius: 999px; background: var(--tbar); }
+.ma-mixkey, .ma-bookkey { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.ma-mixkey li, .ma-bookkey li { display: flex; align-items: center; gap: 10px; min-height: 36px; font-size: 14px; font-weight: 600; }
+.ma-mixkey li > i, .ma-bookkey li > i { width: 10px; height: 10px; flex: 0 0 10px; border-radius: 50%; background: var(--tbar); }
+.ma-mixkey li > span, .ma-bookkey li > span { flex: 1; min-width: 0; }
+.ma-mixkey li > b, .ma-bookkey li > b { font-size: 16px; font-weight: 800; }
+
+/* This week: five columns, Mon to Fri */
+.ma-wk { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.ma-wk > li { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 6px 4px 8px; border-radius: 16px; background: var(--ma-soft); }
+.ma-wk > li.is-today { box-shadow: inset 0 0 0 2px var(--ma-focus); background: var(--ma-glass-hi); }
+.ma-wk-d { display: flex; flex-direction: column; align-items: center; gap: 1px; min-height: 64px; padding: 4px 0; border: 0; background: none; color: inherit; cursor: pointer; }
+.ma-wk-d b { font-size: 13px; font-weight: 800; }
+.ma-wk-d small { font-size: 11px; color: var(--ma-ink2); white-space: nowrap; }
+.ma-wk-d em { font-style: normal; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: var(--ma-ink); }
+.ma-wk-d i { font-style: normal; font-size: 15px; font-weight: 800; }
+.ma-wk > li.is-empty .ma-wk-d i { color: var(--ma-ink3); }
+.ma-wk-ev { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; min-height: 44px; padding: 3px 2px; border-radius: 12px; background: var(--tcard); color: var(--tink); text-align: center; min-width: 0; }
+.ma-wk-ev small { font-size: 10.5px; font-weight: 700; opacity: .85; }
+.ma-wk-ev b { font-size: 12px; font-weight: 800; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ma-wk-more { min-height: 44px; border: 0; border-radius: 12px; background: none; color: var(--ma-ink2); font-size: 13px; font-weight: 800; cursor: pointer; }
+.ma-wk-none { font-size: 10.5px; line-height: 1.2; text-align: center; color: var(--ma-ink3); padding: 6px 2px; }
+
+/* Your book: the ring and its three counts */
+.ma-book { display: flex; align-items: center; gap: 18px; }
+.ma-book .ma-bookkey { flex: 1; min-width: 0; }
+.ma-ring { position: relative; width: 112px; height: 112px; flex: 0 0 112px; }
+.ma-ring svg { width: 100%; height: 100%; display: block; }
+.ma-ring-track, .ma-ring-arc { fill: none; stroke-width: 11; }
+.ma-ring-track { stroke: var(--ma-soft); }
+.ma-ring-arc { stroke: var(--tbar); stroke-linecap: round; }
+.ma-ring-mid { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.ma-ring-mid b { font-size: 24px; font-weight: 800; letter-spacing: -.02em; }
+.ma-ring-mid small { font-size: 11px; color: var(--ma-ink2); }
+
+/* ── Calendar: This week / Next week ── */
+.ma-weekv { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.ma-wkday { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 22px; background: var(--ma-glass); border: 1px solid var(--ma-glass-b); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.ma-wkday.is-today { box-shadow: 0 0 0 2px var(--ma-focus); }
+.ma-wkday > header { display: flex; align-items: baseline; gap: 8px; }
+.ma-wkday > header b { font-size: 17px; font-weight: 800; }
+.ma-wkday > header small { font-size: 13px; color: var(--ma-ink2); }
+.ma-wkday > header em { font-style: normal; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; padding: 3px 8px; border-radius: 999px; background: var(--ma-solid); color: var(--ma-solid-ink); }
+.ma-wkday > header span { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--ma-ink2); }
+.ma-wkday .ma-wk-none { text-align: left; font-size: 14px; padding: 2px 2px 4px; }
+.ma-cdet { display: flex; align-items: center; gap: 10px; min-height: 28px; margin: 0 2px 6px; font-size: 15px; }
+.ma-cdet svg { flex: 0 0 auto; color: var(--ma-ink2); }
+
+/* ── A client: steps, notes, messages ── */
+.ma-steps1002 .sl-list { margin-top: 0; }
+.ma-steps1002 .sl-step { min-height: 52px; padding-left: 0; padding-right: 0; }
+.ma-notes1002 { margin: 0; font-size: 15px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ma-cmsgs { list-style: none; margin: 0 0 4px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ma-cmsgs li { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 16px; background: var(--ma-soft); }
+.ma-cmsgs li b { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--ma-ink2); }
+.ma-cmsgs li span { font-size: 15px; overflow-wrap: anywhere; }
+.ma-cmsgs li small { font-size: 12px; color: var(--ma-ink3); }

@@ -1,22 +1,28 @@
 import { useMemo, useState } from 'react'
-import { Bell, Search, ChevronRight, CalendarOff, CreditCard, UserPlus, CheckCircle2 } from 'lucide-react'
-import { useAdmDay, useAdmDesk, useAdmPeriod, useAdmMoney, useAdmAgents, useAdmActions, useAdmSource, useAdmRota, useAdmSettings, PERIODS } from '../data'
+import { Bell, Search, ChevronRight, CalendarOff, CreditCard, UserPlus, CheckCircle2, Radio, PhoneCall } from 'lucide-react'
+import { useAdmDay, useAdmDesk, useAdmPeriod, useAdmMoney, useAdmAgents, useAdmActions, useAdmSource, useAdmSettings, useAdmCosts, PERIODS } from '../data'
 import { PhoneClock } from '../../template/m/zone'
 import { minuteOf } from '../../lib/callSlots'
 import { useNote, useAccount } from '../../template/kit'
 import { useApp, Ini, rise, SubPage } from '../../template/m/AppKit'
 import { greetingOf, firstName } from '../../template/m/va/vaModel'
-import { money, changeWords, barsOf, halvesOf, toWatch, flagOf, statusLine, callSplit } from './admModel'
+import AreaTrend from '../../template/AreaTrend'
+import LiveStatus from '../LiveStatus'
+import { money, barsOf, halvesOf } from './admModel'
 import { useNeeds, useOwnerMe } from './useAdm'
 import { LATER } from './admStore'
 import { AssignSheet } from './ASubsAdm'
 import { useMessageTo } from './useAdm'
 
-// P986 — Home: the bell (Notifications from the left), the wordmark, search. The date and greeting; the dark profit
-// card (this month, the change vs last month, the last 4 weeks, each owner's half and the payday; tap for the money
-// breakdown); Needs you (days off, failed cards, unassigned leads, each with two buttons; "All clear" when empty); the
-// green Team on shift card; today across all agents; agents to watch.
-const shortPay = p => String(p || '').replace(/^(\w{3}), \w{3} (\d+)$/, '$1 $2')
+// P986 — Home: the bell (Notifications from the left), the wordmark, search. The date and greeting.
+// P1002 — the numbers are the desktop Overview's (adminshell/screens/Overview.jsx), nothing the desktop doesn't have:
+// the live line (what is on right now), Needs you (the desktop's To-dos), Leads this week as a funnel with what the ads
+// cost, On shift today, Revenue this week (tap for the money breakdown), Leads by day, and every agent ranked by sales.
+const LEAD_SERIES = [
+  { key: 'in', label: 'Came in', color: 'var(--ox-soft)' },
+  { key: 'delivered', label: 'Delivered', color: 'var(--ox-mid-tone)' },
+  { key: 'sold', label: 'Sold', color: 'var(--ox-sold)' },
+]
 
 export default function AHomeAdm() {
   const app = useApp()
@@ -24,18 +30,19 @@ export default function AHomeAdm() {
   const account = useAccount()
   const { data: day } = useAdmDay()
   const { data: desk } = useAdmDesk()
-  const { data: month } = useAdmPeriod('month')
-  const { data: last } = useAdmPeriod('last')
   const { data: m } = useAdmMoney()
   const { data: agents } = useAdmAgents()
+  const { data: costs } = useAdmCosts()
   const { data: zoneSet } = useAdmSettings() // P989: the clock and greeting in the admin's own zone
   const nowMin = minuteOf(new Date().toISOString(), zoneSet?.tz || 'America/Chicago')
-  const weeks = m.weeks.slice(-4)
-  const bars = barsOf(weeks.map(w => w.revenue))
-  const halves = halvesOf(month.split, me)
-  const split = callSplit(desk)
-  const today = day.byDay.find(d => d.day === day.today) || { in: 0, booked: 0, transferred: 0 }
-  const watch = toWatch(agents)
+  const w = day.week
+  const steps = [['in', 'Came in', w.in], ['booked', 'Booked', w.booked], ['transferred', 'Live calls', w.transferred], ['sold', 'Sold', w.sold]]
+  const bars = barsOf(m.days.map(d => (d.later ? 0 : d.revenue)))
+  const onShift = day.onShift.map(v => ({ ...v, calls: desk.filter(c => c.va_id === v.id) }))
+  const done = desk.filter(c => ['cancelled', 'no_answer'].includes(c.status)).length
+  const ranked = agents.slice().sort((a, b) => b.week.sold - a.week.sold || b.week.in - a.week.in)
+  const rate = (k, n) => (steps[0][2] ? Math.round((n / (k === 'booked' || k === 'transferred' ? w.in : w.booked + w.transferred)) * 100) : 0)
+  const cost = v => (v == null ? '–' : money(v))
   return (
     <div className="ma-tabpage">
       <div className="ma-home-h ma-rise">
@@ -50,66 +57,81 @@ export default function AHomeAdm() {
         <PhoneClock tz={zoneSet?.tz} />
         <h1>{greetingOf(nowMin)}, {me?.name || firstName(account?.name) || 'there'}</h1>
       </div>
-
-      <button type="button" className="ma-plan am-profit ma-press ma-rise" style={rise(1)} onClick={() => app.openSub('money')} aria-label={`Profit this month ${money(month.profit)}. Open the money breakdown`}>
-        <i className="ma-glow is-sky" aria-hidden="true" />
-        <span className="am-profit-top">
-          <span className="ma-grow"><small>Profit this month</small><b className="tp-money">{money(month.profit)}</b><small className="am-change">{changeWords(month.profit, last.profit)}</small></span>
-          <span className="am-bars" aria-hidden="true">
-            {weeks.map((w, i) => <span key={w.wk}><i style={{ height: `${bars[i]}%` }} className={w.now ? 'is-now' : ''} /><small>{w.wk.replace(/^\w+ /, '')}</small></span>)}
-          </span>
-        </span>
-        <span className="ma-plan-stats am-halves">
-          {halves.map(h => <span key={h.id}><b className="tp-money">{money(h.amount)}</b><small>{h.label}</small></span>)}
-          <span><b>{shortPay(m.payday)}</b><small>payday</small></span>
-        </span>
-        <ChevronRight size={20} className="am-profit-go" aria-hidden="true" />
-      </button>
+      <div className="am-live ma-rise" style={rise(0)}><LiveStatus /></div>
 
       <NeedsYou />
 
-      <button type="button" className="va-shift is-sage am-shift ma-press ma-rise" style={rise(3)} onClick={() => app.goTab('team')}>
-        <span className="va-shift-top">
-          <b><i className={day.onShift.length ? 'is-live' : ''} aria-hidden="true" />Team on shift · {day.onShift.length ? day.onShift.map(v => firstName(v.name)).join(', ') : 'nobody yet'}</b>
-          <span>{split.done} of {split.total} calls done</span>
+      <div className="ma-h2 ma-rise" style={rise(3)}><h2>Leads this week</h2><button type="button" className="ma-textbtn" onClick={() => app.openSub('leads')}>All leads</button></div>
+      <section className="ma-glass ma-pad am-leads ma-rise" style={rise(3)} aria-label="Leads this week">
+        <p className="am-sub">{day.range} · <span className="tp-money">{money(w.premium)}</span> a month in new premium</p>
+        <ol className="am-funnel" aria-label="This week's leads">
+          {steps.map(([k, label, n], i) => (
+            <li key={k} className={`is-${k}`}><b className="tp-num">{n}</b><small>{label}</small>{i > 0 && <span className="tp-num">{rate(k, n)}%</span>}</li>
+          ))}
+        </ol>
+        {costs
+          ? (
+            <dl className="am-costs" aria-label="Ad cost this week">
+              {[['Ad spend', money(costs.total.spend)], ['Per lead', cost(costs.total.perLead)], ['Per booked', cost(costs.total.perBooked)], ['Per sale', cost(costs.total.perSale)]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd className="tp-money">{v}</dd></div>)}
+            </dl>
+          )
+          : <small className="am-subnote">Cost per lead, booked and sale show once ad spend comes in from GoHighLevel.</small>}
+      </section>
+
+      <div className="ma-h2 ma-rise" style={rise(4)}><h2>On shift today</h2><span>{done} of {desk.length} calls done today</span></div>
+      <div className="ma-glass ma-list ma-rise" style={rise(4)}>
+        {onShift.map(v => (
+          <button key={v.id} type="button" className="ma-row" onClick={() => app.openSub('va', { t: v.id })}>
+            <Ini person name={v.name} size={42} />
+            <span className="ma-grow"><b>{v.name}</b><small>{v.hours}</small></span>
+            <span className={`am-onstat${v.onCall ? ' is-live' : ''}`}>{v.onCall ? <><PhoneCall size={12} aria-hidden="true" />On a call</> : `${v.calls.filter(c => c.status === 'booked').length} to call`}</span>
+          </button>
+        ))}
+        {!onShift.length && <p className="ma-empty">Nobody is on shift right now.</p>}
+        <button type="button" className="ma-all" onClick={() => app.goTab('team')}>Open Fulfillment team<ChevronRight size={16} aria-hidden="true" /></button>
+      </div>
+
+      <button type="button" className="ma-plan am-profit am-rev ma-press ma-rise" style={rise(5)} onClick={() => app.openSub('money')} aria-label={`Revenue this week ${money(m.total)}. Open the money breakdown`}>
+        <i className="ma-glow is-sky" aria-hidden="true" />
+        <span className="am-profit-top">
+          <span className="ma-grow"><small>Revenue this week</small><b className="tp-money">{money(m.total)}</b><small className="am-change">{money(m.lastWeek)} last week</small></span>
+          <span className="am-bars" aria-hidden="true">
+            {m.days.map((d, i) => <span key={d.name}><i style={{ height: `${bars[i]}%` }} className={d.isToday ? 'is-now' : ''} /><small>{String(d.name).slice(0, 1)}</small></span>)}
+          </span>
         </span>
-        <span className="va-bar" role="progressbar" aria-label="Desk calls done today" aria-valuemin={0} aria-valuemax={100} aria-valuenow={split.total ? Math.round((split.done / split.total) * 100) : 0}><i style={{ width: `${split.total ? Math.round((split.done / split.total) * 100) : 0}%` }} /></span>
-        <small>No clients on hold · <OffLine /></small>
-        <ChevronRight size={20} className="am-shift-go" aria-hidden="true" />
+        <span className="ma-plan-stats am-halves">
+          <span><b className="tp-money">{money(m.plans)}</b><small>plans</small></span>
+          <span><b className="tp-money">{money(m.leadFee)}</b><small>booking desk</small></span>
+          <span><b className="tp-money">{money(m.setup)}</b><small>setup</small></span>
+        </span>
+        <ChevronRight size={20} className="am-profit-go" aria-hidden="true" />
       </button>
+      <p className="ma-note am-revnote">Lead spend (<span className="tp-money">{money(m.leadSpend)}</span>) passes to Meta and isn’t counted · {day.real ? 'from billing' : 'sample prices'}</p>
 
-      <div className="ma-h2 ma-rise" style={rise(4)}><h2>Today across all agents</h2></div>
-      <button type="button" className="ma-week am-today ma-press ma-rise" style={rise(4)} onClick={() => app.openSub('leads')} aria-label="Open all leads">
-        <span><b>{today.in}</b><small>new leads</small></span>
-        <span><b className="is-good">{today.booked}</b><small>booked</small></span>
-        <span><b>{today.transferred}</b><small>live transfers</small></span>
-      </button>
+      <div className="ma-h2 ma-rise" style={rise(6)}><h2>Leads by day</h2></div>
+      <section className="ma-glass ma-pad am-trend ma-rise" style={rise(6)} aria-label="Leads by day">
+        <AreaTrend rows={day.trend} series={LEAD_SERIES} todayIso={day.todayIso} label="Leads" head={<p className="am-sub">Came in, delivered and sold, day by day</p>} />
+      </section>
 
-      <div className="ma-h2 ma-rise" style={rise(5)}><h2>Agents to watch</h2><button type="button" className="ma-textbtn" onClick={() => app.goTab('agents')}>All agents</button></div>
-      <div className="ma-glass ma-list ma-rise" style={rise(5)}>
-        {watch.map(a => {
-          const f = flagOf(a)
+      <div className="ma-h2 ma-rise" style={rise(7)}><h2>Agents</h2><button type="button" className="ma-textbtn" onClick={() => app.goTab('agents')}>All agents</button></div>
+      <p className="ma-hint">{day.onDuty.length} taking live transfers now · {agents.length} in all</p>
+      <div className="ma-glass ma-list ma-rise" style={rise(7)}>
+        {ranked.map(a => {
+          const duty = a.active && a.onDuty
+          const due = a.billing.status === 'past_due'
           return (
             <button key={a.id} type="button" className="ma-row" onClick={() => app.openSub('agent', { t: a.id })}>
               <Ini person name={a.name} size={42} />
-              <span className="ma-grow"><b>{a.name}</b><small className={f ? 'am-warn' : ''}>{f ? f.title : statusLine(a)}</small></span>
-              <ChevronRight size={18} className="ma-chev" aria-hidden="true" />
+              <span className="ma-grow"><b>{a.name}</b><small>{a.planInfo.label} · {a.city}, {a.state}</small></span>
+              <span className="am-sold"><b className="tp-num">{a.week.sold}</b><small>sold</small></span>
+              <span className={`ma-tag is-${duty ? 'sage' : due ? 'apricot' : 'stone'}`}>{duty ? <><Radio size={11} aria-hidden="true" /> On duty</> : due ? 'Past due' : a.active ? 'Off duty' : 'Booking only'}</span>
             </button>
           )
         })}
-        {!watch.length && <p className="ma-hint">Every agent is doing fine.</p>}
-        <button type="button" className="ma-all" onClick={() => app.goTab('agents')}>All agents<ChevronRight size={16} aria-hidden="true" /></button>
+        {!ranked.length && <p className="ma-empty">No agents yet.</p>}
       </div>
     </div>
   )
-}
-
-// Who is off today (a day off booked for today), for the Team on shift card.
-function OffLine() {
-  const { data: day } = useAdmDay()
-  const { data: rota } = useAdmRota()
-  const names = rota.dayOff.filter(d => d.date === day.today && d.status === 'approved').map(d => firstName(d.va))
-  return names.length ? <>{names.join(' and ')} {names.length === 1 ? 'is' : 'are'} off</> : <>Nobody off today</>
 }
 
 // ── Needs you ────────────────────────────────────────────────────────────────────────────────────────────────────

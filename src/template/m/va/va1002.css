@@ -1,0 +1,131 @@
+/* P1002 — the VA phone's desktop-parity pieces: Clients, the full client screen, the Training card, booked-call actions,
+   Move and Book for an agent, Schedule extras (clock, time off, open shifts, holidays), Search, pay details, Pay. Tokens only
+   (the --ma-* set and the tone classes), light and dark, 390 px wide, tap targets 44 px and up. Money in JetBrains Mono. */
+
+.va .tp-money, .va .tp-num, .ma-layer .tp-money, .ma-layer .tp-num { font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+
+/* a small status word (Done, Not ready, Works, Working…) */
+.va-tag { display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: 999px; font-style: normal; font-size: 12px; font-weight: 800; white-space: nowrap; background: color-mix(in srgb, var(--tink, var(--ma-ink)) 12%, transparent); color: var(--tink, var(--ma-ink)); }
+.va-tag.is-on { background: color-mix(in srgb, var(--sh-f-sage) 45%, transparent); color: var(--ma-ink); }
+.ma-lead .va-tag, .va-chead .va-tag { background: color-mix(in srgb, white 30%, transparent); color: inherit; }
+
+/* ---- Clients list ---- */
+.va-statuspills { margin-bottom: 10px; }
+.va-statuspills .ma-chip { gap: 8px; }
+.va-pillcount { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; font-size: 12px; font-weight: 800; background: color-mix(in srgb, currentColor 14%, transparent); }
+.va-closedrow { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 16px; margin-bottom: 14px; }
+.va-clist { padding-bottom: 28px; }
+.va-crow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.va-crow b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.va-cnext { display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+.va-cnext svg { flex: 0 0 auto; }
+
+/* ---- the client screen ---- */
+.va-chead { display: flex; align-items: center; gap: 10px; min-height: 64px; margin-top: 6px; padding: 12px 16px; border-radius: 22px; background: var(--tcard); color: var(--tink); box-shadow: var(--ma-shadow); }
+.va-chead b { font-size: 17px; font-weight: 800; }
+.va-chead small { display: block; margin-top: 2px; font-size: 13px; font-weight: 600; color: inherit; opacity: .85; }
+.va-alert { display: flex; align-items: flex-start; gap: 12px; margin-top: 12px; padding: 14px 16px; border-radius: 20px; background: var(--tcard); color: var(--tink); }
+.va-alert svg { flex: 0 0 auto; margin-top: 2px; }
+.va-alert b { display: block; font-size: 15px; font-weight: 800; }
+.va-alert small { display: block; margin-top: 3px; font-size: 13px; font-weight: 600; color: inherit; opacity: .88; }
+.va-stagecount { float: right; font-weight: 800; color: var(--ma-ink2); }
+.va-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.va-step { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 6px 0; }
+.va-step + .va-step { border-top: 1px solid var(--ma-line); }
+.va-step b { display: block; font-size: 15px; font-weight: 700; }
+.va-step small { display: block; margin-top: 1px; font-size: 12.5px; color: var(--ma-ink2); }
+.va-step-dot { width: 28px; height: 28px; flex: 0 0 28px; border-radius: 14px; display: grid; place-items: center; font-size: 13px; font-weight: 800; background: color-mix(in srgb, var(--ma-ink) 10%, transparent); color: var(--ma-ink2); }
+.va-step.is-done .va-step-dot { background: color-mix(in srgb, var(--sh-f-sage) 55%, transparent); color: var(--ma-ink); }
+.va-step.is-current .va-step-dot { background: var(--ma-solid); color: var(--ma-solid-ink); }
+.va-step.is-current b { font-weight: 800; }
+.va-step.is-skipped, .va-step.is-upcoming { opacity: .7; }
+.va-step.is-closed .va-step-dot { background: color-mix(in srgb, var(--sh-f-coral) 45%, transparent); color: var(--ma-ink); }
+
+/* ---- Today ---- */
+.va-train { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; padding: 14px 16px; border-radius: 22px; background: var(--tcard); color: var(--tink); box-shadow: var(--ma-shadow); }
+.va-train-ic { width: 42px; height: 42px; flex: 0 0 42px; border-radius: 14px; display: grid; place-items: center; background: color-mix(in srgb, white 38%, transparent); }
+.va-train b { display: block; font-size: 16px; font-weight: 800; }
+.va-train small { display: block; margin-top: 3px; font-size: 13px; font-weight: 600; color: inherit; opacity: .88; }
+.va-train .va-bar { margin-top: 10px; }
+.va-train-go { flex: 1 1 100%; min-height: 48px; }
+.va-next-why { display: block; margin-top: 8px; font-size: 13px; font-weight: 600; color: inherit; opacity: .9; }
+.va-msgagent { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 46px; margin-top: 10px; border: 0; border-radius: 999px; background: color-mix(in srgb, white 20%, transparent); color: inherit; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+
+/* ---- booked-call actions (in the brief) and their sheets ---- */
+.va-actions { margin-top: 14px; }
+.va-actgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.va-actgrid + .va-actgrid { margin-top: 10px; }
+.va-act { min-height: 48px; padding: 0 12px; font-size: 14px; }
+.va-act-why { text-align: center; margin: 8px 6px 0 !important; }
+.va-passtext { margin: 6px 4px 14px; font-size: 15px; font-weight: 600; color: var(--ma-ink); }
+.va-movetext { display: flex; align-items: center; gap: 6px; }
+
+/* ---- the slot chooser (Move, Book for an agent) ---- */
+.va-slots { margin-top: 6px; }
+.va-slots-wait { display: flex; align-items: center; gap: 6px; }
+.va-field-sel select { width: 100%; min-height: 48px; padding: 0 14px; border-radius: 14px; border: 1px solid var(--ma-line); background: var(--ma-glass-hi); font: inherit; font-size: 16px; font-weight: 600; color: var(--ma-ink); outline: none; }
+.va-field-sel select:focus { box-shadow: 0 0 0 3px var(--ma-focus); }
+.va-field-sel small { font-weight: 600; color: var(--ma-ink2); }
+.va-dayscroll { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.va-dayscroll::-webkit-scrollbar { display: none; }
+.va-daychip { flex: 0 0 auto; flex-direction: column; gap: 0; min-width: 60px; min-height: 56px; padding: 6px 12px; justify-content: center; }
+.va-daychip small { font-size: 11px; font-weight: 700; opacity: .8; }
+.va-daychip b { font-size: 17px; font-weight: 800; }
+.va-timegrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.va-timechip { flex-direction: column; justify-content: center; gap: 0; min-height: 48px; padding: 4px 6px; font-size: 14px; }
+.va-timechip b { font-size: 14px; font-weight: 800; }
+.va-timechip small { font-size: 10.5px; font-weight: 700; opacity: .8; }
+.va-timechip:disabled { opacity: .38; cursor: default; }
+.va-tzline { margin: 12px 4px 0; display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--ma-ink2); }
+.va-tzline b { font-size: 14px; color: var(--ma-ink); }
+.va-slotva { display: flex; align-items: flex-start; gap: 10px; margin: 12px 4px 0; padding: 12px 14px; border-radius: 16px; background: var(--ma-glass-hi); border: 1px solid var(--ma-glass-b); }
+.va-slotva.is-set { background: color-mix(in srgb, var(--sh-f-sage) 32%, transparent); }
+.va-slotva span { display: flex; flex-direction: column; gap: 2px; }
+.va-slotva small { font-size: 12.5px; color: var(--ma-ink2); }
+.va-bookwho { margin: 4px 4px 12px; font-size: 15px; color: var(--ma-ink2); }
+.va-bookwho b { color: var(--ma-ink); font-weight: 800; }
+.va-agentchip { gap: 8px; padding-left: 8px; }
+.va-agentchip small { font-size: 11px; font-weight: 700; opacity: .8; }
+.va-warn { display: flex; align-items: flex-start; gap: 8px; margin: 4px 4px 12px; padding: 10px 12px; border-radius: 14px; font-size: 13px; font-weight: 600; background: color-mix(in srgb, var(--sh-f-apricot) 40%, transparent); color: var(--ma-ink); }
+.va-warn svg { flex: 0 0 auto; margin-top: 1px; }
+
+/* ---- Schedule: clock, time off ---- */
+.va-clock { margin-top: 12px; }
+.va-clock-h { display: flex; align-items: center; gap: 10px; }
+.va-clock-h b { font-size: 17px; font-weight: 800; }
+.va-clock-h small { display: block; margin-top: 2px; font-size: 12.5px; color: var(--ma-ink2); }
+.va-band { display: flex; align-items: center; gap: 10px; margin: 12px 0 0; padding: 12px 14px; border-radius: 16px; background: color-mix(in srgb, var(--sh-f-butter) 38%, transparent); color: var(--ma-ink); }
+.va-band.is-warn { background: color-mix(in srgb, var(--sh-f-apricot) 48%, transparent); }
+.va-band span { display: flex; flex-direction: column; }
+.va-band small { font-size: 12.5px; color: var(--ma-ink2); }
+.va-checkrow { display: flex; align-items: center; gap: 12px; min-height: 48px; margin-top: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
+.va-checkrow input { width: 22px; height: 22px; accent-color: var(--ma-solid); flex: 0 0 22px; }
+.va-timeoff { margin-top: 14px; }
+.va-to-big { display: flex; align-items: center; gap: 14px; }
+.va-to-big > b { font-size: 40px; font-weight: 500; line-height: 1; }
+.va-to-big span { display: flex; flex-direction: column; }
+.va-to-big span b { font-size: 15px; font-weight: 800; }
+.va-to-big small { font-size: 12.5px; color: var(--ma-ink2); }
+.va-offs { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; }
+.va-offs li { display: flex; align-items: center; gap: 10px; min-height: 52px; font-size: 14px; font-weight: 600; }
+.va-offs li + li { border-top: 1px solid var(--ma-line); }
+.va-offs svg { flex: 0 0 auto; color: var(--ma-ink2); }
+.va-calm { display: flex; align-items: center; gap: 8px; margin: 12px 0 0; font-size: 14px; color: var(--ma-ink2); }
+.va-timeoff .va-wide { margin-top: 12px; }
+
+/* ---- Pay ---- */
+.va-paydays { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.va-paydays li { display: grid; grid-template-columns: 40px 1fr 56px 74px; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; }
+.va-paydays li.is-off { opacity: .55; }
+.va-paydays li.is-live b { color: var(--ma-ink); }
+.va-paybar { height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--ma-ink) 12%, transparent); overflow: hidden; }
+.va-paybar > i { display: block; height: 100%; border-radius: inherit; background: var(--ma-solid); }
+.va-payamt { text-align: right; font-size: 13px; color: var(--ma-ink2); }
+.va-how { list-style: none; margin: 8px 0 4px; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.va-how li { display: flex; align-items: flex-start; gap: 12px; }
+.va-how b { display: block; font-size: 15px; font-weight: 800; }
+.va-how small { display: block; margin-top: 2px; font-size: 13px; color: var(--ma-ink2); }
+.va-how-dot { width: 26px; height: 26px; flex: 0 0 26px; border-radius: 13px; display: grid; place-items: center; background: color-mix(in srgb, var(--sh-f-sage) 55%, transparent); color: var(--ma-ink); }
+
+/* ---- Messages ---- */
+.va-openclient { min-height: 44px; padding: 0 10px; font-size: 14px; }

@@ -12,7 +12,7 @@ import { AppCtx, Ini, useStill } from '../AppKit'
 import { useTabSwipe } from '../useTabSwipe'
 import { useBackSwipe } from '../useBackSwipe'
 import { screenKey, stackOf } from '../appModel'
-import { VA_TABS, VA_LABEL, VA_OWN_BAR, vaRouteOf } from './vaModel'
+import { VA_TABS, VA_LABEL, VA_NO_BAR, vaRouteOf } from './vaModel'
 import { VaCallProvider } from './VCall'
 import VToday from './VToday'
 import VCalendar from './VCalendar'
@@ -21,12 +21,14 @@ import VMessages, { VThread, VaStandingProvider } from './VMessages'
 import { useVaThreads, FEED_SEEN } from './vaStore'
 import VMe, { VPay, VSettings, VProfile, VTraining, VLesson, VHelp } from './VMe'
 import { VNotif, VSearch, VClient } from './VSubs'
+import VClients from './VClients'
 import '../../glass.css'
 import '../../flow.css'
 import '../../palette.css'
 import '../m.css'
 import '../app.css'
 import './va.css'
+import './va1002.css'
 import '@fontsource/urbanist/500.css'
 import '@fontsource/urbanist/600.css'
 import '@fontsource/urbanist/700.css'
@@ -47,6 +49,7 @@ function SubScreen({ route }) {
   switch (route.sub) {
     case 'search': return <VSearch />
     case 'client': return <VClient id={route.id} />
+    case 'clients': return <VClients />
     case 'settings': return <VSettings section={route.id} />
     case 'profile': return <VProfile />
     case 'pay': return <VPay />
@@ -152,7 +155,7 @@ function Frame() {
   const swipeR = useBackSwipe({ layerRef: topRef, underOf: underR, dir: 1, on: !!topId && !notif, onClose: doBack, key: topId })
   const swipeL = useBackSwipe({ layerRef: notifRef, underOf: underL, scrimRef, dir: -1, on: notif, onClose: doBack })
 
-  const hideBar = VA_OWN_BAR.includes(route.sub) || notif
+  const hideBar = VA_NO_BAR.includes(route.sub) || notif
   const body = status.error ? <DataError onRetry={status.retry} /> : status.loading ? <DataLoading /> : null
   const { onClickCapture } = useTabSwipe({ viewRef, trackRef, barRef, idx, count: VA_TABS.length, onSwitch, on: !body })
   const trackStyle = { transform: `translate3d(calc(${-idx * 100}% + 0px), 0, 0)`, transition: still ? 'none' : undefined }

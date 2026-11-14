@@ -19,6 +19,8 @@ import ATeam, { AVa } from './ATeam'
 import AMsgs, { AThreadAdm } from './AMsgs'
 import AYou, { AUnassigned, AAi, ALeadsAll, ALeadAdm, AClientsAll, AClientAdm, AReports, ABugs, ABug, ASetupView, APayouts, APlans, ASettingsAdm, AProfileAdm } from './AYou'
 import { ANotif, ASearch } from './ASubsAdm'
+import { ADeedstone, ACompliance, ATickets, ATicket } from './APages'
+import { AHelpAdm } from './AHelpAdm'
 import '../../template/glass.css'
 import '../../template/flow.css'
 import '../../template/palette.css'
@@ -26,6 +28,7 @@ import '../../template/m/m.css'
 import '../../template/m/app.css'
 import '../../template/m/va/va.css'
 import './adm.css'
+import './adm1002.css'
 import '@fontsource/urbanist/500.css'
 import '@fontsource/urbanist/600.css'
 import '@fontsource/urbanist/700.css'
@@ -63,6 +66,11 @@ function SubScreen({ route }) {
     case 'plans': return <APlans />
     case 'settings': return <ASettingsAdm section={route.id} />
     case 'profile': return <AProfileAdm />
+    case 'tickets': return <ATickets />
+    case 'ticket': return <ATicket id={route.id} />
+    case 'deedstone': return <ADeedstone />
+    case 'compliance': return <ACompliance />
+    case 'help': return <AHelpAdm />
     default: return null
   }
 }

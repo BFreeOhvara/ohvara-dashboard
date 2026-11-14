@@ -1,12 +1,16 @@
 import { useMemo } from 'react'
-import { Bell, Search, Phone, PhoneIncoming, ChevronRight } from 'lucide-react'
+import { Bell, Search, Phone, PhoneIncoming, ChevronRight, GraduationCap, MessageCircle } from 'lucide-react'
 import { useFulDay, useFulSchedule, useFulShift, useFulSettings } from '../../ful/data'
 import { PhoneClock } from '../zone'
 import { shiftWords } from '../zoneTime'
 import { whyShort } from '../../ful/callSteps'
 import { useAccount } from '../../kit'
+import { useTraining, useLessons } from '../../../fulshell/training/store'
+import { TRAIN_FIRST } from '../../../lib/trainingGate.js'
+import { useGate } from '../../docs886/data'
 import { useApp, Ini, rise } from '../AppKit'
 import { useVaCall } from './vaStore'
+import { useVaChat } from './useVaChat'
 import { useVaNow, dayOfItem } from './useVaNow'
 import { stateOf, forLine, greetingOf, firstName, onShiftWords, withYou, STATE_TONE } from './vaModel'
 
@@ -15,10 +19,31 @@ import { stateOf, forLine, greetingOf, firstName, onShiftWords, withYou, STATE_T
 // call with Start call and its brief; calls left without a result; later today and All of today; the day's numbers.
 const carrierOf = it => it?.row?.old_carrier || it?.row?.carrier || it?.row?.client?.carrier_name || ''
 
+// P1002: training shows once. One clear card until every lesson is passed; then it's gone (the desktop's TrainingCard,
+// Overview.jsx). Training itself stays watch-only on the phone: the card opens the next lesson's video.
+function TrainingCard({ sum, i }) {
+  const app = useApp()
+  const lessons = useLessons()
+  const next = lessons.find(l => l.id === sum.next)
+  return (
+    <section className="va-train is-sky ma-rise" style={rise(i)} aria-label="Training">
+      <span className="va-train-ic" aria-hidden="true"><GraduationCap size={22} /></span>
+      <span className="ma-grow">
+        <b>{TRAIN_FIRST}</b>
+        <small>No calls are given or booked to you until it&apos;s done · {sum.passed} of {sum.total} lessons{next ? ` · next: ${next.title}` : ''}</small>
+        <span className="va-bar" role="progressbar" aria-label="Training done" aria-valuemin={0} aria-valuemax={sum.total} aria-valuenow={sum.passed}><i style={{ width: `${Math.round((sum.pct || 0) * 100)}%` }} /></span>
+      </span>
+      <button type="button" className="ma-btn is-white va-train-go ma-press" onClick={() => (next ? app.openSub('training', { l: next.id }) : app.openSub('training'))}>{sum.passed ? 'Keep going' : 'Start training'}</button>
+    </section>
+  )
+}
+
 export default function VToday() {
   const app = useApp()
   const account = useAccount()
   const vc = useVaCall()
+  const chat = useVaChat()
+  const { sum: training } = useTraining(account?.name)
   const { data: day } = useFulDay()
   const { data: all } = useFulSchedule()
   const { data: shift } = useFulShift()
@@ -33,6 +58,12 @@ export default function VToday() {
   const { data: zoneSet } = useFulSettings() // P989: the live clock in the VA's own zone
   const off = (shift.dayOffs || []).some(o => o.date === todayIso)
   const onShift = !shift.notSet && shift.onToday && !off
+  // Start call: never before training is done; a cancellation also waits for the new policy to be issued (Overview.jsx:158-160).
+  const gate = useGate(next?.name || '')
+  const waitsOnPolicy = next?.kind === 'call' && !gate.open
+  const blocked = !training.complete || waitsOnPolicy
+  const blockWhy = !training.complete ? TRAIN_FIRST : 'Waits for the new policy to be issued'
+  const nextClient = next?.row?.client_id || next?.row?.client?.id || null
 
   return (
     <div className="ma-tabpage">
@@ -59,6 +90,8 @@ export default function VToday() {
         <small>{shift.notSet ? `Shifts are ${shiftWords(null, zoneSet?.timeZone || tz)}` : withYou(shift.mates || [])}</small>
       </section>
 
+      {!training.complete && <TrainingCard sum={training} i={2} />}
+
       {vc.holdLine && (
         <button type="button" className="va-hold is-apricot ma-press ma-rise" style={rise(2)} onClick={vc.takeHold}>
           <span className="va-hold-ic" aria-hidden="true"><PhoneIncoming size={21} /></span>
@@ -80,9 +113,11 @@ export default function VToday() {
             <Ini name={next.name} size={52} className="ma-next-av" />
           </div>
           <div className="ma-next-btns">
-            <button type="button" className="ma-btn is-white is-grow is-tall ma-press" onClick={() => vc.start(next)}><Phone size={18} aria-hidden="true" />Start call</button>
+            <button type="button" className="ma-btn is-white is-grow is-tall ma-press" disabled={blocked} onClick={() => vc.start(next)}><Phone size={18} aria-hidden="true" />Start call</button>
             <button type="button" className="ma-round is-big is-glass ma-press" aria-label="Call brief" onClick={() => vc.openBrief(next)}><ChevronRight size={20} aria-hidden="true" /></button>
           </div>
+          {blocked && <small className="va-next-why">{blockWhy}</small>}
+          {next.agent && nextClient && <button type="button" className="va-msgagent ma-press" onClick={() => chat.message(nextClient)}><MessageCircle size={16} aria-hidden="true" />Message {firstName(next.agent)}</button>}
         </> : <>
           <span className="ma-next-k"><i aria-hidden="true" />Next call</span>
           <b className="ma-next-none">Nothing else booked today</b>

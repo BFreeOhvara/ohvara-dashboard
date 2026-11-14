@@ -1,9 +1,12 @@
 import { useState } from 'react'
-import { CalendarOff, Play, ChevronRight, Moon, Lock, Check, MessageCircle, Bug, GraduationCap, Pencil, User, Bell, CalendarDays, Shield } from 'lucide-react'
-import { useFulPay, useFulSettings, useFulActions, useFulShift } from '../../ful/data'
+import { CalendarOff, Play, ChevronRight, Moon, Lock, Check, MessageCircle, Bug, GraduationCap, Pencil, User, Bell, CalendarDays, Shield, Users, Landmark, Info, FileText, Mail, ShieldCheck } from 'lucide-react'
+import { useFulPay, useFulSettings, useFulActions, useFulShift, useFulSource } from '../../ful/data'
 import { DayOffDrawer } from '../../ful/Shift'
 import { useTimeOff } from '../../ful/useTimeOff'
-import { MY_SHEET, weekPay, hoursOf } from '../../ful/p879'
+import { dateLabel } from '../../../lib/vaShifts'
+import { MY_SHEET, MY_RATE, weekPay, hoursOf } from '../../ful/p879'
+import { hourGrid } from '../../ful/pay931'
+import { SUPPORT_EMAIL } from '../../../components/auth/authUtils'
 import { useAccount, useNote } from '../../kit'
 import { useTheme, useThemePref } from '../../../hooks/useTheme'
 import { useTraining, useLessons } from '../../../fulshell/training/store'
@@ -14,7 +17,7 @@ import { PhoneInput } from '../../PhoneInput'
 import { ReportBug } from '../../ReportBug'
 import { AppAbout } from '../../../components/native/AppAbout'
 import { SUPPORT_THREAD } from '../../support911'
-import { useApp, SubPage, Row, Ini, Toggle, SignOutButton, rise } from '../AppKit'
+import { useApp, SubPage, Row, Ini, Toggle, SignOutButton, BottomSheet, rise } from '../AppKit'
 import { PRIVACY_URL } from '../ASettings'
 import { ZonePicker } from '../zone'
 import { zoneName, shiftWords } from '../zoneTime'
@@ -70,6 +73,7 @@ export default function VMe() {
       </div>
 
       <div className="ma-glass ma-list ma-acct-list ma-rise" style={rise(2)}>
+        <Row onClick={() => app.openSub('clients')} lead={<span className="ma-sym is-sky"><Users size={16} aria-hidden="true" /></span>} title="Clients" sub="Every client across your agents" />
         <Row onClick={() => app.openSub('pay')} lead={<span className="ma-sym is-sage">◷</span>} title="Hours and pay" sub="Every shift and payday" />
         <div className="ma-row ma-theme-row">
           <span className="ma-sym is-stone"><Moon size={16} aria-hidden="true" /></span>
@@ -88,9 +92,18 @@ export default function VMe() {
 // Hours and pay: the week so far (each scheduled shift and its hours), the pay rate, the next payday and the payouts.
 export function VPay() {
   const { data: pay } = useFulPay()
+  const real = useFulSource() === 'real'
+  const off = useTimeOff()
+  const [how, setHow] = useState(false)
   const w = weekPay()
+  const g = hourGrid(MY_SHEET)
+  const top = Math.max(1, ...g.rows.map(r => r.hours))
+  const bank = pay.account?.bank ? `${pay.account.bank}${pay.account.last4 ? ` •••• ${pay.account.last4}` : ''}` : ''
+  const explainer = (
+    <button type="button" className="ma-round is-soft ma-press" aria-label="How pay works" onClick={() => setHow(true)}><Info size={19} aria-hidden="true" /></button>
+  )
   return (
-    <SubPage title="Hours and pay" line={`${money(w.rate)} an hour · paid weekly`} big>
+    <SubPage title="Hours and pay" line={`${money(w.rate)} an hour · paid weekly`} right={explainer} big>
       <div className="ma-plan ma-rise">
         <div className="ma-plan-stats">
           <div><b>{hoursWords(w.hours)}</b><small>this week</small></div>
@@ -98,8 +111,26 @@ export function VPay() {
           <div><b>{shortPayday(pay.payday) || 'Not set'}</b><small>next payday</small></div>
         </div>
       </div>
+      <p className="ma-cap is-out">Day by day</p>
+      <div className="ma-glass ma-pad ma-rise" style={rise(1)}>
+        {real
+          ? <p className="ma-hint">Your hours fill in day by day once your rota is set.</p>
+          : (
+            <ul className="va-paydays" aria-label="The pay period, day by day">
+              {g.rows.map(r => (
+                <li key={r.day} className={`${r.off ? 'is-off' : ''}${r.live ? ' is-live' : ''}`}>
+                  <b>{r.name}</b>
+                  <span className="va-paybar" aria-hidden="true"><i style={{ width: `${Math.round((r.hours / top) * 100)}%` }} /></span>
+                  <span className="tp-num">{r.off ? 'Off' : `${r.hours.toFixed(1)} h`}</span>
+                  <span className="tp-money va-payamt">{r.off ? '' : `$${(r.hours * MY_RATE).toFixed(2)}`}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        <p className="ma-hint">{off.next ? `Next day off ${dateLabel(off.next.date)}. ` : ''}Days off aren’t paid. Pay comes from your rota.</p>
+      </div>
       <p className="ma-cap is-out">Your shifts this week</p>
-      <div className="ma-glass ma-list ma-rise" style={rise(1)}>
+      <div className="ma-glass ma-list ma-rise" style={rise(2)}>
         {MY_SHEET.map(r => (
           <div key={r.day} className="ma-row">
             <span className="ma-sym is-sage">{r.d}</span>
@@ -109,7 +140,7 @@ export function VPay() {
         ))}
       </div>
       <p className="ma-cap is-out">Payouts</p>
-      <div className="ma-glass ma-list ma-rise" style={rise(2)}>
+      <div className="ma-glass ma-list ma-rise" style={rise(3)}>
         {(pay.payouts || []).map(p => (
           <div key={p.id} className="ma-row">
             <span className="ma-sym is-stone"><Check size={16} aria-hidden="true" /></span>
@@ -119,13 +150,30 @@ export function VPay() {
         ))}
         {!(pay.payouts || []).length && <p className="ma-empty">No payouts yet. Your first one lands on {pay.payday || 'payday'}.</p>}
       </div>
-      <p className="ma-note">{pay.account?.bank ? `Paid to ${pay.account.bank} ••${pay.account.last4}. ` : ''}Pay is your set shifts minus days off.</p>
+      {!real && (
+        <>
+          <p className="ma-cap is-out">Tax forms</p>
+          <div className="ma-glass ma-list ma-rise" style={rise(4)}>
+            <div className="ma-row"><span className="ma-sym is-stone"><FileText size={16} aria-hidden="true" /></span><span className="ma-grow"><b>Tax form for 2026</b><small>Ready by Jan 31, 2027{pay.account?.taxEmail ? `, sent to ${pay.account.taxEmail}` : ''}</small></span><em className="va-tag">Not ready</em></div>
+            <div className="ma-row"><span className="ma-sym is-stone"><FileText size={16} aria-hidden="true" /></span><span className="ma-grow"><b>Tax details</b><small>Name and tax ID are kept by the payout service</small></span></div>
+          </div>
+        </>
+      )}
+      <p className="ma-note">{bank ? `Paid to ${bank}. ` : ''}Pay is your set shifts minus days off.</p>
+      <BottomSheet open={how} onClose={() => setHow(false)} label="How pay works">
+        <p className="ma-sheet-t">How pay works</p>
+        <p className="ma-sheet-s">Sample amounts</p>
+        <ol className="va-how">
+          {[['Your shifts', 'The hours set on your rota'], ['Days off', 'Taken out; you have a few a month'], ['Nothing to correct', 'Pay comes from the rota, not a timesheet'], ['Paid Monday', `Scheduled hours × $${MY_RATE.toFixed(2)}${bank ? ` to ${bank}` : ''}`]].map(([a, b]) => <li key={a}><span className="va-how-dot" aria-hidden="true"><Check size={13} strokeWidth={2.6} /></span><span><b>{a}</b><small>{b}</small></span></li>)}
+        </ol>
+      </BottomSheet>
     </SubPage>
   )
 }
 
 // P977 — Settings: a list of sections, each its own screen (?s=settings&t=<section>).
-const SECTIONS = { account: 'Account', alerts: 'Notifications', shifts: 'Shifts', privacy: 'Privacy and security', zone: 'Time zone' }
+const SECTIONS = { account: 'Account', alerts: 'Notifications', shifts: 'Shifts', pay: 'Pay details', privacy: 'Privacy and security', zone: 'Time zone' }
+const payLine = p => (p?.bank ? `${p.bank}${p.last4 ? ` •••• ${p.last4}` : ''} · tax forms by email` : 'Payout account and tax forms')
 const THEME_WORD = { light: 'Light', dark: 'Dark', system: 'Match my phone' }
 
 export function VSettings({ section }) {
@@ -142,6 +190,7 @@ export function VSettings({ section }) {
         <Row onClick={() => go('account')} lead={<span className="ma-sym is-sky"><User size={16} aria-hidden="true" /></span>} title="Account" sub={`${zoneName(s.timeZone)} · ${THEME_WORD[pref] || 'Match my phone'}`} />
         <Row onClick={() => go('alerts')} lead={<span className="ma-sym is-coral"><Bell size={16} aria-hidden="true" /></span>} title="Notifications" sub={on ? `${on} of ${(s.notifications || []).length} come to your phone` : 'Only in the bell'} />
         <Row onClick={() => go('shifts')} lead={<span className="ma-sym is-sage"><CalendarDays size={16} aria-hidden="true" /></span>} title="Shifts" sub={shiftWords(shift.shift?.text, s.timeZone)} />
+        <Row onClick={() => go('pay')} lead={<span className="ma-sym is-sage"><Landmark size={16} aria-hidden="true" /></span>} title="Pay details" sub={payLine(s.payDetails)} />
         <Row onClick={() => go('privacy')} lead={<span className="ma-sym is-stone"><Shield size={16} aria-hidden="true" /></span>} title="Privacy and security" sub="Password, privacy policy" />
       </div>
     </SubPage>
@@ -158,6 +207,7 @@ function VSection({ k }) {
   const off = useTimeOff()
   const [pref, savePref] = useThemePref()
   const [alerts, setAlerts] = useState(s.notifications || [])
+  const [payDraft, setPayDraft] = useState(s.payDetails || {})
   const [panel, setPanel] = useState(null)
   const DeleteDialog = account?.DeleteDialog
   const flip = (key, field, v) => { const next = alerts.map(n => (n.key === key ? { ...n, [field]: v } : n)); setAlerts(next); saveSettings({ notifications: next }) }
@@ -206,6 +256,30 @@ function VSection({ k }) {
           <Row onClick={() => (off.notSet ? note('Days off open once your schedule is set') : setPanel('off'))} title="Ask for a day off" right={<span className="ma-val">{off.notSet ? 'Not yet' : `${off.left} left`}</span>} />
         </div>
         <DayOffDrawer open={panel === 'off'} onClose={() => setPanel(null)} />
+      </>
+    )
+  }
+  if (k === 'pay') {
+    // Where your Monday payout goes and where tax forms are sent (the desktop's Settings, Pay details). Bank details are
+    // only ever entered in the payout service's own form, so Change bank points there.
+    const dirty = JSON.stringify(payDraft) !== JSON.stringify(s.payDetails || {})
+    return (
+      <>
+        <p className="ma-hint ma-set-note">Where your Monday payout goes and where tax forms are sent.</p>
+        <div className="ma-glass ma-list ma-set ma-rise">
+          <div className="ma-row"><span className="ma-grow"><b>Payout account</b></span><span className="ma-val">{payDraft.bank ? `${payDraft.bank}${payDraft.last4 ? ` •••• ${payDraft.last4}` : ''}` : 'Not set'}</span></div>
+          <div className="ma-row"><span className="ma-grow"><b>Status</b></span><span className="ma-val">{payDraft.status || 'Not set'}</span></div>
+          <div className="ma-row"><span className="ma-grow"><b>Paid</b></span><span className="ma-val">Every Monday</span></div>
+        </div>
+        <div className="ma-glass ma-pad ma-rise">
+          <label className="va-field"><span>Tax forms go to</span><input type="email" inputMode="email" autoComplete="email" value={payDraft.taxEmail || ''} onChange={e => setPayDraft({ ...payDraft, taxEmail: e.target.value })} /></label>
+        </div>
+        <button type="button" className="ma-pillbtn ma-press" onClick={() => note('Bank changes open in the payout service once you sign in for real')}><Landmark size={17} aria-hidden="true" />Change bank</button>
+        <button type="button" className="ma-pillbtn ma-press" onClick={() => app.openSub('pay')}>Open Pay</button>
+        <div className="ma-two">
+          <button type="button" className="ma-btn is-soft is-tall ma-press" disabled={!dirty} onClick={() => setPayDraft(s.payDetails || {})}>Discard</button>
+          <button type="button" className="ma-btn is-solid is-tall ma-press" disabled={!dirty} onClick={() => { saveSettings({ payDetails: payDraft }); note('Pay details saved') }}>Save changes</button>
+        </div>
       </>
     )
   }
@@ -312,6 +386,9 @@ export function VHelp() {
     <SubPage title="Help" line="We usually answer within the hour on a shift day" big>
       <div className="ma-glass ma-list ma-rise">
         <Row onClick={() => app.openSub('thread', { t: SUPPORT_THREAD })} lead={<span className="ma-sym is-sky"><MessageCircle size={16} aria-hidden="true" /></span>} title="Message Ohvara support" sub="Shifts, pay, the app, anything" />
+        <Row onClick={() => app.goTab('messages')} lead={<span className="ma-sym is-sky"><MessageCircle size={16} aria-hidden="true" /></span>} title="Message an agent" sub="About one of their clients" />
+        <a className="ma-row" href={`mailto:${SUPPORT_EMAIL}`}><span className="ma-sym is-sage"><Mail size={16} aria-hidden="true" /></span><span className="ma-grow"><b>Email support</b><small>{SUPPORT_EMAIL}</small></span><ChevronRight size={18} className="ma-chev" aria-hidden="true" /></a>
+        <Row chev={false} lead={<span className="ma-sym is-stone"><ShieldCheck size={16} aria-hidden="true" /></span>} title="Coverage or advice questions" sub="Those go to the client's agent. Use Send to agent on the step." />
         <Row onClick={() => app.openSub('training')} lead={<span className="ma-sym is-sage"><GraduationCap size={16} aria-hidden="true" /></span>} title="Training" sub="How every call works, step by step" />
         <Row onClick={() => setBug(true)} lead={<span className="ma-sym is-coral"><Bug size={16} aria-hidden="true" /></span>} title="Report a problem" sub="Something broken or looks wrong" />
       </div>

@@ -11,10 +11,12 @@ import { usd } from '../motion'
 import { useApp, SubPage, BottomSheet, CallButton, rise } from './AppKit'
 import { useAnswer, AppLinkSheet } from './MClients'
 import { useThreadList } from './AMessages'
-import { threadIdFor } from './threadStore'
+import { StageChecklist } from '../Stages911'
+import { threadIdFor, sendLocal } from './threadStore'
 import { NoteIcon } from './ANotes'
 import { last4, clientNow, clientSince, clientTimeline, leadOfClient } from './appModel'
 import { paths } from '../paths'
+import './p1002.css'
 
 // P972 — one client, as its own screen (it used to be a sheet). A coloured hero with where they stand (Protected /
 // Working / Needs attention), the policy, what our team is doing now in one plain line, a timeline of what happened,
@@ -28,7 +30,7 @@ export function AClient({ id }) {
   const app = useApp()
   const { data: clients } = useSampleClients()
   const { data: act } = useSampleActivity()
-  const { markLapsed } = useSampleActions()
+  const { markLapsed, sendMessage } = useSampleActions()
   const { threads } = useThreadList()
   const { data: leads } = useSampleLeads()
   const source = useDataSource()
@@ -39,6 +41,7 @@ export function AClient({ id }) {
   const money = usd(true)
   const [appLink, setAppLink] = useState(false)
   const [lapsing, setLapsing] = useState(false)
+  const [msg, setMsg] = useState('')
   const c = clients.find(x => x.id === id)
   const stagesC = useMemo(() => (c ? stagesOf(c) : null), [c])
   const timeline = useMemo(() => clientTimeline(c, act, stagesC), [c, act, stagesC])
@@ -64,6 +67,19 @@ export function AClient({ id }) {
     ['Policy', last4(c.policy_number) || 'Number not in yet'],
   ]
   const chat = () => app.openSub('thread', { t: threadIdFor(threads, c) })
+  // P1002: the desktop client drawer's Messages block: this client's chat with the team, and a box to write in.
+  const thread = threads.find(t => t.client_id === c.id)
+  const msgs = thread?.messages || []
+  const send = () => {
+    const v = msg.trim()
+    if (!v) return
+    if (thread && !thread.local) sendMessage(thread.id, v)
+    else sendLocal(threadIdFor(threads, c), v, new Date().toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))
+    setMsg('')
+    note('Message sent to the team')
+  }
+  // Every Working client shows the steps we take (read-only; the team moves them); a closed one says why.
+  const onTrack = st === 'working' || (st === 'closed' && !!c.track?.closed)
   const lapse = () => {
     markLapsed?.(c.id, today)
     agentOpensSaveCall({ who: name, why: 'lapsed', state: c.state, city: c.city })
@@ -99,10 +115,26 @@ export function AClient({ id }) {
         <span className="ma-grow"><b>{clientNow(c, st, stages, next)}</b>{when && <small>{when}</small>}</span>
       </div>
 
+      {onTrack && (
+        <>
+          <p className="ma-cap is-out">{stages.label} · {stages.closed ? 'Closed' : stages.complete ? 'Done' : `Stage ${stages.at} of ${stages.of}`}</p>
+          <div className="ma-glass ma-pad ma-steps1002 ma-rise" style={rise(2)}><StageChecklist c={c} /></div>
+        </>
+      )}
+      {closed && !c.track?.closed && (
+        <>
+          <p className="ma-cap is-out">Closed</p>
+          <div className="ma-glass ma-pad ma-rise" style={rise(2)}><p className="ma-muted">{c.note || 'Gone for good. Nothing more from the team.'}</p></div>
+        </>
+      )}
+
       <p className="ma-cap is-out">Policy</p>
       <div className="ma-glass ma-list ma-rise" style={rise(3)}>
         {policy.map(([k, v]) => <div key={k} className="ma-row is-fact"><span className="ma-grow"><small>{k}</small></span><span className="ma-val">{v}</span></div>)}
       </div>
+
+      <p className="ma-cap is-out">Notes</p>
+      <div className="ma-glass ma-pad ma-rise" style={rise(3)}><p className={c.notes ? 'ma-notes1002' : 'ma-muted'}>{c.notes || 'None'}</p></div>
 
       <p className="ma-cap is-out">Timeline</p>
       <div className="ma-glass ma-pad is-tight ma-rise" style={rise(4)}>
@@ -111,6 +143,15 @@ export function AClient({ id }) {
             <li key={e.id}><NoteIcon kind={e.kind} size={30} /><span className="ma-grow"><b>{e.text}</b>{e.at && <small>{e.at}</small>}</span></li>
           ))}
         </ol>
+      </div>
+
+      <p className="ma-cap is-out">Messages · You and the team on this client</p>
+      <div className="ma-glass ma-pad ma-rise" style={rise(5)}>
+        {msgs.length
+          ? <ol className="ma-cmsgs">{msgs.map((m, i) => <li key={m.id || i}><b>{m.from === 'me' ? 'You' : 'Our team'}</b><span>{m.text}</span><small>{m.at}</small></li>)}</ol>
+          : <p className="ma-muted">No messages yet.</p>}
+        <textarea className="ma-input is-area" aria-label="Message the team" placeholder="Write a message" value={msg} onChange={e => setMsg(e.target.value)} />
+        {msg.trim() && <button type="button" className="ma-btn is-solid ma-press" onClick={send}>Send</button>}
       </div>
 
       <p className="ma-cap is-out">Where {c.client_first_name} came from</p>

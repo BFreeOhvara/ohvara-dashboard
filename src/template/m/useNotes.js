@@ -2,8 +2,6 @@ import { useMemo, useSyncExternalStore } from 'react'
 import { useSampleNeeds, useSampleActivity, useSampleLeads, useSampleClients } from '../data'
 import { paths } from '../paths'
 import { useApp } from './AppKit'
-import { useThreadList } from './AMessages'
-import { shortAt } from './threadStore'
 import { kindOfActivity, dayOf, minutesOf } from './appModel'
 
 // P972 — what Notifications and Activity read: the rows (with their kind, day group, time and where a tap goes), the
@@ -54,11 +52,11 @@ export const SEEN = deviceSet('ohv-ma-seen')
 export const READ = deviceSet('ohv-ma-read')
 
 const FYI_KIND = { 'New booking': 'booking', 'Missed transfer': 'live', 'No show': 'moved', Rebooking: 'booking' }
+const LATELY = 4 // the desktop bell's Lately list
 export const byTime = (a, b) => minutesOf(b.time) - minutesOf(a.time)
 export function useNotifItems() {
   const { data: needs } = useSampleNeeds()
   const { data: act } = useSampleActivity()
-  const { threads } = useThreadList()
   const who = useWho()
   return useMemo(() => {
     const top = [
@@ -70,19 +68,16 @@ export function useNotifItems() {
         to: n.kind === 'check' ? { clients: 'need' } : n.ref ? { lead: n.ref } : null,
       })),
       ...(needs.fyi || []).map(n => ({ id: n.id, kind: FYI_KIND[n.title] || 'booking', title: n.name, what: `${n.title}. ${n.what}`, time: '', group: 'today', to: n.ref ? { lead: n.ref } : null })),
-      ...threads.filter(t => t.unread > 0).map(t => {
-        const last = t.messages?.[t.messages.length - 1]
-        const d = dayOf(last?.at)
-        return { id: `msg-${t.id}-${t.messages?.length || 0}`, kind: 'message', title: t.name, what: last ? last.text : 'New message', time: d.group === 'earlier' ? shortAt(last?.at) : d.time, group: 'today', to: { thread: t.id } }
-      }),
     ]
-    const log = act.map(a => {
+    // P1002: the desktop bell's events: billing notices, to-dos, the quiet FYI list, and the latest four activity rows
+    // ("Lately"); the rest is under See all activity. Unread chats are the Messages tab's badge, not the bell's.
+    const log = act.slice(0, LATELY).map(a => {
       const d = dayOf(a.at)
       return { id: `act-${a.id}`, kind: kindOfActivity(a), title: a.who, what: a.text, time: d.group === 'earlier' ? d.day : d.time, group: d.group, to: who(a.who), old: d.group !== 'today' }
     })
     const today = log.filter(x => x.group === 'today').sort(byTime)
     return [...top, ...today, ...log.filter(x => x.group === 'yesterday').sort(byTime), ...log.filter(x => x.group === 'earlier')]
-  }, [needs, act, threads, who])
+  }, [needs, act, who])
 }
 
 // The bell's count: today's notifications not seen yet.

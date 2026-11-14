@@ -1,14 +1,18 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Clock, Ban, PhoneCall } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, Ban, PhoneCall, CalendarClock, Phone, MapPin } from 'lucide-react'
 import { useSampleAppointments, useSampleLeads, useSampleClients, useSampleSettings, useSampleBlocks, useWeek, AGENT_TZ, onAgentClock } from '../data'
 import { dateOf } from '../../lib/callSlots'
 import { clockNow } from '../leadLifecycle'
 import { paths } from '../paths'
 import { HoursDrawer, BlockDrawer } from '../screens/Calendar'
 import { BookCall } from '../TemplateFrame'
+import { useNote } from '../kit'
+import { useStretchPill } from '../../hooks/useStretchPill'
 import { BottomSheet, rise } from './AppKit'
 import MonthDay from './MonthDay'
+import { weekOf } from './p1002'
+import './p1002.css'
 import { monthGrid, trimGrid, shiftMonth, monthName, minutesOf, dayWords, shortDay, stageOf, TONE } from './appModel'
 import { zoneName, theirTime } from './zoneTime'
 
@@ -52,25 +56,66 @@ export default function ACalendar() {
   const [ym, setYm] = useState(() => [Number(todayIso.slice(0, 4)), Number(todayIso.slice(5, 7))])
   const [day, setDay] = useState(null)
   const [panel, setPanel] = useState(null)
+  // P1002: This week · Next week (the desktop's two views, Mon to Fri) beside the phone's own month.
+  const [view, setView] = useState('this')
+  const [call, setCall] = useState(null)
+  const seg = useRef(null)
+  useStretchPill(seg, { activeKey: view, selector: 'button.is-on' })
   const cells = trimGrid(monthGrid(ym[0], ym[1]))
   const byDay = useMemo(() => events.reduce((m, e) => { (m[e.on] = m[e.on] || []).push(e); return m }, {}), [events])
   const blockedIso = new Set(week.days.filter(d => blocked.includes(d[0])).map(d => week.isoOf(d[1])))
   const past = e => e.on < todayIso || (e.on === todayIso && e.mins + 30 <= nowMin)
   const coming = events.filter(e => !past(e)).slice(0, 4)
   const go = by => setYm(shiftMonth(ym[0], ym[1], by))
-  const goToday = () => { setYm([Number(todayIso.slice(0, 4)), Number(todayIso.slice(5, 7))]); setDay(todayIso) }
+  const goToday = () => {
+    if (view !== 'month') { setView('this'); return }
+    setYm([Number(todayIso.slice(0, 4)), Number(todayIso.slice(5, 7))]); setDay(todayIso)
+  }
   const list = day ? byDay[day] || [] : []
-  const open = e => { setDay(null); navigate(openOf(e), { state: { tab: 'calendar' } }) }
+  // A lead's call opens the lead (it has Can't make it); a client's opens a small sheet: Open client, Ask the team to move it.
+  const open = e => { setDay(null); if (e.kind === 'client') setCall(e); else navigate(openOf(e), { state: { tab: 'calendar' } }) }
+  const weeks = { this: weekOf(week, 'this'), next: weekOf(week, 'next') }
+  const weekDays = view === 'month' ? [] : weeks[view].map(d => ({ ...d, today: view === 'this' && d.iso === todayIso, list: events.filter(e => e.on === d.iso) }))
+  const weekCount = k => events.filter(e => weeks[k].some(d => d.iso === e.on)).length
+  const rangeOf = k => { const d = weeks[k]; const a = d[0]; const z = d[d.length - 1]; return a.mon === z.mon ? `${a.mon} ${a.date} to ${z.date}` : `${a.mon} ${a.date} to ${z.mon} ${z.date}` }
   const nowAt = day === todayIso ? list.findIndex(e => e.mins > nowMin) : -1
   const weekend = day ? [0, 6].includes(new Date(`${day}T12:00:00Z`).getUTCDay()) : false
 
   return (
     <div className="ma-tabpage">
       <div className="ma-top ma-rise">
-        <span className="ma-grow"><h1>Calendar</h1><small>{monthName(ym[1])} {ym[0]}</small></span>
+        <span className="ma-grow"><h1>Calendar</h1><small>{view === 'month' ? `${monthName(ym[1])} ${ym[0]}` : `${view === 'next' ? 'Next week' : 'This week'} · ${rangeOf(view)}`}</small></span>
         <button type="button" className="ma-chip ma-press" onClick={goToday}>Today</button>
       </div>
 
+      <div className="ma-seg is-lanes ma-rise" style={rise(0)} role="tablist" aria-label="Calendar view" ref={seg}>
+        {[['this', 'This week', weekCount('this')], ['next', 'Next week', weekCount('next')], ['month', 'Month', null]].map(([k, w, n]) => (
+          <button key={k} type="button" role="tab" aria-selected={view === k} className={`is-sky${view === k ? ' is-on' : ''}`} onClick={() => setView(k)}>{w}{n != null && <> <span>{n}</span></>}</button>
+        ))}
+      </div>
+
+      {view !== 'month' && (
+        <div className="ma-weekv ma-rise" style={rise(1)}>
+          {weekDays.map(d => (
+            <section key={d.iso} className={`ma-wkday${d.today ? ' is-today' : ''}`} aria-label={`${d.day} ${d.mon} ${d.date}`}>
+              <header><b>{d.day}</b><small>{d.mon} {d.date}</small>{d.today && <em>Today</em>}<span className="tp-num">{d.list.length ? `${d.list.length} call${d.list.length === 1 ? '' : 's'}` : ''}</span></header>
+              {d.list.map(e => (
+                <div key={e.id} className={`ma-slot${past(e) ? ' is-past' : ''}`}>
+                  <span className="ma-slot-t">{e.time}</span>
+                  <button type="button" className={`ma-up is-${e.tone} ma-press`} onClick={() => open(e)}>
+                    <span className="ma-grow"><b>{e.who}</b><small>{e.label}{theirTime(e, settings.timeZone) ? ` · ${theirTime(e, settings.timeZone)} theirs` : ''}</small></span>
+                    <span className="ma-tag">{TAGS[e.tone]}</span>
+                  </button>
+                </div>
+              ))}
+              {!d.list.length && <p className="ma-wk-none">{blockedIso.has(d.iso) ? 'Blocked. Nothing new is booked.' : 'Nothing booked'}</p>}
+            </section>
+          ))}
+          <p className="ma-note">Your time ({zoneName(settings.timeZone)}) · client times beside theirs</p>
+        </div>
+      )}
+
+      {view === 'month' && <>
       <div className="ma-month ma-rise" style={rise(0)}>
         <div className="ma-month-h">
           <button type="button" className="ma-round is-soft is-sm ma-press" aria-label="Last month" onClick={() => go(-1)}><ChevronLeft size={18} aria-hidden="true" /></button>
@@ -103,6 +148,7 @@ export default function ACalendar() {
           ))
           : <p className="ma-empty is-glass">Nothing booked yet. Our team fills open times inside your hours.</p>}
       </div>
+      </>}
 
       <button type="button" className="ma-pillbtn ma-press ma-rise" style={rise(2)} onClick={() => setPanel('book')}><PhoneCall size={17} aria-hidden="true" />Book a call</button>
       <div className="ma-two ma-rise" style={rise(2)}>
@@ -136,9 +182,35 @@ export default function ACalendar() {
           </div>
         </>}
       </BottomSheet>
+      <ClientCallSheet e={call} todayIso={todayIso} tz={settings.timeZone} onClose={() => setCall(null)} />
       <HoursDrawer key={panel === 'hours' ? 'h-open' : 'h'} open={panel === 'hours'} onClose={() => setPanel(null)} settings={settings} appts={raw} />
       <BlockDrawer key={panel === 'block' ? 'b-open' : 'b'} open={panel === 'block'} onClose={() => setPanel(null)} appts={raw} blocked={blocked} />
       <BookCall open={panel === 'book'} onClose={() => setPanel(null)} />
     </div>
+  )
+}
+
+// P1002: a client's call (the desktop CallDrawer for a client): who, when, their number and city, Open client, and
+// "Ask the team to move it" (the team makes the change and tells the client).
+function ClientCallSheet({ e, todayIso, tz, onClose }) {
+  const navigate = useNavigate()
+  const note = useNote()
+  const p = e?.person
+  const theirs = e ? theirTime(e, tz) : ''
+  return (
+    <BottomSheet open={!!e} onClose={onClose} label={e ? `${e.who}, ${e.label}` : 'Call'}>
+      {e && <>
+        <p className="ma-sheet-t">{e.who}</p>
+        <p className="ma-sheet-s">{dayWords(e.on, todayIso)}, {e.time} your time{theirs ? ` · ${theirs} for them` : ''}</p>
+        <p className="ma-cdet"><CalendarClock size={16} aria-hidden="true" />{e.label}</p>
+        {p?.client_phone && <p className="ma-cdet"><Phone size={16} aria-hidden="true" />{p.client_phone}</p>}
+        {p?.city && <p className="ma-cdet"><MapPin size={16} aria-hidden="true" />Lives in {p.city}, {p.state}</p>}
+        <p className="ma-sheet-s">The team makes the change and tells the client. You see it here.</p>
+        <div className="ma-two">
+          <button type="button" className="ma-btn is-soft ma-press" onClick={() => { note('Asked the team to move it. They call the client'); onClose() }}>Ask the team to move it</button>
+          <button type="button" className="ma-btn is-solid ma-press" onClick={() => { onClose(); navigate(paths.client(e.ref), { state: { tab: 'calendar' } }) }}>Open client</button>
+        </div>
+      </>}
+    </BottomSheet>
   )
 }

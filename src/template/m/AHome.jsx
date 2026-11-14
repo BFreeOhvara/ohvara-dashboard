@@ -18,6 +18,7 @@ import { useApp, useMark, CallButton, Ini, rise } from './AppKit'
 import { useAnswer } from './MClients'
 import { greeting, minutesOf, untilWords, stageOf, TONE, RESULT } from './appModel'
 import { clockNow } from '../leadLifecycle'
+import { SetupTile, LeadMixTile, WeekStripTile, BookTile } from './HomeTiles1002'
 
 // P967 — Home: what an agent sees first. The bell (left), the ohvara wordmark, search (right); the date and hello;
 // Up next (who, when, how long until, one white Call); Later today; Needs you (the top two, one-tap answers);
@@ -146,6 +147,8 @@ export default function AHome() {
         <h1>{greeting(hour)}, {o.name}</h1>
       </div>
 
+      <SetupTile />
+
       {next
         ? (
           <article className="ma-next ma-rise" style={rise(1)}>
@@ -212,6 +215,11 @@ export default function AHome() {
             ? <button type="button" onClick={() => app.goTab('clients')}><b>{needClients}</b><small>need attention</small></button>
             : <div><b>{leads.filter(l => l.stage === 'sold').length}</b><small>sold</small></div>}
       </div>
+
+      {/* P1002: the desktop Overview tiles the phone lacked */}
+      {navKeys.has('leads') && <LeadMixTile />}
+      <WeekStripTile />
+      <BookTile />
     </div>
   )
 }

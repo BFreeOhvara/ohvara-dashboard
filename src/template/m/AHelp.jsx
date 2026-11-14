@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { MessageCircle, Headphones, Bug, Download, ChevronDown } from 'lucide-react'
+import { MessageCircle, Headphones, Bug, Download, ChevronDown, ChevronRight, Mail } from 'lucide-react'
+import { SUPPORT_EMAIL } from '../../components/auth/authUtils'
 import { GetApp } from '../TemplateFrame'
 import { TalkDrawer } from '../Talk'
 import { ReportBug } from '../ReportBug'
@@ -39,6 +40,8 @@ export function AHelp() {
       <div className="ma-glass ma-list ma-rise" style={rise(1)}>
         <Row onClick={() => setPanel('talk')} lead={<span className="ma-sym is-sage"><Headphones size={16} aria-hidden="true" /></span>} title="Talk to the team" sub="Pick a time for a quick call" />
         <Row onClick={() => setPanel('bug')} lead={<span className="ma-sym is-coral"><Bug size={16} aria-hidden="true" /></span>} title="Report a problem" sub="Something broken or looks wrong" />
+        {/* P1002: the desktop Help's "Email support" */}
+        <a href={`mailto:${SUPPORT_EMAIL}`} className="ma-row"><span className="ma-sym is-butter"><Mail size={16} aria-hidden="true" /></span><span className="ma-grow"><b>Email support</b><small>{SUPPORT_EMAIL}</small></span><ChevronRight size={18} className="ma-chev" aria-hidden="true" /></a>
         {!native && <Row onClick={() => setPanel('app')} lead={<span className="ma-sym is-sky"><Download size={16} aria-hidden="true" /></span>} title="Get the phone app" sub="Alerts the moment a lead comes in" />}
       </div>
       <p className="ma-cap is-out">Common questions</p>

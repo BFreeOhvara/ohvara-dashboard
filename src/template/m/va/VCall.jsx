@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Phone, Mic, MicOff, Grid3x3, Volume2, Building2, Check, Pause, Play, NotebookPen, PhoneOff, Plus, ChevronDown, Search, Delete } from 'lucide-react'
+import { Phone, Mic, MicOff, Grid3x3, Volume2, Building2, Check, Pause, Play, NotebookPen, PhoneOff, Plus, ChevronDown, ChevronRight, CalendarCheck, Search, Delete } from 'lucide-react'
 import { useFulActions, useFulClients, useFulClock, useFulSource, useFulThreads } from '../../ful/data'
 import { newCall, callReducer } from '../../ful/callLine'
 import { fromItem } from '../../ful/callWho'
@@ -10,11 +10,16 @@ import { callGate } from '../../../lib/callOpen'
 import { useCallOpenMin } from '../../../hooks/useCallOpen'
 import { PAD } from '../../../components/fulfillment/phoneIcons'
 import { clockOf } from '../../../lib/callSlots'
-import { useNote } from '../../kit'
+import { useNote, useAccount } from '../../kit'
+import { useTraining } from '../../../fulshell/training/store'
+import { TRAIN_FIRST } from '../../../lib/trainingGate.js'
+import { useGate } from '../../docs886/data'
 import { useExit } from '../../motion'
 import { BottomSheet, Ini } from '../AppKit'
 import { CARRIER_CATALOG, findCarrier, matchCarriers } from '../../../lib/carriers/catalog'
 import { CallCtx } from './vaStore'
+import { BriefActions, CallActionSheets } from './VActions'
+import { BookForAgentSheet } from './VBook'
 import { useVaNow } from './useVaNow'
 import { whenBoth } from '../zoneTime'
 import { OUTCOMES, outcomePlan, carrierLine, draftWords, firstName, callTimer, holdTitle, forLine } from './vaModel'
@@ -54,6 +59,11 @@ export function VaCallProvider({ schedule = [], children }) {
   const [heldAt] = useState(() => Date.now())
   const [mini, setMini] = useState(false)    // P982: the call screen swiped down to the green pill
   const [phone, setPhone] = useState(false)  // P982: the dialer
+  const [sheet, setSheet] = useState(null)   // P1002: a booked-call action sheet (Cancelled, Move, Pass on, Send to agent)
+  // P1002: no calls until training is done (the desktop rule, Overview.jsx: Start call stays off until every lesson is passed).
+  const account = useAccount()
+  const { sum: training } = useTraining(account?.name)
+  const trained = !!training.complete
 
   const { nowMs } = useVaNow()
   const gateOf = useCallback(i => callGate({ iso: i?.iso, done: i?.done, nowMs, lead: openMin }), [nowMs, openMin])
@@ -73,10 +83,11 @@ export function VaCallProvider({ schedule = [], children }) {
   }, [call, rl, note])
 
   const start = useCallback(it => {
+    if (!trained) { note(TRAIN_FIRST); return }
     const g = gateOf(it)
     if (!g.open) { note(g.done ? 'This call is done' : `Start call opens at ${clockOf(new Date(g.at).toISOString(), clock.tz)}`); return }
     begin(fromItem(it), it)
-  }, [gateOf, begin, note, clock.tz])
+  }, [trained, gateOf, begin, note, clock.tz])
 
   // A caller waiting on the incoming line: the real ring routed to this VA, or the sample's callers on hold.
   const offer = rl?.offer || null
@@ -151,19 +162,21 @@ export function VaCallProvider({ schedule = [], children }) {
   }, [schedule, gateOf, begin, rl, note])
 
   const value = useMemo(() => ({
-    call, act, srv, rl, item, start, takeHold, holdCount, gateOf, nowMs, mini,
+    call, act, srv, rl, item, start, takeHold, holdCount, gateOf, nowMs, mini, trained, trainWhy: TRAIN_FIRST,
     openPhone: () => (call && !call.end ? setMini(false) : setPhone(true)),
     // P986: a client's Call button (the header phone is gone): their open booked call, else a call to them.
     callClient: client => (call && !call.end ? setMini(false) : dial({ client })),
-    openBrief: it => setBrief(it), needResult: it => { const p = { ref: it.ref, name: it.name, clientId: it.row?.client_id || null, at: Date.now() }; writePending(p); setPending(p) },
-  }), [call, srv, rl, item, start, takeHold, holdCount, gateOf, nowMs, mini, dial])
+    openBrief: it => setBrief(it), openAction: (what, it) => { setBrief(null); setSheet({ what, it }) }, needResult: it => { const p = { ref: it.ref, name: it.name, clientId: it.row?.client_id || null, at: Date.now() }; writePending(p); setPending(p) },
+  }), [call, srv, rl, item, start, takeHold, holdCount, gateOf, nowMs, mini, dial, trained])
 
   const holdNow = useTick(holdCount > 0)
   const longest = Math.round((holdNow - heldAt) / 1000) + 100
   return (
     <CallCtx.Provider value={{ ...value, holdLine: holdCount ? holdTitle(holdCount, offer ? 0 : longest) : '' }}>
       {children}
-      <BriefSheet it={brief} onClose={() => setBrief(null)} onStart={() => start(brief)} gate={brief ? gateOf(brief) : null} tz={clock.tz} />
+      <BriefSheet it={brief} onClose={() => setBrief(null)} onStart={() => start(brief)} gate={brief ? gateOf(brief) : null} tz={clock.tz} trained={trained}
+        onAction={what => { setBrief(null); setSheet({ what, it: brief }) }} onResult={value.needResult} />
+      <CallActionSheets sheet={sheet} onClose={() => setSheet(null)} />
       {phone && !call && <PhoneScreen onClose={() => setPhone(false)} onDial={dial} />}
       {call && !call.end && !mini && <CallScreen call={call} act={act} srv={srv} rl={rl} item={item} onMin={() => setMini(true)} />}
       {call && !call.end && mini && <CallPill call={call} onOpen={() => setMini(false)} />}
@@ -173,7 +186,10 @@ export function VaCallProvider({ schedule = [], children }) {
 }
 
 // ── The brief ────────────────────────────────────────────────────────────────────────────────────────────────────
-function BriefSheet({ it, onClose, onStart, gate, tz }) {
+function BriefSheet({ it, onClose, onStart, gate, tz, trained, onAction, onResult }) {
+  const cancelGate = useGate(it?.name || '')
+  // A cancellation also waits for the new policy to be issued (P886); nobody starts a call before training is done (P1002).
+  const blocked = !trained || (it?.kind === 'call' && !cancelGate.open)
   const row = it?.row || {}
   const c = row.client || {}
   const carrier = row.old_carrier || row.carrier || c.carrier_name || ''
@@ -197,9 +213,11 @@ function BriefSheet({ it, onClose, onStart, gate, tz }) {
           <p>{whyLine(row)}</p>
           {steps.length > 0 && <ol>{steps.map(s => <li key={s.key}>{s.title}</li>)}</ol>}
         </div>
-        <button type="button" className="ma-btn is-solid is-tall va-wide ma-press" disabled={!gate?.open} onClick={onStart}>
+        <button type="button" className="ma-btn is-solid is-tall va-wide ma-press" disabled={!gate?.open || blocked} onClick={onStart}>
           <Phone size={18} aria-hidden="true" />{gate?.open ? 'Start call' : gate?.done ? 'Done' : `Opens at ${clockOf(new Date(gate.at).toISOString(), tz)}`}
         </button>
+        {blocked && gate?.open && <p className="ma-hint va-act-why">{!trained ? TRAIN_FIRST : 'Waits for the new policy to be issued'}</p>}
+        <BriefActions it={it} go={onAction} onDone={onClose} onResult={onResult} />
       </>}
     </BottomSheet>
   )
@@ -265,7 +283,7 @@ function Pad({ onKey }) {
 function CallScreen({ call, act, srv, rl, item, onMin }) {
   const now = useTick(true)
   const note = useNote()
-  const [sheet, setSheet] = useState(null) // 'add' | 'notes'
+  const [sheet, setSheet] = useState(null) // 'add' | 'notes' | 'book'
   const who = call.who
   const carrierName = who.carrier || item?.row?.old_carrier || item?.row?.carrier || item?.row?.client?.carrier_name || ''
   const added = call.parties.find((p, i) => i > 0)
@@ -340,7 +358,8 @@ function CallScreen({ call, act, srv, rl, item, onMin }) {
         <button type="button" className="va-end ma-press" aria-label="End call" onClick={end}><PhoneOff size={32} aria-hidden="true" /></button>
         {call.pad ? <button type="button" className="va-hide" onClick={() => act({ type: 'pad' })}>Hide</button> : <span aria-hidden="true" />}
       </div>
-      <AddSheet open={sheet === 'add'} onClose={() => setSheet(null)} onPick={addParty} suggested={carrierName} agent={who.agent} />
+      <AddSheet open={sheet === 'add'} onClose={() => setSheet(null)} onPick={addParty} suggested={carrierName} agent={who.agent} onBook={() => setSheet('book')} />
+      <BookForAgentSheet open={sheet === 'book'} onClose={() => setSheet(null)} person={who} className="va-over" />
       <NotesSheet open={sheet === 'notes'} onClose={() => setSheet(null)} call={call} act={act} item={item} carrier={carrierName} />
     </div>,
     document.body,
@@ -350,7 +369,7 @@ function CallScreen({ call, act, srv, rl, item, onMin }) {
 // Add (+): a carrier (searchable, each with its service line; the suggested one from the brief first) or another
 // number (the agent on file, or one typed in). The real line only rings numbers on file (fulfillment-call has no free
 // dialing), so a typed number joins on sample and while calling is off; on a live line it says why not.
-function AddSheet({ open, onClose, onPick, suggested, agent }) {
+function AddSheet({ open, onClose, onPick, suggested, agent, onBook }) {
   const [tab, setTab] = useState('carrier')
   const [q, setQ] = useState('')
   const [num, setNum] = useState('')
@@ -387,6 +406,12 @@ function AddSheet({ open, onClose, onPick, suggested, agent }) {
               <span className="ma-sym is-sage" aria-hidden="true"><Phone size={16} /></span>
               <span className="ma-grow"><b>{agent}</b><small>The agent · their phone on file</small></span>
               <Plus size={18} className="ma-chev" aria-hidden="true" />
+            </button>
+            {/* P1002: when the agent can't take them now, book them on the agent's calendar (the desktop's Book for an agent) */}
+            <button type="button" className="ma-row" onClick={onBook}>
+              <span className="ma-sym is-sky" aria-hidden="true"><CalendarCheck size={16} /></span>
+              <span className="ma-grow"><b>Book them with {agent.split(' ')[0]}</b><small>Puts the call on their calendar</small></span>
+              <ChevronRight size={18} className="ma-chev" aria-hidden="true" />
             </button>
           </div>
         )}

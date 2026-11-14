@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowUp } from 'lucide-react'
+import { ArrowUp, Search, X } from 'lucide-react'
 import { useAdmThreads, useAdmActions } from '../data'
 import { useApp, SubPage, Ini, rise } from '../../template/m/AppKit'
-import { useKeyboard } from '../../template/m/useKeyboard'
+import { useKeyboard, useNoAutoKeyboard } from '../../template/m/useKeyboard'
 import { runsOf } from '../../template/m/appModel'
 import { shortAt } from '../../template/m/threadStore'
 import { firstName } from '../../template/m/va/vaModel'
@@ -12,6 +12,7 @@ import { useAdmChats, admChats, isLocalChat, JORDAN_THREAD } from './admStore'
 // bubbles, tails and the send button inside the field. Jordan (the other admin) is pinned at the top, then the team
 // group, then every agent and VA line (what they see as "Ohvara Support": you answer as Ohvara Support).
 // P1001: Jordan and the team group are gone (desktop has neither); a chat started with someone new still pins first.
+// P1002: Find someone (by name), the All / Agents / VAs filter and Open (a chat's person) as on the desktop's Messages.
 const ROLE_WORD = { Agent: 'Agent · support line', Fulfillment: 'VA · support line' }
 const toneOfRole = r => (r === 'Fulfillment' ? 'sage' : 'sky')
 
@@ -23,13 +24,27 @@ function useAllThreads() {
   return [...pinned.filter(t => t.id === JORDAN_THREAD), ...pinned.filter(t => t.id !== JORDAN_THREAD), ...lines]
 }
 
+// Which group a thread is in: a support line carries its role, a chat started here carries who it is "about".
+const roleOf = t => (t.role === 'Agent' || t.about === 'Agent' ? 'Agent' : t.role === 'Fulfillment' || t.about === 'VA' ? 'Fulfillment' : null)
+const WHO = [['all', 'All'], ['Agent', 'Agents'], ['Fulfillment', 'VAs']]
 export default function AMsgs() {
   const app = useApp()
-  const threads = useAllThreads()
+  const all = useAllThreads()
+  const [q, setQ] = useState('')
+  const [who, setWho] = useState('all')
+  const input = useRef(null)
+  useNoAutoKeyboard(input)
+  const n = q.trim().toLowerCase()
+  const threads = all.filter(t => (who === 'all' || roleOf(t) === who) && String(t.name || '').toLowerCase().includes(n))
   return (
     <div className="ma-tabpage">
       <div className="ma-top ma-rise"><span className="ma-grow"><h1>Messages</h1><small>Agents and VAs</small></span></div>
+      <label className="va-find ma-rise" style={rise(0)}><Search size={18} aria-hidden="true" /><input ref={input} type="search" inputMode="search" enterKeyHint="search" placeholder="Find someone" aria-label="Find a person" value={q} onChange={e => setQ(e.target.value)} />{q && <button type="button" className="ma-ib" aria-label="Clear" onClick={() => setQ('')}><X size={18} aria-hidden="true" /></button>}</label>
+      <div className="ma-seg am-seg ma-rise" style={rise(0)} role="tablist" aria-label="Who">
+        {WHO.map(([k, w]) => <button key={k} type="button" role="tab" aria-selected={who === k} className={`is-sky${who === k ? ' is-on' : ''}`} onClick={() => setWho(k)}>{w}</button>)}
+      </div>
       <div className="ma-threads ma-rise" style={rise(0)}>
+        {!threads.length && <p className="ma-empty is-glass">{all.length ? 'Nobody by that name.' : 'Nobody has written yet.'}</p>}
         {threads.map(t => {
           const last = t.messages?.at(-1)
           const unread = t.unread > 0
@@ -67,7 +82,10 @@ export function AThreadAdm({ id }) {
 }
 
 const whoOf = (t, m) => (m.from === 'me' ? 'You' : t.group ? firstName(m.who || m.from) : firstName(t.name))
+// Open: the person's own screen (an agent or a VA), from their chat, as the desktop's Messages has it.
+const OPEN_SUB = { Agent: 'agent', Fulfillment: 'va' }
 function ChatView({ t, onSend }) {
+  const app = useApp()
   const [text, setText] = useState('')
   const end = useRef(null)
   const root = useRef(null)
@@ -93,7 +111,8 @@ function ChatView({ t, onSend }) {
   )
   return (
     <div className="ma-chatwrap" ref={root}>
-      <SubPage title={t.name} line={t.about} pin foot={foot} className="is-chat">
+      <SubPage title={t.name} line={t.about} pin foot={foot} className="is-chat"
+        right={OPEN_SUB[t.role] && t.who ? <button type="button" className="ma-textbtn ma-press" onClick={() => app.openSub(OPEN_SUB[t.role], { t: t.who })}>Open</button> : null}>
         <div className="ma-chat">
           {msgs.map((m, i) => {
             const mine = m.from === 'me'

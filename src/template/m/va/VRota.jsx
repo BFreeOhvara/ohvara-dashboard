@@ -3,11 +3,11 @@ import { Repeat } from 'lucide-react'
 import { useFulShift, useFulSource, useFulSettings } from '../../ful/data'
 import { shiftWords } from '../zoneTime'
 import { DayOffDrawer } from '../../ful/Shift'
-import { useTimeOff } from '../../ful/useTimeOff'
 import { MY_SWAPS } from '../../ful/p879'
 import { useNote } from '../../kit'
 import { BottomSheet, Ini, rise } from '../AppKit'
 import { useVaNow } from './useVaNow'
+import { ClockCard, TimeOffCard, OpenShifts, Holidays } from './VClock'
 import { weekCards, firstName } from './vaModel'
 
 // P975 — Rota (P977: shown as "Schedule"): who is on shift, This week / Next week. A card per day (you first and highlighted, today ringed,
@@ -21,7 +21,6 @@ export default function VRota() {
   const { data: s } = useFulShift()
   const { data: me } = useFulSettings()
   const real = useFulSource() === 'real'
-  const off = useTimeOff()
   const note = useNote()
   const { todayIso } = useVaNow()
   const [week, setWeek] = useState(0)
@@ -33,6 +32,8 @@ export default function VRota() {
   return (
     <div className="ma-tabpage">
       <div className="ma-top ma-rise"><span className="ma-grow"><h1>Schedule</h1><small>Who is on shift · {shiftWords(s.shift?.text, me.timeZone)}</small></span></div>
+
+      <ClockCard />
 
       <div className="va-weeks ma-rise" role="tablist" aria-label="Week" style={rise(0)}>
         {WEEK.map((w, i) => <button key={w} type="button" role="tab" aria-selected={week === i} className={`va-week ma-press${week === i ? ' is-on' : ''}`} onClick={() => setWeek(i)}>{w}</button>)}
@@ -64,11 +65,11 @@ export default function VRota() {
         </div>
       )}
 
-      <div className="ma-two ma-rise">
-        <button type="button" className="ma-btn is-solid ma-press" disabled={s.notSet} onClick={() => setPanel('off')}>Ask for a day off</button>
-        <button type="button" className="ma-btn is-soft ma-press" disabled={s.notSet} onClick={() => setPanel('swap')}>Swap a shift</button>
-      </div>
-      <p className="ma-note">{off.allowance} days off a month{off.notSet ? '' : ` · ${off.left} left`}. Ask ahead so the team can cover.</p>
+      <TimeOffCard onAsk={() => setPanel('off')} />
+      <button type="button" className="ma-pillbtn ma-press" disabled={s.notSet} onClick={() => setPanel('swap')}>Swap a shift</button>
+      {!real && <OpenShifts i={4} />}
+      {!real && <Holidays i={5} />}
+      <p className="ma-note">Ask ahead so the team can cover.</p>
 
       <DayOffDrawer open={panel === 'off'} onClose={() => setPanel(null)} />
       <SwapSheet open={panel === 'swap'} onClose={() => setPanel(null)} shift={s} real={real}
