@@ -329,16 +329,16 @@ select set_config('request.jwt.claims', '{"sub":"1a110000-0000-4000-8000-0000000
        set_config('role', 'authenticated', true);
 select is(public.sl_rows(c.t), c.n, format('f1 an invited agent reads all %s rows of %s', c.n, c.t)) from chk c order by c.t;
 select cmp_ok((select count(*) from public.team_activity()), '>=', 1::bigint, 'f2 an invited agent still gets team_activity');
-select cmp_ok((select count(*) from public.my_standing_threads() where peer_id is not null), '>=', 1::bigint,
-              'f3 an invited agent still sees the Fulfillment people');
+select is((select count(*) from public.my_standing_threads() where peer_id is not null), 0::bigint,
+              'f3 an invited agent has no direct VA lines (P1018: agents talk to VAs in client conversations)');
 reset role;
 
 select set_config('request.jwt.claims', '{"sub":"5e1f0000-0000-4000-8000-000000000002","role":"authenticated"}', true),
        set_config('role', 'authenticated', true);
 select is(public.sl_rows(c.t), c.n, format('f4 an unlocked self-signup (Servicing) reads all %s rows of %s', c.n, c.t)) from chk c order by c.t;
 select cmp_ok((select count(*) from public.team_activity()), '>=', 1::bigint, 'f5 an unlocked self-signup still gets team_activity');
-select cmp_ok((select count(*) from public.my_standing_threads() where peer_id is not null), '>=', 1::bigint,
-              'f6 an unlocked self-signup still sees the Fulfillment people');
+select is((select count(*) from public.my_standing_threads() where peer_id is not null), 0::bigint,
+              'f6 an unlocked self-signup has no direct VA lines (P1018: agents talk to VAs in client conversations)');
 reset role;
 
 select set_config('request.jwt.claims', '{"sub":"5e1f0000-0000-4000-8000-000000000003","role":"authenticated"}', true),

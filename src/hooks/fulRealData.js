@@ -74,7 +74,7 @@ export function useFulThreadsReal() {
     queryFn: async () => {
       const threads = await soft(supabase.rpc('my_message_threads'))
       const ids = threads.map(t => t.policy_id).filter(Boolean)
-      const messages = ids.length ? await soft(supabase.from('policy_messages').select('id, policy_id, sender_id, body, created_at').in('policy_id', ids).order('created_at').limit(500)) : []
+      const messages = ids.length ? await soft(supabase.from('policy_messages').select('id, policy_id, sender_id, sender_name, sender_role, body, created_at').in('policy_id', ids).order('created_at').limit(500)) : []
       return { threads, messages }
     },
   })

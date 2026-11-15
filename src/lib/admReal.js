@@ -189,11 +189,35 @@ export function toCall(p, now = Date.now()) {
 export const isToday = (iso, now = Date.now()) => !!iso && whenText(iso, now).startsWith('Today')
 
 // ── messages, bugs, audit ────────────────────────────────────────────────────
-export function toThreads(threads = [], messages = [], me = null, now = Date.now()) {
-  return threads.filter(t => t.peer_key === 'admin').map(t => ({
-    id: `${t.agent_id}.admin`, who: t.agent_id, unread: t.unread_count || 0, agentName: t.agent_name,
-    messages: messages.filter(m => m.agent_id === t.agent_id).map(m => ({ id: m.id, from: m.sender_id === me || m.sender_role === 'admin' ? 'me' : 'them', text: m.body, at: whenText(m.created_at, now) })),
+// P1018: an admin sees every conversation. Kinds (role):
+//   * an agent's or VA's Ohvara Support line (peer_key 'admin'): role from the person (Agent / Fulfillment). Every
+//     admin answers as Ohvara Support; the admin sees which admin wrote (m.who).
+//   * the line with another admin (role 'Admin'): just the two of them.
+//   * a VA <-> VA line (role 'VAs', read only): "Ana & Leo".
+//   * a client conversation (role 'Client', id 'pm:<policy id>'): titled by the client, the agent shown smaller.
+// m.from: 'me' (I wrote it), 'team' (another admin wrote it on a Support line), 'them'. m.who: the real name.
+export const threadKey = id => { const s = String(id); const i = s.indexOf('.'); return { agentId: s.slice(0, i), peerKey: s.slice(i + 1) || 'admin' } }
+export function toThreads(threads = [], messages = [], me = null, now = Date.now(), { clientThreads = [], clientMsgs = [] } = {}) {
+  // A line between two other people is shown only when it's a VA pair (agent_role 'fulfillment'); never anything else.
+  const lines = threads.filter(t => t.peer_key === 'admin' || t.agent_id === me || t.peer_id === me || t.agent_role === 'fulfillment').map(t => {
+    const support = t.peer_key === 'admin'
+    const mine = !support && (t.agent_id === me || t.peer_id === me)
+    const watch = !support && !mine
+    const other = support ? t.agent_id : t.agent_id === me ? t.peer_id : t.agent_id
+    const name = support ? t.agent_name : mine ? (t.agent_id === me ? t.peer_name : t.agent_name) : `${t.agent_name || 'VA'} & ${t.peer_name || 'VA'}`
+    return {
+      id: `${t.agent_id}.${t.peer_key}`, who: watch ? null : other, unread: t.unread_count || 0, agentName: name,
+      ...(support ? {} : { role: mine ? 'Admin' : 'VAs', readOnly: watch }),
+      messages: messages.filter(m => m.agent_id === t.agent_id && (m.peer_key || 'admin') === t.peer_key)
+        .map(m => ({ id: m.id, from: m.sender_id === me ? 'me' : support && m.sender_role === 'admin' ? 'team' : 'them', who: m.sender_name || '', text: m.body, at: whenText(m.created_at, now) })),
+    }
+  })
+  const clients = clientThreads.map(t => ({
+    id: `pm:${t.policy_id}`, who: null, client_id: t.policy_id, agent_id: t.agent_id, role: 'Client', unread: t.unread_count || 0,
+    agentName: `${t.client_first_name || ''} ${t.client_last_name || ''}`.trim() || 'Client', agent: t.agent_name || 'Agent', va: t.fulfillment_name || '',
+    messages: clientMsgs.filter(m => m.policy_id === t.policy_id).map(m => ({ id: m.id, from: m.sender_id === me ? 'me' : 'them', who: m.sender_name || '', text: m.body, at: whenText(m.created_at, now) })),
   }))
+  return [...lines, ...clients]
 }
 export function toBug(b, now = Date.now()) {
   return {
@@ -388,7 +412,7 @@ export function buildAdmState(raw = {}, { now = Date.now(), clock = realClock(no
   connect.ads[0].spent = Math.round(weekSpend)
   return {
     agents, idleSignups, vas, admins, invites: (raw.invites || []).map(r => toInvite(r, now)), leads, clients, steps, calls,
-    rota: {}, dayOff, cancels: [], runs, revenue: [], threads: toThreads(raw.threads || [], raw.messages || [], me?.id, now),
+    rota: {}, dayOff, cancels: [], runs, revenue: [], threads: toThreads(raw.threads || [], raw.messages || [], me?.id, now, { clientThreads: (raw.clientThreads || []).filter(t => notTest(t.agent_id)), clientMsgs: raw.clientMsgs || [] }),
     feed: audit.slice(0, 8).map(a => ({ id: `f-${a.id}`, who: a.who, text: `${a.what}${a.target ? `: ${a.target}` : ''}`, at: a.at, kind: 'team' })),
     settings: {
       ...base.settings,

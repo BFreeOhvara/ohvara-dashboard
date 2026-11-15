@@ -386,6 +386,19 @@ export function periodSpan(period, real, now = new Date()) {
 export const CARD_FEE = PRICES.cardFee // P884/P901: from the one price source
 
 const seedThreads = [
+  // P1018: admins always have a line with each other (sample: Jordan).
+  { id: 'th-jordan', who: 'ad-jordan', role: 'Admin', agentName: 'Jordan McNutt', unread: 0, messages: [
+    { id: 'm1', from: 'them', text: 'GoHighLevel account is made. Going through Connect tonight.', at: 'Today, 3:05 PM' },
+  ] },
+  // P1018: admins see every conversation: a client conversation (agent and VAs) and a VA pair (read only).
+  { id: 'pm:cl-gloria', who: null, client_id: 'cl-gloria', role: 'Client', agentName: 'Gloria Santos', agent: 'Dana Walker', va: 'Maya Brooks', unread: 0, messages: [
+    { id: 'm1', from: 'them', who: 'Dana Walker', text: 'Gloria asked if we can move her call to Thursday.', at: 'Today, 9:12 AM' },
+    { id: 'm2', from: 'them', who: 'Maya Brooks', text: 'Moved to Thursday 2 PM and texted her.', at: 'Today, 9:30 AM' },
+  ] },
+  { id: 'th-va-pair', who: null, role: 'VAs', readOnly: true, agentName: 'Andre Lewis & Keisha Grant', unread: 0, messages: [
+    { id: 'm1', from: 'them', who: 'Andre Lewis', text: 'Can you cover my 4:15? Running long.', at: 'Today, 1:02 PM' },
+    { id: 'm2', from: 'them', who: 'Keisha Grant', text: 'Got it.', at: 'Today, 1:03 PM' },
+  ] },
   { id: 'th-dana', who: 'ag-dana', unread: 1, messages: [
     { id: 'm1', from: 'them', text: 'Can I take more live transfers next week? I have Tuesday and Thursday open.', at: 'Today, 10:02 AM' },
   ] },
@@ -618,8 +631,11 @@ export function useAdmThreads() {
     const agent = s.agents.find(a => a.id === t.who)
     // P858: a real thread whose person isn't on the agent or VA list (inactive, or not loaded) keeps the name it came with.
     const va = s.vas.find(v => v.id === t.who)
-    const role = agent || !va ? 'Agent' : 'Fulfillment'
-    return { ...t, name: nameOf(s, t.who) || t.agentName || 'Someone', role }
+    // P1018: a VA pair (read only) or a client conversation keeps the name and role it came with.
+    if (t.role === 'Client' || t.role === 'VAs') return { ...t, name: t.agentName || t.name || 'Someone' }
+    const adm = (s.admins || []).find(a => a.id === t.who)
+    const role = t.role === 'Admin' || (adm && !agent && !va) ? 'Admin' : agent || !va ? 'Agent' : 'Fulfillment'
+    return { ...t, name: nameOf(s, t.who) || adm?.name || t.agentName || 'Someone', role }
   }))
 }
 // P876: a bug report sent from Help & Support lands in Bug reports and in the bell as an app notification (the

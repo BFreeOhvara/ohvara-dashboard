@@ -14,6 +14,7 @@ import {
 import { PRICES } from '../../lib/priceBook'
 import { SAMPLE_AI_CALLS, SAMPLE_CENTS_PER_MIN } from '../../lib/aiCaller'
 import { useAccount, useNote } from '../../template/kit'
+import ConnectChecklist from '../ConnectChecklist'
 import { useTheme } from '../../hooks/useTheme'
 import { useApp, SubPage, Row, Ini, Toggle, SignOutButton, BottomSheet, rise } from '../../template/m/AppKit'
 import { useNoAutoKeyboard } from '../../template/m/useKeyboard'
@@ -90,7 +91,7 @@ export default function AYou() {
         <Row onClick={() => app.openSub('reports')} lead={<Sym tone="butter" Icon={BarChart3} />} title="Reports" sub="This week and this month" />
         <Row onClick={() => app.openSub('bugs')} lead={<Sym tone="coral" Icon={Bug} />} title="Bug reports" sub={openBugs ? `${openBugs} open` : 'Nothing open'} />
         <Row onClick={() => app.openSub('tickets')} lead={<Sym tone="apricot" Icon={Rocket} />} title="Setup" sub={`${tickets.filter(c => c.stage !== 'live').length} open tickets · paid agents to live`} />
-        <Row onClick={() => app.openSub('setup')} lead={<Sym tone="stone" Icon={Plug} />} title="Connect" sub="Every connection, view only" />
+        <Row onClick={() => app.openSub('setup')} lead={<Sym tone="stone" Icon={Plug} />} title="Connect" sub="GoHighLevel, step by step" />
         <Row onClick={() => app.openSub('deedstone')} lead={<Sym tone="sage" Icon={PhoneCall} />} title="Deedstone numbers" sub="Lines and the VAs on each" />
         <Row onClick={() => app.openSub('compliance')} lead={<Sym tone="butter" Icon={Scale} />} title="Compliance" sub="Do not call, complaints, legal holds" />
       </div>
@@ -470,6 +471,16 @@ export function ABug({ id }) {
 
 // ── Connect: every connection, view only (P1002: it was named Setup; Setup is now the tickets page) ───────────────
 export function ASetupView() {
+  // P1018: the phone's Connect is the same numbered checklist as the desktop (paste, Test, tick), not a view-only list.
+  const { live } = useAccount() || {}
+  return (
+    <SubPage title="Connect" line="GoHighLevel, step by step" big>
+      <ConnectChecklist live={!!live} phone />
+    </SubPage>
+  )
+}
+// Before P1018: every connection, view only (kept, unused).
+export function ASetupViewBeforeP1018() {
   const { data: connect } = useAdmConnect()
   const { data: settings } = useAdmSettings()
   const [checked] = useState(() => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))

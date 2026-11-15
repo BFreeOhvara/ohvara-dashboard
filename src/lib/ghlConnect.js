@@ -136,3 +136,39 @@ export function connectStatus(settings, now = Date.now(), keySaved = null) {
 export function ghlPlugged(settings, keySaved) {
   return [keySaved === true, !!settings?.location_id && !!settings?.workflow_new_inbound]
 }
+
+// ── P1018: the Connect checklist ────────────────────────────────────────────────────────────────────────────────
+// The names of the saved secrets (never values), or null when the list can't be read.
+export async function readSecretNames(sb) {
+  try {
+    const { data, error } = await sb.functions.invoke('fetch-secrets', { method: 'GET' })
+    if (error || !data || !Array.isArray(data.secrets)) return null
+    return data.secrets.map(s => s.key_name)
+  } catch {
+    return null
+  }
+}
+// Write-only, like the key: the value goes to the encrypted store and is never echoed or put in an error.
+export async function sendSecret(sb, name, value, description) {
+  const v = (value || '').trim()
+  if (!v) return { ok: false, error: 'Paste it first.' }
+  try {
+    const { data, error } = await sb.functions.invoke('fetch-secrets', { method: 'POST', body: { key_name: name, value: v, description: description || null } })
+    if (error || !data?.success) return { ok: false, error: 'Could not save it. Try again.' }
+    return { ok: true }
+  } catch {
+    return { ok: false, error: 'Could not reach the key store.' }
+  }
+}
+// One ghl_settings column (the location ID or a workflow ID).
+export async function saveGhlColumn(sb, column, value) {
+  const { data, error } = await sb.from('ghl_settings').update({ [column]: (value || '').trim() || null }).eq('id', true).select('id')
+  if (error) return { ok: false, error: /check|violat/i.test(error.message || '') ? 'GoHighLevel IDs are letters, numbers and dashes only.' : 'Could not save it. Try again.' }
+  if (!data?.length) return { ok: false, error: 'Could not save: this login is not an admin.' }
+  return { ok: true }
+}
+// What GoHighLevel has sent so far (migration 280), or null when it can't be read.
+export async function readGhlHeard(sb) {
+  const { data, error } = await sb.rpc('admin_ghl_heard')
+  return error || !data ? null : data
+}

@@ -3,7 +3,7 @@ import { Link, NavLink, useLocation, useOutlet } from 'react-router-dom'
 import {
   Home, Users, Headset, PhoneIncoming, BookUser, Landmark, Plug, Settings, Search, Bell, Sun, Moon, MessageSquare, ChevronRight, LogOut,
   Ellipsis, CircleHelp, Mail, Keyboard, UserPlus, Shuffle, Bug, History, TriangleAlert, Wallet, CalendarDays, CalendarOff,
-  ShieldCheck, PhoneForwarded, CircleDollarSign, CheckCircle2, Radio, Link2, Copy, Plus, Rocket, BadgeCheck, Hourglass,
+  ShieldCheck, CircleDollarSign, CheckCircle2, Radio, Copy, Plus, Rocket, BadgeCheck, Hourglass,
   PhoneCall, Scale, Smartphone,
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
@@ -23,7 +23,7 @@ import { isSearchKey } from '../lib/searchKey'
 import { SUPPORT_EMAIL } from '../components/auth/authUtils'
 import {
   useAdmDay, useAdmAgents, useAdmVas, useAdmLeads, useAdmClients, useAdmFeed, useAdmSettings, useAdmMoney, useAdmActions,
-  useAdmInvites, useAdmConnect, useAdmPeriod, useAdmSetup, useAdmSource, plugged,
+  useAdmInvites, useAdmPeriod, useAdmSetup, useAdmSource,
 } from './data'
 import { useGhlRow } from './useGhlRow'
 import { syncFailed } from './engine'
@@ -169,14 +169,12 @@ function useHeadStats(page) {
   const { data: clients } = useAdmClients()
   const { data: m } = useAdmMoney()
   const { data: invites } = useAdmInvites()
-  const { data: connect } = useAdmConnect()
   const { data: wk } = useAdmPeriod('week')
   const { data: pipe } = useAdmSetup()
   const { data: settings } = useAdmSettings()
   const S = (icon, n, label, extra = {}) => ({ icon, n, label, ...extra })
   const route = day.unassigned.length
   const att = clients.filter(c => c.stage === 'needs_attention').length
-  const linked = plugged(connect).filter(Boolean).length
   return {
     overview: [S(ShieldCheck, day.payingAgents, 'paying agents', { chip: [`${day.onDuty.length} on duty`, 'up'] }), S(Headset, day.onShift.length, 'VAs on shift today'), S(CircleDollarSign, m.total, 'revenue this week', { fmt: money, chip: [`${money(m.lastWeek)} last week`, 'blue'] })],
     agents: [S(Users, agents.length, 'agents', { chip: invites.some(i => i.role === 'agent') ? [`${invites.filter(i => i.role === 'agent').length} invites out`.replace(/^1 invites/, '1 invite'), 'blue'] : null }), S(Radio, agents.filter(a => a.active).length, 'taking transfers'), S(TriangleAlert, agents.filter(a => a.billing.status === 'past_due').length, 'past due', { chip: agents.some(a => a.billing.status === 'past_due') ? ['See who', 'warn'] : null })],
@@ -185,7 +183,8 @@ function useHeadStats(page) {
     leads: [S(PhoneIncoming, day.week.in, 'leads this week'), S(Shuffle, route, 'not matched', { chip: route ? ['Pick an agent', 'warn'] : null }), S(CheckCircle2, day.week.sold, 'sold this week')],
     clients: [S(BookUser, clients.length, 'clients'), S(TriangleAlert, att, 'need attention', { chip: att ? ['See who', 'warn'] : null }), S(CalendarDays, clients.reduce((n, c) => n + c.steps.length, 0), 'servicing steps open')],
     billing: [S(CircleDollarSign, wk.inTotal, 'brought in this week', { fmt: money }), S(Wallet, wk.profit, 'profit this week', { fmt: money, chip: [`${wk.split[0].pct}/${wk.split[1].pct} split`, 'blue'] }), S(TriangleAlert, m.failed.length, 'failed payments', { chip: m.failed.length ? ['Follow up', 'warn'] : null })],
-    connect: [S(Link2, linked, 'of 5 plugged in'), S(PhoneForwarded, connect.ads.length, 'ad accounts'), S(Plug, connect.sources.forms.filter(f => f.on).length, 'forms on')],
+    // P1018: Connect is one numbered checklist with its own progress ("3 of 9 done"); no old counts up here.
+    connect: [],
     settings: [S(Users, agents.length + vas.length, 'people with a login'), S(Bug, day.openBugs, 'open bug reports')],
   }[page] || []
 }

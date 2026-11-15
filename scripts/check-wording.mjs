@@ -27,11 +27,14 @@ const ROUTE = /^\/agent\/inbounds(\/|$)/
 
 // Billing helper no rendered page imports yet; a Deno test under supabase/ pins its exact text, so it stays as on master.
 const NOT_RENDERED = new Set(['src/lib/billingInbound.js'])
+// P1018: admin-only Connect steps; "Inbound Webhook" is GoHighLevel's own trigger name, which Jordan has to find in
+// GoHighLevel. No agent ever sees this file's text.
+const ADMIN_GHL_NAMES = new Set(['src/adminshell/connectSteps.js'])
 
 const files = globSync('src/**/*.{js,jsx}')
   .map(f => f.replaceAll('\\', '/'))
   .filter(f => !/\.test\.jsx?$/.test(f))
-  .filter(f => !NOT_RENDERED.has(f))
+  .filter(f => !NOT_RENDERED.has(f) && !ADMIN_GHL_NAMES.has(f))
   .sort()
 
 const hits = []

@@ -9,37 +9,55 @@ import { ListEmpty, PickConversation } from '../../template/msgsEmpty'
 
 // P849 — Messages: the admin line with every agent and every VA, one thread per person (today's shared inbox for
 // admin). ?to=<person id> opens that person's line (Agents, Fulfillment, Leads and Billing link here). P867: Jordan is a
-// full admin (no partner thread or view). Same panes as the agent and VA pages. Sample only: nothing is sent.
+// full admin (no partner thread or view). Same panes as the agent and VA pages.
 // P911: this line is what agents and VAs see as "Ohvara Support", pinned at the top of their Messages. Admins (Brayden
 // and Jordan) answer it as Ohvara Support: the other side sees that name, not the admin's.
+// P1018 (Brayden, Nov 15): admins see everyone and every conversation, always with the real person's name:
+//   * the other admin (pinned first; just the two of you, you write as yourself),
+//   * every agent's and VA's Ohvara Support line (each admin's reply shows which admin wrote it),
+//   * every client conversation (titled by the client, the agent and VA smaller; admins can write in it),
+//   * every VA-to-VA conversation (read only).
+// ?dm=<thread id> (the bell's link) opens a line too.
 const PERSON = { Agent: 'agents', Fulfillment: 'team' }
+const TONE = { Agent: 'blue', Fulfillment: 'green', Admin: 'outline', Client: 'warn', VAs: 'mute' }
+const WORD = { Agent: 'Agent', Fulfillment: 'VA', Admin: 'Admin', Client: 'Client', VAs: 'VAs' }
+const GROUP = r => (r === 'VAs' ? 'Fulfillment' : r)
+const subOf = x => (x.role === 'Client' ? `Agent: ${x.agent}${x.va ? ` · VA: ${x.va}` : ''}` : x.role === 'VAs' ? 'Between two VAs' : x.role === 'Admin' ? 'Admin' : `${WORD[x.role]} · Support line`)
 
 export default function Messages() {
-  const { data: threads } = useAdmThreads()
+  const { data: all } = useAdmThreads()
+  const threads = [...all.filter(x => x.role === 'Admin'), ...all.filter(x => x.role !== 'Admin')]
   const { sendMessage, readThread } = useAdmActions()
   const [sp] = useSearchParams()
-  const want = threads.find(t => t.who === sp.get('to'))?.id
+  const want = threads.find(t => t.id === sp.get('dm') || (sp.get('to') && t.who === sp.get('to')))?.id
   const [sel, setSel] = useState(want || threads[0]?.id)
   const [text, setText] = useState('')
   const [q, setQ] = useState('')
   const [who, setWho] = useState('all')
   const t = threads.find(x => x.id === sel) || threads[0]
   const n = q.trim().toLowerCase()
-  const list = threads.filter(x => (who === 'all' || x.role === who) && x.name.toLowerCase().includes(n))
+  const list = threads.filter(x => (who === 'all' || GROUP(x.role) === who) && `${x.name} ${x.agent || ''} ${x.va || ''}`.toLowerCase().includes(n))
   const pick = id => { setSel(id); readThread(id) }
-  const send = e => { e.preventDefault(); if (!text.trim() || !t) return; sendMessage(t.id, text.trim(), 'me'); setText('') }
+  const send = e => { e.preventDefault(); if (!text.trim() || !t || t.readOnly) return; sendMessage(t.id, text.trim(), 'me'); setText('') }
   // P1013: no conversations yet keeps the whole box (empty list note + "Pick a conversation"), never a bare message.
   const first = t ? t.name.split(' ')[0] : ''
-  const otherSide = first
+  const kind = t?.role
+  const support = kind === 'Agent' || kind === 'Fulfillment'
+  const head = !t ? '' : kind === 'Admin' ? `Admin · just you and ${first}. Nobody else sees this.`
+    : kind === 'Client' ? `Agent: ${t.agent}${t.va ? ` · VA: ${t.va}` : ''}. About this client; the client never sees it.`
+      : kind === 'VAs' ? 'Between two VAs. Admins can read it; only they write in it.'
+        : `${WORD[kind]} · their ${SUPPORT_NAME} line. Only admins and ${first} see this.`
+  const label = m => (m.from === 'me' ? (support ? `You, as ${SUPPORT_NAME}` : 'You') : m.from === 'team' ? `${m.who || 'An admin'}, as ${SUPPORT_NAME}` : m.who || t.name)
+  const place = kind === 'Client' ? `Write about ${first}…` : support ? `Reply to ${first} as ${SUPPORT_NAME}…` : `Message ${first}…`
   return (
     <section className="ov-card tp-msgs adm-msgs" aria-label="Messages" data-fold data-fold-fit="480" data-fold-phone>
       <div className="tp-threads">
-        <label className="tp-find tp-threads-find"><Search size={15} aria-hidden="true" /><input aria-label="Find a person" placeholder="Find someone" value={q} onChange={e => setQ(e.target.value)} /></label>
-        <Seg label="Who" className="adm-who-seg" value={who} onChange={setWho} options={[{ key: 'all', label: 'All' }, { key: 'Agent', label: 'Agents' }, { key: 'Fulfillment', label: 'VAs' }]} />
+        <label className="tp-find tp-threads-find"><Search size={15} aria-hidden="true" /><input aria-label="Find a person or client" placeholder="Find someone or a client" value={q} onChange={e => setQ(e.target.value)} /></label>
+        <Seg label="Who" className="adm-who-seg" value={who} onChange={setWho} options={[{ key: 'all', label: 'All' }, { key: 'Admin', label: 'Admins' }, { key: 'Agent', label: 'Agents' }, { key: 'Fulfillment', label: 'VAs' }, { key: 'Client', label: 'Clients' }]} />
         <div className="tp-threads-b">
           {list.map(x => (
             <button key={x.id} type="button" className={`tp-thread${x.id === t?.id ? ' on' : ''}`} onClick={() => pick(x.id)}>
-              <Avatar name={x.name} /><span className="tp-grow"><b>{x.name}</b><small>{x.role} · {x.messages.at(-1)?.text || 'No messages yet'}</small></span>
+              <Avatar name={x.name} /><span className="tp-grow"><b>{x.name}</b><small>{subOf(x)} · {x.messages.at(-1)?.text || 'No messages yet'}</small></span>
               {x.unread > 0 && <span className="tp-tb is-msg">{x.unread}</span>}
             </button>
           ))}
@@ -50,20 +68,23 @@ export default function Messages() {
         {!t ? <PickConversation /> : <>
         <div className="tp-conv-h">
           <Avatar name={t.name} />
-          <span className="tp-grow"><b>{t.name}</b><small>{`${t.role} · their ${SUPPORT_NAME} line. Only admins and ${first} see this.`}</small></span>
-          <Chip tone={t.role === 'Agent' ? 'blue' : 'green'}>{t.role}</Chip>
-          {PERSON[t.role] && <Link to={ap(PERSON[t.role], t.who)} className="tp-link">Open<ArrowUpRight size={14} /></Link>}
+          <span className="tp-grow"><b>{t.name}</b><small>{head}</small></span>
+          <Chip tone={TONE[kind] || 'green'}>{WORD[kind] || kind}</Chip>
+          {PERSON[kind] && t.who && <Link to={ap(PERSON[kind], t.who)} className="tp-link">Open<ArrowUpRight size={14} /></Link>}
+          {kind === 'Client' && t.client_id && <Link to={ap('clients', t.client_id)} className="tp-link">Open client<ArrowUpRight size={14} /></Link>}
         </div>
         <div className="tp-conv-b">
           {t.messages.map(m => {
-            const mine = m.from === 'me'
-            return <div key={m.id} className={`tp-bub${mine ? ' me' : ''}`}>{m.text}<small>{mine ? `${SUPPORT_NAME} (you)` : t.name} · {m.at}</small></div>
+            const mine = m.from === 'me' || m.from === 'team'
+            return <div key={m.id} className={`tp-bub${mine ? ' me' : ''}`}>{m.text}<small>{label(m)} · {m.at}</small></div>
           })}
         </div>
-        <form className="tp-conv-f" onSubmit={send}>
-          <input className="tp-input" aria-label={`Reply to ${otherSide} as ${SUPPORT_NAME}`} placeholder={`Reply to ${otherSide} as ${SUPPORT_NAME}…`} value={text} onChange={e => setText(e.target.value)} />
-          <button type="submit" className="tp-primary fx-accent" disabled={!text.trim()}>Send</button>
-        </form>
+        {t.readOnly
+          ? <p className="tp-conv-f adm-readonly">Read only: this is between two VAs.</p>
+          : <form className="tp-conv-f" onSubmit={send}>
+            <input className="tp-input" aria-label={place.replace('…', '')} placeholder={place} value={text} onChange={e => setText(e.target.value)} />
+            <button type="submit" className="tp-primary fx-accent" disabled={!text.trim()}>Send</button>
+          </form>}
         </>}
       </div>
     </section>

@@ -19,25 +19,27 @@ import { NO_CONV, NO_CONV_SUB } from '../../msgsEmptyText.js'
 // direct message with every other VA (no group chat; a new VA shows up for everyone, empty until someone writes),
 // then the agent threads. A thread opens as the agent app's chat: bubbles at most 80 %, tails, send inside the field,
 // drag down to drop the keyboard. Real: support and VA DMs are standing threads (direct_messages).
-const titleOf = t => (isSupport(t) ? 'Ohvara support' : t.va ? t.name : t.agent)
-const aboutOf = t => (isSupport(t) ? 'Ohvara Support · schedule, pay, anything' : t.va ? 'VA' : `Agent · about ${t.name}`)
-const whoOf = (t, m) => (m.from === 'me' ? 'You' : t.va ? firstName(t.name) : isSupport(t) ? 'Ohvara' : firstName(t.agent))
+// P1018 (Brayden, Nov 15): VAs see Ohvara support, every other VA (from account creation) and the client
+// conversations, titled by the client with the agent smaller. Any VA can pick a client conversation up. No agent list.
+const titleOf = t => (isSupport(t) ? 'Ohvara support' : t.name)
+const aboutOf = t => (isSupport(t) ? 'Ohvara Support · schedule, pay, anything' : t.va ? 'VA' : `Client · agent ${t.agent}`)
+const whoOf = (t, m) => (m.from === 'me' ? 'You' : t.va ? firstName(t.name) : isSupport(t) ? 'Ohvara' : m.who ? firstName(m.who) : firstName(t.agent))
 const lastOf = t => t.last || t.messages?.at(-1)
 const emptyLine = t => (isSupport(t) ? 'Write to Ohvara Support' : t.va ? `Say hi to ${firstName(t.name)}` : 'No messages yet')
 
 export default function VMessages() {
   const app = useApp()
-  // P1001: the phone matches the desktop (the reference): Ohvara support and the agent threads, no VA-to-VA chat.
-  const all = useVaThreads().filter(t => !t.va)
+  // P1018: Ohvara support, the other VAs, then the client conversations (P1001's "no VA-to-VA chat" is reversed).
+  const all = useVaThreads()
   // P1002: search, as on the desktop ("Find a client or agent"). Ohvara support stays pinned whatever you type.
   const [q, setQ] = useState('')
   const n = q.trim().toLowerCase()
   const threads = all.filter(t => isSupport(t) || !n || `${t.name} ${t.agent}`.toLowerCase().includes(n))
   return (
     <div className="ma-tabpage">
-      <div className="ma-top ma-rise"><span className="ma-grow"><h1>Messages</h1><small>Ohvara and your agents</small></span></div>
+      <div className="ma-top ma-rise"><span className="ma-grow"><h1>Messages</h1><small>Ohvara, VAs and clients</small></span></div>
       <label className="ma-search is-small ma-rise"><Search size={18} aria-hidden="true" />
-        <input type="search" inputMode="search" aria-label="Find a thread" placeholder="Find a client or agent" value={q} onChange={e => setQ(e.target.value)} />
+        <input type="search" inputMode="search" aria-label="Find a thread" placeholder="Find a VA, client or agent" value={q} onChange={e => setQ(e.target.value)} />
         {q && <button type="button" className="ma-ib" aria-label="Clear" onClick={() => setQ('')}><X size={18} aria-hidden="true" /></button>}
       </label>
       <div className="ma-threads ma-rise" style={rise(0)}>
@@ -57,8 +59,8 @@ export default function VMessages() {
         })}
         {!n && !all.some(t => !isSupport(t)) && <p className="ma-empty is-glass" role="status"><b>{NO_CONV}</b><br />{NO_CONV_SUB.va}</p>}
       </div>
-      {n && threads.filter(t => !isSupport(t)).length === 0 && <p className="ma-empty is-glass">No thread. No client or agent by that name.</p>}
-      <p className="ma-note">Agents write here about their clients. The client never sees these.</p>
+      {n && threads.filter(t => !isSupport(t)).length === 0 && <p className="ma-empty is-glass">No thread. No VA, client or agent by that name.</p>}
+      <p className="ma-note">Client chats are with that client’s agent; any VA can answer. The client never sees them.</p>
     </div>
   )
 }
@@ -125,7 +127,7 @@ function ChatView({ t, msgs, onSend, offline = false }) {
   const input = useRef(null)
   useEffect(() => { end.current?.scrollIntoView({ block: 'end' }) }, [msgs.length])
   useKeyboard(root, input)
-  const to = isSupport(t) ? 'Ohvara' : t.va ? firstName(t.name) : firstName(t.agent)
+  const to = isSupport(t) ? 'Ohvara' : t.va ? firstName(t.name) : `${firstName(t.agent)} about ${firstName(t.name)}`
   const send = e => {
     e.preventDefault()
     const v = text.trim()
@@ -143,7 +145,7 @@ function ChatView({ t, msgs, onSend, offline = false }) {
   )
   return (
     <div className="ma-chatwrap" ref={root}>
-      <SubPage title={titleOf(t)} line={isSupport(t) ? 'Ohvara Support · schedule, pay, anything' : t.va ? 'Just the two of you' : `About ${t.name} · the client doesn't see this`} pin foot={foot} className="is-chat"
+      <SubPage title={titleOf(t)} line={isSupport(t) ? 'Ohvara Support · schedule, pay, anything' : t.va ? 'Just the two of you' : `Agent ${t.agent} · the client doesn't see this`} pin foot={foot} className="is-chat"
         right={!isSupport(t) && !t.va && t.client_id ? <button type="button" className="ma-textbtn va-openclient ma-press" onClick={() => app.openSub('client', { c: t.client_id })}><Users size={16} aria-hidden="true" />Open client</button> : null}>
         <div className="ma-chat">
           {msgs.map((m, i) => {
@@ -157,7 +159,7 @@ function ChatView({ t, msgs, onSend, offline = false }) {
               </div>
             )
           })}
-          {!msgs.length && <p className="ma-empty">{offline ? 'Writing to Ohvara from the app starts once it’s switched on for VAs.' : `Write ${to} anything${t.name && !isSupport(t) && !t.va ? ` about ${firstName(t.name)}` : ''}.`}</p>}
+          {!msgs.length && <p className="ma-empty">{offline ? 'Writing to Ohvara from the app starts once it’s switched on for VAs.' : `Write ${to} anything.`}</p>}
           <span ref={end} />
         </div>
       </SubPage>

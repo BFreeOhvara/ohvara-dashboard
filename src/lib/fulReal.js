@@ -129,7 +129,7 @@ export function toThreads(threads, messages, me, nowMs, tz = DEFAULT_TZ) {
     id: t.policy_id, client_id: t.policy_id, agent_id: t.agent_id, agent: seen(t.agent_id, t.agent_name) || 'Agent', unread: t.unread_count || 0,
     name: `${t.client_first_name || ''} ${t.client_last_name || ''}`.trim() || 'Client', last_at: t.last_at,
     messages: (by.get(t.policy_id) || []).slice().sort((a, b) => ms(a.created_at) - ms(b.created_at))
-      .map(m => ({ id: m.id, from: m.sender_id === me ? 'me' : 'agent', text: m.body, at: whenText(m.created_at, nowMs, tz) })),
+      .map(m => ({ id: m.id, from: m.sender_id === me ? 'me' : m.sender_role === 'agent' || !m.sender_role ? 'agent' : 'team', who: m.sender_name || '', text: m.body, at: whenText(m.created_at, nowMs, tz) })),
   })).sort((a, b) => ms(b.last_at) - ms(a.last_at))
 }
 

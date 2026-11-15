@@ -176,7 +176,7 @@ select is(public.p_fh_val('A', 'public.is_fulfillment()'), 'false', 'row b4 agen
 select is(public.p_fh_val('A', 'public.is_team_member()'), 'true', 'row b5 agent: is_team_member() true');
 select is(public.p_fh_val('F', 'public.is_team_member()'), 'false', 'row b6 fulfillment: is_team_member() false');
 select is(public.p_fh_val('A', format('public.can_dm_thread(%L::uuid, %L::uuid)', public.p_fh_id('A'), public.p_fh_id('F'))),
-          'true', 'row b7 agent: can_dm_thread() with Fulfillment true');
+          'false', 'row b7 agent: can_dm_thread() with Fulfillment false (P1018: no agent-VA lines)');
 select is(public.p_fh_val('B', format('public.can_dm_thread(%L::uuid, %L::uuid)', public.p_fh_id('A'), public.p_fh_id('F'))),
           'false', 'row b8 other agent: can_dm_thread() on A''s thread false');
 select is(public.p_fh_val('A', format('public.can_message_policy(%L::uuid)', public.p_fh_id('polA'))),
@@ -309,7 +309,7 @@ select is(public.p_fh_sees('F', 'leads', array['leadA', 'leadB', 'leadC']), 'lea
 -- policy_messages
 select is(public.p_fh_sees('Z', 'policy_messages', array['msgA', 'msgB']), 'msgA,msgB', 'row h7 admin policy_messages');
 select is(public.p_fh_sees('A', 'policy_messages', array['msgA', 'msgB']), 'msgA', 'row h8 agent policy_messages');
-select is(public.p_fh_sees('F', 'policy_messages', array['msgA', 'msgB']), 'msgA', 'row h9 fulfillment policy_messages');
+select is(public.p_fh_sees('F', 'policy_messages', array['msgA', 'msgB']), 'msgA,msgB', 'row h9 fulfillment policy_messages (P1018: any VA, every booked client)');
 -- team_conversations
 select is(public.p_fh_sees('Z', 'team_conversations', array['chan', 'dmAZ', 'dmBZ', 'dmAB']), 'chan,dmAZ,dmBZ', 'row h10 admin team_conversations');
 select is(public.p_fh_sees('A', 'team_conversations', array['chan', 'dmAZ', 'dmBZ', 'dmAB']), 'chan,dmAB,dmAZ', 'row h11 agent team_conversations');

@@ -10,6 +10,7 @@ import { usd } from '../../template/motion'
 import { Dropdown, DField, Tile } from '../kit'
 import { AD_WORD, CAMPAIGN_WORD } from '../words'
 import { ap } from '../paths'
+import ConnectChecklist from '../ConnectChecklist'
 
 // P866 — Connect is only the rail page where Jordan connects GoHighLevel: the connection form and its status. What it
 // set up, and every client's way to live, moved to the Setup top tab (./Setup.jsx). P864 put Connect on the rail.
@@ -210,7 +211,19 @@ function SourcesTile() {
   )
 }
 
+// P1018: Connect is now one numbered checklist (../ConnectChecklist.jsx). The tiles below (texting number, ad
+// accounts, lead sources, the five-workflow form) came off the page; the code stays here, unused, in case one comes back.
 export default function Connect() {
+  const { live } = useAccount() || {}
+  return (
+    <div className="tp-page fx-page adm-connect cn-page">
+      <ConnectChecklist live={!!live} />
+      <Link to={ap('setup')} className="tp-link adm-tosetup">What GoHighLevel set up for each agent, and each agent's way to live, is on Setup<ArrowRight size={14} aria-hidden="true" /></Link>
+    </div>
+  )
+}
+
+export function ConnectBeforeP1018() {
   const { data: c } = useAdmConnect()
   const { live } = useAccount() || {}
   // P855: when the settings table can't be read (its database step is not applied), ask once and keep that answer:

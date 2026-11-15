@@ -55,7 +55,7 @@ select ok(not has_function_privilege('anon', 'public.my_standing_threads()', 'ex
 -- b. a real VA
 select pg_temp.as_user('a1013000-0000-4000-8000-0000000000f1');
 select is((select coalesce(string_agg(distinct substr(full_name, 7), ',' order by substr(full_name, 7)), '') from public.profiles where full_name like 'P1013 %'), 'F,G,P,Q,Z', 'b1 VA directory: no test account, no non-paying sign-up');
-select is((select coalesce(string_agg(distinct substr(agent_name, 7), ',' order by substr(agent_name, 7)), '') from public.my_standing_threads() where agent_id <> auth.uid()), 'P,Q', 'b2 VA Messages: agent lines only for listed agents');
+select is((select coalesce(string_agg(distinct substr(agent_name, 7), ',' order by substr(agent_name, 7)), '') from public.my_standing_threads() where agent_id <> auth.uid() and agent_role = 'agent'), '', 'b2 VA Messages: no agent lines at all (P1018: VAs and agents talk in client conversations)');
 select is((select coalesce(string_agg(distinct substr(case when agent_id = auth.uid() then peer_name else agent_name end, 7), ',' order by substr(case when agent_id = auth.uid() then peer_name else agent_name end, 7)), '') from public.my_standing_threads() where agent_role = 'fulfillment' and peer_id is not null),
           'G', 'b3 VA to VA lines: never the test VA');
 select is((select count(*)::int from public.my_standing_threads() where peer_key = 'admin'), 1, 'b4 VA keeps the Ohvara Support line');
@@ -65,7 +65,7 @@ reset role;
 -- c. a paying agent
 select pg_temp.as_user('a1013000-0000-4000-8000-00000000000b');
 select is((select coalesce(string_agg(distinct substr(full_name, 7), ',' order by substr(full_name, 7)), '') from public.profiles where full_name like 'P1013 %'), 'F,G,P,Q,Z', 'c1 agent directory: no test account, no non-paying sign-up');
-select is((select coalesce(string_agg(distinct substr(peer_name, 7), ',' order by substr(peer_name, 7)), '') from public.my_standing_threads() where peer_id is not null), 'F,G', 'c2 agent Messages: real VAs only');
+select is((select coalesce(string_agg(distinct substr(peer_name, 7), ',' order by substr(peer_name, 7)), '') from public.my_standing_threads() where peer_id is not null), '', 'c2 agent Messages: no VA lines (P1018)');
 select is((select count(*)::int from public.my_standing_threads() where peer_key = 'admin'), 1, 'c3 agent keeps the Ohvara Support line');
 reset role;
 
@@ -111,7 +111,7 @@ update public.profiles set billing_status = 'active' where id = 'a1013000-0000-4
 select pg_temp.as_user('a1013000-0000-4000-8000-0000000000f1');
 select is((select coalesce(string_agg(distinct substr(full_name, 7), ',' order by substr(full_name, 7)), '') from public.profiles where full_name like 'P1013 %'), 'F,G,N,P,Q,Z', 'g1 paid: the VA reads them');
 select is((select coalesce(string_agg(distinct substr(full_name, 7), ',' order by substr(full_name, 7)), '') from public.va_agent_roster()), 'N,P,Q', 'g2 paid: on the VA agent list');
-select is((select count(*)::int from public.my_standing_threads() where agent_id = 'a1013000-0000-4000-8000-00000000000d'), 1, 'g3 paid: a Messages line');
+select is((select count(*)::int from public.my_standing_threads() where agent_id = 'a1013000-0000-4000-8000-00000000000d'), 0, 'g3 paid: still no direct line with a VA (P1018)');
 reset role;
 select pg_temp.as_user('a1013000-0000-4000-8000-00000000000a');
 select is((select listed from public.admin_agent_activity() where agent_id = 'a1013000-0000-4000-8000-00000000000d'), true, 'g4 paid: listed for the admin');

@@ -14,20 +14,24 @@ import { NO_CONV, NO_CONV_SUB } from '../../template/msgsEmptyText.js'
 // group, then every agent and VA line (what they see as "Ohvara Support": you answer as Ohvara Support).
 // P1001: Jordan and the team group are gone (desktop has neither); a chat started with someone new still pins first.
 // P1002: Find someone (by name), the All / Agents / VAs filter and Open (a chat's person) as on the desktop's Messages.
-const ROLE_WORD = { Agent: 'Agent · support line', Fulfillment: 'VA · support line' }
+// P1018 (Brayden, Nov 15): admins see everyone and every conversation, with real names: the other admin (pinned
+// first, you write as yourself), every Support line, every client conversation (titled by the client, the agent
+// smaller) and every VA-to-VA conversation (read only).
+const ROLE_WORD = { Agent: 'Agent · support line', Fulfillment: 'VA · support line', Admin: 'Admin · just the two of you', VAs: 'Between two VAs · read only' }
+const aboutOf = t => (t.role === 'Client' ? `Client · agent ${t.agent}` : ROLE_WORD[t.role] || t.role)
 const toneOfRole = r => (r === 'Fulfillment' ? 'sage' : 'sky')
 
 function useAllThreads() {
   const { data: threads } = useAdmThreads()
   const local = useAdmChats()
-  const lines = threads.map(t => ({ ...t, about: ROLE_WORD[t.role] || t.role, tone: toneOfRole(t.role) }))
+  const lines = threads.map(t => ({ ...t, about: aboutOf(t), tone: toneOfRole(t.role) }))
   const pinned = local.filter(t => !t.fresh || t.messages.length)
-  return [...pinned.filter(t => t.id === JORDAN_THREAD), ...pinned.filter(t => t.id !== JORDAN_THREAD), ...lines]
+  return [...lines.filter(t => t.role === 'Admin'), ...pinned.filter(t => t.id === JORDAN_THREAD), ...pinned.filter(t => t.id !== JORDAN_THREAD), ...lines.filter(t => t.role !== 'Admin')]
 }
 
 // Which group a thread is in: a support line carries its role, a chat started here carries who it is "about".
-const roleOf = t => (t.role === 'Agent' || t.about === 'Agent' ? 'Agent' : t.role === 'Fulfillment' || t.about === 'VA' ? 'Fulfillment' : null)
-const WHO = [['all', 'All'], ['Agent', 'Agents'], ['Fulfillment', 'VAs']]
+const roleOf = t => (t.role === 'Admin' || t.role === 'Client' ? t.role : t.role === 'VAs' ? 'Fulfillment' : t.role === 'Agent' || t.about === 'Agent' ? 'Agent' : t.role === 'Fulfillment' || t.about === 'VA' ? 'Fulfillment' : null)
+const WHO = [['all', 'All'], ['Admin', 'Admins'], ['Agent', 'Agents'], ['Fulfillment', 'VAs'], ['Client', 'Clients']]
 export default function AMsgs() {
   const app = useApp()
   const all = useAllThreads()
@@ -36,11 +40,11 @@ export default function AMsgs() {
   const input = useRef(null)
   useNoAutoKeyboard(input)
   const n = q.trim().toLowerCase()
-  const threads = all.filter(t => (who === 'all' || roleOf(t) === who) && String(t.name || '').toLowerCase().includes(n))
+  const threads = all.filter(t => (who === 'all' || roleOf(t) === who) && `${t.name || ''} ${t.agent || ''}`.toLowerCase().includes(n))
   return (
     <div className="ma-tabpage">
-      <div className="ma-top ma-rise"><span className="ma-grow"><h1>Messages</h1><small>Agents and VAs</small></span></div>
-      <label className="va-find ma-rise" style={rise(0)}><Search size={18} aria-hidden="true" /><input ref={input} type="search" inputMode="search" enterKeyHint="search" placeholder="Find someone" aria-label="Find a person" value={q} onChange={e => setQ(e.target.value)} />{q && <button type="button" className="ma-ib" aria-label="Clear" onClick={() => setQ('')}><X size={18} aria-hidden="true" /></button>}</label>
+      <div className="ma-top ma-rise"><span className="ma-grow"><h1>Messages</h1><small>Everyone, and every conversation</small></span></div>
+      <label className="va-find ma-rise" style={rise(0)}><Search size={18} aria-hidden="true" /><input ref={input} type="search" inputMode="search" enterKeyHint="search" placeholder="Find someone" aria-label="Find a person or client" value={q} onChange={e => setQ(e.target.value)} />{q && <button type="button" className="ma-ib" aria-label="Clear" onClick={() => setQ('')}><X size={18} aria-hidden="true" /></button>}</label>
       <div className="ma-seg am-seg ma-rise" style={rise(0)} role="tablist" aria-label="Who">
         {WHO.map(([k, w]) => <button key={k} type="button" role="tab" aria-selected={who === k} className={`is-sky${who === k ? ' is-on' : ''}`} onClick={() => setWho(k)}>{w}</button>)}
       </div>
@@ -50,18 +54,18 @@ export default function AMsgs() {
           const last = t.messages?.at(-1)
           const unread = t.unread > 0
           return (
-            <button key={t.id} type="button" className={`ma-thread va-thread${unread ? ' is-unread' : ''}${t.id === JORDAN_THREAD ? ' is-pinned' : ''}`} onClick={() => app.openSub('thread', { t: t.id })}>
+            <button key={t.id} type="button" className={`ma-thread va-thread${unread ? ' is-unread' : ''}${t.id === JORDAN_THREAD || t.role === 'Admin' ? ' is-pinned' : ''}`} onClick={() => app.openSub('thread', { t: t.id })}>
               <Ini person name={t.name} size={48} />
               <span className="ma-grow">
                 <span className="ma-thread-top"><b>{t.name}</b><small>{shortAt(last?.at)}</small></span>
                 <small className="va-about">{t.about}</small>
-                <span className="ma-thread-last"><small>{last ? `${last.from === 'me' ? 'You: ' : t.group ? `${firstName(last.from)}: ` : ''}${last.text}` : 'No messages yet'}</small>{unread && <span className="ma-badge is-inline">{t.unread}</span>}</span>
+                <span className="ma-thread-last"><small>{last ? `${last.from === 'me' ? 'You: ' : t.group ? `${firstName(last.from)}: ` : last.who && (t.role === 'Client' || t.role === 'VAs' || last.from === 'team') ? `${firstName(last.who)}: ` : ''}${last.text}` : 'No messages yet'}</small>{unread && <span className="ma-badge is-inline">{t.unread}</span>}</span>
               </span>
             </button>
           )
         })}
       </div>
-      <p className="ma-note">Agents and VAs see your replies as Ohvara Support.</p>
+      <p className="ma-note">Agents and VAs see your Support replies as Ohvara Support. Admins see who wrote.</p>
     </div>
   )
 }
@@ -82,7 +86,7 @@ export function AThreadAdm({ id }) {
   return <ChatView t={t} onSend={send} />
 }
 
-const whoOf = (t, m) => (m.from === 'me' ? 'You' : t.group ? firstName(m.who || m.from) : firstName(t.name))
+const whoOf = (t, m) => (m.from === 'me' ? 'You' : t.group ? firstName(m.who || m.from) : m.who ? firstName(m.who) : firstName(t.name))
 // Open: the person's own screen (an agent or a VA), from their chat, as the desktop's Messages has it.
 const OPEN_SUB = { Agent: 'agent', Fulfillment: 'va' }
 function ChatView({ t, onSend }) {
@@ -94,7 +98,7 @@ function ChatView({ t, onSend }) {
   const msgs = t.messages || []
   useEffect(() => { end.current?.scrollIntoView({ block: 'end' }) }, [msgs.length])
   useKeyboard(root, input)
-  const to = t.group ? 'the team' : firstName(t.name)
+  const to = t.group ? 'the team' : t.role === 'Client' ? `the team about ${firstName(t.name)}` : firstName(t.name)
   const send = e => {
     e.preventDefault()
     const v = text.trim()
@@ -103,7 +107,7 @@ function ChatView({ t, onSend }) {
     setText('')
   }
   const runs = runsOf(msgs, m => whoOf(t, m))
-  const foot = (
+  const foot = t.readOnly ? <p className="ma-note">Read only: this is between two VAs.</p> : (
     <form className="ma-compose" onSubmit={send}>
       <input ref={input} type="text" aria-label={`Message ${to}`} placeholder={`Message ${to}`} value={text} onChange={e => setText(e.target.value)} enterKeyHint="send"
         onFocus={() => setTimeout(() => end.current?.scrollIntoView({ block: 'end', behavior: 'smooth' }), 260)} />
@@ -116,11 +120,11 @@ function ChatView({ t, onSend }) {
         right={OPEN_SUB[t.role] && t.who ? <button type="button" className="ma-textbtn ma-press" onClick={() => app.openSub(OPEN_SUB[t.role], { t: t.who })}>Open</button> : null}>
         <div className="ma-chat">
           {msgs.map((m, i) => {
-            const mine = m.from === 'me'
+            const mine = m.from === 'me' || m.from === 'team'
             const r = runs[i]
             return (
               <div key={m.id || i} className={`ma-msg${mine ? ' is-me' : ''}${r.first ? ' is-first' : ''}${r.last ? ' is-last' : ''}`}>
-                {r.first && !mine && <small className="ma-msg-who">{whoOf(t, m)}</small>}
+                {r.first && m.from !== 'me' && <small className="ma-msg-who">{whoOf(t, m)}</small>}
                 <div className={`ma-bub${r.last ? ' has-tail' : ''}`}>{m.text}</div>
                 {r.last && <small className="ma-msg-at">{m.at}</small>}
               </div>

@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 import { isMissing } from './agentRealData'
 import { readGhlSettings, readGhlKeySaved } from '../lib/ghlConnect'
-import { buildAdmState, realClock } from '../lib/admReal'
+import { buildAdmState, realClock, threadKey } from '../lib/admReal'
 import { useNote } from '../template/kit'
 import { webUrl } from '../lib/native'
 
@@ -56,7 +56,7 @@ export async function loadAdmin(sb, clock) {
   const lastMonthStart = (() => { const [y, m] = clock.monthStartIso.split('-').map(Number); return m === 1 ? `${y - 1}-12-01` : `${y}-${String(m - 1).padStart(2, '0')}-01` })()
   const dayBefore = iso => new Date(Date.parse(`${iso}T12:00:00Z`) - 864e5).toISOString().slice(0, 10)
   const [profiles, leadSettings, onDuty, accounts, invites, leads, unassigned, policies, steps, threads, messages, bugs, audit, app, rc,
-    campaigns, costsWeek, costsMonth, costsLast, runs, ticks, dayOff, ghl, keySaved, launch, history, activity] = await Promise.all([
+    campaigns, costsWeek, costsMonth, costsLast, runs, ticks, dayOff, ghl, keySaved, launch, history, activity, clientThreads, clientMsgs] = await Promise.all([
     src('people', sb.rpc('admin_list_profiles'), [], failed),
     src('lead settings', sb.from('agent_lead_settings').select('agent_id, active, states'), [], failed),
     src('on duty', sb.rpc('on_duty_agents'), [], []),
@@ -67,7 +67,7 @@ export async function loadAdmin(sb, clock) {
     src('clients', sb.from('policies').select(COLS_POLICY).is('archived_at', null).order('created_at', { ascending: false }).limit(1000), [], failed),
     src('servicing', sb.from('servicing_tasks').select('id, policy_id, kind, status, due_at, done_at').is('done_at', null).limit(500), [], []),
     src('threads', sb.rpc('my_standing_threads'), [], []),
-    src('messages', sb.from('direct_messages').select('id, agent_id, peer_key, sender_id, sender_role, body, created_at').eq('peer_key', 'admin').order('created_at', { ascending: false }).limit(500), [], []),
+    src('messages', sb.from('direct_messages').select('id, agent_id, peer_id, peer_key, sender_id, sender_name, sender_role, body, created_at').order('created_at', { ascending: false }).limit(500), [], []),
     src('bug reports', sb.from('bug_reports').select('id, description, screenshot_url, page_url, status, created_at, reporter:profiles!bug_reports_reporter_id_fkey(id, full_name)').order('created_at', { ascending: false }).limit(100), [], failed),
     src('audit log', sb.from('admin_audit_log').select('id, at, actor, actor_name, via, action, target_table, target_id').order('at', { ascending: false }).limit(100), [], failed),
     src('settings', sb.from('app_settings').select('*').eq('id', 1).maybeSingle(), null, failed),
@@ -85,12 +85,15 @@ export async function loadAdmin(sb, clock) {
     // P942: 91 days of leads for the Overview leads chart (This week / 30 days / 3 months) and the Leads board's All
     src('lead history', sb.from('leads').select(COLS_LEAD).in('lead_type', ['mortgage_protection', 'policy_help']).gte('created_at', new Date(Date.now() - 92 * 864e5).toISOString()).order('created_at').limit(5000), [], []),
     src('agent activity', sb.rpc('admin_agent_activity'), [], []), // P999: hides sign-ups that did nothing
+    // P1018: admins see every conversation, client conversations too (titled by the client)
+    src('client conversations', sb.rpc('my_message_threads'), [], []),
+    src('client messages', sb.from('policy_messages').select('id, policy_id, sender_id, sender_name, sender_role, body, created_at').order('created_at', { ascending: false }).limit(500), [], []),
   ])
   const leadIds = [...leads, ...unassigned].map(l => l.id)
   const intake = leadIds.length ? await src('intake', sb.from('lead_intake').select('lead_id, routing, meta_option, agent_ref, campaign_id').in('lead_id', leadIds.slice(0, 300)), [], []) : []
   return {
     profiles, leadSettings, onDuty: (onDuty || []).map(r => r.agent_id || r.id).filter(Boolean), accounts, invites, leads, unassigned, intake, policies, steps,
-    threads, messages: (messages || []).slice().reverse(), bugs, audit, app, rc, campaigns, costsWeek, costsMonth, costsLast, runs, ticks, dayOff, ghl, keySaved, launch, history, activity, failed: [...new Set(failed)],
+    threads, messages: (messages || []).slice().reverse(), bugs, audit, app, rc, campaigns, costsWeek, costsMonth, costsLast, runs, ticks, dayOff, ghl, keySaved, launch, history, activity, clientThreads, clientMsgs: (clientMsgs || []).slice().reverse(), failed: [...new Set(failed)],
   }
 }
 
@@ -186,13 +189,17 @@ export function useAdmRealActions() {
       },
       setTz: tz => run(supabase.from('profiles').update({ timezone: tz }).eq('id', profile?.id)),
       setBugStatus: (id, status) => run(supabase.from('bug_reports').update({ status: status === 'fixed' ? 'resolved' : 'new' }).eq('id', id)),
+      // P1018: a thread id is `<agent_id>.<peer_key>`: 'admin' = someone's Ohvara Support line, an id = the line
+      // between two admins (lower id first, migration 280).
       sendMessage: (threadId, text) => {
-        const agentId = String(threadId).split('.')[0]
-        return run(supabase.from('direct_messages').insert({ agent_id: agentId, peer_id: null, sender_id: profile?.id, body: text }), 'Could not send')
+        if (String(threadId).startsWith('pm:')) return run(supabase.from('policy_messages').insert({ policy_id: String(threadId).slice(3), sender_id: profile?.id, body: text }), 'Could not send')
+        const { agentId, peerKey } = threadKey(threadId)
+        return run(supabase.from('direct_messages').insert({ agent_id: agentId, peer_id: peerKey === 'admin' ? null : peerKey, sender_id: profile?.id, body: text }), 'Could not send')
       },
       readThread: threadId => {
-        const agentId = String(threadId).split('.')[0]
-        run(supabase.from('direct_message_reads').upsert({ agent_id: agentId, peer_key: 'admin', profile_id: profile?.id, last_read_at: new Date().toISOString() }, { onConflict: 'agent_id,peer_key,profile_id' }))
+        if (String(threadId).startsWith('pm:')) { run(supabase.from('policy_message_reads').upsert({ policy_id: String(threadId).slice(3), profile_id: profile?.id, last_read_at: new Date().toISOString() }, { onConflict: 'policy_id,profile_id' })); return }
+        const { agentId, peerKey } = threadKey(threadId)
+        run(supabase.from('direct_message_reads').upsert({ agent_id: agentId, peer_key: peerKey, profile_id: profile?.id, last_read_at: new Date().toISOString() }, { onConflict: 'agent_id,peer_key,profile_id' }))
       },
       // Connect on real data: the location and workflow IDs (ghl_settings), and the campaign → agent map (232).
       saveConnect: (part, patch) => {
