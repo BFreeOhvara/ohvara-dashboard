@@ -1,6 +1,6 @@
 // P1010 — the phone app's ~2 s logo reveal on a cold start. Source of public/intro.js:
 // run `node scripts/p1010-build-intro.mjs` to write it (the mark's paths come from
-// ohvara-site/_src/mark.json, the one correct logo source; on navy the big piece is white, the wing teal).
+// ohvara-site/_src/mark.json, the one correct logo source; P1020: on navy the big piece is teal, the wing white).
 // A plain classic script so it runs before the app's bundle and paints from the first frame.
 // It only runs inside the iPhone/Android app (Capacitor), never on the website.
 // Three takes were made (A Sweep, B Draw, C Converge); Brayden picked B. The others stay for the preview page.
@@ -62,9 +62,10 @@
   function markup() {
     return '<div class="oi-stage">' +
       '<div class="oi-glow"></div>' +
-      svg('<path fill="' + TEAL + '" d="' + BACK + '"/>', 'oi-wing') +
-      svg('<path fill="' + WHITE + '" d="' + FRONT + '"/>', 'oi-front') +
-      svg('<path pathLength="1" stroke="' + TEAL + '" d="' + BACK + '"/><path pathLength="1" stroke="' + WHITE + '" d="' + FRONT + '"/>', 'oi-line') +
+      // P1020 (Brayden): reversed, the big piece teal and the wing white, like the phone loading screen.
+      svg('<path fill="' + WHITE + '" d="' + BACK + '"/>', 'oi-wing') +
+      svg('<path fill="' + TEAL + '" d="' + FRONT + '"/>', 'oi-front') +
+      svg('<path pathLength="1" stroke="' + WHITE + '" d="' + BACK + '"/><path pathLength="1" stroke="' + TEAL + '" d="' + FRONT + '"/>', 'oi-line') +
       svg('<defs><clipPath id="oi-clip"><path d="' + BACK + '"/><path d="' + FRONT + '"/></clipPath>' +
         '<linearGradient id="oi-sg" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/>' +
         '<stop offset=".5" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>' +

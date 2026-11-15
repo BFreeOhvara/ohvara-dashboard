@@ -1,17 +1,13 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { needsTerms } from '../../lib/oauth'
+import { Loader } from '../shared/Loader'
 
 export function ProtectedRoute({ children, allowedRoles }) {
   const { session, profile, loading, mfaRequired } = useAuth()
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-base)]">
-        <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
+  // P1020: the loading screen (shows only past 300 ms).
+  if (loading) return <Loader />
 
   if (!session) return <Navigate to="/login" replace />
   // Prompt 720 — password done, two-step code not yet: Login shows the code step.

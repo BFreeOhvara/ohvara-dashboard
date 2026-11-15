@@ -10,16 +10,14 @@ import { AdminBoundary } from '../../adminshell/AdminBoundary'
 import { ProtectedRoute } from './ProtectedRoute'
 import { DeleteAccountDialog } from '../shared/DeleteAccount'
 import { rememberPerson } from '../../template/avatarHue'
+import { Loader } from '../shared/Loader'
 
 const AgentShell = lazy(() => import('../../template/AgentShell'))
 const FulfillShell = lazy(() => import('../../fulshell/FulfillShell'))
 const AdminShell = lazy(() => import('../../adminshell/AdminShell'))
 
-const Spinner = () => (
-  <div className="min-h-screen flex items-center justify-center bg-[var(--bg-base)]">
-    <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-  </div>
-)
+// P1020: the loading screen (shows only past 300 ms) while the role or a shell's code loads.
+const Spinner = () => <Loader />
 
 // The agent portal swap: an agent at one of the shell URLs (paths.js SHELL_ROUTES) gets the template's screens.
 // P837: a Fulfillment rep at a Fulfillment URL (fulshell/paths.js) gets the same design, on real data.

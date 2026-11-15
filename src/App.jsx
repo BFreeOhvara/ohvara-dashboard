@@ -8,6 +8,7 @@ import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardLayout } from './components/layout/DashboardLayout'
 import { ShellSwap } from './components/layout/ShellSwap'
 import { ErrorBoundary } from './components/shared/ErrorBoundary'
+import { Loader } from './components/shared/Loader'
 import { NativeBridge } from './components/native/NativeBridge'
 // Side-effect import — attaches the beforeinstallprompt listener at app
 // boot (Prompt 286) so it's never missed while the user is still on Login.
@@ -87,13 +88,8 @@ function RoleRedirect() {
   // nothing at all here (unlike ProtectedRoute's matching branch, which
   // shows a spinner) — a genuine blank screen for however long auth takes
   // to resolve, on the one route guaranteed to run on every app open.
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-base)]">
-        <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
+  // P1020: the loading screen (shows only past 300 ms).
+  if (loading) return <Loader />
   if (!profile) return <Navigate to="/login" replace />
   if (profile.role === 'agent') return <Navigate to="/agent" replace />
   if (profile.role === 'admin') return <Navigate to="/admin" replace />
@@ -105,7 +101,7 @@ export default function App() {
   // /template has no backend: it returns above the providers, so the page makes no Supabase requests.
   const path = window.location.pathname
   if (path === '/template' || path.startsWith('/template/')) {
-    return <ErrorBoundary><Suspense fallback={null}><TemplateApp /></Suspense></ErrorBoundary>
+    return <ErrorBoundary><Suspense fallback={<Loader />}><TemplateApp /></Suspense></ErrorBoundary>
   }
   return (
     // Prompt 746 — outermost boundary: even a crash in the layout or a
@@ -175,12 +171,12 @@ export default function App() {
             <Route path="/agent/inbounds" element={<InboundsToLeads />} />
             <Route path="/agent/inbounds/:id" element={
               <ProtectedRoute allowedRoles={['agent']}>
-                <DashboardLayout><Suspense fallback={null}><V2InboundDetail /></Suspense></DashboardLayout>
+                <DashboardLayout><Suspense fallback={<Loader area />}><V2InboundDetail /></Suspense></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/calendar" element={
               <ProtectedRoute allowedRoles={['agent']}>
-                <DashboardLayout><Suspense fallback={null}><V2Calendar /></Suspense></DashboardLayout>
+                <DashboardLayout><Suspense fallback={<Loader area />}><V2Calendar /></Suspense></DashboardLayout>
               </ProtectedRoute>
             } />
             <Route path="/agent/plan" element={<Navigate to="/agent/billing" replace />} />
@@ -213,7 +209,7 @@ export default function App() {
             {/* Leads: the v2 Inbounds page (Booked appointments, Live calls), always on. */}
             <Route path="/agent/leads" element={
               <ProtectedRoute allowedRoles={['agent']}>
-                <DashboardLayout><Suspense fallback={null}><V2Inbounds /></Suspense></DashboardLayout>
+                <DashboardLayout><Suspense fallback={<Loader area />}><V2Inbounds /></Suspense></DashboardLayout>
               </ProtectedRoute>
             } />
             {/* Prompt 691 — Billing, promoted out of Settings. */}

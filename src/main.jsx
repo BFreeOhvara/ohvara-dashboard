@@ -19,6 +19,7 @@ import App from './App.jsx'
 import { reloadOnceFor, stripBust } from './lib/chunkReload'
 import { isNativeApp } from './lib/native'
 import { bootNative } from './lib/nativeBoot'
+import { adoptBoot } from './lib/loader'
 
 // Prompt 775 — the iPhone / Android app: status bar, back button, links,
 // keyboard, offline, over-the-air updates. Nothing changes on the website.
@@ -33,6 +34,9 @@ stripBust()
 window.addEventListener('vite:preloadError', e => {
   if (reloadOnceFor()) e.preventDefault()
 })
+
+// P1020: the loading screen index.html painted moves out of #root before React clears it; the first <Loader /> takes it over.
+adoptBoot()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

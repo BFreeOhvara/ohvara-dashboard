@@ -14,12 +14,14 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { withProducts } from './products955'
 import { usePhone } from '../template/m/phone'
+import { Loader } from '../components/shared/Loader'
+import { DataLoading } from '../template/DataState'
 
 // P986 — below 768 px (and in the native app) an admin gets the admin phone app (src/adminshell/m), same addresses
 // and data; 768 px and up is the desktop admin exactly as it was. Loaded only on a phone, so its styles never reach
 // the desktop.
 const AdminApp = lazy(() => import('./m/AdminApp'))
-function AdmFrame() { return usePhone() ? <Suspense fallback={null}><AdminApp /></Suspense> : <AdminFrame /> }
+function AdmFrame() { return usePhone() ? <Suspense fallback={<Loader />}><AdminApp /></Suspense> : <AdminFrame /> }
 
 // P849 — the Admin portal: the rebuilt admin pages (src/adminshell) on sample info, the same as the agent and VA
 // shells until the backend step. Two mounts: the real admin URLs (ShellSwap passes the real name, the real sign-out
@@ -32,7 +34,7 @@ const SAMPLE = { live: false, name: ME.name, signOut: null, DeleteDialog: null }
 function RealGate({ children }) {
   const meta = useAdmMeta()
   if (!meta) return children
-  if (meta.isLoading) return <div className="tp-page fx-page" aria-busy="true"><Empty title="Loading real data" sub="Reading agents, leads, clients and the desk." /></div>
+  if (meta.isLoading) return <DataLoading /> // P1020: the loading screen over the page area, only past 300 ms
   if (meta.error) {
     return (
       <div className="tp-page fx-page" role="alert">

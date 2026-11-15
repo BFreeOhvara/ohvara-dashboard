@@ -111,7 +111,7 @@ test('setup: every connection, view only', () => {
 
 test('admins on a phone get the admin app; the desktop frame is unchanged', () => {
   const shell = src('./adminshell/AdminShell.jsx')
-  assert.match(shell, /usePhone\(\) \? <Suspense fallback=\{null\}><AdminApp \/><\/Suspense> : <AdminFrame \/>/)
+  assert.match(shell, /usePhone\(\) \? <Suspense fallback=\{<Loader \/>\}><AdminApp \/><\/Suspense> : <AdminFrame \/>/)
   assert.match(shell, /lazy\(\(\) => import\('.\/m\/AdminApp'\)\)/)
   const app = src('./adminshell/m/AdminApp.jsx')
   for (const icon of ['Home', 'Briefcase', 'Users', 'MessageCircle']) assert.match(app, new RegExp(`\\b${icon}\\b`))

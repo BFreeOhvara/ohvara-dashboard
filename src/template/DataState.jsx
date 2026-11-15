@@ -1,15 +1,11 @@
 import { RefreshCw, CloudOff } from 'lucide-react'
 import './p848.css'
+import { Loader } from '../components/shared/Loader'
 
 // P848 — the real portal's loading and error states, in the shell style. Sample data never shows either.
+// P1020: slow page data shows the loading screen over the page area (not the top bar), only past 300 ms.
 export function DataLoading() {
-  return (
-    <div className="tp-page fx-page dz-load" role="status" aria-live="polite" aria-label="Loading your page">
-      <div className="fx-grid">
-        {[12, 6, 6, 8, 4].map((w, i) => <section key={i} className={`fx-tile fx-s${w} dz-skel`} style={{ '--i': i }} aria-hidden="true"><i /><i /><i /></section>)}
-      </div>
-    </div>
-  )
+  return <div className="tp-page fx-page dz-load"><Loader area /></div>
 }
 
 export function DataError({ onRetry }) {
