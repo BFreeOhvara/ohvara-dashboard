@@ -45,6 +45,11 @@
     <meta name="twitter:image" content="https://portal.ohvara.com/ohvara-favicon.png" />
   </head>
   <body>
+    <!-- P1010: the phone app's ~2 s logo reveal on a cold start (public/intro.js). Only inside the app;
+         the website never downloads it. It runs before the bundle so the first frame is the splash's navy. -->
+    <script>
+      if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) document.write('<script src="/intro.js"><\/script>')
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

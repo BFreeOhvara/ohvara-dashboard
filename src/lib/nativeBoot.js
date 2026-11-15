@@ -16,6 +16,7 @@ import { listenNativeOAuth } from './oauth'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { Keyboard } from '@capacitor/keyboard'
 import { Network } from '@capacitor/network'
+import { SplashScreen } from '@capacitor/splash-screen'
 import { nativePlatform, openExternal, opening } from './native'
 import { setOnline } from './nativeState'
 import { startOta } from './ota'
@@ -28,7 +29,8 @@ function viewportCover() {
 }
 
 function syncStatusBar() {
-  const light = document.documentElement.getAttribute('data-theme') === 'light'
+  // P1010: light icons over the navy logo reveal while it plays (public/intro.js).
+  const light = !window.__ohvaraIntroPlaying && document.documentElement.getAttribute('data-theme') === 'light'
   // Style.Light = dark icons for a light page; Style.Dark = light icons.
   StatusBar.setStyle({ style: light ? Style.Light : Style.Dark }).catch(() => {})
 }
@@ -78,6 +80,9 @@ export function bootNative() {
   root.classList.add('is-native', `is-${nativePlatform()}`)
   viewportCover()
 
+  // P1010: the logo reveal (public/intro.js) hides the splash itself; this is the backstop if it didn't run.
+  SplashScreen.hide({ fadeOutDuration: 0 }).catch(() => {})
+  window.addEventListener('ohvara-intro-done', syncStatusBar)
   syncStatusBar()
   new MutationObserver(syncStatusBar).observe(root, { attributes: true, attributeFilter: ['data-theme'] })
 
