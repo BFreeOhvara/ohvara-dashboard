@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- P1010 + P1021: the ground behind the app-open splash follows the phone's light/dark setting.
-     Light (this file): the plain light ground the app intro starts on. Dark: values-night/splash_colors.xml, the logo navy.
-     The name stays ohvaraSplashNavy (styles.xml refers to it). -->
+<!-- P1010: the logo navy behind the app-open splash. -->
 <resources>
-    <color name="ohvaraSplashNavy">#E6E9E6</color>
+    <color name="ohvaraSplashNavy">#0A1F44</color>
 </resources>

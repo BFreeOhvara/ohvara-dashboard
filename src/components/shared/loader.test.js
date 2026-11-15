@@ -43,18 +43,11 @@ test('every page-level loading state uses it', () => {
   assert.match(src('../../main.jsx'), /adoptBoot\(\)\r?\n\r?\ncreateRoot/)
 })
 
-test('the app intro: dark is big piece teal + wing white; light is big piece navy + wing teal on the light ground', () => {
-  assert.match(intro, /var wingC = light \? TEAL : WHITE, bodyC = light \? NAVY : TEAL/)
-  assert.match(intro, /fill="' \+ wingC \+ '" d="' \+ BACK \+ '"\/>', 'oi-wing'/)
-  assert.match(intro, /fill="' \+ bodyC \+ '" d="' \+ FRONT \+ '"\/>', 'oi-front'/)
-  assert.match(intro, /LIGHT_BG = '#E6E9E6'/)
-  assert.match(intro, /\.oi\.oi-light\{background:' \+ LIGHT_BG/)
-})
-
-test('the intro only plays light on builds whose splash follows the theme; older builds stay navy', () => {
-  assert.match(intro, /splashFollowsTheme = Number\(info && info\.build\) >= \(MIN_LIGHT_BUILD\[plat\] \|\| Infinity\)/)
-  assert.match(intro, /run\(splashFollowsTheme && document\.documentElement\.getAttribute\('data-theme'\) === 'light'\)/)
-  assert.match(intro, /var MIN_LIGHT_BUILD = \{ ios: \d+, android: \d+ \}/)
+test('the app intro is always the dark one: navy ground, big piece teal, wing white, in light and dark mode', () => {
+  assert.match(intro, /fill="' \+ WHITE \+ '" d="' \+ BACK \+ '"\/>', 'oi-wing'/)
+  assert.match(intro, /fill="' \+ TEAL \+ '" d="' \+ FRONT \+ '"\/>', 'oi-front'/)
+  assert.match(intro, /background:' \+ NAVY/)
+  assert.doesNotMatch(intro, /oi-light|LIGHT_BG/)
 })
 
 test('the theme is decided before the first paint: saved choice, else signed-out pages light, else the device', () => {
@@ -71,9 +64,8 @@ test('useTheme with nothing saved follows the device, like index.html', () => {
   assert.match(t, /localStorage\.getItem\(KEY\)\) \|\| 'system'/)
 })
 
-test('the native splash follows the phone: light ground by day, navy by night, no fixed plugin colour', () => {
+test('the native splash stays plain navy in light and dark (the intro is always navy)', () => {
   const cfg = JSON.parse(src('../../../capacitor.config.json'))
-  assert.equal(cfg.plugins.SplashScreen.backgroundColor, undefined)
-  assert.match(src('../../../android/app/src/main/res/values/splash_colors.xml'), /#E6E9E6/)
-  assert.match(src('../../../android/app/src/main/res/values-night/splash_colors.xml'), /#0A1F44/)
+  assert.equal(cfg.plugins.SplashScreen.backgroundColor, '#0A1F44')
+  assert.match(src('../../../android/app/src/main/res/values/splash_colors.xml'), /#0A1F44/)
 })

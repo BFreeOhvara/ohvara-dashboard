@@ -103,7 +103,7 @@ await run('phone-system-light', { w: 390, h: 844, theme: 'light', saved: 'system
 await run('phone-light-reduce', { w: 390, h: 844, theme: 'light', saved: 'light', delay: DELAY, phone: true, reduce: true })
 
 // The app intro (public/intro.js) mounted as the app would on a cold start, light and dark, recorded at phone size.
-for (const light of [true, false]) {
+for (const light of [false]) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, recordVideo: { dir: OUT, size: { width: 390, height: 844 } } })
   const page = await ctx.newPage()
   await page.setContent(`<html><body style="margin:0;background:${light ? '#E6E9E6' : '#0A1F44'}"></body></html>`)

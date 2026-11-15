@@ -29,8 +29,8 @@ function viewportCover() {
 }
 
 function syncStatusBar() {
-  // P1010: light icons over the navy logo reveal while it plays (public/intro.js). P1021: dark icons when it plays light.
-  const light = window.__ohvaraIntroPlaying ? !!window.__ohvaraIntroLight : document.documentElement.getAttribute('data-theme') === 'light'
+  // P1010: light icons over the navy logo reveal while it plays (public/intro.js).
+  const light = !window.__ohvaraIntroPlaying && document.documentElement.getAttribute('data-theme') === 'light'
   // Style.Light = dark icons for a light page; Style.Dark = light icons.
   StatusBar.setStyle({ style: light ? Style.Light : Style.Dark }).catch(() => {})
 }
