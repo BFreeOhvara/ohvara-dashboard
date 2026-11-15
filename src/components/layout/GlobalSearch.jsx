@@ -7,7 +7,6 @@ import { useAgentBookings } from '../../hooks/useAgentBookings'
 import { useFulfillmentQueue } from '../../hooks/usePolicies'
 import { useInbounds } from '../../hooks/useInbounds'
 import { matchClients, tabOf, agentStageOf, stageOf, isLive, placeOf, useNow } from '../../lib/agentBookings'
-import { excludeTestAccounts } from '../../lib/testAccounts'
 import { callWhen } from '../../lib/scheduling'
 import { fullName } from '../../lib/policyFormat'
 import { matchInbounds, inboundPath, leadName, phoneDisplay, stageOf as inboundStageOf, cameInAt } from '../../lib/inbounds'
@@ -127,8 +126,8 @@ export function GlobalSearch() {
   const { data: inboundList = [] } = useInbounds({ enabled: !!profile?.id && role === 'agent' })
   const rows = useMemo(() => {
     if (isFulfill) return queue.filter(p => p.assigned_fulfillment_id === profile?.id)
-    return isAdmin ? excludeTestAccounts(raw, profile?.id) : raw
-  }, [raw, queue, isAdmin, isFulfill, profile?.id])
+    return raw // P1013: test accounts' rows never reach an admin (policies demo wall, migration 260)
+  }, [raw, queue, isFulfill, profile?.id])
 
   const q = query.trim().toLowerCase()
   const clients = useMemo(() => matchClients(rows, q).slice(0, MAX_CLIENTS), [rows, q])

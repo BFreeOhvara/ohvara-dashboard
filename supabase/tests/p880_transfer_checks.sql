@@ -25,6 +25,8 @@ select '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authentic
 update public.profiles set is_active = true where id::text like 'a8800000-%';
 update public.profiles set role = 'fulfillment' where id in ('a8800000-0000-4000-8000-00000000000f', 'a8800000-0000-4000-8000-00000000000e');
 update public.profiles set role = 'admin' where id = 'a8800000-0000-4000-8000-000000000009';
+-- P1013: these are working (comped) agents; an agent who never paid is hidden from admins and uplines (migration 276).
+update public.profiles set billing_exempt = true where role = 'agent' and id::text like 'a8800000-%';
 
 insert into public.push_devices (profile_id, token, platform) values ('a8800000-0000-4000-8000-00000000000a', 'p880-token-agent-a-000000', 'ios');
 insert into public.transfer_readiness (agent_id, push_ok_at, call_ok_at, booking_only)

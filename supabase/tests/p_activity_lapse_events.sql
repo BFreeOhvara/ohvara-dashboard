@@ -41,6 +41,8 @@ select '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authentic
     ('cccccccc-cccc-4ccc-8209-000000000001'::uuid, 'admin_z', 'agent')
   ) as u(id, n, role);
 update public.profiles set role = 'admin' where id = 'cccccccc-cccc-4ccc-8209-000000000001';
+-- P1013: these are working (comped) agents; an agent who never paid is hidden from admins and uplines (migration 276).
+update public.profiles set billing_exempt = true where role = 'agent' and id::text like 'aaaaaaaa-aaaa-4aaa-8209-%';
 update public.profiles set upline_id = 'aaaaaaaa-aaaa-4aaa-8209-00000000000c' where id = 'aaaaaaaa-aaaa-4aaa-8209-00000000000a';
 update public.app_settings set submit_live = true, agent_billing_enforced = false where id = 1;
 

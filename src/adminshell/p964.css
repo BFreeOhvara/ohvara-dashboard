@@ -9,6 +9,9 @@
    title. Negative margins take the clock's extra height out of the row (it still shares the Live line's baseline). */
 @media (min-width: 1000px) { .adm .adm-ov-statusrow .fx-clock { margin-top: -22px; margin-bottom: -6px; } }
 @media (max-width: 999.98px) { .adm .adm-ov-statusrow .fx-clock { --clk: 18px; gap: 8px; } }
+/* P1013: the same 16px gap under the date + clock as on the agent and VA Overviews (it sat right on the first card). */
+@media (min-width: 1000px) { .adm .adm-ov-statusrow .fx-clock { margin-bottom: 8px; } }
+@media (max-width: 999.98px) { .adm .adm-ov-statusrow { margin-bottom: 4px; } }
 
 /* 2. To-dos: no header, no Show all. The list scrolls inside the card (the card is as tall as Leads this week beside it);
    the Calendar button sits bottom left. Room around the list so a row lifting on hover isn't clipped by the scroll box. */

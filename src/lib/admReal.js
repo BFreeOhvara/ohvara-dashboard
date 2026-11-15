@@ -339,17 +339,21 @@ export function pushOf(c, now = Date.now()) {
 // store's settings, for the rules that are company config rather than sample records (notification list, pay rule).
 // Returns the same keys as the sample store, so every derived hook (funnel, Money, Setup) reads it unchanged.
 export function buildAdmState(raw = {}, { now = Date.now(), clock = realClock(now), me = null, base = {} } = {}) {
-  // P929: test accounts (is_test, the demo side, and the known test ids) and everything of theirs stay out of every
-  // admin number: revenue, agents, leads, clients, calls, VA pay, to-dos.
-  const testIds = new Set((raw.profiles || []).filter(p => p.is_demo || isTestProfile(p)).map(p => p.id))
-  const notTest = id => !id || !testIds.has(id) && !isTestProfile({ id })
-  const profiles = (raw.profiles || []).filter(p => !p.deleted_at && !p.is_demo && !isTestProfile(p))
+  // P1013: the server decides who exists here. admin_list_profiles never returns a test account (migration 276), so a
+  // row whose person isn't on that list (a test account's lead, campaign, day off...) stays out of every admin number,
+  // and so does an agent who signed up but never paid (below). No people answer at all = nothing is dropped.
+  const activity = Object.fromEntries((raw.activity || []).map(r => [r.agent_id, r]))
+  // An agent the server marks not listed (signed up, never paid) is left out of every admin list and number, shown
+  // only under Agents > "Signed up, not paying". Before migration 276 (no listed field): P999's rule.
+  const idle = p => p.role === 'agent' && !!activity[p.id] && (activity[p.id].listed !== undefined
+    ? activity[p.id].listed === false
+    : p.signup_source === 'self' && !activity[p.id].paying && !activity[p.id].active)
+  const all = (raw.profiles || []).filter(p => !isTestProfile(p))
+  const known = new Set(all.filter(p => !idle(p)).map(p => p.id))
+  const notTest = id => !id || !all.length || known.has(id)
+  const profiles = all.filter(p => !p.deleted_at && !p.is_demo)
   const settings = raw.leadSettings || []
   const plansIdx = base.plans || {}
-  // P999: a self-signup the server calls neither paying nor active is left out of every admin list and number (shown
-  // only under "Signed up, not active"). No activity answer = everyone shows (never hide a real agent on an error).
-  const activity = Object.fromEntries((raw.activity || []).map(r => [r.agent_id, r]))
-  const idle = p => p.signup_source === 'self' && !!activity[p.id] && !activity[p.id].paying && !activity[p.id].active
   const agents = profiles.filter(p => p.role === 'agent' && !idle(p)).map(p => toAgent(p, { settings, onDuty: raw.onDuty || [], plans: plansIdx }))
   const idleSignups = profiles.filter(p => p.role === 'agent' && idle(p)).map(p => ({ ...toAgent(p, { settings, onDuty: [], plans: plansIdx }), idle: true }))
   const vas = profiles.filter(p => p.role === 'fulfillment').map(p => toVa(p, { accounts: raw.accounts || [] }))
