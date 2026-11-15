@@ -445,7 +445,7 @@ function useSettingsSample() { const s = useStore(); return ok(s.settings) }
 function useNeedsSample() { const s = useStore(); return ok(useMemo(() => ({ now: needsYouNow({ leads: s.leads, checks: checkLists(clientsOf(s), SAMPLE_NOW.slice(0, 10), CHECK_DEFAULTS), toSubmit: canServe(pickedOf(s.billing)) ? unsubmittedSales(s.leads, s.clients) : [] }, SAMPLE_NOW), fyi: forYourInfo(s), notices: billingNeeds(s.billing) }), [s])) }
 function useSignupSample() {
   return useMemo(() => ok({
-    covers: ['Booked appointments and live calls, at a daily spend you set', 'A team that calls every lead right away and books them on your calendar', 'Servicing that keeps your policies on the books', 'Your own portal and phone app'],
+    covers: ['Booked appointments and live calls, at a daily spend you set', 'An AI caller that calls every new lead within seconds and books them on your calendar', 'Servicing that keeps your policies on the books', 'Your own portal and phone app'],
   }), [])
 }
 // The sample clock is fixed at Monday, November 2, 2:14 PM, like the frame.

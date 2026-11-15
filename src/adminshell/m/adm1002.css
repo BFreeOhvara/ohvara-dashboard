@@ -116,3 +116,10 @@ button.ma-textbtn.am-wide { justify-content: center; }
   .am-costs dd { font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) { .am-weekbars i { transition: none !important; } }
+
+/* P1008 — What GoHighLevel set up + Audit log on the admin phone. Tokens only. */
+.am-ghl { margin-top: 18px; }
+.am-ghl .ma-list { margin-bottom: 14px; }
+.am-val { font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--ma-ink); text-align: right; flex: none; }
+.am-sel { margin-top: 8px; width: 100%; min-height: 44px; border-radius: 12px; border: 1px solid var(--ma-line, rgba(127,127,127,.3)); background: var(--ma-surface, transparent); color: var(--ma-ink); font: inherit; font-size: 14px; padding: 0 12px; }
+.am-aud small { display: block; }

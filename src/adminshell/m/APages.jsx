@@ -8,6 +8,7 @@ import { PhoneInput } from '../../template/PhoneInput'
 import { engineState } from '../engine'
 import { useGhlRow } from '../useGhlRow'
 import { CAMPAIGN_REQ, OWNERS, SETUP_STAGES, readiness, signupOf } from '../setup'
+import { AGhlDetails } from './AGhlAudit'
 import { DNC, INCIDENTS, COMPLAINTS, LEGAL, DATA_REQUESTS, DR_KEPT, daysLeft } from '../p879'
 import { SAMPLE_POOL, CALLER_NAME, DEFAULT_LIMIT, DEFAULT_ESTIMATE, isHot, isFull, poolWarning, shownPhone, barOf, BRANDING_STEPS } from '../../lib/deedstonePool'
 import { loadPool, saveNumber, savePoolSettings, loadPods, savePod, VOICE_URL } from '../../hooks/deedstoneAdmin'
@@ -15,8 +16,8 @@ import { POD_MIN, POD_MAX } from '../../lib/clientLine'
 
 // P1002 — three desktop pages on the admin phone, the desktop's words and data: Deedstone numbers (screens/Numbers916),
 // Compliance (screens/Compliance879) and the Setup tickets (screens/Setup.jsx). Same hooks and data helpers as the
-// desktop; the phone's own look. The hold line (its music and the AI front desk) and the "What GoHighLevel set up"
-// panels stay on the desktop; Connect (view only) is the phone's page for what is plugged in.
+// desktop; the phone's own look. The hold line (its music and the AI front desk)
+// stays on the desktop; P1008 added the "What GoHighLevel set up" panels (AGhlAudit.jsx); Connect (view only) is the phone's page for what is plugged in.
 const money = usd()
 const cents = usd(true)
 const first = n => String(n || '').split(' ')[0]
@@ -350,6 +351,7 @@ function Readiness() {
         ))}
       </div>
       {peek && !st.on && <button type="button" className="ma-textbtn am-wide" onClick={() => setPeek(false)}>Back to the real state</button>}
+      {on && <AGhlDetails row={row} sample={!st.on} />}
     </>
   )
 }

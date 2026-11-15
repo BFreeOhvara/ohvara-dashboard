@@ -160,10 +160,10 @@ export function PlanV2Parts() {
             icon={CalendarDays} tone="is-a" title="Booked Appointments" sub="Homeowners asking about mortgage protection"
             steps={[
               'They fill in a short form.',
-              'An Ohvara VA calls them right away.',
+              'Our AI caller calls them within seconds.',
               'They’re booked on your calendar.',
               'They get a confirmation, a reminder the day before and one an hour before, each with a link to move the time.',
-              'If they don’t show, the VA rebooks them within the hour, up to twice.',
+              'If they don’t show, we text them a link to rebook right away and call to find a new time, up to twice.',
               'If we can’t reach them, we call or text on day 0, 1, 3 and 7, then once a month. We stop when they reply, book or ask us to stop.',
             ]}
             youDo={['Show up at the booked time.', 'Mark each one Sold, Follow up or Not interested.']}

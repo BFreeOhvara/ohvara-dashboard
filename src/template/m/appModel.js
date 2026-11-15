@@ -73,7 +73,7 @@ export const TAG = { mark: 'Needs your result', booked: 'Booked', follow: 'Call 
 export const RESULT = {
   sold: { label: 'Sold', sub: 'We take it from here and service the policy', sym: '✓', tone: 'sage' },
   not_interested: { label: 'Not sold', sub: 'Closes the lead. Calls and texts stop', sym: '×', tone: 'stone' },
-  no_show: { label: 'No show', sub: 'We text them to rebook and our team calls', sym: '!', tone: 'apricot' },
+  no_show: { label: 'No show', sub: 'We text them to rebook and call', sym: '!', tone: 'apricot' },
   follow_up: { label: 'Follow up', sub: 'Call them back later. It goes on your calendar', sym: '↻', tone: 'butter' },
   booked: { label: 'Booked', sub: 'Back on your calendar', sym: '↺', tone: 'sky' },
 }

@@ -181,7 +181,7 @@ export function nextLine(l, evs, tz, nowMs = Date.now()) {
     .sort((a, b) => new Date(b.at) - new Date(a.at))[0]
   switch (l.inbound_stage) {
     case 'contacting':
-      return step ? { kind: 'clock', text: step, up: true } : { kind: 'phone', text: 'Our VA keeps trying' }
+      return step ? { kind: 'clock', text: step, up: true } : { kind: 'phone', text: 'We keep trying' }
     case 'booked':
       if (step) return { kind: 'clock', text: step, up: true }
       return lastReminder ? { kind: 'check', text: `Reminder sent ${timeText(lastReminder.at, tz)}` } : { kind: 'check', text: 'On your calendar' }
@@ -189,7 +189,7 @@ export function nextLine(l, evs, tz, nowMs = Date.now()) {
     case 'sold': return { kind: 'check', text: 'Sold' }
     case 'follow_up': return ns ? { kind: 'clock', text: `Call back ${upcomingWords(ns.at, tz, nowMs)}`, up: true } : { kind: 'clock', text: 'Follow up', up: true }
     case 'lost': return { kind: 'check', text: 'Not interested' }
-    default: return step ? { kind: 'clock', text: step, up: true } : { kind: 'clock', text: 'Our VA calls within minutes', up: true }
+    default: return step ? { kind: 'clock', text: step, up: true } : { kind: 'clock', text: 'Our AI caller calls within seconds', up: true }
   }
 }
 

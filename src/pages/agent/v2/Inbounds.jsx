@@ -26,10 +26,10 @@ import './inboundsExtra.css'
 const NEXT_ICON = { check: Check, clock: Clock, phone: Phone, note: PenLine }
 const BOOKED_STEPS = [
   ['They ask for help', 'Someone fills in a short form about protecting their mortgage.'],
-  ['Our VA calls right away', "We call within minutes. If we can't call yet, we text them first."],
-  ['We book them with you', 'The VA puts them on your calendar and texts a confirmation.'],
+  ['Our AI caller calls within seconds', "It calls the moment they ask. If it can't call yet, we text them first."],
+  ['We book them with you', 'They go on your calendar and get a text confirmation.'],
   ['We remind them', 'A text the day before and 1 hour before, with a link to reschedule.'],
-  ['No-show? We rebook', 'The VA calls to rebook within the hour, up to twice.'],
+  ['No-show? We rebook', 'We text a link to rebook right away and call to find a new time, up to twice.'],
   ["Can't reach them? We keep trying", 'Calls and texts on day 0, 1, 3 and 7, then once a month. We stop when they reply, book or ask us to stop.'],
 ]
 const LIVE_STEPS = [
@@ -93,8 +93,8 @@ function Card({ l, appt, evs, tz }) {
 // What each empty column says will land there.
 const COL_EMPTY = {
   new: ['Nobody new right now', 'People land here the moment they fill in the form.'],
-  contacting: ['Nobody to reach right now', "Anyone we haven't reached yet waits here while our VA keeps trying."],
-  booked: ['Nothing booked yet', 'When our VA books someone, they show here and on your calendar.'],
+  contacting: ['Nobody to reach right now', "Anyone we haven't reached yet waits here while we keep trying."],
+  booked: ['Nothing booked yet', 'When we book someone, they show here and on your calendar.'],
   met: ['Nobody to mark', 'After you meet someone, they move here so you can mark how it went.'],
   done: ['No outcomes yet', 'Everyone you mark Sold, Follow up or Not interested ends up here.'],
 }
@@ -111,7 +111,7 @@ function Board({ list, evMap, tz }) {
       <section className="ov-card pv-card pv-empty">
         <span className="pv-tile"><Ico icon={Inbox} size={20} /></span>
         <h3>No booked appointments yet</h3>
-        <p className="pv-sub">When someone asks for help, they show up under New and our VA starts calling them. You don&rsquo;t need to refresh.</p>
+        <p className="pv-sub">When someone asks for help, they show up under New and our AI caller calls them within seconds. You don&rsquo;t need to refresh.</p>
       </section>
     )
   }

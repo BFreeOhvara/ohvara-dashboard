@@ -490,7 +490,7 @@ function EmptyMessage({ title, text, full, keys = true }) {
       {keys && (
         <div className="cal-keys">
           <div><Ico icon={Phone} size={16} /><span><b>Booked calls</b>Cancellation calls you book for your clients.</span></div>
-          <div><Ico icon={Inbox} size={16} /><span><b>Leads</b>People our VA books at your first open time.</span></div>
+          <div><Ico icon={Inbox} size={16} /><span><b>Leads</b>People we book at your first open time.</span></div>
           <div><Ico icon={CalendarCheck} size={16} /><span><b>Annual reviews</b>A yearly check-in our team does with your client.</span></div>
         </div>
       )}

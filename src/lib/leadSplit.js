@@ -72,7 +72,7 @@ export function inLiveHours(hours, tz, nowMs = Date.now()) {
 }
 
 // ── A fresh form lead on the VA desk ────────────────────────────────────────────────────────────────────────────
-// The VA calls right away and qualifies. Inside the agent's live-call hours (transfer agents) → Check agent; else book.
+// A fresh form lead: the AI caller dials within seconds and qualifies (see ai-caller/rules.js). Inside the agent's live-call hours (transfer agents) → Check agent; else book.
 export function freshLeadRoute({ mode, hours, tz }, nowMs = Date.now()) {
   if (mode !== 'both') return { route: 'book', key: 'appts_only', why: 'Appointments only: book them' }
   if (!inLiveHours(hours, tz, nowMs)) return { route: 'book', key: 'out_of_hours', why: `Outside their live-call hours (${liveHoursText(hours)}): book them` }

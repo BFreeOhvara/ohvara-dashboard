@@ -1,15 +1,15 @@
 import { useState } from 'react'
-import { Bug, Mail, Search, Copy, UserPlus } from 'lucide-react'
+import { Bug, Mail, Search, Copy, UserPlus, History } from 'lucide-react'
 import { useAdmActions, useAdmSettings, useAdmSource } from '../data'
 import { useIsOwner, ROLE_WORD, roleOptions } from '../owner'
 import { useNote } from '../../template/kit'
 import { ReportBug } from '../../template/ReportBug'
 import { SUPPORT_EMAIL } from '../../components/auth/authUtils'
-import { useApp, SubPage, BottomSheet, Row, rise } from '../../template/m/AppKit'
+import { useApp, SubPage, BottomSheet, Row } from '../../template/m/AppKit'
 
 // P1002 — Help and support and Add a VA on the admin phone (the desktop's Help drawer and "Add a VA" drawer in
 // AdminFrame.jsx, same words and the same invite action). Help: Report a bug (the one pop-up all three portals share),
-// Bug reports, the support mailbox, Search anything. The audit log is a desktop page.
+// Bug reports, the support mailbox, Search anything, the audit log (P1008).
 const Sym = ({ tone, Icon }) => <span className={`ma-sym is-${tone}`}><Icon size={16} aria-hidden="true" /></span>
 
 export function AHelpAdm() {
@@ -22,8 +22,8 @@ export function AHelpAdm() {
         <Row onClick={() => app.openSub('bugs')} lead={<Sym tone="butter" Icon={Bug} />} title="Bug reports" sub="What agents, VAs and admins sent from Help and support" />
         <a href={`mailto:${SUPPORT_EMAIL}`} className="ma-row"><Sym tone="sky" Icon={Mail} /><span className="ma-grow"><b>Support mailbox</b><small>{SUPPORT_EMAIL}</small></span></a>
         <Row onClick={() => app.openSub('search')} lead={<Sym tone="stone" Icon={Search} />} title="Search anything" sub="Agents, VAs, leads and clients" />
+        <Row onClick={() => app.openSub('audit')} lead={<Sym tone="sage" Icon={History} />} title="Audit log" sub="Every admin action, newest first" />
       </div>
-      <p className="ma-note" style={rise(1)}>The audit log (every admin action, newest first) is on the desktop, in Settings.</p>
       <ReportBug open={bug} onClose={() => setBug(false)} role="Admin" />
     </SubPage>
   )

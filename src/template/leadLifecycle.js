@@ -36,7 +36,7 @@ export function atLabel(s, now = clockNow()) {
 // key: the sample stage. db: the lead row stage column (migration 180: new/contacting/booked/met/sold/follow_up/lost);
 // outcome: leads.outcome (migration 215). lane: the Leads board column. who: who acts next.
 export const STAGES = {
-  new: { label: 'New', chip: 'New lead', lane: 'follow_up', owner: 'team', db: 'new', who: 'The team calls right away' },
+  new: { label: 'New', chip: 'New lead', lane: 'follow_up', owner: 'team', db: 'new', who: 'The AI caller calls within seconds' },
   calling: { label: 'Calling', chip: 'Calling', lane: 'follow_up', owner: 'team', db: 'contacting', who: 'The team, then automatic texts' },
   ringing: { label: 'Live transfer', chip: 'Ringing now', lane: 'booked', db: 'contacting', who: 'You' },
   missed: { label: 'Missed transfer', chip: 'Missed transfer', lane: 'follow_up', owner: 'team', db: 'contacting', who: 'The team books a time' },
@@ -139,7 +139,7 @@ export function seedEvents(l, now = clockNow()) {
   }
 
   switch (l.stage) {
-    case 'new': team(addMin(c, 1), 'Calls right away'); break
+    case 'new': team(addMin(c, 1), 'AI caller calls within seconds'); break
     case 'calling': {
       noAnswer(c, l.reply ? l.reply.at : null)
       if (l.reply) replyRows(l, l.reply.text, l.reply.at).forEach(r => add(r.kind, r.at, r.label, r))

@@ -140,7 +140,7 @@ function NextAppointment({ appts, now, tz, evMap, loading, failed, onRetry }) {
       <section className="ov-card tc-card tc-a-next" aria-label="Next appointment">
         <Head icon={CalendarClock} title="Next appointment" />
         <p className="tc-empty-big">Nothing booked today</p>
-        <p className="tc-sub">When our VA books someone with you, it shows here with a reminder of when to call.</p>
+        <p className="tc-sub">When someone books with you, it shows here with a reminder of when to call.</p>
       </section>
     )
   }
@@ -160,7 +160,7 @@ function NextAppointment({ appts, now, tz, evMap, loading, failed, onRetry }) {
       <p className="tc-name">{leadName(l)}</p>
       <p className="tc-sub">
         {PRODUCT_LABEL[l.inbound_product] || 'Lead'}
-        {bookedOn ? ` · Our VA booked this on ${dateText(bookedOn.at, tz)}.` : ''}
+        {bookedOn ? ` · Booked on ${dateText(bookedOn.at, tz)}.` : ''}
         {reminder ? ` Reminder text went out at ${timeText(reminder.at, tz)}.` : ''}
       </p>
       <div className="tc-acts">

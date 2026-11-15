@@ -268,7 +268,7 @@ export default function Leads() {
       <FilterPills label="Status" value={laneKey} onChange={setLane} items={[{ key: 'all', label: 'All', count: shown.filter(x => ALL.some(l => inLane(l, x))).length }, ...ALL.map(l => ({ key: l.key, label: l.label, tone: l.tone, count: shown.filter(x => inLane(l, x)).length }))]} />
       {laneKey !== 'all' && <p className="lc-explain">{ALL.find(l => l.key === laneKey).explain}</p>}
 
-      {leads.length === 0 && <FirstRun icon={Inbox} title="Your leads show here" sub="Each lead lands here the moment it comes in. Our team calls it right away, books it on your calendar or rings you live, and you see every step." />}
+      {leads.length === 0 && <FirstRun icon={Inbox} title="Your leads show here" sub="Each lead lands here the moment it comes in. Our AI caller calls it within seconds, books it on your calendar or rings you live, and you see every step." />}
       <div className={`fx-board lc-board${lanes.length === 1 ? ' is-one' : ''}${dragUi ? ' is-dragging' : ''}`} style={{ '--lanes': lanes.length }} role="region" aria-label="Leads by stage">
         {lanes.map((lane, li) => {
           const rows = shown.filter(l => inLane(lane, l))

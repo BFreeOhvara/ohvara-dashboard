@@ -21,6 +21,7 @@ import AYou, { AUnassigned, AAi, ALeadsAll, ALeadAdm, AClientsAll, AClientAdm, A
 import { ANotif, ASearch } from './ASubsAdm'
 import { ADeedstone, ACompliance, ATickets, ATicket } from './APages'
 import { AHelpAdm } from './AHelpAdm'
+import { AAudit } from './AGhlAudit'
 import '../../template/glass.css'
 import '../../template/flow.css'
 import '../../template/palette.css'
@@ -71,6 +72,7 @@ function SubScreen({ route }) {
     case 'deedstone': return <ADeedstone />
     case 'compliance': return <ACompliance />
     case 'help': return <AHelpAdm />
+    case 'audit': return <AAudit />
     default: return null
   }
 }

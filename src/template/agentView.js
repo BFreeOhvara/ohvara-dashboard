@@ -13,7 +13,7 @@ import { followUpSlot, instantOf, zoneOf, minuteOf, dateOf } from '../lib/callSl
 // Not interested. Unmarked after its day, it's also a to-do (leadLifecycle.js needsYouNow).
 export const AGENT_STATUSES = [
   { key: 'booked', label: 'Booked', tone: 'blue', empty: 'No appointments booked yet.', explain: 'On your calendar, plus live calls waiting for a result. Once the time has passed, mark the result.' },
-  { key: 'no_show', label: 'No show', tone: 'mute', empty: 'No missed appointments.', explain: 'They didn’t pick up at the booked time. We text them a one-tap link to rebook and our team calls to book them again; when they rebook, they go back to Booked.' },
+  { key: 'no_show', label: 'No show', tone: 'mute', empty: 'No missed appointments.', explain: 'They didn’t pick up at the booked time. We text them a one-tap link to rebook and call to book them again; when they rebook, they go back to Booked.' },
   { key: 'follow', label: 'Follow up', tone: 'teal', empty: 'No follow-ups set.', explain: 'Not sold yet. Your follow-up call is on your calendar; they get a reminder text the day before and that morning.' },
   { key: 'not_interested', label: 'Not interested', tone: 'warn', empty: 'No one said no.', explain: 'They said no. Calls and texts stop. If they change their mind, move them to Follow up.' },
   { key: 'sold', label: 'Sold', tone: 'green', empty: 'Sales you mark show here.', explain: 'Sold. Each one is on Clients as Setting up.' },
@@ -71,7 +71,7 @@ export const RESULT_LABEL = { sold: 'Sold', no_show: 'No show', follow_up: 'Foll
 // The one-line meaning under each choice in the status picker.
 export const RESULT_MEANING = {
   sold: 'They bought a policy.',
-  no_show: 'They didn’t pick up at the booked time. We text them a link to rebook and our team calls them.',
+  no_show: 'They didn’t pick up at the booked time. We text them a link to rebook and call them.',
   follow_up: 'Not sold yet. A follow-up call goes on your calendar.',
   not_interested: 'They don’t want it. Calls and texts stop.',
   booked: 'Back on your calendar for a set time.',

@@ -7,7 +7,7 @@ export const TYPE_LABEL = { live_call: 'Live Calls', booked_appointment: 'Booked
 
 export const WHAT_YOU_GET = {
   live_call: 'People who already have a policy call in. Our team qualifies them and transfers the call live to you, or books them if you’re not active.',
-  booked_appointment: 'Homeowners asking about mortgage protection. Our team calls them and books them on your calendar, with reminders before the call.',
+  booked_appointment: 'Homeowners asking about mortgage protection. Our AI caller calls them within seconds and books them on your calendar, with reminders before the call.',
 }
 
 export const HOW_IT_WORKS = [

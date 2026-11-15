@@ -565,7 +565,7 @@ export function useActionsReal() {
   }, [me, qc, note, clients, leads, tz])
 }
 
-export const useSignupReal = () => ({ data: { covers: ['Booked appointments and live calls, at a daily spend you set', 'A team that calls every lead right away and books them on your calendar', 'Servicing that keeps your policies on the books', 'Your own portal and phone app'] }, isLoading: false, error: null })
+export const useSignupReal = () => ({ data: { covers: ['Booked appointments and live calls, at a daily spend you set', 'An AI caller that calls every new lead within seconds and books them on your calendar', 'Servicing that keeps your policies on the books', 'Your own portal and phone app'] }, isLoading: false, error: null })
 
 // The page as a whole: loading until the agent's leads, clients and settings are in; an error if one fails.
 export function useStatusReal() {
