@@ -125,7 +125,7 @@ export default function Leads() {
     <div className="tp-page fx-page fx-leads adm-leads">
       <div className="fx-tools adm-leads-tools">
         <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a lead" placeholder="Find by name, city, phone or agent" value={q} onChange={e => setQ(e.target.value)} /></label>
-        <div className="adm-showing" role="group" aria-label="Showing"><span aria-hidden="true">Showing</span><Seg label="Showing" value={when} onChange={setWhen} options={RANGES} /></div>
+        <Seg className="adm-showing" label="Showing" value={when} onChange={setWhen} options={RANGES} />
         <Dropdown className="adm-dd-sm" label="Agent" value={agent} onChange={setAgent} options={[{ value: 'all', label: 'Every agent' }, ...agents.map(a => ({ value: a.id, label: a.name }))]} />
         <span className="tp-grow" />
         {viewSeg}
