@@ -8,6 +8,10 @@
   'use strict'
   var TAKE = 'B' // Brayden picked B (Nov 15)
   var NAVY = '#0A1F44', TEAL = '#00BFA6', WHITE = '#FFFFFF'
+  // P1021: the intro follows the theme index.html decided before first paint (<html data-theme>). Dark = navy, the big
+  // piece teal and the wing white. Light = a plain light ground (the same as the light splash), the big piece navy and
+  // the wing teal, the real logo colours.
+  var LIGHT_BG = '#E6E9E6'
   var VB = [291.4, 354]
   var FRONT = '__FRONT__'
   var BACK = '__BACK__'
@@ -47,6 +51,7 @@
 
   var CSS = [
     '.oi{position:fixed;inset:0;z-index:2147483647;background:' + NAVY + ';display:flex;align-items:center;justify-content:center;overflow:hidden;pointer-events:auto;contain:strict}',
+    '.oi.oi-light{background:' + LIGHT_BG + '}',
     '.oi.oi-in{position:absolute}',
     '.oi-stage{position:relative;width:34vmin;max-width:170px;aspect-ratio:291.4/354;will-change:transform}',
     '.oi.oi-in .oi-stage{width:34%}',
@@ -59,13 +64,14 @@
     '.oi-sheen rect{transform-box:view-box;transform-origin:0 0}'
   ].join('')
 
-  function markup() {
+  function markup(light) {
+    var wingC = light ? TEAL : WHITE, bodyC = light ? NAVY : TEAL
     return '<div class="oi-stage">' +
       '<div class="oi-glow"></div>' +
-      // P1020 (Brayden): reversed, the big piece teal and the wing white, like the phone loading screen.
-      svg('<path fill="' + WHITE + '" d="' + BACK + '"/>', 'oi-wing') +
-      svg('<path fill="' + TEAL + '" d="' + FRONT + '"/>', 'oi-front') +
-      svg('<path pathLength="1" stroke="' + WHITE + '" d="' + BACK + '"/><path pathLength="1" stroke="' + TEAL + '" d="' + FRONT + '"/>', 'oi-line') +
+      // P1020 (Brayden): reversed on dark, the big piece teal and the wing white, like the phone loading screen.
+      svg('<path fill="' + wingC + '" d="' + BACK + '"/>', 'oi-wing') +
+      svg('<path fill="' + bodyC + '" d="' + FRONT + '"/>', 'oi-front') +
+      svg('<path pathLength="1" stroke="' + wingC + '" d="' + BACK + '"/><path pathLength="1" stroke="' + bodyC + '" d="' + FRONT + '"/>', 'oi-line') +
       svg('<defs><clipPath id="oi-clip"><path d="' + BACK + '"/><path d="' + FRONT + '"/></clipPath>' +
         '<linearGradient id="oi-sg" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/>' +
         '<stop offset=".5" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>' +
@@ -130,15 +136,15 @@
     return { anims: A, total: TOTAL }
   }
 
-  function mount(host, take, reduce, inline) {
+  function mount(host, take, reduce, inline, light) {
     if (!document.getElementById('oi-css')) {
       var st = document.createElement('style'); st.id = 'oi-css'; st.textContent = CSS
       document.head.appendChild(st)
     }
     var root = document.createElement('div')
-    root.className = 'oi' + (inline ? ' oi-in' : '')
+    root.className = 'oi' + (inline ? ' oi-in' : '') + (light ? ' oi-light' : '')
     root.setAttribute('aria-hidden', 'true')
-    root.innerHTML = markup()
+    root.innerHTML = markup(light)
     host.appendChild(root)
     var b = build(root, take, reduce)
     return { root: root, anims: b.anims, total: b.total,
@@ -158,6 +164,9 @@
   // The intro needs the plain navy splash and launchAutoHide off, which only app builds from P1010 on have.
   // Older store builds (old splash with the mark, auto-hide) skip it, so they never see a jump.
   var MIN_BUILD = { ios: __MIN_IOS__, android: __MIN_ANDROID__ }
+  // P1021: builds from here on have a splash that follows light/dark. Older builds have the plain navy one, so on those
+  // the intro stays navy (a light intro would jump from navy to light the moment the splash hides).
+  var MIN_LIGHT_BUILD = { ios: __MIN_LIGHT_IOS__, android: __MIN_LIGHT_ANDROID__ }
   window.__ohvaraIntroPending = true
   var decided = false
   function skip() {
@@ -173,11 +182,13 @@
       var min = MIN_BUILD[C.getPlatform ? C.getPlatform() : ''] || Infinity
       if (!(Number(info && info.build) >= min)) return skip()
       decided = true
-      run()
+      var plat = C.getPlatform ? C.getPlatform() : ''
+      var splashFollowsTheme = Number(info && info.build) >= (MIN_LIGHT_BUILD[plat] || Infinity)
+      run(splashFollowsTheme && document.documentElement.getAttribute('data-theme') === 'light')
     }, skip)
   } catch (e) { skip() }
 
-  function run() {
+  function run(light) {
     var now = Date.now(), at = null
     try { at = Number(sessionStorage.getItem(KEY)) || null } catch (e) { /* storage off */ }
     var reduce = false
@@ -187,7 +198,8 @@
     var from = at ? now - at : 0
     if (at && from >= TOTAL) { window.__ohvaraIntroPending = false; hideSplash(); return }
     if (!at) { try { sessionStorage.setItem(KEY, String(now)) } catch (e) { /* storage off */ } }
-    var intro = mount(document.body || document.documentElement, TAKE, reduce)
+    var intro = mount(document.body || document.documentElement, TAKE, reduce, false, light)
+    window.__ohvaraIntroLight = !!light // the status bar icons over it (nativeBoot.js)
     window.__ohvaraIntroPlaying = true
     window.__ohvaraIntroPending = false
     var started = false

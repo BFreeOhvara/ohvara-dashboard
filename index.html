@@ -13,20 +13,26 @@
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/pwa-192.png" />
     <title>Ohvara Portal</title>
-    <!-- P996: signed-out pages open light (like ohvara.com) unless a theme was saved, from the very first paint,
-         so a click from the website never shows a dark frame first. src/hooks/useTheme.js makes the same call. -->
+    <!-- P996 + P1021: the theme is decided here, before the first paint, and set on <html data-theme> every time, so the
+         loading screen, the app intro, sign-in and the portal all open in the same one. The call: the saved choice
+         (light / dark / system); with nothing saved, the signed-out pages open light (like ohvara.com) and everywhere
+         else follows the device's setting. src/hooks/useTheme.js makes the same call; public/intro.js reads the result. -->
     <script>
       (function () {
         var saved = null
         try { saved = localStorage.getItem('ohvara-theme') } catch (e) {}
-        if (!saved && /^\/(login|signup|join|j|reset-password|confirm-email)(\/|$)/.test(location.pathname)) {
-          document.documentElement.setAttribute('data-theme', 'light')
-          document.documentElement.style.background = '#ECECE7'
+        var sysLight = !!(window.matchMedia && !window.matchMedia('(prefers-color-scheme: dark)').matches)
+        var pub = /^\/(login|signup|join|j|reset-password|confirm-email)(\/|$)/.test(location.pathname)
+        var light
+        if (saved === 'light') light = true
+        else if (saved === 'dark') light = false
+        else if (saved === 'system') light = sysLight
+        else light = pub || sysLight
+        document.documentElement.setAttribute('data-theme', light ? 'light' : 'dark')
+        if (light) {
+          if (!saved && pub) document.documentElement.style.background = '#ECECE7'
           var m = document.querySelector('meta[name="theme-color"]')
           if (m) m.setAttribute('content', '#ECECE7')
-        } else if (saved === 'light' || (saved === 'system' && window.matchMedia && !window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-          // P1020: a saved light theme is known before the bundle too, so the first loading screen is the light one.
-          document.documentElement.setAttribute('data-theme', 'light')
         }
       })()
     </script>
@@ -36,7 +42,7 @@
       .ol{--ol-bg:linear-gradient(160deg,#2B3238 0%,#1A1F23 55%,#13171A 100%);--ol-body:#00BFA6;--ol-wing:#FFFFFF;--ol-line:#00BFA6;--ol-track:rgba(255,255,255,.14);--ol-word:#A3ACB3;
         position:fixed;top:0;right:0;bottom:0;left:0;z-index:2147483000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;
         background:var(--ol-bg);opacity:0;transition:opacity .2s ease;pointer-events:none;-webkit-tap-highlight-color:transparent}
-      :root[data-theme="light"] .ol:not(.ol-phone){--ol-bg:linear-gradient(135deg,#C9D7E8 0%,#E6E9E6 45%,#EFE3D3 100%);--ol-body:#0A1F44;--ol-wing:#00BFA6;--ol-track:rgba(10,31,68,.12);--ol-word:#5F6B72}
+      :root[data-theme="light"] .ol{--ol-bg:linear-gradient(135deg,#C9D7E8 0%,#E6E9E6 45%,#EFE3D3 100%);--ol-body:#0A1F44;--ol-wing:#00BFA6;--ol-track:rgba(10,31,68,.12);--ol-word:#5F6B72}
       .ol.is-on{opacity:1;pointer-events:auto;animation:none}
       .ol.is-out{opacity:0;transition-duration:.22s;pointer-events:none;animation:none}
       .ol.ol-boot{animation:ol-in .2s ease .3s forwards}

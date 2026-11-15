@@ -17,13 +17,13 @@ const resolve = pref => (pref === 'system' ? systemTheme() : pref)
 const apply = theme => document.documentElement.setAttribute('data-theme', theme)
 
 // P996: the signed-out pages (sign in, create account, invite, reset password, confirm email) open light, like
-// ohvara.com, unless this browser has a saved choice. Nothing is saved, so the portal behind them keeps its own
-// default (dark) once someone is signed in. index.html's inline script makes the same call before first paint.
+// ohvara.com, unless this browser has a saved choice. P1021: with nothing saved the portal behind them follows the
+// device's setting (it used to be dark). index.html's inline script makes the same call before first paint.
 export const PUBLIC_PATH = /^\/(login|signup|join|j|reset-password|confirm-email)(\/|$)/
 const hasSaved = () => { try { return !!localStorage.getItem(KEY) } catch { return false } }
 const publicLight = () => typeof location !== 'undefined' && PUBLIC_PATH.test(location.pathname) && !hasSaved()
 
-let pref = (typeof localStorage !== 'undefined' && localStorage.getItem(KEY)) || 'dark'
+let pref = (typeof localStorage !== 'undefined' && localStorage.getItem(KEY)) || 'system'
 let current = resolve(pref)
 
 // Prompt 669 — apply the saved theme as soon as this module loads (main.jsx
