@@ -156,7 +156,7 @@
   }
   // The intro needs the plain navy splash and launchAutoHide off, which only app builds from P1010 on have.
   // Older store builds (old splash with the mark, auto-hide) skip it, so they never see a jump.
-  var MIN_BUILD = { ios: Infinity, android: Infinity }
+  var MIN_BUILD = { ios: 9, android: 6 }
   window.__ohvaraIntroPending = true
   var decided = false
   function skip() {

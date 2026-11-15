@@ -85,6 +85,6 @@
   },
   "ohvara": {
     "otaMinNativeBuild": { "ios": 3, "android": 1 },
-    "introMinNativeBuild": { "ios": 0, "android": 0 }
+    "introMinNativeBuild": { "ios": 9, "android": 6 }
   }
 }
