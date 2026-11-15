@@ -11,6 +11,7 @@ import { SWAPS, OPEN_SHIFTS, HOLIDAYS, HOLIDAY_WORD, TIMESHEET, sheetTotals, day
 import { DAYS_OFF_DEFAULT, daysUsed, daysLeft } from '../../lib/dayOff'
 import { canTakeCalls, TRAIN_FIRST } from '../../lib/trainingGate.js'
 import { NUDGE_AFTER, HANDOFF_AFTER } from '../../lib/callEscalation.js'
+import PillBar from '../../template/m/PillBar'
 
 // P1002 — the Team page's other tabs on the admin phone, the desktop's words and data: Calendar (the week's calls, each
 // VA in their colour, a call opens with Give to someone), Time off (the days-a-month allowance, booked days) with Swaps
@@ -43,12 +44,8 @@ export function TeamCalendar() {
           <button key={w} type="button" role="tab" aria-selected={week === i} className={`is-sky${week === i ? ' is-on' : ''}`} onClick={() => setWeek(i)}>{w} <span>{countIn(i)}</span></button>
         ))}
       </div>
-      <div className="ma-chips am-vachips ma-rise" style={rise(1)} role="group" aria-label="Show a VA">
-        <button type="button" className={`ma-fchip am-fchip${who === 'all' ? ' is-on' : ''}`} aria-pressed={who === 'all'} onClick={() => setWho('all')}>Every VA</button>
-        {vas.map(v => (
-          <button key={v.id} type="button" className={`ma-fchip am-fchip am-vachip is-${vaHue(vas, v.id)}${who === v.id ? ' is-on' : ''}`} aria-pressed={who === v.id} onClick={() => setWho(who === v.id ? 'all' : v.id)}><i aria-hidden="true" />{first(v.name)}</button>
-        ))}
-      </div>
+      {/* P1015: one row, no "Every VA" pill: nothing chosen = every VA, tap the chosen VA again to clear it */}
+      <PillBar options={vas.map(v => ({ key: v.id, label: first(v.name), hue: vaHue(vas, v.id) }))} value={who === 'all' ? null : who} onChange={k => setWho(k || 'all')} label="Show a VA" style={rise(1)} />
       <p className="ma-hint am-clock">Central time · client times beside theirs</p>
       {WEEKS[week].map(d => {
         const list = calls.filter(c => c.day === d && mine(c)).sort((a, b) => minutesOf(a.time) - minutesOf(b.time))

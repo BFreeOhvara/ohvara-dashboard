@@ -10,13 +10,14 @@ import { money, callSplit, callTag, CALL_GROUP, GROUP_ORDER, GROUP_TAG, GROUP_TO
 import { useMessageTo } from './useAdm'
 import { TeamCalendar, TimeOffTab, Holidays, HoursPay } from './ATeamMore'
 import { AddVaSheet } from './AHelpAdm'
+import PillBar from '../../template/m/PillBar'
 
 // P986 — Team: today's desk calls as one bar split by result (Done / No answer / Needs a result / To call) with the
 // on-hold line; the VAs on shift now (status dot, progress bar, calls done, saves); this week's rota with Edit rota;
 // training (who's fully trained, who's mid-way). P1002: the desktop's tabs as chips: Today (the above) · Calendar · Rota
 // (this week + Holidays) · Time off (+ Swaps and open shifts) · Hours & pay. A VA opens from the right: today's calls, hours this pay period,
 // earned so far, lessons done, today's calls with results, Message and Call.
-const TEAM_TABS = [['today', 'Today'], ['calendar', 'Calendar'], ['rota', 'Rota'], ['requests', 'Time off'], ['pay', 'Hours & pay']]
+const TEAM_TABS = [['today', 'Today'], ['calendar', 'Calendar'], ['rota', 'Rota'], ['requests', 'Time off'], ['pay', 'Pay']] // P1015: short words so the one-row pill bar fits
 export default function ATeam() {
   const app = useApp()
   const [qs] = useSearchParams()
@@ -34,9 +35,7 @@ export default function ATeam() {
     <div className="ma-tabpage">
       <div className="ma-top ma-rise"><span className="ma-grow"><h1>Team</h1><small>{vas.length} VAs · {on.length} on shift now</small></span><button type="button" className="ma-textbtn ma-press" onClick={() => setAddVa(true)}>Add a VA</button></div>
 
-      <div className="ma-chips am-tabs ma-rise" role="tablist" aria-label="Fulfillment team">
-        {TEAM_TABS.map(([k, w]) => <button key={k} type="button" role="tab" aria-selected={tab === k} className={`ma-fchip am-fchip${tab === k ? ' is-on' : ''}`} onClick={() => setTab(k)}>{w}</button>)}
-      </div>
+      <PillBar kind="tabs" clear={false} options={TEAM_TABS.map(([key, label]) => ({ key, label }))} value={tab} onChange={setTab} label="Fulfillment team" />
       <div key={tab}>
       {tab === 'calendar' && <TeamCalendar />}
       {tab === 'requests' && <TimeOffTab />}

@@ -9,6 +9,7 @@ import { engineState } from '../engine'
 import { useGhlRow } from '../useGhlRow'
 import { CAMPAIGN_REQ, OWNERS, SETUP_STAGES, readiness, signupOf } from '../setup'
 import { AGhlDetails } from './AGhlAudit'
+import PillBar from '../../template/m/PillBar'
 import { DNC, INCIDENTS, COMPLAINTS, LEGAL, DATA_REQUESTS, DR_KEPT, daysLeft } from '../p879'
 import { SAMPLE_POOL, CALLER_NAME, DEFAULT_LIMIT, DEFAULT_ESTIMATE, isHot, isFull, poolWarning, shownPhone, barOf, BRANDING_STEPS } from '../../lib/deedstonePool'
 import { loadPool, saveNumber, savePoolSettings, loadPods, savePod, VOICE_URL } from '../../hooks/deedstoneAdmin'
@@ -299,15 +300,15 @@ function DataRequests() {
   )
 }
 const PARTS = [['dnc', 'Do not call', DoNotCall], ['incidents', 'Licensed line', Incidents], ['complaints', 'Complaints', Complaints], ['legal', 'Legal holds', Legal], ['data', 'Data requests', DataRequests]]
+// P1015: the one-row pill bar's short words (the page keeps the long names).
+const PART_SHORT = { dnc: 'Do not call', incidents: 'Licensed', complaints: 'Complaints', legal: 'Legal', data: 'Data' }
 export function ACompliance() {
   const [part, setPart] = useState('dnc')
   const real = useAdmSource() === 'real' // P1017: every list below is sample (p879.js); real has none logged yet
   const P = PARTS.find(p => p[0] === part)[2]
   return (
     <SubPage title="Compliance" line="Kept 5 years. Admins only." big>
-      <div className="ma-chips am-tabs ma-rise" role="tablist" aria-label="Compliance">
-        {PARTS.map(([k, w]) => <button key={k} type="button" role="tab" aria-selected={part === k} className={`ma-fchip am-fchip${part === k ? ' is-on' : ''}`} onClick={() => setPart(k)}>{w}</button>)}
-      </div>
+      <PillBar kind="tabs" clear={false} options={PARTS.map(([key, title]) => ({ key, label: PART_SHORT[key], title }))} value={part} onChange={setPart} label="Compliance" />
       {real
         ? <div className="ma-glass ma-list ma-rise"><p className="ma-empty">Nothing logged yet. Do-not-call numbers, licensed-line notes, complaints, legal holds and data requests show here once they're logged.</p></div>
         : <P key={part} />}

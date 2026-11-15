@@ -13,9 +13,6 @@
 .am-fchip span { font-size: 12px; opacity: .8; }
 
 /* Team: Calendar */
-.am-vachips { margin: 12px 0 0; }
-.am-vachip i { width: 10px; height: 10px; border-radius: 5px; background: var(--tbar); flex: none; }
-.am-vachip.is-on i { background: currentColor; }
 .am-clock { margin: 8px 6px 0 !important; }
 .am-dayh { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 20px 6px 8px; }
 .am-dayh b { font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
