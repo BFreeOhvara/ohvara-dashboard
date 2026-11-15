@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
 import { useIsTestAccount } from '../hooks/useIsTestAccount'
+import { useIsOwner, ROLE_WORD, roleOptions } from './owner'
 import { Drawer, Avatar, Field, Seg, PillTabs, useAccount, useNote, initials } from '../template/kit'
 import ViewToggle from '../template/ViewToggle'
 import { ReportBug } from '../template/ReportBug'
@@ -66,33 +67,46 @@ function BellDrawer({ open, onClose, onRoute }) {
 }
 
 // Add someone: an agent or a Fulfillment person, by email, by text, or a link to copy. No admin from here (as today).
+const ROLE_SUB = {
+  agent: 'They get a link to set a password and land on the agent side.',
+  fulfillment: 'They get a link to set a password and land on the Fulfillment side.',
+  admin: 'They get a link to set a password and land on the admin side, with every page and permission you have.',
+}
+
 export function AddSomeone({ open, onClose }) {
   const { invite } = useAdmActions()
   const { data: settings } = useAdmSettings()
   const note = useNote()
-  const role = 'fulfillment' // P906: agents sign up and pay themselves; only the Fulfillment team is invited here
+  const owner = useIsOwner()
+  const [role, setRole] = useState('fulfillment') // P1004: Agent, Fulfillment, or Admin (owner only)
   const [via, setVia] = useState('email')
   const [name, setName] = useState('')
   const [to, setTo] = useState('')
+  const real = useAdmSource() === 'real'
   const keep = useKeep(open)
   if (!keep) return null
   const textOff = !settings.switches.invite_sms_live
   const ready = name.trim().length > 1 && (via === 'link' || to.trim().length > 4)
+  const r = role === 'admin' && !owner ? 'fulfillment' : role
   const send = () => {
-    invite({ name: name.trim(), role, via, to: via === 'link' ? 'Link copied' : to.trim() })
-    note(via === 'link' ? `Invite link for ${name.trim()} copied (sample)` : `Invite sent to ${name.trim()} (sample: nothing was sent)`)
+    invite({ name: name.trim(), role: r, via, to: via === 'link' ? 'Link copied' : to.trim() })
+    // Real: the link path copies and says so itself (admRealData); email and text say they're on the way.
+    if (real) { if (via !== 'link') note(`Sending ${name.trim()}'s ${ROLE_WORD[r].toLowerCase()} invite…`) } else note((via === 'link' ? `Invite link for ${name.trim()} copied (sample)` : `Invite sent to ${name.trim()} (sample: nothing was sent)`))
     setName(''); setTo(''); onClose()
   }
   return (
-    <Drawer open={open} center onClose={onClose} title="Add a VA" sub="They get a link to set a password and land on the Fulfillment side."
+    <Drawer open={open} center onClose={onClose} title="Add someone" sub={ROLE_SUB[r]}
       footer={<><button type="button" className="tp-primary fx-accent" disabled={!ready} onClick={send}>{via === 'link' ? <Copy size={16} /> : <UserPlus size={16} />}{via === 'link' ? 'Copy the link' : 'Send invite'}</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Cancel</button></>}>
+      <div className="tp-field"><span>Role</span>
+        <Seg label="Role" role="radiogroup" value={r} onChange={setRole} options={roleOptions(owner)} />
+      </div>
       <Field label="Full name"><input value={name} onChange={e => setName(e.target.value)} placeholder="First and last name" /></Field>
       <div className="tp-field"><span>Send it by</span>
         <Seg label="Send by" role="radiogroup" value={via} onChange={setVia} options={[{ key: 'email', label: 'Email' }, { key: 'text', label: 'Text', title: textOff ? 'Invite by text is off in Settings' : undefined }, { key: 'link', label: 'Copy a link' }]} />
         {via === 'text' && textOff && <small>Invite by text is off in Settings, so this would go as a link to copy.</small>}
       </div>
       {via !== 'link' && <Field label={via === 'email' ? 'Email' : 'Mobile number'}><input type={via === 'email' ? 'email' : 'tel'} value={to} onChange={e => setTo(e.target.value)} placeholder={via === 'email' ? 'name@example.com' : '(555) 555-0100'} /></Field>}
-      <p className="tp-sub">Agents sign up and pay on their own; they show on Setup once they've paid. Admins are added by another admin outside the portal.</p>
+      <p className="tp-sub">{r === 'admin' ? 'An admin can do everything you can, except invite another admin. The link works once and lasts 7 days.' : r === 'agent' ? 'Most agents sign up and pay on their own; an invited agent shows on Setup once they’ve paid.' : 'The link works once and lasts 7 days.'}</p>
     </Drawer>
   )
 }
@@ -118,6 +132,7 @@ function Help({ open, onClose, onBug }) {
 function AccountMenu({ open, onClose, theme, setTheme, onApp }) {
   const account = useAccount()
   const note = useNote()
+  const owner = useIsOwner()
   useEffect(() => {
     if (!open) return undefined
     const onKey = e => { if (e.key === 'Escape') onClose() }
@@ -132,7 +147,7 @@ function AccountMenu({ open, onClose, theme, setTheme, onApp }) {
     <div className={`tp fx-layer fx-menu-layer${leaving ? ' is-leaving' : ''}`} role="presentation">
       <button type="button" className="fx-scrim is-clear tp-bare" aria-label="Close menu" tabIndex={-1} onClick={onClose} />
       <section className="fx-menu" role="dialog" aria-label="Your account">
-        <header className="fx-menu-h"><span className={`fx-av av-${avatarHue(name)}`}>{initials(name).toUpperCase()}</span><span className="tp-grow"><b>{name}</b><small>Admin · owner</small></span></header>
+        <header className="fx-menu-h"><span className={`fx-av av-${avatarHue(name)}`}>{initials(name).toUpperCase()}</span><span className="tp-grow"><b>{name}</b><small>{owner ? 'Admin · owner' : 'Admin'}</small></span></header>
         <button type="button" className="fx-mrow" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}<b className="tp-grow">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</b></button>
         <ViewToggle />
         {/* P1001: Get the phone app, as the agent and VA menus have it */}

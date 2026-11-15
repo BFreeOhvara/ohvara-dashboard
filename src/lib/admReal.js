@@ -99,7 +99,7 @@ export function toVa(p, { accounts = [] } = {}) {
 }
 export function toInvite(r, now = Date.now()) {
   const to = r.invited_email || r.invited_phone || ''
-  return { id: r.id, name: to || 'Invite link', role: r.role === 'fulfillment' ? 'fulfillment' : 'agent', via: r.channel || (r.invited_phone ? 'text' : r.invited_email ? 'email' : 'link'), to, sent: whenText(r.created_at, now) }
+  return { id: r.id, name: to || 'Invite link', role: r.role === 'fulfillment' || r.role === 'admin' ? r.role : 'agent', via: r.channel || (r.invited_phone ? 'text' : r.invited_email ? 'email' : 'link'), to, sent: whenText(r.created_at, now) }
 }
 
 // ── leads ────────────────────────────────────────────────────────────────────
@@ -353,6 +353,8 @@ export function buildAdmState(raw = {}, { now = Date.now(), clock = realClock(no
   const agents = profiles.filter(p => p.role === 'agent' && !idle(p)).map(p => toAgent(p, { settings, onDuty: raw.onDuty || [], plans: plansIdx }))
   const idleSignups = profiles.filter(p => p.role === 'agent' && idle(p)).map(p => ({ ...toAgent(p, { settings, onDuty: [], plans: plansIdx }), idle: true }))
   const vas = profiles.filter(p => p.role === 'fulfillment').map(p => toVa(p, { accounts: raw.accounts || [] }))
+  // P1004: every admin, the owner marked (migration 275's is_owner; before it, nobody is marked and the list still shows).
+  const admins = profiles.filter(p => p.role === 'admin' && !p.deleted_at).map(p => ({ id: p.id, name: p.full_name || p.email || 'Admin', email: p.email || '', owner: p.is_owner === true, access: p.is_active !== false, lastOn: p.last_login_at ? whenText(p.last_login_at, now) : 'Never' }))
   const intake = Object.fromEntries((raw.intake || []).map(i => [i.lead_id, i]))
   const seen = new Set()
   const leads = [...(raw.leads || []), ...(raw.unassigned || [])].filter(l => !l.is_sample && notTest(l.assigned_rep_id) && !seen.has(l.id) && seen.add(l.id)).map(l => toLead(l, { clock, now, intake }))
@@ -381,7 +383,7 @@ export function buildAdmState(raw = {}, { now = Date.now(), clock = realClock(no
   const connect = connectOf(raw.ghl, raw.keySaved, campaigns)
   connect.ads[0].spent = Math.round(weekSpend)
   return {
-    agents, idleSignups, vas, invites: (raw.invites || []).map(r => toInvite(r, now)), leads, clients, steps, calls,
+    agents, idleSignups, vas, admins, invites: (raw.invites || []).map(r => toInvite(r, now)), leads, clients, steps, calls,
     rota: {}, dayOff, cancels: [], runs, revenue: [], threads: toThreads(raw.threads || [], raw.messages || [], me?.id, now),
     feed: audit.slice(0, 8).map(a => ({ id: `f-${a.id}`, who: a.who, text: `${a.what}${a.target ? `: ${a.target}` : ''}`, at: a.at, kind: 'team' })),
     settings: {

@@ -496,8 +496,11 @@ const seedIdle = [
   mkAgent('ag-idle2', 'Tamsin Pryor', { city: 'Reno', state: 'NV', phone: '', spend: 0, active: false, servicing: false, states: [], joined: 'Nov 13', lastOn: 'Never', idle: true, billing: {} }),
 ]
 
+// P1004 — the admins (People & access › Admins). Sample: you, the owner. Real: every admin profile (hooks/admRealData).
+const seedAdmins = [{ id: 'ad-me', name: ME.name, email: ME.email, owner: true, access: true, lastOn: 'Today' }]
+
 let state = {
-  idleSignups: seedIdle,
+  idleSignups: seedIdle, admins: seedAdmins,
   agents: seedAgents, vas: seedVas, invites: seedInvites, leads: seedLeads, clients: seedClients, steps: seedSteps, calls: seedCalls,
   rota: seedRota, dayOff: seedDayOff, cancels: seedCancels, runs: seedRuns, revenue: seedRevenue, threads: seedThreads, feed: seedFeed,
   settings: seedSettings, bugs: seedBugs, audit: seedAudit, connect: seedConnect, setupFees: seedSetupFees, draws: seedDraws,
@@ -579,6 +582,8 @@ export function useAdmVas() {
   }))
 }
 export function useAdmInvites() { const s = useS(); return okS(s, s.invites) }
+// P1004: owner first. A real store from before this prompt has no admins key: just you.
+export function useAdmAdmins() { const s = useS(); return okS(s, [...(s.admins || seedAdmins)].sort((x, y) => Number(!!y.owner) - Number(!!x.owner))) }
 // P942: { all: true } = every lead we have (real: the last 91 days; sample: the sample week), for "Showing: All".
 export function useAdmLeads({ all = false } = {}) {
   const s = useS()
@@ -901,7 +906,7 @@ const SAMPLE_ACTIONS = {
     }),
     invite: ({ name, role, via, to }) => set(s => {
       const id = `inv-${Date.now()}`
-      return { invites: [{ id, name, role, via, to, sent: `Today, ${stamp()}` }, ...s.invites], ...audit(s, 'Sent an invite', `${name} (${role === 'agent' ? 'agent' : 'Fulfillment'})`) }
+      return { invites: [{ id, name, role, via, to, sent: `Today, ${stamp()}` }, ...s.invites], ...audit(s, 'Sent an invite', `${name} (${role === 'agent' ? 'agent' : role === 'admin' ? 'admin' : 'Fulfillment'})`) }
     }),
     resendInvite: id => set(s => ({ invites: patchById(s.invites, id, { sent: `Today, ${stamp()}` }), ...audit(s, 'Resent an invite', s.invites.find(i => i.id === id).name) })),
     // P906 — Setup tickets. Admins tick the checklist; "Create campaign" goes through the GoHighLevel engine slot and

@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
-import { Bell, Search, ChevronRight, CalendarOff, CreditCard, UserPlus, CheckCircle2, Radio, PhoneCall } from 'lucide-react'
+import { Bell, Search, ChevronRight, CalendarOff, CreditCard, UserPlus, Radio, PhoneCall } from 'lucide-react'
 import { useAdmDay, useAdmDesk, useAdmPeriod, useAdmMoney, useAdmAgents, useAdmActions, useAdmSource, useAdmSettings, useAdmCosts, PERIODS } from '../data'
 import { PhoneClock } from '../../template/m/zone'
 import { minuteOf } from '../../lib/callSlots'
 import { useNote, useAccount } from '../../template/kit'
+import { AllClear } from '../../template/AllClear'
 import { useApp, Ini, rise, SubPage } from '../../template/m/AppKit'
 import { greetingOf, firstName } from '../../template/m/va/vaModel'
 import AreaTrend from '../../template/AreaTrend'
@@ -182,7 +183,7 @@ function NeedsYou() {
           </div>
         )
       })}
-      {!items.length && <p className="ma-empty is-glass am-clear"><CheckCircle2 size={20} aria-hidden="true" />All clear. Nothing needs you right now.</p>}
+      {!items.length && <AllClear phone line="Approvals, setup steps and anything else waiting on you." />}
       <AssignSheet leads={assign} onClose={() => setAssign(null)} />
     </div>
   )

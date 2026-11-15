@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { User, Mail, Lock, ArrowRight, Loader2, Check, Clock, PhoneCall, ListChecks, Wallet, Link2Off } from 'lucide-react'
+import { User, Mail, Lock, ArrowRight, Loader2, Check, Clock, PhoneCall, ListChecks, Wallet, Link2Off, LayoutDashboard, ShieldCheck, Landmark } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { AuthPage, AuField, PasswordField, AuCheck, AuAlert } from '../components/auth/AuthShell'
@@ -23,6 +23,12 @@ const PERKS = {
     [PhoneCall, 'Call from the portal', 'Ring the client and carrier, merge, done.'],
     [Wallet, null, 'Paid automatically every Monday.'],
   ],
+  // P1004: an admin invite (only the owner sends one). Same admin side as the owner's, every page and permission.
+  admin: [
+    [LayoutDashboard, 'The whole admin side', 'Every page, every permission. The same portal as the owner.'],
+    [ShieldCheck, 'Your own sign-in', 'Your own password, and two-step sign-in in Settings.'],
+    [Landmark, 'Your own payout bank', 'Add it in Settings. Owner payouts start once they’re switched on.'],
+  ],
 }
 
 const dollars = c => `$${(c / 100).toFixed(c % 100 ? 2 : 0)}`
@@ -33,7 +39,7 @@ function Story({ role, pay }) {
     <>
       <h1 className="sx-h1 sx-h1--join">You’re invited to <span className="sx-grad">Ohvara.</span></h1>
       <p className="sx-lede sx-desk-only">
-        {role === 'fulfillment' ? 'Make the cancel calls. Get paid every Monday.' : 'Make your account and your portal opens right away.'}
+        {role === 'fulfillment' ? 'Make the cancel calls. Get paid every Monday.' : role === 'admin' ? 'Make your account and the admin side opens right away.' : 'Make your account and your portal opens right away.'}
       </p>
       <div className="sx-perks">
         {perks.map(([Icon, t, s], i) => {
@@ -149,7 +155,7 @@ export default function Join() {
     }
   }
 
-  const role = invite?.role === 'fulfillment' ? 'fulfillment' : 'agent'
+  const role = invite?.role === 'fulfillment' || invite?.role === 'admin' ? invite.role : 'agent'
 
   return (
     <AuthPage left={<Story role={role} pay={invite?.pay} />}>
@@ -162,7 +168,7 @@ export default function Join() {
           <DeadInvite reason={reason} />
         ) : (
           <form onSubmit={handleSubmit} onFocus={keepSubmitVisible} noValidate>
-            <span className={`sx-role sx-role--${role}`}><i />Invited as {role === 'fulfillment' ? 'Fulfillment' : 'an agent'}</span>
+            <span className={`sx-role sx-role--${role}`}><i />Invited as {role === 'fulfillment' ? 'Fulfillment' : role === 'admin' ? 'an admin' : 'an agent'}</span>
             <h2>Create your account</h2>
             <p className="sx-card-sub">You’ll sign in with your email.</p>
             {error && <AuAlert>{error}</AuAlert>}

@@ -12,7 +12,7 @@
 // never sees it (channel / invited_email / invited_phone set on those rows).
 //
 // Two actions:
-//   { action: 'check', token }  → { valid, role, email, by_text, pay_per_cancel_cents }
+//   { action: 'check', token }  → { valid, role, email, by_text, pay_per_cancel_cents } (role: agent | fulfillment | admin, P1004)
 //     or { valid: false, reason: 'expired' | 'used' | 'invalid' } — the signup page's load gate
 //     (email = the address an agent-sent email invite is locked to, else null)
 //   { action: 'claim', token, full_name, email, password[, username] }
@@ -51,6 +51,12 @@ async function fetchInvite(adminClient: ReturnType<typeof createClient>, token: 
   if (error || !data) return { invite: null, reason: 'invalid' }
   if (data.used_at) return { invite: null, reason: 'used' }
   if (new Date(data.expires_at) <= new Date()) return { invite: null, reason: 'expired' }
+  // P1004: an admin invite works only while the person who sent it is still the active owner (migration 275). The
+  // database refuses anyone else's admin invite row; this also covers a link made before an owner change.
+  if (data.role === 'admin') {
+    const { data: by } = await adminClient.from('profiles').select('*').eq('id', data.created_by).maybeSingle()
+    if (!(by?.role === 'admin' && by?.is_active && by?.is_owner === true)) return { invite: null, reason: 'invalid' }
+  }
   return { invite: data, reason: null }
 }
 
@@ -198,7 +204,8 @@ Deno.serve(async (req) => {
     // account menu (channel set) carries no tie at all — no team, no upline —
     // so the inviter can never see the new agent's bookings (can_view_agent /
     // upline_of never reach them).
-    if (!invite.channel) {
+    // P1004: an admin has no upline (admins see everything; the owner is not Jordan's upline).
+    if (!invite.channel && invite.role !== 'admin') {
       const { error: uplineError } = await adminClient
         .from('profiles')
         .update({ upline_id: invite.created_by })

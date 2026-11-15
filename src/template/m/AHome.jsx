@@ -15,6 +15,7 @@ import { targetOf } from '../../lib/deedstoneCall'
 import { AddLeadsCard } from '../Products955'
 import { useProducts, useNavKeys } from '../useProducts'
 import { useApp, useMark, CallButton, Ini, rise } from './AppKit'
+import { AllClear } from '../AllClear'
 import { useAnswer } from './MClients'
 import { greeting, minutesOf, untilWords, stageOf, TONE, RESULT } from './appModel'
 import { clockNow } from '../leadLifecycle'
@@ -197,10 +198,10 @@ export default function AHome() {
       {!later.length && appts.length > 0 && <button type="button" className="ma-pillbtn ma-rise ma-press" style={rise(2)} onClick={() => app.openSub('today')}>{appts.length === 1 ? '1 call today' : `All ${appts.length} calls today`}<ChevronRight size={18} aria-hidden="true" /></button>}
 
       <section className="ma-needs ma-rise" style={rise(3)} aria-label="Needs you">
-        <div className="ma-h2"><h2>Needs you</h2><span>{items.length ? `${items.length} waiting` : 'All caught up'}</span></div>
+        <div className="ma-h2"><h2>Needs you</h2><span>{items.length ? `${items.length} waiting` : 'Nothing waiting'}</span></div>
         {items.length
           ? items.slice(0, 2).map(it => <NeedCard key={it.id || it.key} item={it} leads={leads} lists={lists} />)
-          : <p className="ma-empty is-glass">Nothing waiting on you. We let you know when something comes up.</p>}
+          : <AllClear phone line="Leads to call back, results to mark and anything else waiting on you." />}
         {items.length > 2 && <button type="button" className="ma-pillbtn is-tone is-apricot ma-press" onClick={() => app.openSub('needs')}>View all {items.length}<ChevronRight size={18} aria-hidden="true" /></button>}
       </section>
 

@@ -42,7 +42,9 @@ test('P917: every unmarked live call is a to-do (today or older); the to-do box 
   assert.doesNotMatch(read('./template/screens/Overview.jsx'), /LiveCalls/)
   const ui = read('./template/screens/Overview.jsx')
   assert.match(ui, /Your to-dos/)
-  assert.match(ui, /You\{'’'\}re all caught up\./)
+  // P1004: the empty to-do box is the shared All caught up panel (template/AllClear.jsx), not a grey line.
+  assert.match(ui, /<AllClear line=/)
+  assert.match(read('./template/AllClear.jsx'), /title = 'All caught up'/)
   assert.doesNotMatch(read('./template/screens/Leads.jsx'), /Live call · Mark result|label="Lead type"/)
 })
 

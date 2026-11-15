@@ -27,9 +27,6 @@
 /* Needs you */
 .am-needs .ma-need + .ma-need { margin-top: 10px; }
 .am-needs .ma-h2 span { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 11px; display: inline-grid; place-items: center; background: var(--sh-coral); color: white; font-weight: 800; font-size: 12px; }
-.am-clear { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--ma-ink); font-weight: 700; }
-.am-clear svg { color: var(--sh-f-sage); }
-[data-theme="light"] .am-clear svg { color: color-mix(in srgb, var(--sh-f-sage) 60%, var(--sh-fi-sage)); }
 .am-warn { color: color-mix(in srgb, var(--sh-f-coral) 70%, var(--sh-fi-coral)) !important; font-weight: 700; }
 .ma:not(:is([data-theme="light"] *)) .am-warn { color: var(--sh-f-coral) !important; }
 .am-ok { color: color-mix(in srgb, var(--sh-f-sage) 60%, var(--sh-fi-sage)) !important; font-weight: 700; }

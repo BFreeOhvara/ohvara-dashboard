@@ -6,6 +6,7 @@ import { isMissing } from './agentRealData'
 import { readGhlSettings, readGhlKeySaved } from '../lib/ghlConnect'
 import { buildAdmState, realClock } from '../lib/admReal'
 import { useNote } from '../template/kit'
+import { webUrl } from '../lib/native'
 
 // P858 — the Admin portal on real data. Same store shape as the sample door (src/adminshell/data.js), read from the
 // tables and RPCs that already exist, under RLS (admins read everything). A table or function that isn't on the
@@ -14,6 +15,26 @@ import { useNote } from '../template/kit'
 // server functions (and 232's once applied). Nothing here texts, emails, dials or moves money by itself; inviting
 // and the switches do what the classic admin pages already do. Mappers: lib/admReal.js.
 export const ADM_KEY = ['p858', 'admin']
+
+// P1004 — invite helpers. Same token as useCreateInvite (12 chars, 64-symbol URL-safe alphabet, CSPRNG).
+const newToken = () => {
+  const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
+  const bytes = new Uint8Array(12)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, b => ALPHABET[b % 64]).join('')
+}
+async function copyLink(token, note) {
+  const link = webUrl(`/join?t=${token}`)
+  try { await navigator.clipboard.writeText(link); note('Invite link copied. It works once and lasts 7 days') } catch { note(`Invite link: ${link}`) }
+}
+// send-agent-invite, with the function's own words on a refusal (e.g. "Only the owner can invite an admin.").
+async function sendInvite({ channel, to, role }) {
+  const { data, error } = await supabase.functions.invoke('send-agent-invite', { body: { action: 'send', channel, to, role } })
+  if (!error) return data?.ok ? { data } : { error: new Error(data?.error || 'Nothing was sent') }
+  let msg = error.message
+  try { msg = (await error.context?.json())?.error || msg } catch { /* keep it */ }
+  return { error: new Error(msg) }
+}
 const COLS_LEAD = ['id', 'contact_name', 'business_name', 'phone', 'state', 'city', 'lead_type', 'lead_source', 'inbound_product', 'inbound_stage', 'outcome', 'transfer_status', 'va_outcome', 'assigned_rep_id', 'created_at', 'delivered_at', 'appointment_at', 'is_sample'].join(', ')
 const COLS_POLICY = 'id, agent_id, client_first_name, client_last_name, client_phone, state, carrier_name, product_name, product_type, policy_number, monthly_premium, status, cancellation_status, cancellation_substatus, pending_underwriting, next_lapse_check_at, policy_sold_date, created_at, fulfillment_assigned, assigned_fulfillment_id, scheduled_call_at, call_live_since, fulfillment_stage'
 
@@ -120,17 +141,24 @@ export function useAdmRealActions() {
       setAccess: (id, on) => rpc('admin_set_user_access', { p_user: id, p_active: on, p_confirm: true }),
       setRole: (id, role) => rpc('admin_set_user_role', { p_user: id, p_role: role, p_confirm: true }),
       // The existing invite flow: an email or text goes through send-agent-invite (what the classic page does); a link
-      // is a rep_invites row the admin copies.
+      // is a rep_invites row the admin copies. P1004: role 'admin' too (the owner only: the function and the database
+      // refuse anyone else), the link is copied straight away, and Resend works on real data.
       invite: ({ role, via, to }) => (via === 'link'
         ? run((async () => {
-          const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
-          const bytes = new Uint8Array(12)
-          crypto.getRandomValues(bytes)
-          const token = Array.from(bytes, b => ALPHABET[b % 64]).join('')
-          return supabase.from('rep_invites').insert({ token, role, created_by: profile?.id })
+          const r = await supabase.from('rep_invites').insert({ token: newToken(), role, created_by: profile?.id }).select('token').single()
+          if (!r.error) await copyLink(r.data.token, note)
+          return r
         })())
-        : run(supabase.functions.invoke('send-agent-invite', { body: { action: 'send', channel: via === 'text' ? 'sms' : 'email', to, role } }), 'Could not send the invite')),
-      resendInvite: notYet('Resending an invite'),
+        : run(sendInvite({ channel: via === 'text' ? 'sms' : 'email', to, role }).then(r => { if (!r.error) note('Invite sent'); return r }), 'Could not send the invite')),
+      // Email or text: sent again to the same address (the function ends the old link). A copied link: copied again.
+      resendInvite: id => run((async () => {
+        const { data: inv, error } = await supabase.from('rep_invites').select('token, role, channel, invited_email, invited_phone').eq('id', id).maybeSingle()
+        if (error || !inv) return { error: error || new Error('That invite is gone') }
+        if (!inv.channel) { await copyLink(inv.token, note); return {} }
+        const r = await sendInvite({ channel: inv.channel, to: inv.channel === 'email' ? inv.invited_email : inv.invited_phone, role: inv.role })
+        if (!r.error) note('Invite sent again')
+        return r
+      })(), 'Could not resend the invite'),
       cancelInvite: id => run(supabase.from('rep_invites').delete().eq('id', id)),
       tickSetup: (id, key, on) => rpc('admin_setup_tick', { p_agent: id, p_step: key, p_on: on }),
       markLaunched: id => run(Promise.all(['campaign', 'budget', 'mapped', 'link', 'tracking', 'workflows']

@@ -1,0 +1,32 @@
+/* P1004 — the empty "Needs you" panel (AllClear.jsx), every role. Centred in whatever height the panel has, so it
+   sits naturally next to the left column; the soft sage check is the "done" colour used across the portal. */
+.fx-allclear {
+  flex: 1 1 auto; min-height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; padding: 20px 16px; text-align: center;
+  animation: fx-up .6s var(--fx-ease) both;
+}
+.fx-allclear-ic {
+  display: grid; place-items: center; width: 56px; height: 56px; margin-bottom: 8px; border-radius: 50%;
+  color: var(--sh-fi-sage);
+  background: color-mix(in srgb, var(--sh-f-sage) 55%, transparent);
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--sh-f-sage) 22%, transparent);
+}
+.fx-allclear-t { font-family: var(--font-display); font-size: 17px; font-weight: 700; color: var(--ov-hi); }
+.fx-allclear-s { margin: 0; max-width: 260px; font-size: 13px; line-height: 1.45; color: var(--ov-mid); }
+.fx-allclear-at { margin-top: 6px; font-size: 12px; color: var(--ov-mute); }
+
+/* The empty panel takes the page's normal card look, not the deep one (the deep panel is for a list of to-dos). */
+.fx-ovl-needs.is-clear .fx-ovl-needs-in { gap: 0; }
+
+/* Phone: the app's glass card. */
+.fx-allclear.is-phone {
+  min-height: 0; padding: 22px 16px 18px; border-radius: 20px;
+  background: var(--ma-glass); border: 1px solid var(--ma-glass-b);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+}
+.fx-allclear.is-phone .fx-allclear-ic { width: 46px; height: 46px; box-shadow: 0 0 0 6px color-mix(in srgb, var(--sh-f-sage) 22%, transparent); }
+.fx-allclear.is-phone .fx-allclear-t { font-size: 16px; color: var(--ma-ink); }
+.fx-allclear.is-phone .fx-allclear-s { color: var(--ma-ink2); }
+.fx-allclear.is-phone .fx-allclear-at { color: var(--ma-ink3); }
+
+@media (prefers-reduced-motion: reduce) { .fx-allclear { animation: none; } }

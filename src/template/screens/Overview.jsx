@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, Check, Clock, CalendarDays } from 'lucide-react'
+import { ArrowUpRight, Clock, CalendarDays } from 'lucide-react'
 import { rangeWords } from '../spendPlan'
 import { useDeliveredPace } from '../useDeliveredPace'
 import { countByStatus } from '../agentView'
@@ -12,6 +12,7 @@ import { CallDrawer } from './Calendar'
 import '../cal947.css'
 import '../cal958.css'
 import { Avatar, Empty } from '../kit'
+import { AllClear } from '../AllClear'
 import { CountUp } from '../motion'
 import { SetupProgress } from '../SetupProgress'
 import { useLaunchView } from '../launchView'
@@ -265,7 +266,7 @@ export default function Overview() {
       <div className="fx-ovl-side">
         <AddLeadsCard />
         {/* P917: no live-call cards here; a live call waiting for its result is a to-do (and pinned on Leads) */}
-        <section className="fx-tile is-deep fx-ovl-needs" style={{ '--i': 4 }} aria-label="Your to-dos">
+        <section className={`fx-tile fx-ovl-needs ${needs.now.length ? 'is-deep' : 'is-clear'}`} style={{ '--i': 4 }} aria-label="Your to-dos">
           <div className="fx-ovl-needs-in">
             <header className="fx-tile-h">
               <span className="tp-grow"><h2>Your to-dos</h2><p>{needs.now.length ? `${needs.now.length} for you` : 'Nothing waiting'}</p></span>
@@ -273,7 +274,7 @@ export default function Overview() {
             </header>
             {needs.now.length > 0
               ? <div className="fx-ncards">{needs.now.map((r, i) => <NeedCard key={r.id} item={r} i={i} onAct={act} />)}</div>
-              : <p className="fx-calm" data-empty="todos"><Check size={16} aria-hidden="true" />You{'’'}re all caught up.</p>}
+              : <AllClear line="Leads to call back, results to mark and anything else waiting on you." />}
           </div>
         </section>
 

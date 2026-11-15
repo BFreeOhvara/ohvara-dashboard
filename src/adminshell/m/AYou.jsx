@@ -25,6 +25,7 @@ import {
   appOf, pageOf, connectionsOf, callSplit,
 } from './admModel'
 import { useOwnerMe, useAdmName } from './useAdm'
+import { useMyPayoutBank, useOwnerPayouts, useSplitLine } from '../payoutBank'
 import { AssignSheet } from './ASubsAdm'
 import { useMessageTo } from './useAdm'
 import { AddVaSheet } from './AHelpAdm'
@@ -96,7 +97,7 @@ export default function AYou() {
       <div className="ma-glass ma-list ma-acct-list ma-rise" style={rise(3)}>
         <Row onClick={() => app.openSub('payouts')} lead={<Sym tone="sage" Icon={Wallet} />} title="Payouts" sub="Your split, VA pay, the bank" />
         <Row onClick={() => app.openSub('plans')} lead={<Sym tone="sky" Icon={Tags} />} title="Plans and prices" sub="View only" />
-        <Row onClick={() => setAddVa(true)} lead={<Sym tone="sage" Icon={UserPlus} />} title="Add a VA" sub="Invite someone to the Fulfillment team" />
+        <Row onClick={() => setAddVa(true)} lead={<Sym tone="sage" Icon={UserPlus} />} title="Add someone" sub="Invite an agent, a VA or (owner only) an admin" />
         <Row onClick={() => app.openSub('help')} lead={<Sym tone="coral" Icon={CircleHelp} />} title="Help and support" sub="Report a bug, bug reports, support mailbox" />
         <div className="ma-row ma-theme-row">
           <span className="ma-sym is-stone"><Moon size={16} aria-hidden="true" /></span>
@@ -486,6 +487,18 @@ export function ASetupView() {
   )
 }
 
+function MyBankRows() {
+  const bank = useMyPayoutBank()
+  const owners = useOwnerPayouts()
+  const split = useSplitLine()
+  return (
+    <div className="ma-glass ma-list ma-rise" style={rise(3)}>
+      <div className="ma-row"><span className="ma-grow"><b>{bank.text || (bank.loading ? 'Checking…' : 'Not set up yet')}</b><small>{bank.text ? 'Where your owner payouts go' : 'Add it on the desktop: Settings › Profile'}</small></span></div>
+      <div className="ma-row"><span className="ma-grow"><b>Owner payouts · {owners.pct}/{100 - owners.pct}</b><small>{split}</small></span><span className="ma-val">{owners.on ? 'On' : 'Off'}</span></div>
+    </div>
+  )
+}
+
 // ── Payouts, plans, settings ─────────────────────────────────────────────────────────────────────────────────────
 export function APayouts() {
   const me = useOwnerMe()
@@ -517,6 +530,9 @@ export function APayouts() {
         {m.run.map(r => <div key={r.va_id} className="ma-row"><span className="ma-grow"><b>{r.name}</b><small>{Math.round(r.hours * 10) / 10} h · {r.bank === 'ready' ? 'bank ready' : r.bank === 'held' ? 'held' : 'no bank yet'}</small></span><span className="ma-val tp-money">{money(r.amount)}</span></div>)}
         <div className="ma-row am-line is-strong"><span className="ma-grow"><b>Paid Monday</b><small>Only VAs with a bank ready</small></span><span className="ma-val tp-money">{money(m.runTotal)}</span></div>
       </div>
+      {/* P1004: your own payout bank (added or changed on the desktop, Settings › Profile) and owner payouts (off). */}
+      <p className="ma-cap is-out">Your payout bank</p>
+      <MyBankRows />
       <p className="ma-cap is-out">The bank</p>
       <div className="ma-glass ma-list ma-rise" style={rise(3)}>
         <div className="ma-row"><span className="ma-grow"><b>Stripe balance</b><small>{m.paused ? 'Pay runs paused' : m.live ? 'Pays out automatically' : 'Pay runs are off until launch'}</small></span><span className="ma-val tp-money">{money(m.stripeBalance)}</span></div>

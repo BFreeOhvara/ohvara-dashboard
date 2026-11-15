@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ArrowUpRight, Check, PhoneCall, MessageSquare, CalendarClock, GraduationCap, ArrowRight, Clock3, Wallet, CalendarOff, MessageSquareText, Building2, Target, Sparkles } from 'lucide-react'
 import { useFulDay, useFulPay, useFulSource, useFulActions, minutesOf } from '../data'
 import { Avatar, useAccount } from '../../kit'
+import { AllClear } from '../../AllClear'
 import { CountUp, usd } from '../../motion'
 import { fp } from '../paths'
 import { CALL_TONE } from '../words'
@@ -232,7 +233,7 @@ export default function Overview() {
         {/* P947: until training is done its card sits on top of Today's calls (that column had room to spare), so the
             page still fits the screen at 1440x900 and 1920x1080: no scroll. */}
         {!tr.complete && <TrainingCard sum={tr} i={1} />}
-        <Tile className="is-deep ov946-today" i={5} title="Today's calls" icon={Sparkles}
+        <Tile className={`${day.today.length ? 'is-deep' : 'is-clear'} ov946-today`} i={5} title="Today's calls" icon={Sparkles}
           sub={day.today.length ? `${open.length} to call · ${done.length} done` : 'Nothing booked today'} to={fp('calendar')} label="Open Calendar">
           {day.today.length > 0 ? (
             <ul className="ov946-cards">
@@ -250,7 +251,7 @@ export default function Overview() {
                 )
               })}
             </ul>
-          ) : <p className="fx-calm"><Check size={16} aria-hidden="true" />No booked calls today.</p>}
+          ) : <AllClear line="Today’s booked calls, callbacks and anything waiting on you show up here." />}
         </Tile>
       </div>
     </div>

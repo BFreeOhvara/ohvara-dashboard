@@ -52,6 +52,7 @@
 .lg-page .sx-big-ico--warn { background: color-mix(in srgb, var(--sh-apricot) 16%, transparent); color: var(--sh-apricot); }
 .lg-page .sx-role--agent { background: color-mix(in srgb, var(--sh-apricot) 16%, transparent); color: var(--sh-ink-2); }
 .lg-page .sx-role--fulfillment { background: color-mix(in srgb, var(--sh-acc) 14%, transparent); color: var(--sh-acc-line); }
+.lg-page .sx-role--admin { background: color-mix(in srgb, var(--sh-acc) 14%, transparent); color: var(--sh-acc-line); } /* P1004 */
 .lg-page .sx-link { color: var(--sh-acc-line); }
 .lg-page .sx-alert { background: var(--sx-red-tint); border-color: var(--sx-red-box); color: var(--sh-ink); }
 .lg-page .sx-note { background: var(--sx-chip); border-color: var(--sh-line); color: var(--sh-ink-2); }

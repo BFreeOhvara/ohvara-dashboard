@@ -6,7 +6,8 @@
 //   supabase functions deploy send-agent-invite --project-ref jjextitmbptoaolacocs
 //
 //   { action: 'status' }                    → { email, sms } — which channels can send
-//   { action: 'send', channel, to, role? }  → { ok: true } (nothing else, ever); role: admin only (P762)
+//   { action: 'send', channel, to, role? }  → { ok: true } (nothing else, ever); role: admin only (P762);
+//                                             role 'admin' only from the owner (P1004)
 //
 // Email: Resend (RESEND_API_KEY, INVITE_FROM_EMAIL on a Resend-verified domain).
 // Text: the same Twilio account/number as recovery-sms, and only once
@@ -40,9 +41,10 @@ const deps: Deps = {
   async caller(jwt) {
     const { data } = await db.auth.getUser(jwt)
     if (!data?.user) return null
-    const { data: p } = await db.from('profiles').select('role, is_active, full_name, is_demo').eq('id', data.user.id).maybeSingle()
+    // P1004: '*' so is_owner is read once migration 275 is on (and nothing breaks before it).
+    const { data: p } = await db.from('profiles').select('*').eq('id', data.user.id).maybeSingle()
     // Prompt 775 — an App Review sample account can't send real invites (treated as access off).
-    return { id: data.user.id, role: p?.role ?? null, is_active: p?.is_demo ? false : (p?.is_active ?? null), full_name: p?.full_name ?? null }
+    return { id: data.user.id, role: p?.role ?? null, is_active: p?.is_demo ? false : (p?.is_active ?? null), full_name: p?.full_name ?? null, is_owner: p?.is_owner === true }
   },
   lockedSelfSignup: userId => isLockedSelfSignup(db, userId),
   async smsLive() {

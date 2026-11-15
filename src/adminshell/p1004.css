@@ -1,0 +1,7 @@
+/* P1004 — Settings › Profile: your payout bank, owner payouts (off) and your sign-in, as quiet rows under the form. */
+.adm-bank { display: flex; flex-direction: column; gap: 8px; }
+.adm-bank-row { border: 1px solid var(--ov-line); border-radius: 14px; padding: 10px 12px; }
+.adm-bank-row > svg { flex: none; color: var(--ov-mid); }
+.adm-bank-row small { display: block; color: var(--ov-mute); }
+.adm-bank-lock { display: flex; align-items: center; gap: 6px; margin-top: 12px; }
+.adm-bank-key { margin-top: 8px; }

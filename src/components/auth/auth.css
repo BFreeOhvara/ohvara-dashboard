@@ -185,6 +185,7 @@ html.sx-root body {
 .sx-role i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .sx-role--agent { background: var(--sx-amber-tint); color: var(--sx-amber); }
 .sx-role--fulfillment { background: rgba(52, 224, 196, 0.12); color: var(--sx-teal-hi); }
+.sx-role--admin { background: rgba(52, 224, 196, 0.12); color: var(--sx-teal-hi); } /* P1004 */
 
 .sx-alert {
   margin-top: 18px; display: flex; align-items: flex-start; gap: 10px;

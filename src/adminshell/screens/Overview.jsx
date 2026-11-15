@@ -3,6 +3,7 @@ import { Check, CalendarDays, CreditCard, PhoneCall, Radio, Megaphone, MapPin, S
 import { useAdmDay, useAdmMoney, useAdmAgents, useAdmDesk, useAdmCosts, useAdmSetup, useAdmRota, useAdmVas, useAdmSource, useAdmSettings, SHIFT_MIN, dateText } from '../data'
 import { useAdmReactivation, pausedLists } from '../reactivation952'
 import { Avatar } from '../../template/kit'
+import { AllClear } from '../../template/AllClear'
 import { CountUp, usd } from '../../template/motion'
 import { Tile, EngineSlot } from '../kit'
 import { useGhlRow } from '../useGhlRow'
@@ -123,11 +124,11 @@ export default function Overview() {
         <div className="fx-ovl-side">
           {/* P964: no header and no Show all. Every to-do stays in the list, which scrolls inside the card; the Calendar button
               sits at the bottom left. The rows get the agent side's hover wave (shell914.css). */}
-          <section className="fx-tile is-deep fx-ovl-needs adm-todos" style={{ '--i': 4 }} aria-label="To-dos">
+          <section className={`fx-tile fx-ovl-needs adm-todos ${todos.length ? 'is-deep' : 'is-clear'}`} style={{ '--i': 4 }} aria-label="To-dos">
             <div className="fx-ovl-needs-in">
               {todos.length
                 ? <ul className="adm-todo-list">{todos.map((t, i) => <Todo key={t.id} t={t} i={i} />)}</ul>
-                : <p className="fx-calm"><Check size={16} aria-hidden="true" />All caught up.</p>}
+                : <AllClear line="Approvals, setup steps and anything else waiting on you." />}
               {/* P945: booked calls look after themselves (they move on at 10 minutes); the shortcut opens the calendar. */}
               <Link to={`${ap('team')}?tab=calendar`} className="fx-pillbtn adm-cal-go"><CalendarDays size={14} aria-hidden="true" />Calendar</Link>
             </div>

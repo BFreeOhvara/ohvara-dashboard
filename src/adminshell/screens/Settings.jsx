@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import {
   User, Users, Wallet, History, SlidersHorizontal, LogOut, Mail, UserPlus, ArrowUpRight, Search, ShieldCheck,
-  ShieldOff, Lock, Bot, CreditCard, Hand, Smartphone,
+  ShieldOff, Lock, Bot, CreditCard, Hand, Smartphone, KeyRound,
 } from 'lucide-react'
-import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmAudit, useAdmDay, useAdmSource, ME } from '../data'
+import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmAdmins, useAdmAudit, useAdmDay, useAdmSource } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
 import { Field, Seg, Switch, Chip, PillTabs, Avatar, Empty, useNote, useAccount, initials } from '../../template/kit'
 import { CountUp } from '../../template/motion'
@@ -12,6 +12,8 @@ import '../../template/settings929.css'
 import { avatarHue } from '../../template/avatarHue'
 import { Dropdown, DField } from '../kit'
 import { AddSomeone } from '../AdminFrame'
+import { useIsOwner, ROLE_WORD } from '../owner'
+import { PayoutBankSection } from '../PayoutBank1004'
 import { ap } from '../paths'
 import { PhoneInput } from '../../template/PhoneInput'
 import { ZONES } from '../words'
@@ -72,12 +74,13 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
 
 function ProfileCard({ name, email }) {
   const { data: day } = useAdmDay()
+  const owner = useIsOwner()
   const stats = [[day.needs, 'Need you'], [day.payingAgents, 'Paying'], [day.onShift.length, 'On shift']]
   return (
     <aside className="fx-tile fx-prof" aria-label="Your profile">
       <div className={`fx-prof-av av-${avatarHue(name)}`} aria-hidden="true">{initials(name).toUpperCase()}<i className="on" /></div>
       <h2>{name}</h2>
-      <p>Admin · owner</p>
+      <p>{owner ? 'Admin · owner' : 'Admin'}</p>
       <span className="fx-prof-mail"><Mail size={13} aria-hidden="true" />{email}</span>
       <ul className="fx-pstats">{stats.map(([n, label]) => <li key={label}><small>{label}</small><b className="tp-num"><CountUp value={n} /></b></li>)}</ul>
       <Link to={ap('overview')} className="fx-pnext"><i aria-hidden="true" /><span className="tp-grow"><small>Overview</small><b>{day.needs} things need you</b><small>Leads, desk, days off, money</small></span><ArrowUpRight size={16} aria-hidden="true" /></Link>
@@ -89,8 +92,11 @@ function People() {
   const { data: agents } = useAdmAgents()
   const { data: vas } = useAdmVas()
   const { data: invites } = useAdmInvites()
+  const { data: admins } = useAdmAdmins()
   const { setAccess, resendInvite, cancelInvite } = useAdmActions()
   const note = useNote()
+  const owner = useIsOwner()
+  const real = useAdmSource() === 'real'
   const [who, setWho] = useState('agent')
   const [q, setQ] = useState('')
   const [adding, setAdding] = useState(false)
@@ -106,9 +112,12 @@ function People() {
         <span className="tp-grow" />
         <button type="button" className="tp-primary sm fx-accent" onClick={() => setAdding(true)}><UserPlus size={14} />Add someone</button>
       </div>
-      <Seg label="Who" value={who} onChange={setWho} options={[{ key: 'agent', label: 'Agents', count: agents.length }, { key: 'fulfillment', label: 'Fulfillment', count: vas.length }, { key: 'admin', label: 'Admins', count: 1 }, { key: 'invites', label: 'Invites', count: invites.length }]} />
+      <Seg label="Who" value={who} onChange={setWho} options={[{ key: 'agent', label: 'Agents', count: agents.length }, { key: 'fulfillment', label: 'Fulfillment', count: vas.length }, { key: 'admin', label: 'Admins', count: admins.length }, { key: 'invites', label: 'Invites', count: invites.length }]} />
       <ul className="tp-list adm-people">
-        {who === 'admin' && <li className="fx-mrow"><Avatar name={ME.name} /><span className="tp-grow"><b>{ME.name}</b><small>Admin · {ME.email}</small></span><Chip tone="teal">Owner</Chip><Lock size={14} aria-hidden="true" /></li>}
+        {/* P1004: every admin, real or sample. Admins can't change each other here (admin_user_guard); only the owner invites one. */}
+        {who === 'admin' && admins.filter(a => !n || `${a.name} ${a.email}`.toLowerCase().includes(n)).map(a => (
+          <li key={a.id} className="fx-mrow"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>Admin · {a.email}{a.lastOn ? ` · on ${a.lastOn}` : ''}</small></span><Chip tone={a.owner ? 'teal' : 'mute'}>{a.owner ? 'Owner' : 'Admin'}</Chip><Lock size={14} aria-hidden="true" /></li>
+        ))}
         {rows.map(p => (
           <li key={p.id} className="fx-mrow">
             <Avatar name={p.name} />
@@ -119,12 +128,12 @@ function People() {
           </li>
         ))}
         {out.map(i => (
-          <li key={i.id} className="fx-mrow"><Mail size={17} aria-hidden="true" /><span className="tp-grow"><b>{i.name}</b><small>Invite · {i.role === 'agent' ? 'Agent' : 'Fulfillment'} · {i.to} · sent {i.sent}</small></span>
-            <button type="button" className="fx-pillbtn" onClick={() => { resendInvite(i.id); note('Invite sent again (sample)') }}>Resend</button>
+          <li key={i.id} className="fx-mrow"><Mail size={17} aria-hidden="true" /><span className="tp-grow"><b>{i.name}</b><small>Invite · {ROLE_WORD[i.role] || 'Agent'} · {i.to || 'link to copy'} · sent {i.sent}</small></span>
+            <button type="button" className="fx-pillbtn" onClick={() => { resendInvite(i.id); if (!real) note('Invite sent again (sample)') }}>{i.via === 'link' ? 'Copy link' : 'Resend'}</button>
             <button type="button" className="fx-pillbtn" onClick={() => { cancelInvite(i.id); note('Invite cancelled') }}>Cancel</button>
           </li>
         ))}
-        {who === 'admin' && <li className="tp-sub">Admins are added or removed by another admin outside the portal. An admin can't delete their own account here.</li>}
+        {who === 'admin' && <li className="tp-sub">{owner ? 'Add an admin with Add someone. They get every page and permission you have, except inviting another admin.' : 'Only the owner can invite an admin.'} Admins can’t turn each other off or delete their own account here.</li>}
         {who !== 'admin' && rows.length === 0 && out.length === 0 && <li><Empty title="No one" sub="Nobody matches that." /></li>}
       </ul>
       <AddSomeone open={adding} onClose={() => setAdding(false)} />
@@ -216,6 +225,7 @@ function Prefs() {
 
 export default function Settings() {
   const { data: s } = useAdmSettings()
+  const owner = useIsOwner()
   const { saveSettings } = useAdmActions()
   const account = useAccount()
   const note = useNote()
@@ -241,14 +251,22 @@ export default function Settings() {
         <PillTabs label="Settings sections" className="fx-ptabs adm-settabs" itemClass="fx-ptab" value={tab} onChange={setTab} items={TABS.map(([key, label, icon]) => ({ key, label, icon }))} />
         <div className="fx-form" key={tab} role="tabpanel" aria-label={TABS.find(t => t[0] === tab)[1]}>
           {tab === 'profile' && <>
-            <Head title="Profile" sub="How agents, VAs and Jordan see you on messages." />
-            <div className="fx-form-grid">
+            {/* P1004: two columns so Profile never scrolls: you on the left; your payout bank, owner payouts (off) and
+                your own two-step sign-in (the shared Settings page) on the right. */}
+            <div className="adm-set-two"><div>
+            <Head title="Profile" sub="How agents, VAs and the other admins see you on messages." />
+            <div className="fx-form-grid adm-prof-grid">
               <Field label="Full name"><input value={p.name} onChange={e => setP({ ...p, name: e.target.value })} /></Field>
               <Field label="Email"><input type="email" value={p.email} onChange={e => setP({ ...p, email: e.target.value })} /></Field>
               <Field label="Phone"><PhoneInput value={p.phone} onChange={(d, e164, shown) => setP({ ...p, phone: shown })} /></Field>
-              <Field label="Role" hint="Admins are set outside the portal"><input value="Admin · owner" readOnly /></Field>
+              <Field label="Role" hint={owner ? 'Only you can invite another admin' : 'Only the owner invites admins'}><input value={owner ? 'Admin · owner' : 'Admin'} readOnly /></Field>
             </div>
             <Field label="Live Room link" hint="The one shared meeting room for the company"><input value={s.liveRoom} onChange={e => saveSettings({ liveRoom: e.target.value })} /></Field>
+            </div><div>
+            <Head title="Payouts and sign-in" sub="Yours alone. Nobody else sees or changes these." />
+            <PayoutBankSection />
+            <div className="fx-mrow adm-bank-row adm-bank-key"><KeyRound size={17} aria-hidden="true" /><span className="tp-grow"><b>Password and two-step sign-in</b><small>Change your password or turn on two-step sign-in.</small></span><Link to="/settings#security" className="fx-pillbtn">Open<ArrowUpRight size={13} /></Link></div>
+            </div></div>
             <div className="fx-form-row"><span className="tp-grow" /><button type="button" className="tp-btn ov-ghost" onClick={() => (DeleteDialog ? setPanel('delete') : note('Admin accounts are removed by another admin'))}>Delete my account</button></div>
             <FormFoot dirty={!same(p, s.profile)} onDiscard={() => setP(s.profile)} onSave={() => { saveSettings({ profile: p }); note('Profile saved') }} />
           </>}

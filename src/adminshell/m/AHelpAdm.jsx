@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Bug, Mail, Search, Copy, UserPlus } from 'lucide-react'
-import { useAdmActions, useAdmSettings } from '../data'
+import { useAdmActions, useAdmSettings, useAdmSource } from '../data'
+import { useIsOwner, ROLE_WORD, roleOptions } from '../owner'
 import { useNote } from '../../template/kit'
 import { ReportBug } from '../../template/ReportBug'
 import { SUPPORT_EMAIL } from '../../components/auth/authUtils'
@@ -28,25 +29,33 @@ export function AHelpAdm() {
   )
 }
 
-// Add someone: a Fulfillment person, by email, by text, or a link to copy. No admin from here (as today).
+// Add someone: an agent, a Fulfillment person or (the owner only, P1004) an admin, by email, by text, or a link to copy.
 export function AddVaSheet({ open, onClose }) {
   const { invite } = useAdmActions()
   const { data: settings } = useAdmSettings()
   const note = useNote()
+  const owner = useIsOwner()
+  const real = useAdmSource() === 'real'
+  const [role, setRole] = useState('fulfillment')
+  const r = role === 'admin' && !owner ? 'fulfillment' : role
   const [via, setVia] = useState('email')
   const [name, setName] = useState('')
   const [to, setTo] = useState('')
   const textOff = !settings.switches?.invite_sms_live
   const ready = name.trim().length > 1 && (via === 'link' || to.trim().length > 4)
   const send = () => {
-    invite({ name: name.trim(), role: 'fulfillment', via, to: via === 'link' ? 'Link copied' : to.trim() })
-    note(via === 'link' ? `Invite link for ${name.trim()} copied (sample)` : `Invite sent to ${name.trim()} (sample: nothing was sent)`)
+    invite({ name: name.trim(), role: r, via, to: via === 'link' ? 'Link copied' : to.trim() })
+    if (real) { if (via !== 'link') note(`Sending ${name.trim()}'s ${ROLE_WORD[r].toLowerCase()} invite…`) } else note(via === 'link' ? `Invite link for ${name.trim()} copied (sample)` : `Invite sent to ${name.trim()} (sample: nothing was sent)`)
     setName(''); setTo(''); onClose()
   }
   return (
-    <BottomSheet open={open} onClose={onClose} label="Add a VA" tall>
-      <p className="ma-sheet-t">Add a VA</p>
-      <p className="ma-sheet-s">They get a link to set a password and land on the Fulfillment side.</p>
+    <BottomSheet open={open} onClose={onClose} label="Add someone" tall>
+      <p className="ma-sheet-t">Add someone</p>
+      <p className="ma-sheet-s">They get a link to set a password and land on the {r === 'admin' ? 'admin' : r === 'agent' ? 'agent' : 'Fulfillment'} side.</p>
+      <p className="ma-cap is-out">Role</p>
+      <div className="ma-seg am-seg" role="radiogroup" aria-label="Role">
+        {roleOptions(owner).map(({ key: k, label: w }) => <button key={k} type="button" role="radio" aria-checked={r === k} className={`is-sky${r === k ? ' is-on' : ''}`} onClick={() => setRole(k)}>{w}</button>)}
+      </div>
       <label className="va-field"><span>Full name</span><input value={name} onChange={e => setName(e.target.value)} placeholder="First and last name" autoComplete="off" /></label>
       <p className="ma-cap is-out">Send it by</p>
       <div className="ma-seg am-seg" role="radiogroup" aria-label="Send by">
@@ -58,7 +67,7 @@ export function AddVaSheet({ open, onClose }) {
           <input type={via === 'email' ? 'email' : 'tel'} value={to} onChange={e => setTo(e.target.value)} placeholder={via === 'email' ? 'name@example.com' : '(555) 555-0100'} /></label>
       )}
       <button type="button" className="ma-btn is-solid is-tall ma-press am-wide" disabled={!ready} onClick={send}>{via === 'link' ? <Copy size={18} aria-hidden="true" /> : <UserPlus size={18} aria-hidden="true" />}{via === 'link' ? 'Copy the link' : 'Send invite'}</button>
-      <p className="ma-hint">Agents sign up and pay on their own; they show on Setup once they've paid. Admins are added by another admin outside the portal.</p>
+      <p className="ma-hint">{r === 'admin' ? 'An admin can do everything you can, except invite another admin.' : 'The link works once and lasts 7 days.'}</p>
     </BottomSheet>
   )
 }

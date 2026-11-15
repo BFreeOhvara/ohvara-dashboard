@@ -9,7 +9,7 @@
 import { LOCKED_MESSAGE } from '../_shared/portalAccess.ts'
 
 export type Channel = 'email' | 'sms'
-export type InviteRole = 'agent' | 'fulfillment'
+export type InviteRole = 'agent' | 'fulfillment' | 'admin'
 
 export type Env = {
   resendKey?: string
@@ -21,7 +21,8 @@ export type Env = {
   appUrl?: string
 }
 
-export type Caller = { id: string; role: string | null; is_active: boolean | null; full_name: string | null }
+// P1004: is_owner = Brayden's account, the only one that may invite another admin.
+export type Caller = { id: string; role: string | null; is_active: boolean | null; full_name: string | null; is_owner?: boolean | null }
 
 export type Deps = {
   env: Env
@@ -63,6 +64,7 @@ export const MSG = {
   smsSoon: 'Texting invites is coming soon.',
   tooMany: "You've sent a lot of invites today. Try again tomorrow.",
   hasAccount: 'That person already has an account.',
+  ownerOnly: 'Only the owner can invite an admin.',
   failed: "Couldn't send that. Try again.",
 }
 
@@ -95,7 +97,7 @@ const escapeHtml = (s: string) =>
   s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
 
 // Prompt 781 — the role line both the text and the email use.
-export const roleLine = (role: InviteRole) => (role === 'fulfillment' ? 'as part of the Fulfillment team' : 'as an agent')
+export const roleLine = (role: InviteRole) => (role === 'fulfillment' ? 'as part of the Fulfillment team' : role === 'admin' ? 'as an admin' : 'as an agent')
 
 // Prompt 781 — the short /j/<code> link, written without https:// so the text
 // reads "portal.ohvara.com/j/…" (phones still make it a link).
@@ -199,7 +201,11 @@ export async function handle(deps: Deps, jwt: string, body: Record<string, unkno
   if ((caller.role !== 'agent' && !isAdmin) || caller.is_active === false) {
     return { status: 403, body: { error: 'Only agents can send invites.' } }
   }
-  const role: InviteRole = isAdmin && body.role === 'fulfillment' ? 'fulfillment' : 'agent'
+  const role: InviteRole = isAdmin && body.role === 'fulfillment' ? 'fulfillment' : isAdmin && body.role === 'admin' ? 'admin' : 'agent'
+  // P1004: an admin invite only from the owner. Checked here, never trusted from the portal (the button is hidden too).
+  if (body.action === 'send' && body.role === 'admin' && !(isAdmin && caller.is_owner === true)) {
+    return { status: 403, body: { error: MSG.ownerOnly } }
+  }
 
   if (body.action === 'status') return { status: 200, body: await status(deps) }
   if (body.action !== 'send') return { status: 400, body: { error: 'Unknown action' } }

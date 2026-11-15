@@ -111,3 +111,41 @@ test('real guard: an admin sends the invite', async () => {
   assert.deepEqual(await handle(d, 'jwt', { ...send, role: 'fulfillment' }), { status: 200, body: { ok: true } })
   assert.ok(touched.includes('insertInvite'))
 })
+
+// ── P1004: only the owner invites an admin ──
+const owner: Caller = { id: 'o', role: 'admin', is_active: true, full_name: 'Brayden Freeman', is_owner: true }
+const admin2: Caller = { id: 'j', role: 'admin', is_active: true, full_name: 'Jordan Lee', is_owner: false }
+
+test('the owner sends an admin invite; the row and the email say admin', async () => {
+  const { d, touched } = fake(owner, false)
+  let row: { role?: string } = {}
+  let mail = ''
+  d.insertInvite = async r => { row = r; return 'inv' }
+  d.fetch = (async (_u: unknown, init?: RequestInit) => { mail = String(init?.body ?? ''); return new Response('{}') }) as typeof fetch
+  assert.deepEqual(await handle(d, 'jwt', { ...send, role: 'admin' }), { status: 200, body: { ok: true } })
+  assert.equal(row.role, 'admin')
+  assert.match(mail, /invited you to join Ohvara as an admin/)
+  assert.ok(!touched.includes('deleteInvite'))
+})
+
+test('another admin is refused an admin invite before anything is checked, made or sent', async () => {
+  const { d, touched } = fake(admin2, false)
+  assert.deepEqual(await handle(d, 'jwt', { ...send, role: 'admin' }), { status: 403, body: { error: 'Only the owner can invite an admin.' } })
+  assert.deepEqual(touched, [])
+})
+
+test('an agent asking for an admin invite is refused', async () => {
+  const { d, touched } = fake({ ...agent, is_owner: true }, false)
+  assert.equal((await handle(d, 'jwt', { ...send, role: 'admin' })).status, 403)
+  assert.deepEqual(touched, [])
+})
+
+test('a non-owner admin still invites Agents and Fulfillment', async () => {
+  for (const role of ['agent', 'fulfillment']) {
+    const { d } = fake(admin2, false)
+    let made = ''
+    d.insertInvite = async r => { made = r.role; return 'inv' }
+    assert.equal((await handle(d, 'jwt', { ...send, role })).status, 200)
+    assert.equal(made, role)
+  }
+})
