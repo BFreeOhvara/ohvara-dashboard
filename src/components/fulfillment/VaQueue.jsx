@@ -112,7 +112,7 @@ export default function VaQueue({ queue, heldId, claimingId, notice, onTake }) {
         <div className="ov-card va-empty">
           <span className="va-tile"><Phone size={20} strokeWidth={2} aria-hidden="true" /></span>
           <h3>Nothing to work right now</h3>
-          <p className="sub">New leads and callbacks show up here on their own. You don't need to refresh.</p>
+          <p className="sub">Callers to call back show up here on their own. New leads never do: the AI caller calls them. You don't need to refresh.</p>
         </div>
       ) : BUCKETS.map(b => (
         <Section key={b} bucket={b} rows={groups[b]} now={now} heldId={heldId} claimingId={claimingId} onTake={onTake} />

@@ -295,7 +295,7 @@ select (select count(*) from public.notification_emails)    as emails,
 
 -- ── c. Retry: the schedule, the timings and the repeat ──────────────────────
 select public.p_arr_as('V1');
-select is(public.p_arr_bucket('retry'), 'new', 'c1 a new lead is on the desk as new');
+select is(public.p_arr_bucket('retry'), null, 'c1 a new form lead is not on the VA desk (P1014: the AI caller''s)');
 select lives_ok($$ select public.p_arr_work('retry', 'not_reached') $$, 'c2 a VA records not reached with sms_live off');
 select is(public.p_arr_bucket('retry'), null, 'c3 right after not reached the lead does not bounce back onto the desk');
 select throws_ok(format($$ select public.va_claim(%L) $$, public.p_arr_lead('retry')), '22023', 'This lead is not in the queue',
@@ -479,7 +479,7 @@ update public.leads set va_callback_at = now() - interval '1 minute' where id = 
 update public.inbound_events set at = now() + interval '1 day'
  where lead_id = public.p_arr_lead('callback') and state = 'scheduled' and detail ->> 'va_step' = 'retry_d1';
 select public.p_arr_as('V1');
-select is(public.p_arr_bucket('callback'), 'callback_due', 'd8 a future step does not hide a callback that is due, bucket callback_due');
+select is(public.p_arr_bucket('callback'), null, 'd8 a due callback on a form lead stays off the VA desk (P1014: the AI calls back)');
 select public.p_arr_as('owner');
 
 -- ── e. Stop ─────────────────────────────────────────────────────────────────
@@ -691,7 +691,7 @@ select is(public.lead_next_rebook_slot(public.p_arr_user('B'), now()), null::tim
 
 -- ── i. Text steps stay out of it ────────────────────────────────────────────
 select public.p_arr_as('V1');
-select is(public.p_arr_bucket('text_only'), 'new', 'i1 a text step alone does not hide a new lead');
+select is(public.p_arr_bucket('text_only'), null, 'i1 a text step alone does not put a new form lead on the VA desk (P1014)');
 select lives_ok($$ select public.p_arr_work('text', 'not_reached') $$, 'i2 not reached on a lead with text steps');
 select is(public.p_arr_bucket('text'), null, 'i3 the past-due text step does not put the lead on the desk');
 select public.p_arr_as('owner');

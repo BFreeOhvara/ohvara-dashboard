@@ -21,7 +21,7 @@ const COVERS = { 'mp-v1': false, 'mp-v2': true }
 const OK = { ok: true }
 
 test('who calls: only fresh form leads, switch on, agent on, AI consent, pre-dial ok', () => {
-  assert.deepEqual(whoCalls({ settings: ON, lead: FORM, consentVersions: COVERS, predial: OK }), { by: 'ai', reason: null })
+  assert.deepEqual(whoCalls({ settings: ON, lead: FORM, consentVersions: COVERS, predial: OK }), { by: 'ai', reason: null, state: null })
   assert.equal(whoCalls({ settings: { ...ON, live: false }, lead: FORM, consentVersions: COVERS, predial: OK }).reason, 'switch_off')
   for (const source of ['call_in', 'live_call', 'client']) assert.equal(whoCalls({ settings: ON, lead: { ...FORM, source }, consentVersions: COVERS }).reason, 'not_form', source)
   assert.equal(whoCalls({ settings: ON, lead: { ...FORM, agent_id: 'ag-2' }, consentVersions: COVERS, predial: OK }).reason, 'agent_not_on')
@@ -30,9 +30,34 @@ test('who calls: only fresh form leads, switch on, agent on, AI consent, pre-dia
   assert.equal(agentOn(ON, null), false)
 })
 
-test('no AI consent → a VA calls (today\'s mp-v1 wording does not cover AI calls)', () => {
+// P1014 (Brayden, Nov 15): a VA never calls a new lead. Each case the AI can't take gets its own state.
+test('P1014: the AI cannot call → wait or blocked, never a VA', () => {
+  const who = (o = {}) => whoCalls({ settings: ON, lead: FORM, consentVersions: COVERS, predial: OK, ...o })
+  const nxt = '2026-11-16T14:00:00Z'
+  assert.deepEqual(who({ predial: { ok: false, reason: 'outside_hours', next_at: nxt } }), { by: 'wait', reason: 'outside_hours', state: 'wait_hours', nextAt: nxt })
+  for (const reason of ['dnc', 'opted_out', 'national_dnc']) assert.equal(who({ predial: { ok: false, reason } }).state, 'blocked_dnc', reason)
+  assert.equal(who({ settings: { ...ON, live: false }, predial: { ok: false, reason: 'dnc' } }).state, 'blocked_dnc') // DNC before the switch
+  assert.equal(who({ lead: { ...FORM, consent_version: 'mp-v1' } }).state, 'blocked_no_consent')
+  assert.equal(who({ settings: { ...ON, live: false } }).state, 'wait_switch_off')
+  assert.equal(who({ lead: { ...FORM, agent_id: 'ag-2' } }).state, 'wait_switch_off')
+  assert.equal(who({ lead: { ...FORM, agent_id: null } }).state, 'wait_agent')
+  const all = [who(), who({ settings: { ...ON, live: false } }), who({ lead: { ...FORM, source: 'call_in' } }), who({ predial: { ok: false, reason: 'attempt_cap' } }),
+    who({ predial: { ok: false, reason: 'weird' } }), who({ lead: { ...FORM, consent_version: 'mp-v1' } })]
+  assert.ok(all.every(r => ['ai', 'wait', 'blocked', 'none'].includes(r.by)), 'never "va"')
+})
+
+test('P1014: migration 277 routes every case away from VAs', () => {
+  const sql = readFileSync('supabase/migrations/277_ai_never_va.sql', 'utf8')
+  assert.doesNotMatch(sql.replace(/--.*$/gm, ''), /route_enqueue\('new_lead'/) // nothing in 277 queues a new lead for a VA
+  for (const st of ['wait_hours', 'blocked_dnc', 'blocked_no_consent', 'wait_switch_off']) assert.ok(sql.includes(`'${st}'`), st)
+  assert.match(sql, /create trigger a0_call_queue_no_new_leads before insert on public\.call_queue/)
+  assert.match(sql, /when l\.lead_type = 'mortgage_protection' then false/) // va_queue: no new form leads
+  assert.match(sql, /revoke execute on function %s from public, anon, authenticated/)
+})
+
+test('no AI consent → nobody calls, admins told (today\'s mp-v1 wording does not cover AI calls)', () => {
   const r = whoCalls({ settings: ON, lead: { ...FORM, consent_version: 'mp-v1' }, consentVersions: COVERS, predial: OK })
-  assert.deepEqual(r, { by: 'va', reason: 'no_ai_consent' })
+  assert.deepEqual(r, { by: 'blocked', reason: 'no_ai_consent', state: 'blocked_no_consent' })
   assert.equal(aiConsentOk({ consent_version: null }, COVERS), false)
   assert.equal(aiConsentOk({ consent_version: 'unknown' }, COVERS), false)
 })
@@ -152,7 +177,7 @@ function fakes({ live = true, ready = true, takes = { by: 'ai', reason: null }, 
     lead: async () => ({ id: 'l1', first: 'Pat', phone: '+15125550123', state: 'TX', tz: 'America/Chicago', need: 'Mortgage protection', age: '55 to 64' }),
     agent: async () => agent,
     takes: async () => takes,
-    toVa: async (_id, reason) => { log.push(['toVa', reason]); call().status = 'to_va' },
+    notDialed: async (_id, reason) => { log.push(['notDialed', reason]); call().status = 'to_va' },
     status: async (_id, st, patch = {}) => { log.push(['status', st]); Object.assign(call(), { status: st, ...Object.fromEntries(Object.entries(patch).filter(([, v]) => v != null)) }); return call() },
     result: async (_id, outcome, patch = {}) => { log.push(['result', outcome, !!patch.callback_task]); call().status = 'done' },
     slots: async () => slots,
@@ -170,11 +195,11 @@ function fakes({ live = true, ready = true, takes = { by: 'ai', reason: null }, 
 const ev = (f, type, extra = {}) => core.onEvent(f.store, f.provider, f.env, { providerCallId: 'rc1', callId: f.call().id, type, ...extra })
 const tool = (f, name, args = {}) => ev(f, 'tool', { name, args, toolCallId: null })
 
-test('core: not connected, switch off, or rules changed → the lead goes to a VA', async () => {
-  for (const [opts, why] of [[{ ready: false }, 'not_connected'], [{ live: false }, 'switch_off'], [{ takes: { by: 'va', reason: 'no_ai_consent' } }, 'no_ai_consent']]) {
+test('core: not connected, switch off, or rules changed → not dialed; the database decides (never a VA)', async () => {
+  for (const [opts, why] of [[{ ready: false }, 'not_connected'], [{ live: false }, 'switch_off'], [{ takes: { by: 'blocked', reason: 'no_ai_consent' } }, 'no_ai_consent']]) {
     const f = fakes(opts)
     await core.start(f.store, f.provider, f.env, f.call().id)
-    assert.deepEqual(f.log[0], ['toVa', why])
+    assert.deepEqual(f.log[0], ['notDialed', why])
   }
 })
 
@@ -237,7 +262,7 @@ test('core: no answer → result no_answer (the SQL schedules try 2); stop → o
   x.provider.start = async () => { throw new Error('provider down') }
   assert.equal((await core.start(x.store, x.provider, x.env, x.call().id)).code, 'start_failed')
   assert.deepEqual(x.log.at(-1), ['result', 'no_answer', false])
-  assert.ok(!x.log.some(e => e[0] === 'toVa'))
+  assert.ok(!x.log.some(e => e[0] === 'notDialed'))
   assert.equal(core.handoffTimeout, undefined)
   assert.equal(core.twiml, undefined)
 })

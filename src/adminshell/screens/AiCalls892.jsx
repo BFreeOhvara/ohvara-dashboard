@@ -69,7 +69,7 @@ export function AiCallerSettings() {
           options={[{ value: 'none', label: 'Not picked yet' }, ...PROVIDERS.map(p => ({ value: p.key, label: p.name, sub: p.recommended ? 'Recommended' : undefined }))]} /></DField>
       </div>
       {prov && <dl className="fx-facts ai-prov">{[['Cost', prov.perMin], ['Calls out', prov.outbound], ['Transfers', prov.transfer], ['Transcripts', prov.transcripts]].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>}
-        <button type="button" className="fx-mrow ai-words-open" onClick={() => setWords(true)}><MessageSquareText size={16} aria-hidden="true" /><span className="tp-grow"><b>What it says and its call rules</b><small>The six lines it says, and when a VA calls instead</small></span><ChevronRight size={15} aria-hidden="true" /></button>
+        <button type="button" className="fx-mrow ai-words-open" onClick={() => setWords(true)}><MessageSquareText size={16} aria-hidden="true" /><span className="tp-grow"><b>What it says and its call rules</b><small>The six lines it says, and when it waits instead of calling</small></span><ChevronRight size={15} aria-hidden="true" /></button>
       </div>
       </div>
       <Drawer open={words} onClose={() => setWords(false)} title="What the AI caller says" sub="Its lines, and the rules every call follows.">
@@ -77,8 +77,9 @@ export function AiCallerSettings() {
         <li key={k}><small className="tp-sub">{k}</small><p className="tp-mid">“{v}”</p></li>
       ))}</ul>
       <ul className="tp-list tp-sub">
-        <li>Before every call: consent on file and covering AI calls, not opted out or on do-not-call, inside the state{'’'}s calling hours in the lead{'’'}s time zone, under the attempt cap. Otherwise a VA calls.</li>
-        <li>No answer (or a call that fails): one more try {AI_RULES.retryAfterSecs / 60} minutes later, then the no-answer texts and call tasks.</li>
+        <li>Before every call: consent on file and covering AI calls, not opted out or on do-not-call, inside the state{'’'}s calling hours in the lead{'’'}s time zone, under the attempt cap. Otherwise nobody calls (a VA never calls a new lead): outside hours it calls at the next allowed time; while it{'’'}s switched off the lead waits in line; do-not-call is never called; consent that doesn{'’'}t cover AI calls is never called and every admin is told.</li>
+        <li>A lead who texts back after a missed call: it calls them back.</li>
+        <li>No answer (or a call that fails): one more try {AI_RULES.retryAfterSecs / 60} minutes later, then the no-answer texts and its own call-backs.</li>
         <li>Every call ends in one result: booked, transferred, no answer, not now, hard no, wrong number or opted out. Only no answer and booked (a "not now" with a time counts as booked) start texts.</li>
         <li>{'“'}Stop calling{'”'} is honoured at once, everywhere.</li>
       </ul>

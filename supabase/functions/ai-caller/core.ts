@@ -43,8 +43,9 @@ export interface Store {
   callByProvider(providerCallId: string): Promise<Call | null>
   lead(id: string): Promise<Lead | null>
   agent(id: string): Promise<Agent | null>
-  takes(leadId: string): Promise<{ by: 'ai' | 'va'; reason: string | null }>
-  toVa(callId: string, reason: string): Promise<void>
+  takes(leadId: string): Promise<{ by: 'ai' | 'wait' | 'blocked' | 'none'; reason: string | null; state?: string | null }>
+  // P1014: a call that wasn't dialed. The database decides what happens next (wait, retry, blocked); never a VA.
+  notDialed(callId: string, reason: string): Promise<void>
   status(callId: string, status: Phase, patch?: Record<string, unknown>): Promise<Call | null>
   result(callId: string, outcome: string, patch?: Record<string, unknown>): Promise<unknown>
   slots(callId: string): Promise<string[]>
@@ -100,18 +101,18 @@ export async function start(store: Store, provider: Provider, env: Env, callId: 
     if (!provider.ready) { await store.result(c.id, 'no_answer', { summary: 'Test call: provider not connected.' }); return { ok: false, code: 'not_connected' } }
   } else {
     // P952: a reactivation call runs on its own switch (reactivation_live, checked in takes()), not the fresh-lead one.
-    if (!live.on && !lead?.reactivation) { await store.toVa(c.id, 'switch_off'); return { ok: false, code: 'switch_off' } }
-    if (!provider.ready) { await store.toVa(c.id, 'not_connected'); return { ok: false, code: 'not_connected' } }
+    if (!live.on && !lead?.reactivation) { await store.notDialed(c.id, 'switch_off'); return { ok: false, code: 'switch_off' } }
+    if (!provider.ready) { await store.notDialed(c.id, 'not_connected'); return { ok: false, code: 'not_connected' } }
     // The rules again at the moment of the dial (an opt-out or the window may have changed since the lead came in).
     const w = await store.takes(c.lead_id)
-    if (w.by !== 'ai') { await store.toVa(c.id, w.reason || 'rules'); return { ok: false, code: w.reason } }
+    if (w.by !== 'ai') { await store.notDialed(c.id, w.reason || 'rules'); return { ok: false, code: w.reason } }
   }
   const agent = c.agent_id ? testAgent(await store.agent(c.agent_id), lead) : null
-  if (!lead || !agent) { await store.toVa(c.id, 'no_lead_or_agent'); return { ok: false, code: 'no_lead_or_agent' } }
+  if (!lead || !agent) { await store.notDialed(c.id, 'no_lead_or_agent'); return { ok: false, code: 'no_lead_or_agent' } }
   const ds = await store.deedstoneFrom?.(agent.id, c.id).catch(() => null)
   // P952: a reactivation call only ever shows a reactivation number (never the fresh-lead fallback).
   const from = ds?.phone || (lead.reactivation ? null : env.from)
-  if (!from) { await store.toVa(c.id, 'not_connected'); return { ok: false, code: 'not_connected' } }
+  if (!from) { await store.notDialed(c.id, 'not_connected'); return { ok: false, code: 'not_connected' } }
   const v = await chooseVoice(store, provider, c, lead).catch(() => null)
   const name = aiNameOf(v?.voice)
   try {

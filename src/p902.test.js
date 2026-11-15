@@ -75,7 +75,7 @@ test('any action stops the current flow and starts the right one', () => {
   for (const a of ACTIONS) assert.equal(onAction('no_answer', a).stop, true, a)
   assert.equal(onAction('no_answer', 'booked_link').start, 'booked')
   assert.equal(onAction('no_answer', 'booked').start, 'booked')
-  assert.equal(onAction('no_answer', 'replied').task, 'va_call')
+  assert.equal(onAction('no_answer', 'replied').task, 'ai_call') // P1014: the AI calls back, never a VA
   assert.equal(onAction('no_answer', 'answered').start, null)
   assert.deepEqual([onAction('booked', 'opted_out').stop, onAction('booked', 'opted_out').start], [true, null])
   assert.deepEqual([onAction('booked', 'booked_link').stop, onAction('booked', 'booked_link').start], [true, 'booked']) // a rebook restarts

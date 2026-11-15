@@ -102,8 +102,8 @@ const store: Store = {
     return { id: p.id, first: String(p.full_name ?? '').split(' ')[0], phone: p.phone, mode: lp?.mode ?? 'appts', hours: lp?.live_hours ?? {},
       tz: lp?.tz ?? p.timezone ?? 'America/Chicago', reachable: r?.ready !== false }
   },
-  async takes(leadId) { const r = await rpc<{ by: 'ai' | 'va'; reason: string | null }[]>('ai_caller_takes', { p_lead: leadId }); return r[0] ?? { by: 'va', reason: 'rules' } },
-  async toVa(callId, reason) { await rpc('ai_caller_to_va', { p_call: callId, p_reason: reason }) },
+  async takes(leadId) { const r = await rpc<{ by: 'ai' | 'wait' | 'blocked' | 'none'; reason: string | null; state: string | null }[]>('ai_caller_takes', { p_lead: leadId }); return r[0] ?? { by: 'wait', reason: 'rules', state: 'wait_retry' } },
+  async notDialed(callId, reason) { await rpc('ai_caller_not_dialed', { p_call: callId, p_reason: reason }) },
   async status(callId, status, patch = {}) { return rpc('ai_caller_status', { p_call: callId, p_status: status, p_patch: patch }) },
   async result(callId, outcome, patch = {}) { return rpc('ai_caller_result', { p_call: callId, p_outcome: outcome, p_patch: patch }) },
   async slots(callId) { return rpc<string[]>('ai_caller_slots', { p_call: callId, p_limit: 6 }) },

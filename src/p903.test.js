@@ -27,7 +27,7 @@ function fakes({ talks = true } = {}) {
     lead: async () => ({ id: 'l1', first: 'Pat', phone: '+15125550123', state: 'TX', tz: 'America/Chicago', need: 'Mortgage protection', age: '55 to 64' }),
     agent: async () => ({ id: 'ag-1', first: 'Dana', phone: '+15125550100', mode: 'both', hours: DEFAULT_LIVE_HOURS, tz: 'America/Chicago', reachable: true }),
     takes: async () => ({ by: 'ai', reason: null }),
-    toVa: async (_id, reason) => { log.push(['toVa', reason]); call.status = 'to_va' },
+    notDialed: async (_id, reason) => { log.push(['notDialed', reason]); call.status = 'to_va' },
     status: async (_id, st, patch = {}) => { log.push(['status', st]); Object.assign(call, { status: st, ...Object.fromEntries(Object.entries(patch).filter(([, v]) => v != null)) }); return call },
     result: async (_id, outcome, patch = {}) => { log.push(['result', outcome, !!patch.callback_task]); call.status = 'done' },
     slots: async () => [SLOT],
@@ -133,7 +133,7 @@ test('beat 5, Yes but the agent\'s phone isn\'t answered in about 20 s → bounc
   assert.deepEqual(r.slots, [SLOT])
   assert.equal(f.call.status, 'booking')
   assert.deepEqual(f.kinds(['check', 'clear']), [['check', 'ringing'], ['check', 'bounced'], ['clear', 'booking', 'ag-1']])
-  assert.ok(!f.log.some(x => x[0] === 'handoff' || x[0] === 'toVa'))
+  assert.ok(!f.log.some(x => x[0] === 'handoff' || x[0] === 'notDialed'))
   await f.tool('book', { at: SLOT }); await f.ev('ended', { reason: 'hangup' })
   assert.deepEqual(f.log.at(-1), ['result', 'booked', false])
   // A late or repeated transfer_failed / check_status can't send it round again.
@@ -149,7 +149,7 @@ test('P902: after a bounce the caller asks for a person → "Your agent will go 
   const r = await f.tool('ask_agent', { reason: 'asked_person', summary: 'Wants a person' })
   assert.match(r.say, /^Your agent will go over that with you\./)
   assert.deepEqual([r.slots, r.next], [[SLOT], 'book'])
-  assert.ok(!f.log.some(x => x[0] === 'handoff' || x[0] === 'toVa'))
+  assert.ok(!f.log.some(x => x[0] === 'handoff' || x[0] === 'notDialed'))
   await f.tool('book', { at: SLOT }); await f.ev('ended', { reason: 'hangup', durationSecs: 90 })
   assert.deepEqual(f.log.at(-1), ['result', 'booked', false])
 })

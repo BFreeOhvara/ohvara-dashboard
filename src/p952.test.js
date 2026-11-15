@@ -16,7 +16,7 @@ function fakes({ live = false, takes = { by: 'ai', reason: null }, ds = { phone:
     lead: async () => ({ id: 'l1', first: 'Ann', phone: '+15125556001', state: 'TX', tz: null, need: null, age: null, reactivation: { voicemailLeft } }),
     agent: async () => ({ id: 'ag-1', first: 'Nate', phone: '+15125550100' }),
     takes: async () => takes,
-    toVa: async (_id, reason) => { log.push(['toVa', reason]) },
+    notDialed: async (_id, reason) => { log.push(['notDialed', reason]) },
     status: async (_id, st) => { log.push(['status', st]) },
     result: async (_id, o) => { log.push(['result', o]) },
     deedstoneFrom: async () => ds,
@@ -44,15 +44,15 @@ test('no reactivation number: the call never falls back to a fresh-lead number',
   const f = fakes({ ds: { phone: '', providerId: null, pool: 'reactivation' } })
   const r = await core.start(f.store, f.provider, f.env, f.call.id)
   assert.equal(r.ok, false)
-  assert.deepEqual(f.log[0], ['toVa', 'not_connected']) // the database puts it back in line (never a VA)
+  assert.deepEqual(f.log[0], ['notDialed', 'not_connected']) // the database puts it back in line (never a VA)
   assert.equal(f.got().from, null)
 })
 
 test('the rules say no (flag off, outside hours, do-not-call): nothing dials', async () => {
   for (const reason of ['switch_off', 'outside_hours', 'dnc', 'list_paused']) {
-    const f = fakes({ takes: { by: 'va', reason } })
+    const f = fakes({ takes: { by: 'wait', reason } })
     await core.start(f.store, f.provider, f.env, f.call.id)
-    assert.deepEqual(f.log[0], ['toVa', reason])
+    assert.deepEqual(f.log[0], ['notDialed', reason])
     assert.equal(f.got().vars, null)
   }
 })

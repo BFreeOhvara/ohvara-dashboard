@@ -99,9 +99,12 @@ select pg_temp.as_owner();
 update public.va_presence set idle_since = now() - interval '10 minutes' where user_id = 'e8820000-0000-4000-8000-000000000001';
 update public.va_presence set idle_since = now() - interval '1 minute' where user_id = 'e8820000-0000-4000-8000-000000000002';
 
--- ── d. a new lead rings ONE VA, the longest idle ─────────────────────────────────────────────────────────────
-insert into public.leads (id, lead_type, phone, state, contact_name, business_name, qualifier_answers) values
-  ('a8820000-0000-4000-8000-000000000010', 'mortgage_protection', '+15550100010', 'ZZ', 'Lee New', 'Lee New', '{"consent_at":"2026-11-07T10:00:00Z"}');
+-- ── d. a call for a VA rings ONE VA, the longest idle ────────────────────────────────────────────────────────
+-- P1014: a new form lead never rings a VA (the AI caller's; supabase/tests/p1014_ai_never_va.sql). The ring is shown
+-- with an inbound caller to call back (a hold-line callback), which stays a VA's.
+insert into public.leads (id, lead_type, phone, state, contact_name, business_name, call_consent_at) values
+  ('a8820000-0000-4000-8000-000000000010', 'policy_help', '+15550100010', 'ZZ', 'Lee New', 'Lee New', now());
+select public.route_enqueue('callback', 'a8820000-0000-4000-8000-000000000010', p_due => now(), p_detail => '{"help_call_sid":"CA882d"}'::jsonb);
 select is((select count(*)::int from public.call_queue where lead_id = 'a8820000-0000-4000-8000-000000000010'), 1, 'd1 the new lead is on the queue');
 select is((select status from public.call_queue where lead_id = 'a8820000-0000-4000-8000-000000000010'), 'offered', 'd2 it is offered at once');
 select is((select offered_to from public.call_queue where lead_id = 'a8820000-0000-4000-8000-000000000010'),
@@ -133,8 +136,10 @@ select throws_ok($$ select public.route_accept((select id from public.call_queue
 select pg_temp.as_owner();
 
 -- ── e. two misses in a row = Away + admins ───────────────────────────────────────────────────────────────────
-insert into public.leads (id, lead_type, phone, state, contact_name, business_name, qualifier_answers) values
-  ('a8820000-0000-4000-8000-000000000011', 'mortgage_protection', '+15550100011', 'ZZ', 'Mia Miss', 'Mia Miss', '{"consent_at":"x"}');
+-- P1014: shown with a caller waiting (inbound); a new form lead never rings a VA.
+insert into public.leads (id, lead_type, phone, state, contact_name, business_name, call_consent_at) values
+  ('a8820000-0000-4000-8000-000000000011', 'policy_help', '+15550100011', 'ZZ', 'Mia Miss', 'Mia Miss', now());
+select public.route_enqueue('inbound', 'a8820000-0000-4000-8000-000000000011', p_help_sid => 'CA882e');
 select is((select offered_to from public.call_queue where lead_id = 'a8820000-0000-4000-8000-000000000011'),
   'e8820000-0000-4000-8000-000000000001'::uuid, 'e1 V1 (the only free VA) is rung');
 select pg_temp.as_user('e8820000-0000-4000-8000-000000000001');
@@ -179,7 +184,7 @@ update public.call_queue set offer_expires_at = now() + interval '1 minute' wher
 select public.route_tick();
 select ok(exists (select 1 from public.notifications where type = 'callback_late'), 'h2 more than 5 min late: admins told');
 
--- ── i. a new lead pulls a VA off a carrier hold (no client on it) ────────────────────────────────────────────
+-- ── i. a caller waiting pulls a VA off a carrier hold (no client on it) ────────────────────────────────────────────
 update public.call_queue set status = 'done' where status in ('waiting', 'offered', 'held');
 update public.va_presence set status = 'away' where user_id = 'e8820000-0000-4000-8000-000000000001';
 insert into public.va_lines (id, kind, va_id, status, detail) values
@@ -188,11 +193,13 @@ update public.va_presence set status = 'on_call', line_id = 'b8820000-0000-4000-
 insert into public.fulfillment_voice_legs (call_sid, line_id, party, status) values ('CAcarrier1', 'b8820000-0000-4000-8000-000000000001', 'carrier', 'live');
 select public.line_hold_state('b8820000-0000-4000-8000-000000000001');
 select is((select status from public.va_presence where user_id = 'e8820000-0000-4000-8000-000000000002'), 'on_hold_carrier', 'i1 carrier-only hold is marked');
-insert into public.leads (id, lead_type, phone, state, contact_name, business_name, qualifier_answers) values
-  ('a8820000-0000-4000-8000-000000000012', 'mortgage_protection', '+15550100012', 'ZZ', 'Pat Pull', 'Pat Pull', '{"consent_at":"x"}');
+-- P1014: a caller waiting (inbound) pulls the hold; a new form lead never rings a VA.
+insert into public.leads (id, lead_type, phone, state, contact_name, business_name, call_consent_at) values
+  ('a8820000-0000-4000-8000-000000000012', 'policy_help', '+15550100012', 'ZZ', 'Pat Pull', 'Pat Pull', now());
+select public.route_enqueue('inbound', 'a8820000-0000-4000-8000-000000000012', p_help_sid => 'CA882i');
 select is((select pull_hold from public.call_queue where lead_id = 'a8820000-0000-4000-8000-000000000012'), true, 'i2 nobody free: offered to the VA on hold');
 select pg_temp.as_user('e8820000-0000-4000-8000-000000000002');
-select ok((public.route_accept((select id from public.call_queue where lead_id = 'a8820000-0000-4000-8000-000000000012')) ->> 'line_id') is not null, 'i3 they answer the new lead');
+select ok((public.route_accept((select id from public.call_queue where lead_id = 'a8820000-0000-4000-8000-000000000012')) ->> 'line_id') is not null, 'i3 they answer the caller');
 select pg_temp.as_owner();
 select is((select status from public.va_lines where id = 'b8820000-0000-4000-8000-000000000001'), 'handoff', 'i4 the hold is handed off');
 select is((select count(*)::int from public.call_queue where line_id = 'b8820000-0000-4000-8000-000000000001' and kind = 'hold_handoff'), 1, 'i5 and queued for the next VA');
@@ -217,17 +224,20 @@ select ok(exists (select 1 from public.notifications where profile_id = 'e882000
 update public.va_presence set status = 'available', last_seen = now(), pulled_reason = null where user_id = 'e8820000-0000-4000-8000-000000000001';
 insert into public.leads (id, lead_type, phone, state, contact_name, business_name, qualifier_answers) values
   ('a8820000-0000-4000-8000-000000000013', 'mortgage_protection', '+15550100013', 'ZZ', 'Dee Dnc', 'Dee Dnc', '{"consent_at":"x"}');
+-- P1014: new leads never queue for a VA; use a caller's queued callback instead.
+select public.route_enqueue('callback', 'a8820000-0000-4000-8000-000000000013', p_due => now() + interval '1 hour', p_detail => '{"help_call_sid":"CA882l"}');
 insert into public.inbound_events (lead_id, kind, state, at, label) values
   ('a8820000-0000-4000-8000-000000000013', 'text_sent', 'scheduled', now() + interval '1 day', 'Check-in text');
 select pg_temp.as_user('e8820000-0000-4000-8000-000000000001');
 select is((public.mark_do_not_call(null, 'a8820000-0000-4000-8000-000000000013', null, 'asked on the call') ->> 'cancelled_texts')::int, 1, 'l1 Do not call skips the scheduled text');
 select pg_temp.as_owner();
-select is((select status from public.call_queue where lead_id = 'a8820000-0000-4000-8000-000000000013' and kind = 'new_lead'), 'cancelled', 'l2 and cancels the queued call');
+select is((select status from public.call_queue where lead_id = 'a8820000-0000-4000-8000-000000000013' and kind = 'callback'), 'cancelled', 'l2 and cancels the queued call');
 select is(public.sms_is_opted_out('+15550100013'), true, 'l3 opted out of texts (and GoHighLevel through the opt-out list)');
 select is((select reason from public.predial_eval('+15550100013', 'ZZ', null, 'call', now())), 'opted_out', 'l4 every later call is blocked');
 -- STOP from anywhere cancels queued calls too.
 insert into public.leads (id, lead_type, phone, state, contact_name, business_name, qualifier_answers) values
   ('a8820000-0000-4000-8000-000000000014', 'mortgage_protection', '+15550100014', 'ZZ', 'Sam Stop', 'Sam Stop', '{"consent_at":"x"}');
+select public.route_enqueue('callback', 'a8820000-0000-4000-8000-000000000014', p_due => now() + interval '1 hour', p_detail => '{"help_call_sid":"CA882m"}');
 select public.sms_set_opt('+15550100014', true, 'STOP');
 select is((select status from public.call_queue where lead_id = 'a8820000-0000-4000-8000-000000000014'), 'cancelled', 'l5 a STOP cancels the queued call');
 

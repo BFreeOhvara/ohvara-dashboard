@@ -4,7 +4,8 @@
 // Migration p902_lead_outcomes.sql is the SQL side; src/p902.test.js checks the two agree.
 //
 // The rules:
-//   * A new lead gets a CALL first (the AI within 10 s, or a VA when the AI is off), never a text.
+//   * A new lead gets a CALL first (the AI within 10 s), never a text. P1014: a VA never calls a new lead; when the AI
+//     can't call yet (outside hours, switched off) the lead waits for it.
 //   * Every first call ends in exactly one outcome (FIRST_CALL_OUTCOMES). Ohvara stores it, shows it on the lead's
 //     timeline and sends it to GoHighLevel as a `call_outcome` event.
 //   * Only two outcomes start texts: no answer and booked ("not now" WITH a time is booked as a callback).
@@ -163,7 +164,7 @@ export function fillWords(words, v = {}) {
 // ── Anything the lead does stops the current flow and starts the right one ─────────────────────────────────────────
 // action: answered (picked up a later call, or called us back) | replied (any text back) | confirmed ("C") |
 //         booked_link (picked a time from the link) | booked (our team booked them) | opted_out (STOP, "don't call").
-// Returns { stop: bool, start: flow | null, task: 'va_call' | null, note }.
+// Returns { stop: bool, start: flow | null, task: 'ai_call' | null, note }. P1014: a reply gets the AI's call back, never a VA's.
 export const ACTIONS = ['answered', 'replied', 'confirmed', 'booked_link', 'booked', 'opted_out']
 export function onAction(flow, action) {
   if (action === 'opted_out') return { stop: !!flow, start: null, task: null, note: 'Opted out: every call and text stopped' }
@@ -173,7 +174,7 @@ export function onAction(flow, action) {
   }
   if (flow === 'no_answer') {
     if (action === 'answered') return { stop: true, start: null, task: null, note: 'They answered: no-answer texts stopped' }
-    if (action === 'replied' || action === 'confirmed') return { stop: true, start: null, task: 'va_call', note: 'They replied: no-answer texts stopped, our team calls them' }
+    if (action === 'replied' || action === 'confirmed') return { stop: true, start: null, task: 'ai_call', note: 'They replied: no-answer texts stopped, our team calls them' }
   }
   if (flow === 'booked') {
     // A confirm or a question keeps the reminders going; the replier answers (P878) and C marks it Confirmed.

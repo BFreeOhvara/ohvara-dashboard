@@ -72,14 +72,27 @@ export function agentOn(settings, agentId) {
   return settings?.agents === 'all' || (Array.isArray(settings?.agents) && settings.agents.includes(agentId))
 }
 
+// P1014 (Brayden, Nov 15): a VA never calls a new lead. When the AI can't call, the lead waits or is blocked; nobody
+// else calls it. by: ai | wait | blocked | none. state (migration 277 ai_lead_waits): wait_hours (the AI calls at the
+// next allowed time, nextAt) · wait_switch_off (switched off, or the agent isn't on: waits in line) · wait_agent (no
+// agent yet) · wait_retry · blocked_dnc (nobody, ever) · blocked_no_consent (nobody; admins told). reason: the old codes.
+// Same order as ai_caller_takes(): do-not-call is checked before anything else.
+export const DNC_REASONS = ['opted_out', 'dnc', 'national_dnc']
+export const WAIT_HOURS_REASONS = ['outside_hours', 'attempt_cap', 'unknown_state']
 export function whoCalls({ settings, lead, consentVersions, predial }) {
-  if (lead?.source !== 'form') return { by: 'va', reason: 'not_form' } // inbound calls and clients: never the AI
-  if (!settings?.live) return { by: 'va', reason: 'switch_off' }
-  if (!agentOn(settings, lead.agent_id)) return { by: 'va', reason: 'agent_not_on' }
-  if (!aiConsentOk(lead, consentVersions)) return { by: 'va', reason: 'no_ai_consent' }
-  // Blocked or outside the calling window: the VA path (P882 route_enqueue) holds or cancels it exactly as today.
-  if (predial && !predial.ok) return { by: 'va', reason: predial.reason || 'predial' }
-  return { by: 'ai', reason: null }
+  if (lead?.source !== 'form') return { by: 'none', reason: 'not_form', state: null } // inbound calls and clients: VAs answer those
+  if (predial && !predial.ok && DNC_REASONS.includes(predial.reason)) return { by: 'blocked', reason: predial.reason, state: 'blocked_dnc' }
+  if (!settings?.live) return { by: 'wait', reason: 'switch_off', state: 'wait_switch_off' }
+  if (!lead.agent_id) return { by: 'wait', reason: 'agent_not_on', state: 'wait_agent' }
+  if (!agentOn(settings, lead.agent_id)) return { by: 'wait', reason: 'agent_not_on', state: 'wait_switch_off' }
+  if (!aiConsentOk(lead, consentVersions)) return { by: 'blocked', reason: 'no_ai_consent', state: 'blocked_no_consent' }
+  if (predial && !predial.ok) {
+    const reason = predial.reason || 'predial'
+    if (WAIT_HOURS_REASONS.includes(reason)) return { by: 'wait', reason, state: 'wait_hours', nextAt: predial.next_at ?? null }
+    if (reason === 'no_phone') return { by: 'none', reason, state: null }
+    return { by: 'wait', reason, state: 'wait_retry' }
+  }
+  return { by: 'ai', reason: null, state: null }
 }
 
 // ── Transfer or book (same rule as the VA desk, P889 freshLeadRoute) ──────────────────────────────────────────────

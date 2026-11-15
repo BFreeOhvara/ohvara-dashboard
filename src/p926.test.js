@@ -65,8 +65,8 @@ function fakes({ test: t = null, live = false, attempt = 1 } = {}) {
     callByProvider: async () => ({ ...call }),
     lead: async () => ({ id: 'l1', first: 'Brayden', phone: '+15125550123', state: 'TX', tz: 'America/Chicago', need: 'Mortgage protection', age: '45-54', test: t }),
     agent: async () => ({ id: 'ag-t', first: 'Test', phone: '+15125550100', mode: 'appts', hours: {}, tz: 'America/Chicago', reachable: false }),
-    takes: async () => { log.push(['takes']); return { by: 'va', reason: 'consent' } },
-    toVa: async (_id, r) => { log.push(['toVa', r]); call.status = 'to_va' },
+    takes: async () => { log.push(['takes']); return { by: 'blocked', reason: 'consent' } },
+    notDialed: async (_id, r) => { log.push(['notDialed', r]); call.status = 'to_va' },
     status: async (_id, st, patch = {}) => { Object.assign(call, { status: st, ...Object.fromEntries(Object.entries(patch).filter(([, v]) => v != null)) }); return call },
     result: async (_id, o, p = {}) => { log.push(['result', o, p.summary]); call.status = 'done' },
     slots: async () => ['2026-11-11T16:00:00Z'],
@@ -88,7 +88,7 @@ function fakes({ test: t = null, live = false, attempt = 1 } = {}) {
 test('a real lead with the switch off still goes to a VA (unchanged); a test call dials with the switch off and skips the lead rules', async () => {
   const real = fakes()
   assert.equal((await real.start()).code, 'switch_off')
-  assert.deepEqual(real.log, [['toVa', 'switch_off']])
+  assert.deepEqual(real.log, [['notDialed', 'switch_off']])
   const t = fakes({ test: { check: null } })
   assert.equal((await t.start()).ok, true)
   assert.deepEqual(t.log, [['dial', '+15125550123', '+15125559999']])

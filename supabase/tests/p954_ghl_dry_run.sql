@@ -48,15 +48,15 @@ select is((select assigned_rep_id from public.leads where id = (select lead_id f
 select is(public.ghl_intake_lead(jsonb_build_object('intake_key', 'p954-lead-1', 'phone', '(214) 555-0154', 'state', 'TX',
             'agent_id', (select code from p954)))->>'lead_id', (select lead_id::text from p954_lead), '2c a GHL retry saves nothing twice');
 -- The form's consent line, as GHL sends it. Live has only mp-v1 (covers_ai false), so until Jordan's form carries the AI
--- sentence and CC registers that version (Brayden's yes), every lead goes to the VAs: 2d2 proves that, 2e the step after.
+-- sentence and CC registers that version (Brayden's yes), every lead is blocked and admins are told (P1014; never a VA): 2d2 proves that, 2e the step after.
 update public.leads set qualifier_answers = coalesce(qualifier_answers, '{}'::jsonb)
        || jsonb_build_object('consent_at', now()::text, 'consent_text_version', 'mp-v1'),
        lead_type = 'mortgage_protection', call_consent_at = null
  where id = (select lead_id from p954_lead);
-select is((select reason from public.ai_caller_takes((select lead_id from p954_lead))), 'switch_off', '2d AI caller off: the VAs call it');
+select is((select reason from public.ai_caller_takes((select lead_id from p954_lead))), 'switch_off', '2d AI caller off: the lead waits in line (P1014: never a VA)');
 update public.recovery_config set ai_caller_live = true;
 update public.ai_caller_settings set all_agents = true where id;
-select is((select reason from public.ai_caller_takes((select lead_id from p954_lead))), 'no_ai_consent', '2d2 on, but mp-v1 doesn''t cover AI: still the VAs');
+select is((select reason from public.ai_caller_takes((select lead_id from p954_lead))), 'no_ai_consent', '2d2 on, but mp-v1 doesn''t cover AI: blocked, nobody calls');
 insert into public.ai_consent_versions (version, covers_ai) values ('ds-ai-v1', true);
 update public.leads set qualifier_answers = qualifier_answers || '{"consent_text_version":"ds-ai-v1"}'::jsonb where id = (select lead_id from p954_lead);
 select ok((select reason is null or reason not in ('not_form', 'test_account', 'switch_off', 'agent_not_on', 'no_ai_consent')

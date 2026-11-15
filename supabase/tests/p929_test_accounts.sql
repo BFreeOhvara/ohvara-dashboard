@@ -84,13 +84,13 @@ select pg_temp.as_owner();
 update public.va_presence set idle_since = now() - interval '30 minutes' where user_id = 'e9290000-0000-4000-8000-000000000002';
 update public.va_presence set idle_since = now() - interval '5 minutes' where user_id = 'e9290000-0000-4000-8000-000000000001';
 insert into public.call_queue (id, kind, priority, lead_id, phone, name, status)
-values ('a9290000-0000-4000-8000-000000000002', 'new_lead', 1, 'c9290000-0000-4000-8000-000000000002', '+15125550182', 'Rory Lead', 'waiting');
+values ('a9290000-0000-4000-8000-000000000002', 'inbound', 0, 'c9290000-0000-4000-8000-000000000002', '+15125550182', 'Rory Lead', 'waiting');
 select is(public.route_offer('a9290000-0000-4000-8000-000000000002'), 'e9290000-0000-4000-8000-000000000001'::uuid,
-  'c2 a real lead rings the real VA even though the test VA has been free longer');
+  'c2 a real lead''s call rings the real VA even though the test VA has been free longer (P1014: inbound; new leads never ring a VA)');
 insert into public.call_queue (id, kind, priority, lead_id, phone, name, status)
-values ('a9290000-0000-4000-8000-000000000001', 'new_lead', 1, 'c9290000-0000-4000-8000-000000000001', '+15125550181', 'Tina Lead', 'waiting');
+values ('a9290000-0000-4000-8000-000000000001', 'inbound', 0, 'c9290000-0000-4000-8000-000000000001', '+15125550181', 'Tina Lead', 'waiting');
 select is(public.route_offer('a9290000-0000-4000-8000-000000000001'), 'e9290000-0000-4000-8000-000000000002'::uuid,
-  'c3 a test agent''s lead rings only the test VA');
+  'c3 a test agent''s lead''s call rings only the test VA');
 
 -- ── d. the lead desk ──────────────────────────────────────────────────────────────────────────────────────────────
 insert into public.leads (id, business_name, contact_name, phone, state, lead_type, lead_source, created_at)
