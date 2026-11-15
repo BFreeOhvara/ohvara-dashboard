@@ -13,7 +13,6 @@ import {
 import { fullName } from '../../lib/policyFormat'
 import { callWhen, callAt } from '../../lib/scheduling'
 import { SUBSTATUS_LABEL, tabOf, useNow } from '../../lib/agentBookings'
-import { excludeTestAccounts } from '../../lib/testAccounts'
 import { slideOut } from '../../lib/daySlide'
 import { inboundPath } from '../../lib/inbounds'
 import { SUPPORT_NAME } from '../../template/support911'
@@ -235,7 +234,7 @@ export default function Activity() {
   // Before migration 185 is applied (fromFunction false) an agent's finished inbound steps
   // join the feed as before; the function returns them as lead, text, call and outcome rows.
   const extra = !isAdmin && events.data && !events.data.fromFunction ? inbound.items.map(i => ({ ...i, target: 'lead', pill: 'Lead update' })) : []
-  const feed = isAdmin ? excludeTestAccounts(all, profile?.id, 'agentId') : [...all, ...extra]
+  const feed = isAdmin ? all : [...all, ...extra] // P1013: the server drops test accounts and non-paying sign-ups (migration 276)
 
   // The type filter (kept in the URL like the open client) narrows the day's rows.
   const selected = parseSelected(params.get('types'))

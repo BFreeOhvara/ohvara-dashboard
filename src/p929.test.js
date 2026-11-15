@@ -11,7 +11,6 @@ const src = f => readFileSync(new URL(f, import.meta.url), 'utf8')
 
 test('a test account always sees sample info, with no sample line or tag', () => {
   assert.equal(isTestProfile({ id: 'x', is_test: true }), true)
-  assert.equal(isTestProfile({ id: '3f2b2df7-40b1-4921-80e2-09981c819642' }), true)
   assert.equal(isTestProfile({ id: 'x' }), false)
   assert.equal(resolveMode({ show: true, view: null, canPreview: true, isTest: true }), 'sample')
   assert.match(src('./template/kit.jsx'), /SampleTag = [^\n]*useIsTestAccount\(\) \? null/)

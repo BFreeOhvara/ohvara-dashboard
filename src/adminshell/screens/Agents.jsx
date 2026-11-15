@@ -135,7 +135,7 @@ function PlanBudget({ a }) {
 function AgentDrawer({ id, onClose }) {
   const { data: listed } = useAdmAgents()
   const { data: idle = [] } = useAdmIdleSignups()
-  const agents = [...listed, ...idle] // P999: a "Signed up, not active" row opens here too
+  const agents = [...listed, ...idle] // P999: a "Signed up, not paying" row opens here too
   const { data: leads } = useAdmLeads()
   const { setAgentActive, setServicing, setAccess, setRole } = useAdmActions()
   const note = useNote()
@@ -222,7 +222,7 @@ export default function Agents() {
           { key: 'booking', label: 'Booking only', count: agents.filter(a => hasLeads(a) && !a.active).length }, { key: 'due', label: 'Past due', count: agents.filter(a => a.billing.status === 'past_due').length },
           { key: 'paused', label: 'Leads paused', count: agents.filter(a => a.paused).length },
           // P999: people who signed up and did nothing; hidden from every other view.
-          ...(idle.length ? [{ key: 'idle', label: 'Signed up, not active', count: idle.length }] : []),
+          ...(idle.length ? [{ key: 'idle', label: 'Signed up, not paying', count: idle.length }] : []),
         ]} />
         <span className="tp-grow" />
         <Dropdown className="adm-dd-sm" label="Sort" value={sort} options={SORTS} onChange={setSort} />
@@ -236,7 +236,7 @@ export default function Agents() {
           return (
             // P945: the whole row opens the agent (hover highlights it); the switch and links inside still do their own job.
             <div key={a.id} className="adm-tr is-click" style={{ '--i': i }} onClick={e => { if (!e.target.closest('a, button, input, label, [role="switch"]')) openAgent(a.id) }}>
-              <Link to={ap('agents', a.id)} className="adm-who"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>{a.city}, {a.state} · {a.paused ? `leads paused${a.paused.until ? ` until ${a.paused.until}` : ''}` : a.access ? `on ${a.lastOn}` : 'access off'}</small><ProductChips a={a} /></span></Link>
+              <Link to={ap('agents', a.id)} className="adm-who"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>{a.idle ? `Signed up ${a.joined || 'recently'}${a.city ? ` · ${a.city}${a.state ? `, ${a.state}` : ''}` : ''}` : <>{a.city}, {a.state} · {a.paused ? `leads paused${a.paused.until ? ` until ${a.paused.until}` : ''}` : a.access ? `on ${a.lastOn}` : 'access off'}</>}</small><ProductChips a={a} /></span></Link>
               {line.leads
                 ? <span className="adm-cell"><b>{a.comped ? 'Comped' : line.label}</b><small>{money(a.spend)} a day + {feeWords}{a.paused ? ' · paused' : ''}{a.planNext ? ` · ${PLANS[a.planNext.key].label} from ${a.planNext.on.replace(/^\w+, /, '')}` : ''}</small></span>
                 : <span className="adm-cell"><b>{a.comped ? 'Comped' : line.label}</b><small>{line.sub}</small></span>}

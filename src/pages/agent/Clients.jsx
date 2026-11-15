@@ -14,7 +14,6 @@ import { fmtBooking, callWhen, clientSlotISO, slotState, openBookingIsos, dayIn,
 import { bookingCarrier, viewerHoursSummary } from '../../lib/carriers'
 import { viewerTimezone, DEFAULT_TIMEZONE } from '../../lib/timezones'
 import { isLive, agentStageOf, stageOf, tabOf, canRebook, PIPELINE_TABS, PROGRESS_TABS, sideOfTab, RANGES, SUBSTATUS_LABEL, SUBMITTED_LABEL, isSubmittedOnly, reviewCallLine, digits, useNow, startOfWeek, startOfMonth, placeOf } from '../../lib/agentBookings'
-import { excludeTestAccounts } from '../../lib/testAccounts'
 import { usePhoneLayout } from '../../hooks/usePhoneLayout'
 import { PhoneClients } from '../../components/agent/phone/PhoneClients'
 import { PhoneClientSheet } from '../../components/agent/phone/PhoneClientSheet'
@@ -111,7 +110,7 @@ export default function Clients() {
   const { data: raw = [], isLoading, isError, refetch } = useAgentBookings(isAdmin ? null : profile?.id)
   // P778 — a failed load says so (not "No clients yet"), on both layouts.
   const loadError = isError ? <LoadError what="your clients" onRetry={() => refetch()} /> : null
-  const rows = useMemo(() => (isAdmin ? excludeTestAccounts(raw, profile?.id) : raw), [raw, isAdmin, profile?.id])
+  const rows = raw // P1013: test accounts' clients never reach an admin (policies demo wall, migration 260)
 
   // Looked up from every row, not the tab's list, so a link from Overview
   // opens its client whichever tab is selected.

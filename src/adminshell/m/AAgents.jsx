@@ -13,7 +13,7 @@ import { useMessageTo } from './useAdm'
 // opens from the right: who they are and what they buy, a flag banner if anything's wrong, their numbers, billing (view
 // only: plan and price changes are done on the desktop), access (read only), recent activity, Message and Call.
 // P1002: Find an agent (name, email, phone or city), the desktop's filter pills (All · Take transfers · Booking only ·
-// Past due · Leads paused · Signed up, not active, each with its count) and Invites out (Resend, Cancel).
+// Past due · Leads paused · Signed up, not paying, each with its count) and Invites out (Resend, Cancel).
 export default function AAgents() {
   const app = useApp()
   const note = useNote()
@@ -30,11 +30,11 @@ export default function AAgents() {
   const keep = a => (filter === 'all' || (filter === 'duty' && a.active) || (filter === 'booking' && hasLeads(a) && !a.active) || (filter === 'due' && a.billing.status === 'past_due') || (filter === 'paused' && a.paused))
   const found = (filter === 'idle' ? idle : agents).filter(a => (filter === 'idle' || keep(a)) && (!n || `${a.name} ${a.email} ${a.phone} ${a.city}`.toLowerCase().includes(n)))
   // P999: sign-ups that did nothing sit behind their own pill.
-  const groups = filter === 'idle' ? [{ key: 'idle', label: 'Signed up, not active', items: found }] : agentGroups(found, 'all', day.todayIso)
+  const groups = filter === 'idle' ? [{ key: 'idle', label: 'Signed up, not paying', items: found }] : agentGroups(found, 'all', day.todayIso)
   const pills = [
     ['all', 'All', agents.length], ['duty', 'Take transfers', agents.filter(a => a.active).length], ['booking', 'Booking only', agents.filter(a => hasLeads(a) && !a.active).length],
     ['due', 'Past due', agents.filter(a => a.billing.status === 'past_due').length], ['paused', 'Leads paused', agents.filter(a => a.paused).length],
-    ...(idle.length ? [['idle', 'Signed up, not active', idle.length]] : []),
+    ...(idle.length ? [['idle', 'Signed up, not paying', idle.length]] : []),
   ]
   const out = invites.filter(i => i.role === 'agent')
   return (
@@ -63,7 +63,7 @@ export default function AAgents() {
                 {g.items.map(a => (
                   <button key={a.id} type="button" className="ma-row" onClick={() => app.openSub('agent', { t: a.id })}>
                     <Ini person name={a.name} size={44} />
-                    <span className="ma-grow"><b>{a.name}</b><small>{planLineOf(a, PLANS).label}{buysLeads(a) ? <> · <span className="tp-money">{money(a.spend)}</span> a day</> : ''}</small><small>{statusLine(a)}</small></span>
+                    <span className="ma-grow"><b>{a.name}</b><small>{planLineOf(a, PLANS).label}{buysLeads(a) ? <> · <span className="tp-money">{money(a.spend)}</span> a day</> : ''}</small><small>{a.idle ? `Signed up ${a.joined || 'recently'}` : statusLine(a)}</small></span>
                     <ChevronRight size={18} className="ma-chev" aria-hidden="true" />
                   </button>
                 ))}
@@ -94,7 +94,7 @@ export default function AAgents() {
 export function AAgent({ id }) {
   const { data: listed } = useAdmAgents()
   const { data: idle = [] } = useAdmIdleSignups()
-  const agents = [...listed, ...idle] // P999: a "Signed up, not active" row opens here too
+  const agents = [...listed, ...idle] // P999: a "Signed up, not paying" row opens here too
   const { data: clients } = useAdmClients()
   const { data: leads } = useAdmLeads()
   const { data: audit } = useAdmAudit()
