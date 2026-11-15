@@ -1,0 +1,288 @@
+{
+ "phone-light-slow": {
+  "themes": [
+   "light"
+  ],
+  "log": [
+   {
+    "key": "false|0",
+    "at": 613,
+    "area": false,
+    "phone": true,
+    "top": 0,
+    "left": 0,
+    "w": 390,
+    "h": 844,
+    "bg": "linear-gradient(135deg, rgb(201, 215, 232) 0%, rgb(230, 233,",
+    "body": "rgb(10, 31, 68)",
+    "wing": "rgb(0, 191, 166)",
+    "word": "none",
+    "wingAnim": "ol-wing",
+    "barAnim": "ol-bar",
+    "header": null,
+    "off": 5888,
+    "handoff": true
+   },
+   {
+    "key": "true|0",
+    "at": 5888,
+    "area": true,
+    "phone": true,
+    "top": 0,
+    "left": 0,
+    "w": 390,
+    "h": 844,
+    "bg": "linear-gradient(135deg, rgb(201, 215, 232) 0%, rgb(230, 233,",
+    "body": "rgb(10, 31, 68)",
+    "wing": "rgb(0, 191, 166)",
+    "word": "none",
+    "wingAnim": "ol-wing",
+    "barAnim": "ol-bar",
+    "header": null,
+    "off": 7617
+   }
+  ],
+  "left": 0,
+  "errors": []
+ },
+ "phone-dark-slow": {
+  "themes": [
+   "dark"
+  ],
+  "log": [
+   {
+    "key": "false|0",
+    "at": 359,
+    "area": false,
+    "phone": true,
+    "top": 0,
+    "left": 0,
+    "w": 390,
+    "h": 844,
+    "bg": "linear-gradient(160deg, rgb(43, 50, 56) 0%, rgb(26, 31, 35) ",
+    "body": "rgb(0, 191, 166)",
+    "wing": "rgb(255, 255, 255)",
+    "word": "none",
+    "wingAnim": "ol-wing",
+    "barAnim": "ol-bar",
+    "header": null,
+    "off": 2335,
+    "handoff": true
+   },
+   {
+    "key": "true|0",
+    "at": 2335,
+    "area": true,
+    "phone": true,
+    "top": 0,
+    "left": 0,
+    "w": 390,
+    "h": 844,
+    "bg": "linear-gradient(160deg, rgb(43, 50, 56) 0%, rgb(26, 31, 35) ",
+    "body": "rgb(0, 191, 166)",
+    "wing": "rgb(255, 255, 255)",
+    "word": "none",
+    "wingAnim": "ol-wing",
+    "barAnim": "ol-bar",
+    "header": null,
+    "off": 4041
+   }
+  ],
+  "left": 0,
+  "errors": []
+ },
+ "phone-unsaved-device-light": {
+  "themes": [
+   "light"
+  ],
+  "log": [
+   {
+    "key": "false|0",
+    "at": 346,
+    "area": false,
+    "phone": true,
+    "top": 0,
+    "left": 0,
+    "w": 390,
+    "h": 844,
+    "bg": "linear-gradient(135deg, rgb(201, 215, 232) 0%, rgb(230, 233,",
+    "body": "rgb(10, 31, 68)",
+    "wing": "rgb(0, 191, 166)",
+    "word": "none",
+    "wingAnim": "ol-wing",
+    "barAnim": "ol-bar",
+    "header": null,
+    "off": 2329,
+    "handoff": true
+   },
+   {
+    "key": "true|0",
+    "at": 2329,
+    "area": true,
+    "phone": true,
+    "top": 0,
+    "left": 0,
+    "w": 390,
+    "h": 844,
+    "bg": "linear-gradient(135deg, rgb(201, 215, 232) 0%, rgb(230, 233,",
+    "body": "rgb(10, 31, 68)",
+    "wing": "rgb(0, 191, 166)",
+    "word": "none",
+    "wingAnim": "ol-wing",
+    "barAnim": "ol-bar",
+    "header": null,
+    "off": 4038
+   }
+  ],
+  "left": 0,
+  "errors": []
+ },
+ "phone-unsaved-device-dark": {
+  "themes": [
+   "dark"
+  ],
+  "log": [
+   {
+    "key": "false|0",
+    "at": 342,
+    "area": false,
+    "phone": true,
+    "top": 0,
+    "left": 0,
+    "w": 390,
+    "h": 844,
+    "bg": "linear-gradient(160deg, rgb(43, 50, 56) 0%, rgb(26, 31, 35) ",
+    "body": "rgb(0, 191, 166)",
+    "wing": "rgb(255, 255, 255)",
+    "word": "none",
+    "wingAnim": "ol-wing",
+    "barAnim": "ol-bar",
+    "header": null,
+    "off": 2313,
+    "handoff": true
+   },
+   {
+    "key": "true|0",
+    "at": 2313,
+    "area": true,
+    "phone": true,
+    "top": 0,
+    "left": 0,
+    "w": 390,
+    "h": 844,
+    "bg": "linear-gradient(160deg, rgb(43, 50, 56) 0%, rgb(26, 31, 35) ",
+    "body": "rgb(0, 191, 166)",
+    "wing": "rgb(255, 255, 255)",
+    "word": "none",
+    "wingAnim": "ol-wing",
+    "barAnim": "ol-bar",
+    "header": null,
+    "off": 4030
+   }
+  ],
+  "left": 0,
+  "errors": []
+ },
+ "phone-system-light": {
+  "themes": [
+   "light"
+  ],
+  "log": [
+   {
+    "key": "false|0",
+    "at": 337,
+    "area": false,
+    "phone": true,
+    "top": 0,
+    "left": 0,
+    "w": 390,
+    "h": 844,
+    "bg": "linear-gradient(135deg, rgb(201, 215, 232) 0%, rgb(230, 233,",
+    "body": "rgb(10, 31, 68)",
+    "wing": "rgb(0, 191, 166)",
+    "word": "none",
+    "wingAnim": "ol-wing",
+    "barAnim": "ol-bar",
+    "header": null,
+    "off": 2311,
+    "handoff": true
+   },
+   {
+    "key": "true|0",
+    "at": 2311,
+    "area": true,
+    "phone": true,
+    "top": 0,
+    "left": 0,
+    "w": 390,
+    "h": 844,
+    "bg": "linear-gradient(135deg, rgb(201, 215, 232) 0%, rgb(230, 233,",
+    "body": "rgb(10, 31, 68)",
+    "wing": "rgb(0, 191, 166)",
+    "word": "none",
+    "wingAnim": "ol-wing",
+    "barAnim": "ol-bar",
+    "header": null,
+    "off": 4020
+   }
+  ],
+  "left": 0,
+  "errors": []
+ },
+ "phone-light-reduce": {
+  "themes": [
+   "light"
+  ],
+  "log": [
+   {
+    "key": "false|0",
+    "at": 339,
+    "area": false,
+    "phone": true,
+    "top": 0,
+    "left": 0,
+    "w": 390,
+    "h": 844,
+    "bg": "linear-gradient(135deg, rgb(201, 215, 232) 0%, rgb(230, 233,",
+    "body": "rgb(10, 31, 68)",
+    "wing": "rgb(0, 191, 166)",
+    "word": "none",
+    "wingAnim": "none",
+    "barAnim": "ol-bar",
+    "header": null,
+    "off": 2319,
+    "handoff": true
+   },
+   {
+    "key": "true|0",
+    "at": 2319,
+    "area": true,
+    "phone": true,
+    "top": 0,
+    "left": 0,
+    "w": 390,
+    "h": 844,
+    "bg": "linear-gradient(135deg, rgb(201, 215, 232) 0%, rgb(230, 233,",
+    "body": "rgb(10, 31, 68)",
+    "wing": "rgb(0, 191, 166)",
+    "word": "none",
+    "wingAnim": "none",
+    "barAnim": "ol-bar",
+    "header": null,
+    "off": 4027
+   }
+  ],
+  "left": 0,
+  "errors": []
+ },
+ "intro-light": {
+  "bg": "rgb(230, 233, 230)",
+  "front": "#0A1F44",
+  "wing": "#00BFA6"
+ },
+ "intro-dark": {
+  "bg": "rgb(10, 31, 68)",
+  "front": "#00BFA6",
+  "wing": "#FFFFFF"
+ }
+}
