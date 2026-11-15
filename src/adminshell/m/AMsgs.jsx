@@ -7,6 +7,7 @@ import { runsOf } from '../../template/m/appModel'
 import { shortAt } from '../../template/m/threadStore'
 import { firstName } from '../../template/m/va/vaModel'
 import { useAdmChats, admChats, isLocalChat, JORDAN_THREAD } from './admStore'
+import { NO_CONV, NO_CONV_SUB } from '../../template/msgsEmptyText.js'
 
 // P986 — Messages, the same as the agent and VA apps: threads straight on the page, a chat opens from the right with
 // bubbles, tails and the send button inside the field. Jordan (the other admin) is pinned at the top, then the team
@@ -44,7 +45,7 @@ export default function AMsgs() {
         {WHO.map(([k, w]) => <button key={k} type="button" role="tab" aria-selected={who === k} className={`is-sky${who === k ? ' is-on' : ''}`} onClick={() => setWho(k)}>{w}</button>)}
       </div>
       <div className="ma-threads ma-rise" style={rise(0)}>
-        {!threads.length && <p className="ma-empty is-glass">{all.length ? 'Nobody by that name.' : 'Nobody has written yet.'}</p>}
+        {!threads.length && (all.length ? <p className="ma-empty is-glass">Nobody by that name.</p> : <p className="ma-empty is-glass" role="status"><b>{NO_CONV}</b><br />{NO_CONV_SUB.admin}</p>)}
         {threads.map(t => {
           const last = t.messages?.at(-1)
           const unread = t.unread > 0

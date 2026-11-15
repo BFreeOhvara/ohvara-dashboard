@@ -49,3 +49,14 @@ test('migration 276: the directory, Messages lines and people lists are filtered
     assert.match(m, new RegExp(`rename to ${f}_p1013`), f)
   }
 })
+
+test('Messages keeps its full box with no conversations: list note + "Pick a conversation", every role, desktop and phone', () => {
+  for (const f of ['./adminshell/screens/Messages.jsx', './template/screens/Messages.jsx', './template/ful/screens/Messages.jsx']) {
+    const s = src(f)
+    assert.doesNotMatch(s, /if \(!t\) return/, f)
+    assert.match(s, /<PickConversation \/>/, f)
+    assert.match(s, /<ListEmpty who=/, f)
+  }
+  for (const f of ['./adminshell/m/AMsgs.jsx', './template/m/AMessages.jsx', './template/m/va/VMessages.jsx']) assert.match(src(f), /NO_CONV_SUB\.(admin|agent|va)/, f)
+  assert.doesNotMatch(src('./adminshell/screens/Messages.jsx') + src('./adminshell/m/AMsgs.jsx'), /Nobody has written yet/)
+})

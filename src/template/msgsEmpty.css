@@ -1,0 +1,8 @@
+/* P1013 follow-up: Messages with no conversations keeps its box (tokens only, both themes). */
+.tp-msgs-empty { padding: 28px 16px; }
+.tp-msgs-empty b { font-size: 14px; }
+.tp-msgs-empty span { font-size: 13px; line-height: 1.45; }
+.tp-conv-pick { flex: 1 1 auto; min-height: 220px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 32px 20px; text-align: center; color: var(--ov-mute); }
+.tp-conv-pick svg { color: var(--ov-mute); opacity: 0.7; margin-bottom: 4px; }
+.tp-conv-pick b { font-size: 15px; }
+.tp-conv-pick span { font-size: 13px; }
