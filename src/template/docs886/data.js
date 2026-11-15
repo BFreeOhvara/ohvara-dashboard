@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { pickChannel, addressFor, faxDigits, validEmail, MAX_ATTEMPTS } from '../../lib/documents.js'
 import { replacementGate, cancelDueBy, shortDate } from '../../lib/clientCheck.js'
+import { useAccount } from '../kit'
 
 // P886 — documents on a policy, sample only (the sample day is Thu, Nov 5). One store shared by the VA side, the agent
 // side and the /sign page, keyed by the client's name so both sides see the same papers. Nothing leaves the browser:
@@ -73,6 +74,23 @@ const listeners = new Set()
 const set = fn => { state = { ...state, ...fn(state) }; listeners.forEach(l => l()) }
 const subscribe = fn => { listeners.add(fn); return () => listeners.delete(fn) }
 const useStore = () => useSyncExternalStore(subscribe, () => state)
+// P1017: a real account never sees the sample seed: no seeded papers, no seeded replacement gates, and no made-up
+// carrier fax numbers or emails (the real ones come from carriers.docs_* once docsApi is wired).
+const SEED_DOC_IDS = new Set(Object.values(seedDocs).flat().map(d => d.id))
+const NO_CARRIERS = {}
+const NO_GATES = {}
+let realCache = { from: null, view: null }
+const realView = st => {
+  if (realCache.from === st) return realCache.view
+  const docs = Object.fromEntries(Object.entries(st.docs).map(([who, list]) => [who, list.filter(d => !SEED_DOC_IDS.has(d.id))]))
+  realCache = { from: st, view: { ...st, carriers: NO_CARRIERS, gates: NO_GATES, docs } }
+  return realCache.view
+}
+const useView = () => {
+  const real = useAccount()?.view?.mode === 'real'
+  const st = useStore()
+  return real ? realView(st) : st
+}
 
 const gateOf = (s, who) => {
   const g = replacementGate(s.gates[who])
@@ -82,9 +100,9 @@ const gateOf = (s, who) => {
 }
 const carrierOf = (s, name) => ({ name, docs_channels: [], ...(s.carriers[name] || {}) })
 
-export function useDocs(who) { const s = useStore(); return { docs: s.docs[who] || [], gate: gateOf(s, who) } }
-export function useGate(who) { const s = useStore(); return gateOf(s, who) }
-export function useCarrierDocs(name) { const s = useStore(); return carrierOf(s, name) }
+export function useDocs(who) { const s = useView(); return { docs: s.docs[who] || [], gate: gateOf(s, who) } }
+export function useGate(who) { const s = useView(); return gateOf(s, who) }
+export function useCarrierDocs(name) { const s = useView(); return carrierOf(s, name) }
 // The /sign page: find the signer by their link.
 export function useByToken(token) {
   const s = useStore()

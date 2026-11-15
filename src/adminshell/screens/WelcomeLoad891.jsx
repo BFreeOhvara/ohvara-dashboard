@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { Minus, Plus, UserPlus } from 'lucide-react'
-import { Avatar, Chip, SampleTag, useNote } from '../../template/kit'
+import { Avatar, Chip, Empty, SampleTag, useNote } from '../../template/kit'
+import { useAdmSource } from '../data'
 import { spreadWelcomes } from '../../lib/bookImport.js'
 import '../../template/p891.css'
 
@@ -21,8 +22,11 @@ const setState = fn => { state = { ...state, ...fn(state) }; subs.forEach(l => l
 const useWelcome = () => useSyncExternalStore(f => { subs.add(f); return () => subs.delete(f) }, () => state)
 
 export function WelcomeLoad() {
-  const s = useWelcome()
+  const w = useWelcome()
   const note = useNote()
+  // P1017: the agents below are sample people; real has none until admin_welcome_backlog() is wired.
+  const real = useAdmSource() === 'real'
+  const s = real ? { ...w, agents: [] } : w
   const total = s.agents.reduce((t, a) => t + a.waiting, 0)
   // Days to clear what's waiting at this cap (the server spreads them the same way).
   const days = total ? Math.max(...spreadWelcomes(total, s.perDay)) + 1 : 0
@@ -30,7 +34,7 @@ export function WelcomeLoad() {
   return (
     <section className="fx-tile adm-steps" style={{ '--i': 0 }} aria-label="Welcome calls waiting">
       <header className="fx-tile-h">
-        <span className="tp-grow"><h2>Welcome calls waiting <SampleTag>Sample</SampleTag></h2><p>{total} clients agents added · about {days} business day{days === 1 ? '' : 's'} to clear at this pace</p></span>
+        <span className="tp-grow"><h2>Welcome calls waiting {!real && <SampleTag>Sample</SampleTag>}</h2><p>{total} clients agents added · about {days} business day{days === 1 ? '' : 's'} to clear at this pace</p></span>
         <div className="wl-cap" role="group" aria-label="Welcome calls a day">
           <span>A day</span>
           <button type="button" className="tp-icbtn" aria-label="Fewer a day" onClick={() => step(-5)}><Minus size={15} /></button>
@@ -39,6 +43,7 @@ export function WelcomeLoad() {
           <button type="button" className="tp-btn ov-ghost" onClick={() => note(`Welcome calls a day set to ${s.perDay}. New imports spread at this pace`)}>Save</button>
         </div>
       </header>
+      {real && <Empty title="No welcome calls waiting" sub="Clients an agent adds or imports show here until their welcome call." />}
       <ul className="tp-list adm-rows">{s.agents.map(a => (
         <li key={a.id} className="adm-step">
           <Avatar name={a.name} tone={a.overdue ? 'warn' : 'blue'} />

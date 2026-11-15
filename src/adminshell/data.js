@@ -373,6 +373,16 @@ const PERIOD_COSTS = {
 }
 export const AI_RATE = 0.13 // $ a minute all in (Retell, src/lib/aiCaller.js "expect about $0.13")
 export const PERIODS = [['week', 'This week', 'Mon, Nov 2 to today'], ['month', 'This month', 'Nov 1 to today'], ['last', 'Last month', 'October']]
+// P1017: the period's date span. Sample keeps the sample week; a real account reads its own clock, never Nov 2.
+export function periodSpan(period, real, now = new Date()) {
+  const row = PERIODS.find(x => x[0] === period) || PERIODS[0]
+  if (!real) return row[2]
+  if (row[0] === 'last') return new Date(now.getFullYear(), now.getMonth() - 1, 1).toLocaleDateString('en-US', { month: 'long' })
+  if (row[0] === 'month') return `${now.toLocaleDateString('en-US', { month: 'short' })} 1 to today`
+  const mon = new Date(now)
+  mon.setDate(now.getDate() - ((now.getDay() + 6) % 7))
+  return `${mon.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} to today`
+}
 export const CARD_FEE = PRICES.cardFee // P884/P901: from the one price source
 
 const seedThreads = [
@@ -619,9 +629,15 @@ const fromSample = r => ({ id: r.id, who: r.ctx.who, role: r.ctx.role, text: r.t
 export const bugsWithSent = (bugs, sent) => [...sent.map(fromSample), ...bugs]
 export const feedWithSent = (feed, sent) => [...sent.map(r => ({ id: `fb-${r.id}`, who: r.ctx.who, text: `Reported a bug: ${r.text}`, at: bugWhen(r.ctx.at), kind: 'bug' })), ...feed]
 export const openBugCount = (bugs, sent) => [...bugs, ...sent].filter(b => b.status !== 'fixed').length
-export function useAdmFeed() { const s = useS(); const sent = useSampleBugs(); return okS(s, feedWithSent(s.feed, sent)) }
+// P1017: the real payday is the coming Monday (the payout run day), never the sample date.
+export function nextMonday(now = new Date()) {
+  const d = new Date(now); d.setDate(d.getDate() + (((8 - d.getDay()) % 7) || 7))
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+}
+// P1017: bugs filed from a sample page live in this browser only; real mode never mixes them in.
+export function useAdmFeed() { const s = useS(); const sent = useSampleBugs(); return okS(s, feedWithSent(s.feed, s.real ? [] : sent)) }
 export function useAdmSettings() { const s = useS(); return okS(s, s.settings) }
-export function useAdmBugs() { const s = useS(); const sent = useSampleBugs(); return okS(s, bugsWithSent(s.bugs, sent)) }
+export function useAdmBugs() { const s = useS(); const sent = useSampleBugs(); return okS(s, bugsWithSent(s.bugs, s.real ? [] : sent)) }
 export function useAdmAudit() { const s = useS(); return okS(s, s.audit) }
 export function useAdmConnect() { const s = useS(); return okS(s, s.connect) }
 // P906 — Setup: one ticket per agent who has paid (setup fee + first days of spend). Unpaid sign-ups aren't here.
@@ -663,7 +679,7 @@ export function useAdmMoney() {
   const runTotal = run.filter(r => r.bank === 'ready').reduce((t, r) => t + r.amount, 0)
   return okS(s, {
     plans, leadsCharged, leadSpend: leadsCharged, leadFee, setup: setupWeek, total: plans + leadFee + setupWeek, lastWeek: s.revenue.length ? revOf(s.revenue[s.revenue.length - 1]) : 0, weeks, days,
-    failed, run, runTotal, runs: s.runs, payday: 'Mon, Nov 9',
+    failed, run, runTotal, runs: s.runs, payday: s.real ? nextMonday() : 'Mon, Nov 9',
     stripeBalance: s.real ? s.stripeBalance : 2140, rate, paused: s.settings.payoutsPaused, live: s.settings.switches.payouts_live,
     adSpend: s.connect.ads.reduce((t, a) => t + a.spent, 0), adBudget: s.connect.ads.reduce((t, a) => t + a.budget, 0),
   })
@@ -897,12 +913,32 @@ const SAMPLE_ACTIONS = {
     setRole: (id, role) => set(s => {
       const a = s.agents.find(x => x.id === id)
       const v = s.vas.find(x => x.id === id)
-      const who = a || v
+      const admins = s.admins || seedAdmins
+      const ad = admins.find(x => x.id === id)
+      const who = a || v || (ad && { ...ad, role: 'admin' })
       if (!who || who.role === role) return {}
+      const roleWord = { agent: 'Agent', fulfillment: 'Fulfillment', admin: 'Admin' }[role]
+      // P1017: the owner makes someone an admin, or an admin back into an agent or Fulfillment.
+      if (role === 'admin') {
+        return { agents: s.agents.filter(x => x.id !== id), vas: s.vas.filter(x => x.id !== id), admins: [...admins, { id, name: who.name, email: who.email || '', owner: false, access: true, lastOn: 'Today' }], ...audit(s, 'Changed a role', `${who.name} to Admin`) }
+      }
+      if (ad) {
+        const list = role === 'agent' ? 'agents' : 'vas'
+        const base = role === 'agent'
+          ? { ...seedAgents[0], active: false, onDuty: false, spend: 0, states: ['TX'], billing: { status: 'current', next: 'Not set up', method: 'None yet', failed: null } }
+          : { ...seedVas[0], bank: 'none', missed: 0, hours: '9:00 AM to 5:00 PM' }
+        return { admins: admins.filter(x => x.id !== id), [list]: [...s[list], { ...base, id, name: ad.name, email: ad.email, role, access: true }], ...audit(s, 'Changed a role', `${ad.name} to ${roleWord}`) }
+      }
       const out = role === 'fulfillment'
         ? { agents: s.agents.filter(x => x.id !== id), vas: [...s.vas, { ...seedVas[0], ...who, role, id, bank: 'none', missed: 0, hours: '9:00 AM to 5:00 PM' }] }
         : { vas: s.vas.filter(x => x.id !== id), agents: [...s.agents, { ...seedAgents[0], ...who, role, id, active: false, onDuty: false, spend: 0, states: ['TX'], billing: { status: 'current', next: 'Not set up', method: 'None yet', failed: null } }] }
-      return { ...out, ...audit(s, 'Changed a role', `${who.name} to ${role === 'agent' ? 'Agent' : 'Fulfillment'}`) }
+      return { ...out, ...audit(s, 'Changed a role', `${who.name} to ${roleWord}`) }
+    }),
+    // P1017: change the role on a pending invite before it's used (Admin: the owner only).
+    setInviteRole: (id, role) => set(s => {
+      const inv = s.invites.find(i => i.id === id)
+      if (!inv || inv.role === role) return {}
+      return { invites: s.invites.map(i => (i.id === id ? { ...i, role } : i)), ...audit(s, 'Changed an invite', `${inv.name} to ${{ agent: 'Agent', fulfillment: 'Fulfillment', admin: 'Admin' }[role]}`) }
     }),
     invite: ({ name, role, via, to }) => set(s => {
       const id = `inv-${Date.now()}`

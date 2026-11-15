@@ -2,11 +2,12 @@ import { Database } from 'lucide-react'
 import { useAccount, useNote, Switch } from './kit'
 
 // P848 — the admin's own view of the data, in the avatar menu. It changes what this browser shows, never what anyone
-// else sees. account.view = { mode, canPreview, setView, show } (useDataMode).
+// else sees. account.view = { mode, canPreview, setView } (useDataMode).
 // P934 (Brayden, Nov 10): one compact pill toggle, "Sample info", the same pill as Preferences' toggles and the height
 // of one menu row (no two-option Sample / Real control). Admins only (canPreview, lib/dataMode.js): agents and VAs
-// have no view control. On = this admin sees the sample data; off = real data. It is not the company-wide
-// "Show sample data" switch in Settings › Go live, and it never turns sample data on for agents or VAs.
+// have no view control. On = this admin sees the sample data; off = real data (P1017: the default, saved per account on
+// the server by set_my_data_view). It never turns sample data on for anyone else.
+
 export default function ViewToggle() {
   const { view } = useAccount()
   const note = useNote()

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { Music, Play, Pause, Upload, Bot } from 'lucide-react'
 import { Chip, Switch, SampleTag, Empty, useNote } from '../../template/kit'
 import { Dropdown, DField } from '../kit'
-import { useAdmSettings } from '../data'
+import { useAdmSettings, useAdmSource } from '../data'
 import { usePlaybookState, playbookActions } from '../../template/ful/playbook932Store'
 import { FrontDeskNote } from '../../template/ful/Playbook932'
 import '../../template/ful/playbook932.css'
@@ -17,7 +17,7 @@ const EVERY = [45, 60, 90].map(v => ({ value: v, label: `Every ${v} seconds` }))
 const MAXW = [5, 10, 15].map(v => ({ value: v, label: `${v} minutes` }))
 
 export function HoldLineSettings() {
-  const s = usePlaybookState()
+  const s = usePlaybookState(useAdmSource() === 'real')
   const { data: adm } = useAdmSettings()
   const note = useNote()
   const h = s.hold

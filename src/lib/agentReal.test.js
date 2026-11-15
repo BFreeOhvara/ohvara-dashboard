@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { wallOf, weekOf, stageOfInbound, toLead, phoneText } from './agentReal.js'
-import { resolveMode, canPreviewReal, switchReady } from './dataMode.js'
+import { resolveMode, canPreviewReal } from './dataMode.js'
 
 test('wallOf puts an instant on the agent clock', () => {
   assert.equal(wallOf('2026-11-07T20:05:00Z', 'America/Chicago'), '2026-11-07T14:05')
@@ -60,19 +60,21 @@ test('phoneText formats US numbers', () => {
   assert.equal(phoneText(''), '')
 })
 
-test('the sample switch: on by default, admins and test accounts can preview', () => {
-  assert.equal(resolveMode({ show: undefined, view: null, canPreview: false }), 'sample')
-  assert.equal(resolveMode({ show: true, view: 'real', canPreview: false }), 'sample') // an agent can't override
-  assert.equal(resolveMode({ show: true, view: 'real', canPreview: true }), 'real')
-  assert.equal(resolveMode({ show: false, view: null, canPreview: false }), 'real')
-  assert.equal(resolveMode({ show: false, view: 'sample', canPreview: true }), 'sample')
+test('P1017: sample data only for test accounts; admins pick their own view, default real', () => {
+  assert.equal(resolveMode({ profile: null }), 'real') // loading or signed out: never sample
+  assert.equal(resolveMode({ profile: { role: 'agent' } }), 'real')
+  assert.equal(resolveMode({ profile: { role: 'fulfillment' } }), 'real')
+  assert.equal(resolveMode({ profile: { role: 'agent', data_view: 'sample' } }), 'real') // ignored for agents
+  assert.equal(resolveMode({ profile: { role: 'agent' }, view: 'sample' }), 'real') // an agent can't override
+  assert.equal(resolveMode({ profile: { role: 'agent', is_test: true } }), 'sample')
+  assert.equal(resolveMode({ profile: { role: 'fulfillment', is_test: true } }), 'sample')
+  assert.equal(resolveMode({ profile: { role: 'admin' } }), 'real') // admins default to real
+  assert.equal(resolveMode({ profile: { role: 'admin', data_view: 'sample' } }), 'sample')
+  assert.equal(resolveMode({ profile: { role: 'admin', data_view: 'sample' }, view: 'real' }), 'real')
+  assert.equal(resolveMode({ profile: { role: 'agent', is_test: true, deleted_at: '2026-11-15' } }), 'real')
   assert.equal(canPreviewReal({ role: 'admin', id: 'x' }), true)
   assert.equal(canPreviewReal({ role: 'agent', id: 'x' }), false)
-  // P934: test agents and the test VA no longer pick a view; only admins do
-  assert.equal(canPreviewReal({ role: 'agent', id: '3f2b2df7-40b1-4921-80e2-09981c819642' }), false)
-  assert.equal(canPreviewReal({ role: 'fulfillment', id: '402a7a07-c9b0-428f-9b9d-ff2b6480bed0' }), false)
-  assert.equal(switchReady({ id: 1 }), false)
-  assert.equal(switchReady({ id: 1, show_sample_data: true }), true)
+  assert.equal(canPreviewReal({ role: 'fulfillment', id: 'x', is_test: true }), false)
 })
 
 test('boughtOf counts the agent leads in the range: booked and transferred apart (P889)', async () => {

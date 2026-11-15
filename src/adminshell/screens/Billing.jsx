@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 're
 import { createPortal } from 'react-dom'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Check, CircleCheck, Landmark, ArrowUpRight, CreditCard, MessageSquare, RotateCw, Wallet, Megaphone, Headset, Receipt, BadgeDollarSign, PiggyBank, Lock, Bot } from 'lucide-react'
-import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, useAdmSettings, useAdmSource, useAdmAgentResults, useAdmRevTrend, ownerOf, OWNERS, PLANS, PERIODS, SETUP_FEE, CARD_FEE, AI_RATE } from '../data'
+import { useAdmMoney, useAdmAgents, useAdmActions, useAdmPeriod, useAdmDraws, useAdmSettings, useAdmSource, useAdmAgentResults, useAdmRevTrend, ownerOf, OWNERS, PLANS, PERIODS, periodSpan, SETUP_FEE, CARD_FEE, AI_RATE } from '../data'
 import { PRICES } from '../../lib/priceBook.js'
 import { deskAdminLabel } from '../../lib/bookingDesk'
 import { RecentCharges } from './Billing933'
@@ -396,7 +396,7 @@ export default function Billing() {
     <div className="tp-page fx-page adm-billing adm-rev">
       <div className="adm-money-bar">
         <Seg label="Period" value={period} onChange={v => put('period', v, 'week')} options={PERIODS.map(([k, label]) => ({ key: k, label }))} />
-        <small className="tp-sub">{span[2]} · {src === 'real' ? 'from billing' : 'sample numbers'}</small>
+        <small className="tp-sub">{periodSpan(span[0], src === 'real')} · {src === 'real' ? 'from billing' : 'sample numbers'}</small>
       </div>
       <Headline p={p} label={span[1]} />
       {/* P964: the profit split sits right under the revenue numbers, above the By week / Agent results box. */}

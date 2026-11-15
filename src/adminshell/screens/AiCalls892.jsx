@@ -213,19 +213,20 @@ export function AiCallsView() {
       <CallSheet c={open} real={real} onClose={() => setOpen(null)} />
       <p className="tp-sub"><Clock3 size={12} aria-hidden="true" /> Speed is from the form arriving to the first dial. Only no answer and booked start texts; the rest are recorded and sent to GoHighLevel.</p>
       <LeadFlows />
-      <LeadQuality />
+      <LeadQuality rows={real ? [] : SAMPLE_BAD_LEADS} real={real} />
     </section>
   )
 }
 
 // P902: wrong numbers (AI or VA first call) close the lead as a bad lead and land here, per agent, for a spend check.
 // Real rows: admin_lead_quality_view() (supabase/migrations/248_lead_outcomes.sql); sample until 904 applies it.
-export function LeadQuality({ rows = SAMPLE_BAD_LEADS }) {
+export function LeadQuality({ rows = SAMPLE_BAD_LEADS, real = false }) {
+  // P1017: real mode never shows the sample bad leads (real rows: admin_lead_quality_view, not wired yet).
   const byAgent = rows.reduce((m, r) => ({ ...m, [r.agent]: (m[r.agent] || 0) + 1 }), {})
   return (
     <section className="ai-quality" aria-label="Lead quality">
-      <div className="tp-row tp-wrap ai-view-h"><h2 className="fx-h3"><PhoneOff size={17} aria-hidden="true" />Lead quality · bad leads</h2><span className="tp-grow" /><SampleTag>Sample</SampleTag></div>
-      <p className="tp-sub">Closed on the first call as a wrong number or never asked. Check the agent{'’'}s ad spend if these pile up: {Object.entries(byAgent).map(([a, n]) => `${a} ${n}`).join(' · ')}.</p>
+      <div className="tp-row tp-wrap ai-view-h"><h2 className="fx-h3"><PhoneOff size={17} aria-hidden="true" />Lead quality · bad leads</h2><span className="tp-grow" />{!real && <SampleTag>Sample</SampleTag>}</div>
+      <p className="tp-sub">Closed on the first call as a wrong number or never asked. Check the agent{'’'}s ad spend if these pile up{rows.length ? `: ${Object.entries(byAgent).map(([a, n]) => `${a} ${n}`).join(' · ')}` : ''}.</p>
       {rows.length === 0 ? <Empty title="No bad leads" sub="Wrong numbers from the first call show here." /> : (
         <ul className="tp-list ai-rows">{rows.map(r => (
           <li key={r.lead_id} className="fx-mrow">

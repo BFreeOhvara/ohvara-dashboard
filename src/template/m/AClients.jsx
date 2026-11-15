@@ -81,7 +81,8 @@ function ClientsBody({ tab = false }) {
       <label className="ma-search is-small ma-rise" style={rise(1)}><Search size={18} aria-hidden="true" /><input type="search" aria-label="Find a client" placeholder="Name, phone or carrier" value={q} onChange={e => setQ(e.target.value)} />{q && <button type="button" className="ma-ib" aria-label="Clear" onClick={() => setQ('')}><X size={18} aria-hidden="true" /></button>}</label>
       {f !== 'all' && <button type="button" className="ma-link-btn is-left" onClick={() => setF('all')}>Show all clients</button>}
 
-      {merged.rows.length > 0 && (f === 'all' || f === 'needs_attention') && !searching && <div className="ma-checkwrap"><CheckCard key={merged.drafts.join()} m={merged} /></div>}
+      {/* P1017: a brand-new agent has no check lists yet (merged is null) */}
+      {merged?.rows?.length > 0 && (f === 'all' || f === 'needs_attention') && !searching && <div className="ma-checkwrap"><CheckCard key={merged.drafts.join()} m={merged} /></div>}
 
       {groups.map(g => (
         <section key={g.key} className="ma-cgroup" aria-label={g.label}>

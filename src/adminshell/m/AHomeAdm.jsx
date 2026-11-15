@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Bell, Search, ChevronRight, CalendarOff, CreditCard, UserPlus, Radio, PhoneCall } from 'lucide-react'
-import { useAdmDay, useAdmDesk, useAdmPeriod, useAdmMoney, useAdmAgents, useAdmActions, useAdmSource, useAdmSettings, useAdmCosts, PERIODS } from '../data'
+import { useAdmDay, useAdmDesk, useAdmPeriod, useAdmMoney, useAdmAgents, useAdmActions, useAdmSource, useAdmSettings, useAdmCosts, PERIODS, periodSpan } from '../data'
 import { PhoneClock } from '../../template/m/zone'
 import { minuteOf } from '../../lib/callSlots'
 import { useNote, useAccount } from '../../template/kit'
@@ -199,8 +199,9 @@ export function AMoney() {
   const me = useOwnerMe()
   const halves = useMemo(() => halvesOf(p.split, me), [p.split, me])
   const label = PERIODS.find(x => x[0] === period)
+  const realSpan = useAdmSource() === 'real'
   return (
-    <SubPage title="Money" line={`${label[1]} · ${label[2]}`} big>
+    <SubPage title="Money" line={`${label[1]} · ${periodSpan(label[0], realSpan)}`} big>
       <div className="ma-seg am-seg ma-rise" role="tablist" aria-label="Period">
         {PERIODS.map(([k, w]) => <button key={k} type="button" role="tab" aria-selected={period === k} className={`is-sky${period === k ? ' is-on' : ''}`} onClick={() => setPeriod(k)}>{w}</button>)}
       </div>

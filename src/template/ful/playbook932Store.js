@@ -6,21 +6,30 @@ import { useSyncExternalStore } from 'react'
 let state = {
   edits: {},                 // { [carrier_key]: { [action]: entry } }
   log: [
-    { id: 'lg-1', key: 'cat-americo', carrier: 'Americo', action: 'name', by: 'Sarah Kim', at: 'Wed 3:12 PM', what: 'Noted: name change form isn’t listed on their page' },
+    { id: 'lg-1', seed: true, key: 'cat-americo', carrier: 'Americo', action: 'name', by: 'Sarah Kim', at: 'Wed 3:12 PM', what: 'Noted: name change form isn’t listed on their page' },
   ],
   esign: { 'st-4': { stage: 1, sentAt: 'Thu 9:40 AM' } },   // Tom's address change: link out, waiting on his signature
   hold: { track: 'calm', custom_name: null, custom_url: null, front_desk_on: true, ai_after_sec: 20, update_every_sec: 60, max_wait_min: 10 },
   waiting: [
-    { id: 'fd-1', name: 'Gloria Hayes', carrier: 'Foresters', need: 'beneficiary', minutes: 4, ahead: 0, since: '1:29 PM',
+    { id: 'fd-1', seed: true, name: 'Gloria Hayes', carrier: 'Foresters', need: 'beneficiary', minutes: 4, ahead: 0, since: '1:29 PM',
       summary: 'Gloria Hayes · Foresters\nBeneficiary change: “I want to change my beneficiary”\nThey said: “my son Marcus Hayes, instead of my late husband”' },
-    { id: 'fd-2', name: 'Sam Ortiz', carrier: null, need: 'address', minutes: 7, ahead: 1, since: '1:31 PM',
+    { id: 'fd-2', seed: true, name: 'Sam Ortiz', carrier: null, need: 'address', minutes: 7, ahead: 1, since: '1:31 PM',
       summary: 'Sam Ortiz (not on file: check name and date of birth) · DOB March 4 1950\nAddress change: “I moved last month”\nThey said: “12 Oak Street, Dallas 75201”' },
   ],
 }
 const subs = new Set()
 const set = fn => { state = { ...state, ...fn(state) }; subs.forEach(f => f()) }
 const subscribe = f => { subs.add(f); return () => subs.delete(f) }
-export const usePlaybookState = () => useSyncExternalStore(subscribe, () => state)
+// P1017: a real account never sees the sample seed (the Americo log line, Tom's e-sign, the two callers on hold).
+const SEED_ESIGN = new Set(['st-4'])
+let realCache = { from: null, view: null }
+const realView = st => {
+  if (realCache.from === st) return realCache.view
+  const esign = Object.fromEntries(Object.entries(st.esign).filter(([k]) => !SEED_ESIGN.has(k)))
+  realCache = { from: st, view: { ...st, log: st.log.filter(l => !l.seed), waiting: st.waiting.filter(w => !w.seed), esign } }
+  return realCache.view
+}
+export const usePlaybookState = (real = false) => useSyncExternalStore(subscribe, () => (real ? realView(state) : state))
 export const playbookState = () => state
 
 let n = 0

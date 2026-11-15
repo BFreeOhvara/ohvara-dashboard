@@ -140,6 +140,8 @@ export function useAdmRealActions() {
       setComped: (id, on) => run(supabase.from('profiles').update({ billing_exempt: on }).eq('id', id)),
       setAccess: (id, on) => rpc('admin_set_user_access', { p_user: id, p_active: on, p_confirm: true }),
       setRole: (id, role) => rpc('admin_set_user_role', { p_user: id, p_role: role, p_confirm: true }),
+      // P1017: a pending invite's role (migration 279; Admin only from the owner).
+      setInviteRole: (id, role) => rpc('admin_set_invite_role', { p_invite: id, p_role: role }),
       // The existing invite flow: an email or text goes through send-agent-invite (what the classic page does); a link
       // is a rep_invites row the admin copies. P1004: role 'admin' too (the owner only: the function and the database
       // refuse anyone else), the link is copied straight away, and Resend works on real data.

@@ -1,40 +1,34 @@
-// P848 — "Show sample data" (Brayden, Nov 6): every portal keeps its sample information until this is switched off.
-// The company-wide switch is app_settings.show_sample_data. Until that column exists (it needs a migration) or while
-// it is anything but false, every page shows sample data. Admins can preview real data for
-// themselves with the "Sample info" pill in the avatar menu (P934); that choice lives in this browser only and changes
-// nothing anyone else sees.
+// P1017 (Brayden, Nov 15) — sample information is for internal test accounts only. Every real account, any role, sees
+// real data from the first second. The server decides per account (migration 279: profile_sees_sample / my_data_view):
+//   - a test account (profiles.is_test: Test Agent, Test Fulfill, the App Review logins) → sample, always (P929);
+//   - an admin → their own View: Sample / Real (profiles.data_view, set only through set_my_data_view), default Real;
+//   - everyone else → real. The old company switch (app_settings.show_sample_data) no longer decides anything.
+// Nothing here waits on a settings load, so no real account ever sees a sample frame while the page loads.
 
-export const VIEW_KEY = 'ohvara-view'
-
-// show: the company switch's value as loaded (undefined = column not there yet, or still loading).
-// view: this viewer's own choice ('sample' | 'real' | null). canPreview: admins only (P934).
-// P929: test accounts always open on the sample information (Brayden wants every screen filled in), even after the
-// company switch goes to real; P934: no view control for them any more.
-export function resolveMode({ show, view, canPreview, isTest = false }) {
-  if (canPreview && (view === 'sample' || view === 'real')) return view
-  if (isTest) return 'sample'
-  return show === false ? 'real' : 'sample'
+// profile: the signed-in row from get_my_profile (null while signed out or loading → real, never sample).
+// view: an admin's choice made in this tab a moment ago ('sample' | 'real' | null), shown at once while the server saves it.
+export function resolveMode({ profile, view = null }) {
+  if (!profile || profile.deleted_at) return 'real'
+  if (profile.is_test === true) return 'sample'
+  if (profile.role === 'admin') {
+    const v = view === 'sample' || view === 'real' ? view : profile.data_view
+    return v === 'sample' ? 'sample' : 'real'
+  }
+  return 'real'
 }
 
-// P934 (Brayden, Nov 10): only admins pick their own view (the "Sample info" pill in the avatar menu, until real
-// agents are in). Agents and VAs have no view control: test accounts are the sandbox and always show their sample
-// info (P929), real accounts follow the company switch. (P852's test-VA preview is gone with it.)
-export const canPreviewReal = profile => !!profile && profile.role === 'admin'
+// P934: only admins pick their own view (the "Sample info" pill in the avatar menu). Agents and VAs have no view control.
+export const canPreviewReal = profile => !!profile && profile.role === 'admin' && profile.is_test !== true
 
-// The switch can only be flipped once the column is there; a missing column reads as "on" and can't be saved.
-export const switchReady = settings => !!settings && Object.prototype.hasOwnProperty.call(settings, 'show_sample_data')
-
+// This tab's pending admin choice: shown at once while set_my_data_view saves it; cleared when the profile reloads.
+let pending = null
 const listeners = new Set()
-export function readView() {
-  try { const v = window.localStorage.getItem(VIEW_KEY); return v === 'real' || v === 'sample' ? v : null } catch { return null }
-}
+export const readView = () => pending
 export function writeView(v) {
-  try { if (v) window.localStorage.setItem(VIEW_KEY, v); else window.localStorage.removeItem(VIEW_KEY) } catch { /* private window: this page only */ }
+  pending = v === 'sample' || v === 'real' ? v : null
   listeners.forEach(l => l())
 }
 export function subscribeView(fn) {
   listeners.add(fn)
-  const onStorage = e => { if (e.key === VIEW_KEY) fn() }
-  if (typeof window !== 'undefined') window.addEventListener('storage', onStorage)
-  return () => { listeners.delete(fn); if (typeof window !== 'undefined') window.removeEventListener('storage', onStorage) }
+  return () => { listeners.delete(fn) }
 }

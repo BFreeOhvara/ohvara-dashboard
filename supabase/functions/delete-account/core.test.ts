@@ -44,11 +44,36 @@ test('signed out, wrong method and no DELETE are refused; nothing runs', async (
   assert.deepEqual(log, [])
 })
 
-test('an admin can’t delete themselves here', async () => {
-  const { d, log } = deps({ role: 'admin' })
+test('the owner can’t delete their account; nothing runs', async () => {
+  const { d, log } = deps({ role: 'admin', is_owner: true })
   const res = await handle(req({ confirm: 'DELETE' }), d)
   assert.equal(res.status, 403)
   assert.deepEqual(log, [])
+})
+
+test('P1017: an admin who isn’t the owner deletes their account (no Stripe)', async () => {
+  const { d, log } = deps({ role: 'admin', is_owner: false, stripe_subscription_id: null, billing_status: 'none' })
+  const res = await handle(req({ confirm: 'DELETE' }), d)
+  assert.equal(res.status, 200)
+  assert.deepEqual(log, [`data:${UID}`, `photo:${UID}`, `login:${UID}`])
+})
+
+test('P1017: the last admin is refused with a clear message', async () => {
+  const { d } = deps({ role: 'admin', is_owner: false, stripe_subscription_id: null }, {
+    async deleteData() { throw new Error('This is the last admin, so it can\'t be deleted') },
+  })
+  const res = await handle(req({ confirm: 'DELETE' }), d)
+  assert.equal(res.status, 409)
+  assert.match((await res.json()).error, /last admin/)
+})
+
+test('P1017: the login delete (which frees the email) is tried twice', async () => {
+  let n = 0
+  const { d } = deps({ role: 'fulfillment', stripe_subscription_id: null }, {
+    async deleteLogin() { n += 1; if (n === 1) throw new Error('blip') },
+  })
+  assert.equal((await handle(req({ confirm: 'DELETE' }), d)).status, 200)
+  assert.equal(n, 2)
 })
 
 test('billed agent: plan cancelled first, then data, photo, login', async () => {

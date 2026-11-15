@@ -396,7 +396,7 @@ export function buildAdmState(raw = {}, { now = Date.now(), clock = realClock(no
       tz: meP.timezone || base.settings?.tz || TZ,
       billing: { ...(base.settings?.billing || {}), maxOverride: {} },
       switches: switchesOf(app, rc), payoutsPaused: !!rc.payouts_paused, liveRoom: app.daily_room_url || '',
-      split: base.settings?.split || { brayden: 50, changed: null }, showSample: app.show_sample_data !== false,
+      split: base.settings?.split || { brayden: 50, changed: null },
       daysOffPerMonth: app.va_days_off_per_month ?? base.settings?.daysOffPerMonth, // P915: the server's allowance
     },
     bugs: (raw.bugs || []).map(b => toBug(b, now)), audit, connect, setupFees: [], draws: [], onboard, setupLog: {},

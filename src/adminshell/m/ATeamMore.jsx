@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Check, ChevronRight, Hand, Repeat, CalendarX } from 'lucide-react'
-import { useAdmDesk, useAdmVas, useAdmRota, useAdmSettings, useAdmActions, WEEK, NEXT_WEEK, TODAY, dayName } from '../data'
+import { useAdmDesk, useAdmVas, useAdmRota, useAdmSettings, useAdmActions, useAdmSource, WEEK, NEXT_WEEK, TODAY, dayName } from '../data'
 import { useAdmShifts } from '../../hooks/useVaShiftsAdmin'
 import { useNote } from '../../template/kit'
 import { usd } from '../../template/motion'
@@ -183,8 +183,10 @@ export function TimeOffTab() {
 // then an admin confirms). N-F-07; sample data, the same as the desktop.
 function SwapsAndOpen() {
   const note = useNote()
-  const [swaps, setSwaps] = useState(SWAPS)
-  const [open, setOpen] = useState(OPEN_SHIFTS)
+  // P1017: sample people only in sample mode; real has none until swaps are built.
+  const real = useAdmSource() === 'real'
+  const [swaps, setSwaps] = useState(real ? [] : SWAPS)
+  const [open, setOpen] = useState(real ? [] : OPEN_SHIFTS)
   const decide = (id, ok) => { setSwaps(s => s.map(x => (x.id === id ? { ...x, status: ok ? 'approved' : 'declined' } : x))); note(ok ? 'Swap approved. The rota is updated.' : 'Swap declined') }
   return (
     <>
@@ -214,6 +216,7 @@ function SwapsAndOpen() {
             {s.status === 'open' && <span className="ma-tag is-sky">Waiting</span>}
           </div>
         ))}
+        {!open.length && <p className="ma-empty">No open shifts.</p>}
       </div>
     </>
   )
@@ -223,12 +226,14 @@ function SwapsAndOpen() {
 const HOLIDAY_TONE = { warn: 'apricot', blue: 'sky', teal: 'sage' }
 export function Holidays() {
   const note = useNote()
+  const days = useAdmSource() === 'real' ? [] : HOLIDAYS // P1017: the list is sample
   return (
     <>
       <div className="ma-h2 ma-rise" style={rise(4)}><h2>Holidays</h2></div>
       <p className="ma-hint">On the rota and the VAs' schedule; closed days run the after-hours path</p>
       <div className="ma-glass ma-list ma-rise" style={rise(4)}>
-        {HOLIDAYS.map(h => {
+        {!days.length && <p className="ma-empty">No holidays set.</p>}
+        {days.map(h => {
           const [w, tone] = HOLIDAY_WORD[h.kind]
           return (
             <div key={h.id} className="ma-row am-reqrow"><span className="ma-sym is-stone"><CalendarX size={16} aria-hidden="true" /></span><span className="ma-grow"><b>{h.date} · {h.name}</b><small>{h.note}</small></span><span className={`ma-tag is-${HOLIDAY_TONE[tone] || 'stone'}`}>{w}</span></div>
@@ -244,13 +249,14 @@ export function Holidays() {
 // The week's pay: each VA's scheduled hours times their rate, days off taken out (P945). No corrections, nothing to approve.
 export function HoursPay() {
   const [open, setOpen] = useState(null)
-  const rows = TIMESHEET.map(r => ({ ...r, t: sheetTotals(r) }))
+  const real = useAdmSource() === 'real' // P1017: TIMESHEET is sample VAs
+  const rows = (real ? [] : TIMESHEET).map(r => ({ ...r, t: sheetTotals(r) }))
   const total = rows.reduce((t, r) => t + r.t.pay, 0)
   const row = rows.find(r => r.va === open)
   return (
     <>
-      <div className="ma-h2 ma-rise"><h2>This week's hours</h2><Sample /></div>
-      <p className="ma-hint">Nov 2 to 8 · scheduled hours minus days off · pay is hourly</p>
+      <div className="ma-h2 ma-rise"><h2>This week's hours</h2>{!real && <Sample />}</div>
+      <p className="ma-hint">{real ? 'Scheduled hours minus days off · pay is hourly' : 'Nov 2 to 8 · scheduled hours minus days off · pay is hourly'}</p>
       <div className="ma-plan am-profitline ma-rise" style={rise(1)}>
         <span className="ma-grow"><small>Pay this week</small><b className="tp-money">{cents(total)}</b></span>
       </div>
@@ -262,6 +268,7 @@ export function HoursPay() {
             <span className="ma-val tp-money">{cents(r.t.pay)}</span>
           </button>
         ))}
+        {!rows.length && <p className="ma-empty">No hours yet. Each VA's scheduled hours show here once they're on the rota.</p>}
       </div>
       <p className="ma-note">From the rota: each shift's set hours, days off taken out. Paid in Monday's run; Brayden says yes before anything is paid.</p>
       <BottomSheet open={!!row} onClose={() => setOpen(null)} label={row ? `${row.name}'s shifts` : 'Shifts'} tall>

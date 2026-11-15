@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { BookOpen, Pencil, Phone, Clock3, FileSignature, ExternalLink, Send, CircleCheck, Check, Bot, Sparkles, CalendarClock, History } from 'lucide-react'
-import { Chip, Drawer, Field, Seg, useNote } from '../kit'
+import { Chip, Drawer, Field, Seg, useNote, useAccount } from '../kit'
 import { pathFor, openState, doItNow, hoursLine, METHOD, ACTION_WORD, VIA_WORD, ESIGN_STEPS, actionOf } from '../../lib/servicing/playbook.js'
 import { normalizeName } from '../../lib/carriers.js'
 import { usePlaybookState, playbookActions } from './playbook932Store'
@@ -22,7 +22,7 @@ function openWords(st) {
 }
 
 export function CarrierWay({ carrier, kind, itemId, first = 'them', done = false, vaFree = true, now = null, blocked = null }) {
-  const s = usePlaybookState()
+  const s = usePlaybookState(useAccount()?.view?.mode === 'real')
   const [edit, setEdit] = useState(false)
   const p = pathFor(carrier, kind, s.edits)
   const action = actionOf(kind)
@@ -63,7 +63,7 @@ export function CarrierWay({ carrier, kind, itemId, first = 'them', done = false
 // The e-sign path: link texted (prefilled) → signed on their phone → sent to the carrier (P886) → a follow-up checks the
 // carrier processed it → the client's "done" text.
 export function EsignTrack({ itemId, carrier, first, action, via, to, wetInk = false, blocked = null }) {
-  const s = usePlaybookState()
+  const s = usePlaybookState(useAccount()?.view?.mode === 'real')
   const note = useNote()
   const stage = s.esign[itemId]?.stage || 0
   const go = (k, msg) => { playbookActions.esign(itemId, k); if (msg) note(msg) }
@@ -109,7 +109,7 @@ export function DoItNow({ carrier, name, first, vaFree = true, now }) {
 // Edit one carrier's way for one change (admin and VAs). Every save is logged.
 const METHODS = ['esign', 'online', 'merge', 'check'].map(k => ({ key: k, label: METHOD[k].short }))
 export function PlaybookEditor({ carrierKey, name: initialName, action: initialAction, entry, onClose }) {
-  const s = usePlaybookState()
+  const s = usePlaybookState(useAccount()?.view?.mode === 'real')
   const note = useNote()
   const [name, setName] = useState(initialName || '')
   const [action, setAction] = useState(initialAction || 'cancel')
@@ -159,7 +159,7 @@ export function FrontDeskNote({ summary, compact = false }) {
 
 // Submit (agent): once the old carrier is picked, how our team will cancel it. One line, no setup for the agent.
 export function CancelWayHint({ carrier }) {
-  const s = usePlaybookState()
+  const s = usePlaybookState(useAccount()?.view?.mode === 'real')
   if (!carrier) return null
   const p = pathFor(carrier, 'cancel', s.edits)
   const m = METHOD[p.step?.method || 'check']

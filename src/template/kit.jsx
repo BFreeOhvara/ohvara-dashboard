@@ -94,7 +94,8 @@ export const Avatar = ({ name, tone, id = null }) => (isSupportPerson(name)
   : <span className={`tp-av av-${tone ? hueFor(name, tone) : avatarHue(name, id)}${tone ? ' is-status' : ''}`} aria-hidden="true">{initials(name)}</span>)
 export const Chip = ({ tone = 'blue', children }) => <span className={`tp-chip is-${tone}`}><i />{children}</span>
 // P929: test accounts never see a "sample" label.
-export const SampleTag = ({ children = 'Sample price' }) => (useIsTestAccount() ? null : <span className="tp-tag">{children}</span>)
+// P1017: never on real data (a real account has no sample prices); test accounts never see it either (P929).
+export const SampleTag = ({ children = 'Sample price' }) => { const real = useContext(AccountCtx)?.view?.mode === 'real'; return useIsTestAccount() ? null : real ? null : <span className="tp-tag">{children}</span> }
 export const Money = ({ v, cents = true, size = '' }) => (
   <span className={`tp-money ${size}`}>{`$${Number(v).toLocaleString('en-US', { minimumFractionDigits: cents ? 2 : 0, maximumFractionDigits: cents ? 2 : 0 })}`}</span>
 )

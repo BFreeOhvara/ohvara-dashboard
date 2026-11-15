@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Check, TriangleAlert, Timer, Users, ShieldCheck, CalendarX, Repeat, Star, Flag, Scale, ClipboardCheck } from 'lucide-react'
-import { Avatar, Chip, Drawer, Seg, SampleTag, useNote } from '../../template/kit'
+import { Avatar, Chip, Drawer, Empty, Seg, SampleTag, useNote } from '../../template/kit'
 import { usd } from '../../template/motion'
 import { Tile } from '../kit'
+import { useAdmSource } from '../data'
 import {
   VA_STATUS, DESK_VAS, DESK_QUEUE, SPEED_TODAY, median, clockS, deskAlerts, staffing, isRouted,
   VA_METRICS, QA_RUBRIC, QA_MIN_PER_WEEK, QA_REVIEWS, qaScore, qaDone, reReviewerFor,
@@ -73,12 +74,15 @@ export function LiveDesk() {
 // N-F-07: swap requests between VAs, and open shifts pushed to eligible VAs (first to accept, then an admin confirms).
 export function SwapsAndOpen() {
   const note = useNote()
-  const [swaps, setSwaps] = useState(SWAPS)
-  const [open, setOpen] = useState(OPEN_SHIFTS)
+  // P1017: the swaps and open shifts below are sample people; real data has none until swaps are built.
+  const real = useAdmSource() === 'real'
+  const [swaps, setSwaps] = useState(real ? [] : SWAPS)
+  const [open, setOpen] = useState(real ? [] : OPEN_SHIFTS)
   const decide = (id, ok) => { setSwaps(s => s.map(x => (x.id === id ? { ...x, status: ok ? 'approved' : 'declined' } : x))); note(ok ? 'Swap approved. The rota is updated.' : 'Swap declined') }
   return (
     <div className="adm-two p879-mt">
       <Tile i={2} title="Shift swaps" sub="Both VAs agreed; you approve">
+        {swaps.length === 0 && <Empty title="No swap requests" sub="When two VAs agree to swap a shift, it shows here for you to approve." />}
         <ul className="tp-list">{swaps.map(s => (
           <li key={s.id} className="adm-req"><Repeat size={16} aria-hidden="true" />
             <span className="tp-grow"><b>{s.from} → {s.to}</b><small>{s.day}</small></span>
@@ -90,6 +94,7 @@ export function SwapsAndOpen() {
         ))}</ul>
       </Tile>
       <Tile i={3} title="Open shifts" sub="Sent to every VA free that day; first to accept takes it">
+        {open.length === 0 && <Empty title="No open shifts" sub="A shift nobody is on shows here until a VA takes it." />}
         <ul className="tp-list">{open.map(s => (
           <li key={s.id} className="adm-req"><CalendarX size={16} aria-hidden="true" />
             <span className="tp-grow"><b>{s.day} · <span className="tp-num">{s.hours}</span></b><small>{s.why}{s.accepted ? ` · ${s.accepted} accepted` : ' · nobody yet'}</small></span>
@@ -107,13 +112,16 @@ export function SwapsAndOpen() {
 // paid on their set scheduled hours minus days off, so there are no correction requests and nothing to approve.
 export function HoursPay() {
   const [open, setOpen] = useState(null)
-  const rows = TIMESHEET.map(r => ({ ...r, t: sheetTotals(r) }))
+  // P1017: TIMESHEET is sample VAs; real hours come from the rota once VA pay is wired, so real shows none yet.
+  const real = useAdmSource() === 'real'
+  const rows = (real ? [] : TIMESHEET).map(r => ({ ...r, t: sheetTotals(r) }))
   const total = rows.reduce((t, r) => t + r.t.pay, 0)
   const row = rows.find(r => r.va === open)
   return (
     <div className="p879-stack">
-      <Tile i={0} title="This week's hours" sub="Nov 2 to 8 · scheduled hours minus days off · pay is hourly" aside={<SampleTag>Sample</SampleTag>}>
+      <Tile i={0} title="This week's hours" sub={real ? 'Scheduled hours minus days off · pay is hourly' : 'Nov 2 to 8 · scheduled hours minus days off · pay is hourly'} aside={real ? null : <SampleTag>Sample</SampleTag>}>
         <b className="fx-huge tp-money">{money(total)}</b>
+        {rows.length === 0 && <Empty title="No hours yet" sub="Each VA's scheduled hours and pay show here once they're on the rota." />}
         <ul className="tp-list adm-rows">{rows.map(r => (
           <li key={r.va}><button type="button" className="fx-mrow" onClick={() => setOpen(r.va)}>
             <Avatar name={r.name} /><span className="tp-grow"><b>{r.name}</b><small><span className="tp-num">{r.t.hours.toFixed(2)}</span> h × {money(r.t.rate)} · {r.days.length} {r.days.length === 1 ? 'shift' : 'shifts'}{r.t.ot ? ` · ${r.t.ot.toFixed(1)} h overtime` : ''}</small></span>
@@ -226,9 +234,12 @@ export function Records() {
 // N-F-31: closed and reduced days, carrier holidays; the rota shows them and the after-hours path runs on closed days.
 export function Holidays() {
   const note = useNote()
+  // P1017: the holiday list is sample; real has none saved yet.
+  const days = useAdmSource() === 'real' ? [] : HOLIDAYS
   return (
     <Tile className="p879-mt" i={3} title="Holidays" sub="On the rota and the VAs' schedule; closed days run the after-hours path">
-      <ul className="tp-list">{HOLIDAYS.map(h => {
+      {days.length === 0 && <Empty title="No holidays set" sub="Closed and short days you add show here and on the rota." />}
+      <ul className="tp-list">{days.map(h => {
         const [w, tone] = HOLIDAY_WORD[h.kind]
         return <li key={h.id} className="adm-req"><CalendarX size={16} aria-hidden="true" /><span className="tp-grow"><b>{h.date} · {h.name}</b><small>{h.note}</small></span><Chip tone={tone}>{w}</Chip></li>
       })}</ul>

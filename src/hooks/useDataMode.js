@@ -1,20 +1,26 @@
-import { useSyncExternalStore } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 import { useAuth } from './useAuth'
-import { useAppSettings } from './useAppSettings'
-import { resolveMode, canPreviewReal, readView, writeView, subscribeView, switchReady } from '../lib/dataMode'
+import { supabase } from '../lib/supabase'
+import { resolveMode, canPreviewReal, readView, writeView, subscribeView } from '../lib/dataMode'
 import { isTestProfile } from '../lib/testAccounts'
 
-// P848 — which data this viewer sees: 'sample' (default, and while anything is loading) or 'real'.
-// Returns { mode, real, view, setView, canPreview, show, ready, loading }.
+// P848 → P1017 — which data this viewer sees: 'sample' (test accounts; an admin who picked it) or 'real' (everyone
+// else, from the first frame). The rule lives on the server (migration 279) and in lib/dataMode.js.
+// Returns { mode, real, view, setView, canPreview, isTest }.
 export function useDataMode() {
-  const { profile } = useAuth()
-  const { data: settings, isLoading } = useAppSettings()
+  const { profile, refreshProfile } = useAuth()
   const view = useSyncExternalStore(subscribeView, readView, () => null)
   const canPreview = canPreviewReal(profile)
-  const show = settings?.show_sample_data
   const isTest = isTestProfile(profile)
-  const mode = isLoading ? 'sample' : resolveMode({ show, view, canPreview, isTest })
-  return { mode, real: mode === 'real', view, setView: writeView, canPreview, isTest, show: show !== false, ready: switchReady(settings), loading: isLoading }
+  const mode = resolveMode({ profile, view: canPreview ? view : null })
+  const setView = useCallback(v => {
+    if (!canPreview) return
+    writeView(v)
+    supabase.rpc('set_my_data_view', { p_view: v })
+      .then(({ error }) => { if (error) console.error('[useDataMode] set_my_data_view:', error.message); return refreshProfile?.() })
+      .finally(() => writeView(null))
+  }, [canPreview, refreshProfile])
+  return { mode, real: mode === 'real', view, setView, canPreview, isTest }
 }
 
 // P929: test accounts never see the "Sample info" line or any other sample label.

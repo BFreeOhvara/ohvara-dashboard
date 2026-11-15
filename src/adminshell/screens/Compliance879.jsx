@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Check, PhoneOff, ShieldAlert, MessageSquareWarning, Gavel, FileLock2, Download, Lock, FileSearch, ShieldCheck } from 'lucide-react'
-import { Chip, Seg, SampleTag, Avatar, useNote } from '../../template/kit'
+import { Chip, Empty, Seg, SampleTag, Avatar, useNote } from '../../template/kit'
 import { Block } from '../../template/Record'
 import { EngineSlot } from '../kit'
+import { useAdmSource } from '../data'
 import { DNC, INCIDENTS, COMPLAINTS, LEGAL, DATA_REQUESTS, DR_KEPT, daysLeft, consentOf, SOURCE_AD, assignable } from '../p879'
 import '../p879.css'
 
@@ -88,10 +89,13 @@ const PARTS = [['dnc', 'Do not call', DoNotCall], ['incidents', 'Licensed line',
 export function Compliance() {
   const [part, setPart] = useState('dnc')
   const P = PARTS.find(p => p[0] === part)[2]
+  // P1017: every list here is sample (p879.js); real has none logged yet, so real shows one empty state.
+  const real = useAdmSource() === 'real'
   return (<>
-    <div className="fx-form-row"><span className="tp-grow"><b>Compliance</b><p className="tp-sub">Kept 5 years. Admins only.</p></span><SampleTag>Sample</SampleTag></div>
-    <Seg className="p879-seg" label="Compliance" value={part} onChange={setPart} options={PARTS.map(([key, label]) => ({ key, label }))} />
-    <P />
+    <div className="fx-form-row"><span className="tp-grow"><b>Compliance</b><p className="tp-sub">Kept 5 years. Admins only.</p></span>{!real && <SampleTag>Sample</SampleTag>}</div>
+    {real
+      ? <Empty title="Nothing logged yet" sub="Do-not-call numbers, licensed-line notes, complaints, legal holds and data requests show here once they're logged." />
+      : <><Seg className="p879-seg" label="Compliance" value={part} onChange={setPart} options={PARTS.map(([key, label]) => ({ key, label }))} /><P /></>}
   </>)
 }
 

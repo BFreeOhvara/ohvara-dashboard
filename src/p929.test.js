@@ -12,7 +12,7 @@ const src = f => readFileSync(new URL(f, import.meta.url), 'utf8')
 test('a test account always sees sample info, with no sample line or tag', () => {
   assert.equal(isTestProfile({ id: 'x', is_test: true }), true)
   assert.equal(isTestProfile({ id: 'x' }), false)
-  assert.equal(resolveMode({ show: true, view: null, canPreview: true, isTest: true }), 'sample')
+  assert.equal(resolveMode({ profile: { role: 'agent', is_test: true }, view: 'real' }), 'sample')
   assert.match(src('./template/kit.jsx'), /SampleTag = [^\n]*useIsTestAccount\(\) \? null/)
   for (const f of ['./adminshell/AdminFrame.jsx', './template/TemplateFrame.jsx', './template/ful/FulFrame.jsx', './template/m/MobileFrame.jsx']) assert.match(src(f), /!isTest &&/, f)
   // sample-only code never loads the Supabase client to ask

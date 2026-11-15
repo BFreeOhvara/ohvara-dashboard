@@ -18,7 +18,7 @@ Deno.serve(req => handle(req, {
   },
   async profile(id) {
     const { data } = await admin.from('profiles')
-      .select('id, role, is_demo, billing_exempt, billing_status, stripe_subscription_id, deleted_at')
+      .select('id, role, is_demo, is_owner, billing_exempt, billing_status, stripe_subscription_id, deleted_at')
       .eq('id', id).maybeSingle()
     return data
   },

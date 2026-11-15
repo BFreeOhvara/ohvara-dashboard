@@ -90,7 +90,8 @@ export default function Overview() {
   const stateChanges = useStateChanges()
   // P952: reactivation lists that paused themselves.
   const react = useAdmReactivation(useAdmSource())
-  const states = openChanges(stateChanges).map(c => ({ ...c, name: agents.find(a => a.id === c.agentId)?.name || c.agentName, diff: diffWords(c), startsText: dayWords(c.starts),
+  // P1017: real mode lists only real agents' changes (never the sample Dana, or a save made on a sample page).
+  const states = openChanges(day.real ? stateChanges.filter(c => agents.some(a => a.id === c.agentId)) : stateChanges).map(c => ({ ...c, name: agents.find(a => a.id === c.agentId)?.name || c.agentName, diff: diffWords(c), startsText: dayWords(c.starts),
     onDone: () => doneStateChange(c.id, new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) }))
   const todos = adminTodos({
     unassigned: day.unassigned, pipeline, failed: day.failed, cover, ads: day.real ? [] : adAlerts(), states, react: pausedLists(react),

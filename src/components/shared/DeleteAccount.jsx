@@ -11,11 +11,13 @@ import { useDeleteAccount } from '../../hooks/useAccount'
 // and keeps only the records the law makes us keep (pay records for tax
 // forms, call recordings for their retention time) under an anonymous id.
 // What's deleted vs kept: brain/Account Deletion.md in the vault.
-// Admins can't delete themselves here (another admin removes an admin).
+// P1017: admins may delete their own account too, except the owner (and the server refuses the last admin).
+// After a delete the email is free again: Create account, Google, Apple or an invite all start a fresh account.
 
 const KEPT = {
   agent: 'Your plan is cancelled right away. Bookings you made stay on the calls Fulfillment already handled, without your name.',
   fulfillment: 'Pay records stay for tax forms (1099s) and call recordings stay until they expire, without your name.',
+  admin: 'What you did as an admin stays in the audit log, without your name. Your email can be invited again later.',
 }
 
 export function DeleteAccountDialog({ onClose }) {
@@ -24,7 +26,8 @@ export function DeleteAccountDialog({ onClose }) {
   const del = useDeleteAccount()
   const [text, setText] = useState('')
   const field = useRef(null)
-  const admin = profile?.role === 'admin'
+  // P1017: only the owner's account can't be deleted here.
+  const admin = profile?.role === 'admin' && profile?.is_owner === true
   const ready = text.trim() === 'DELETE' && !del.isPending
 
   useEffect(() => {
@@ -59,7 +62,7 @@ export function DeleteAccountDialog({ onClose }) {
               <h2 id="del-title" className="ov-invite-title">Delete my account</h2>
               <p className="ov-invite-sub">
                 {admin
-                  ? 'Admin accounts can’t be deleted from here. Ask another admin to remove yours from People.'
+                  ? 'The owner account can’t be deleted.'
                   : 'This can’t be undone. Your login, name, phone, email, photo, messages and settings are deleted, and you’re signed out everywhere.'}
               </p>
             </div>

@@ -34,7 +34,7 @@ function NativeBilling() {
 }
 
 // The template's screens at the real agent URLs (SHELL_ROUTES), inside the app's own router. ShellSwap decides
-// who gets here. P848: the data is sample until "Show sample data" is off (or this viewer picks View: Real); then
+// who gets here. P1017: real data for every real account; sample only for test accounts (and an admin who picks it); then
 // every screen reads the agent's own rows (hooks/agentRealData.js). The tree is keyed on the mode, so a switch remounts it.
 const SCREENS = {
   overview: Overview, leads: Leads, lead: Leads, calendar: Calendar, clients: Clients, client: Clients, submit: Submit,
@@ -44,12 +44,12 @@ const SCREENS = {
 const PHONE = { overview: MOverview, leads: MLeads, lead: MLeads, calendar: MCalendar, clients: MClients, client: MClients, more: MMore }
 
 export default function AgentShell({ account }) {
-  const { mode, canPreview, setView, show } = useDataMode()
+  const { mode, canPreview, setView } = useDataMode()
   const tz = useTz()
   const real = mode === 'real'
   // The lifecycle rules read the agent's real clock in real mode, the sample clock otherwise (set before children render).
   useMemo(() => setClock(real ? realClock(tz) : null), [real, tz])
-  const live = useMemo(() => ({ ...account, view: { mode, canPreview, setView, show } }), [account, mode, canPreview, setView, show])
+  const live = useMemo(() => ({ ...account, view: { mode, canPreview, setView } }), [account, mode, canPreview, setView])
   return (
     <AccountProvider value={live}>
       <DataProvider key={mode} impl={real ? REAL : null}>

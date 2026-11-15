@@ -51,7 +51,7 @@ export default function AYou() {
   const [appOpen, setAppOpen] = useState(false)
   const [addVa, setAddVa] = useState(false)
   const { data: tickets } = useAdmSetup()
-  const ai = aiWeek()
+  const ai = aiWeek(useAdmSource() === 'real')
   const mine = me ? month.split.find(o => o.id === me.id) : null
   const name = useAdmName() || ME.name
   const openBugs = bugs.filter(b => b.status !== 'fixed').length
@@ -116,11 +116,12 @@ export default function AYou() {
 }
 
 // The AI caller this week (sample calls until it's live; real numbers come from the desktop's AI calls page).
-function aiWeek() {
-  const calls = SAMPLE_AI_CALLS
+// P1017: real mode never counts the sample calls (real numbers: the desktop's AI calls page).
+function aiWeek(real) {
+  const calls = real ? [] : SAMPLE_AI_CALLS
   const booked = calls.filter(c => c.outcome === 'booked' || c.outcome === 'transferred').length
   const mins = calls.reduce((t, c) => t + Math.max(1, Math.ceil((Number(c.duration) || 0) / 60)), 0)
-  return { calls: calls.length, booked, mins, cost: (mins * SAMPLE_CENTS_PER_MIN) / 100 }
+  return { real, calls: calls.length, booked, mins, cost: (mins * SAMPLE_CENTS_PER_MIN) / 100 }
 }
 
 export function AUnassigned() {
@@ -146,11 +147,11 @@ export function AUnassigned() {
 export function AAi() {
   const { data: settings } = useAdmSettings()
   const live = !!settings.switches?.ai_caller_live
-  const ai = aiWeek()
+  const ai = aiWeek(useAdmSource() === 'real')
   return (
     <SubPage title="AI caller" line={live ? 'Calling new leads now' : 'Off until launch'} big>
       <div className="ma-glass ma-pad am-status ma-rise"><i className={live ? 'is-on' : 'is-off'} aria-hidden="true" /><span className="ma-grow"><b>{live ? 'On' : 'Off'}</b><small>{live ? 'It calls every new lead within a minute.' : 'It starts calling when it’s switched on at launch, on the desktop.'}</small></span></div>
-      <p className="ma-cap is-out">{live ? 'This week' : 'Sample week'}</p>
+      <p className="ma-cap is-out">{live || ai.real ? 'This week' : 'Sample week'}</p>
       <div className="am-stats ma-rise" style={rise(1)}>
         <div><b>{ai.calls}</b><small>Calls</small></div>
         <div><b>{ai.booked}</b><small>Booked or transferred</small></div>
@@ -362,6 +363,7 @@ export function AClientAdm({ id }) {
 // ── Reports (view only) ──────────────────────────────────────────────────────────────────────────────────────────
 export function AReports() {
   const [period, setPeriod] = useState('week')
+  const real = useAdmSource() === 'real'
   const { data: p } = useAdmPeriod(period)
   const { data: res } = useAdmAgentResults(period)
   const { data: day } = useAdmDay()
@@ -383,7 +385,7 @@ export function AReports() {
         <div><b className="tp-money">{money(p.profit)}</b><small>Profit</small></div>
         {halvesOf(p.split, me).map(h => <div key={h.id}><b className="tp-money">{money(h.amount)}</b><small>{h.label}</small></div>)}
       </div>
-      <p className="ma-cap is-out">Leads {period === 'month' ? '(the sample week)' : ''}</p>
+      <p className="ma-cap is-out">Leads {period === 'month' && !real ? '(the sample week)' : ''}</p>
       <div className="am-stats is-3 ma-rise" style={rise(2)}>
         <div><b>{w.in}</b><small>Leads</small></div>
         <div><b>{w.booked + w.transferred}</b><small>Booked</small></div>
@@ -611,7 +613,7 @@ function ASettingsSection({ k }) {
             <div className="ma-seg am-seg ma-rise" role="radiogroup" aria-label="View">
               {['sample', 'real'].map(v => <button key={v} type="button" role="radio" aria-checked={view.mode === v} className={`is-sky${view.mode === v ? ' is-on' : ''}`} onClick={() => view.setView(v)}>{v === 'sample' ? 'Sample' : 'Real'}</button>)}
             </div>
-            <p className="ma-note">Only changes what you see. Everyone else stays on {view.show ? 'sample' : 'real'} info.</p>
+            <p className="ma-note">Only changes what you see. Agents and Fulfillment always see their own real info.</p>
           </>
         )}
         <p className="ma-hint ma-set-note">Your photo, name, phone and email are on Edit profile, on the You page.</p>

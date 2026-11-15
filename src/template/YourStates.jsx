@@ -4,7 +4,7 @@ import { Chip, Drawer } from './kit'
 import { useSampleSettings } from './data'
 import { US_STATES } from '../lib/usStates'
 import { asPick } from './licenceModel'
-import { useSaveStates, todayIso, AGENT } from './useStates'
+import { useSaveStates, todayIso, useAgentKey } from './useStates'
 import { MIN_STATES, MAX_STATES, NOT_TAKING, stateDiff, diffWords, flipState, statesBlock, startsOn, dayWords, useStateChanges } from './adStates'
 import './p878.css'
 import './p881.css'
@@ -35,6 +35,7 @@ export function StatesDrawer({ open, onClose }) {
   const [ticked, setTicked] = useState(false)
   const save = useSaveStates()
   const all = useStateChanges()
+  const me = useAgentKey()
   const pick = draft || now
   const { added, removed } = stateDiff(now, pick)
   const block = statesBlock(now, pick, ticked)
@@ -75,7 +76,7 @@ export function StatesDrawer({ open, onClose }) {
       )}
       <div className="st-hist-box">
         <h3>Change history</h3>
-        <History list={all.filter(c => c.agentId === AGENT.id)} />
+        <History list={all.filter(c => c.agentId === me)} />
       </div>
     </Drawer>
   )

@@ -38,7 +38,8 @@ export default function VMe() {
   const [theme, setTheme] = useTheme()
   const { sum } = useTraining(account?.name)
   const [panel, setPanel] = useState(null)
-  const w = weekPay()
+  // P1017: a real VA never sees the sample timesheet's hours or pay (real hours come once shifts are read).
+  const w = weekPay(useFulSource() === 'real' ? [] : MY_SHEET)
   const { data: st } = useFulSettings()
   const name = account?.name || st.profile?.name || 'You'
   const photo = st.profile?.photo || null
@@ -95,7 +96,7 @@ export function VPay() {
   const real = useFulSource() === 'real'
   const off = useTimeOff()
   const [how, setHow] = useState(false)
-  const w = weekPay()
+  const w = weekPay(real ? [] : MY_SHEET)
   const g = hourGrid(MY_SHEET)
   const top = Math.max(1, ...g.rows.map(r => r.hours))
   const bank = pay.account?.bank ? `${pay.account.bank}${pay.account.last4 ? ` •••• ${pay.account.last4}` : ''}` : ''
@@ -103,7 +104,7 @@ export function VPay() {
     <button type="button" className="ma-round is-soft ma-press" aria-label="How pay works" onClick={() => setHow(true)}><Info size={19} aria-hidden="true" /></button>
   )
   return (
-    <SubPage title="Hours and pay" line={`${money(w.rate)} an hour · paid weekly`} right={explainer} big>
+    <SubPage title="Hours and pay" line={real ? 'Paid weekly, the Monday after' : `${money(w.rate)} an hour · paid weekly`} right={explainer} big>
       <div className="ma-plan ma-rise">
         <div className="ma-plan-stats">
           <div><b>{hoursWords(w.hours)}</b><small>this week</small></div>
@@ -131,7 +132,8 @@ export function VPay() {
       </div>
       <p className="ma-cap is-out">Your shifts this week</p>
       <div className="ma-glass ma-list ma-rise" style={rise(2)}>
-        {MY_SHEET.map(r => (
+        {real && <p className="ma-empty">Your shifts show here once your rota is set.</p>}
+        {(real ? [] : MY_SHEET).map(r => (
           <div key={r.day} className="ma-row">
             <span className="ma-sym is-sage">{r.d}</span>
             <span className="ma-grow"><b>Nov {r.day}</b><small>{r.in} to {r.out || 'now'}{r.live ? ' · on shift' : ''}</small></span>
@@ -162,9 +164,9 @@ export function VPay() {
       <p className="ma-note">{bank ? `Paid to ${bank}. ` : ''}Pay is your set shifts minus days off.</p>
       <BottomSheet open={how} onClose={() => setHow(false)} label="How pay works">
         <p className="ma-sheet-t">How pay works</p>
-        <p className="ma-sheet-s">Sample amounts</p>
+        {!real && <p className="ma-sheet-s">Sample amounts</p>}
         <ol className="va-how">
-          {[['Your shifts', 'The hours set on your rota'], ['Days off', 'Taken out; you have a few a month'], ['Nothing to correct', 'Pay comes from the rota, not a timesheet'], ['Paid Monday', `Scheduled hours × $${MY_RATE.toFixed(2)}${bank ? ` to ${bank}` : ''}`]].map(([a, b]) => <li key={a}><span className="va-how-dot" aria-hidden="true"><Check size={13} strokeWidth={2.6} /></span><span><b>{a}</b><small>{b}</small></span></li>)}
+          {[['Your shifts', 'The hours set on your rota'], ['Days off', 'Taken out; you have a few a month'], ['Nothing to correct', 'Pay comes from the rota, not a timesheet'], ['Paid Monday', `Scheduled hours × ${real ? 'your hourly rate' : `$${MY_RATE.toFixed(2)}`}${bank ? ` to ${bank}` : ''}`]].map(([a, b]) => <li key={a}><span className="va-how-dot" aria-hidden="true"><Check size={13} strokeWidth={2.6} /></span><span><b>{a}</b><small>{b}</small></span></li>)}
         </ol>
       </BottomSheet>
     </SubPage>

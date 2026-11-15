@@ -13,7 +13,7 @@ import { FUL } from './paths'
 
 // P845 — the Fulfillment (VA) portal: the rebuilt VA pages (src/template/ful) at the real Fulfillment URLs. ShellSwap
 // decides who gets here and passes the real name, the real sign-out and the delete-account dialog.
-// P852 — sample stays on: every VA sees the sample pages until admin Settings → "Show sample data" is switched off.
+// P1017 — a real VA sees only real data from the first second; only test accounts (is_test) see the sample pages.
 // Admins (and the test VA) can preview real data for themselves with View: Sample / Real in the avatar menu. In real
 // mode FulDataProvider hands the pages the real hooks (hooks/fulRealData.js). The tree is keyed on the mode, so a switch
 // remounts it and no page swaps hooks mid-mount.
@@ -28,9 +28,9 @@ function Page({ children }) {
 }
 
 export default function FulfillShell({ account }) {
-  const { mode, canPreview, setView, show } = useDataMode()
+  const { mode, canPreview, setView } = useDataMode()
   const real = mode === 'real'
-  const live = useMemo(() => ({ ...account, view: { mode, canPreview, setView, show } }), [account, mode, canPreview, setView, show])
+  const live = useMemo(() => ({ ...account, view: { mode, canPreview, setView } }), [account, mode, canPreview, setView])
   return (
     <AccountProvider value={live}>
       <FulDataProvider key={mode} impl={real ? REAL : null}>

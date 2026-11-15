@@ -19,6 +19,8 @@ export type Me = {
   billing_status: string | null
   stripe_subscription_id: string | null
   deleted_at: string | null
+  // P1017: the owner's account is never deleted from here (an admin who isn't the owner may delete theirs).
+  is_owner?: boolean | null
 }
 
 export interface Deps {
@@ -57,8 +59,8 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   const me = await deps.profile(uid)
   if (!me) return json({ error: 'No account found.' }, 404)
   if (me.deleted_at) return json({ ok: true, already: true })
-  if (me.role === 'admin') return json({ error: 'Admin accounts can’t be deleted from here. Ask another admin.' }, 403)
-  if (me.role !== 'agent' && me.role !== 'fulfillment') return json({ error: 'This account can’t be deleted from here.' }, 403)
+  if (me.role === 'admin' && me.is_owner) return json({ error: 'The owner account can’t be deleted.' }, 403)
+  if (me.role !== 'agent' && me.role !== 'fulfillment' && me.role !== 'admin') return json({ error: 'This account can’t be deleted from here.' }, 403)
 
   // 1. Stripe first (agents only; sample and comped accounts were never billed).
   let plan: 'none' | 'cancelled' | 'gone' = 'none'
@@ -78,14 +80,21 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   try {
     removed = await deps.deleteData(uid)
   } catch (e) {
-    console.error('[delete-account] account_delete failed:', (e as Error).message)
+    const msg = (e as Error).message || ''
+    console.error('[delete-account] account_delete failed:', msg)
+    // P1017: account_delete refuses the last active admin (someone has to be able to run Ohvara).
+    if (/last admin/i.test(msg)) return json({ error: 'You’re the last admin, so this account can’t be deleted.', plan }, 409)
     return json({ error: 'Couldn’t delete your account. Try again in a minute.', plan }, 500)
   }
 
   // 3–4. Photo and login. The profile is already anonymous and switched off,
   // so a failure here is logged, not shown: the person is signed out anyway.
   try { await deps.removePhoto(uid) } catch (e) { console.error('[delete-account] photo:', (e as Error).message) }
-  try { await deps.deleteLogin(uid) } catch (e) { console.error('[delete-account] login:', (e as Error).message) }
+  // P1017: the soft delete is what frees the email (and Google/Apple sign-in) for a new account, so try twice.
+  try { await deps.deleteLogin(uid) } catch (e) {
+    console.error('[delete-account] login:', (e as Error).message)
+    try { await deps.deleteLogin(uid) } catch (e2) { console.error('[delete-account] login retry:', (e2 as Error).message) }
+  }
 
   return json({ ok: true, plan, removed })
 }

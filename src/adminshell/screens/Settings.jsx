@@ -6,13 +6,13 @@ import {
 } from 'lucide-react'
 import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmAdmins, useAdmAudit, useAdmDay, useAdmSource } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
-import { Field, Seg, Switch, Chip, PillTabs, Avatar, Empty, useNote, useAccount, initials } from '../../template/kit'
+import { Field, Seg, Switch, Chip, PillTabs, Avatar, Empty, Drawer, useNote, useAccount, initials } from '../../template/kit'
 import { CountUp } from '../../template/motion'
 import '../../template/settings929.css'
 import { avatarHue } from '../../template/avatarHue'
 import { Dropdown, DField } from '../kit'
 import { AddSomeone } from '../AdminFrame'
-import { useIsOwner, ROLE_WORD } from '../owner'
+import { useIsOwner, ROLE_WORD, roleOptions } from '../owner'
 import { PayoutBankSection } from '../PayoutBank1004'
 import { ap } from '../paths'
 import { PhoneInput } from '../../template/PhoneInput'
@@ -88,15 +88,44 @@ function ProfileCard({ name, email }) {
   )
 }
 
+// P1017: fix a wrong role without deleting anyone. Agent <-> Fulfillment for any admin; Admin (to or from) for the owner
+// only (admin_set_user_role / admin_set_invite_role refuse anyone else). Each change asks first, and is audit-logged.
+function RolePick({ value, owner, name, onPick }) {
+  const opts = roleOptions(owner).map(o => ({ value: o.key, label: o.label }))
+  return <Dropdown className="adm-dd-sm" label={`${name}'s role`} value={value} options={opts} onChange={v => v !== value && onPick(v)} />
+}
+const ROLE_AFTER = {
+  admin: 'They get every page and permission you have, except inviting another admin or changing an admin.',
+  agent: 'They get the agent portal. Anything they were doing as Fulfillment is handed back to the team.',
+  fulfillment: 'They get the Fulfillment portal. Their open agent work stays where it is until you move it.',
+}
+function RoleAsk({ ask, onClose, onYes }) {
+  if (!ask) return <Drawer open={false} onClose={onClose} title="" />
+  const to = ROLE_WORD[ask.to]
+  return (
+    <Drawer open center onClose={onClose} title={ask.invite ? `Make ${ask.name}'s invite ${to}?` : `Make ${ask.name} ${to === 'Admin' ? 'an Admin' : to === 'Agent' ? 'an Agent' : 'Fulfillment'}?`}
+      sub={`${ROLE_WORD[ask.from] || 'Agent'} now`}
+      footer={<><button type="button" className="tp-primary fx-accent" onClick={onYes}>Change the role</button><button type="button" className="tp-btn ov-ghost" onClick={onClose}>Keep {ROLE_WORD[ask.from] || 'Agent'}</button></>}>
+      <p className="tp-sub">{ask.invite ? `The link they already have makes ${to === 'Admin' ? 'an Admin' : to === 'Agent' ? 'an Agent' : 'a Fulfillment'} account. ` : ''}{ROLE_AFTER[ask.to]} The change is in the audit log.</p>
+    </Drawer>
+  )
+}
+
 function People() {
   const { data: agents } = useAdmAgents()
   const { data: vas } = useAdmVas()
   const { data: invites } = useAdmInvites()
   const { data: admins } = useAdmAdmins()
-  const { setAccess, resendInvite, cancelInvite } = useAdmActions()
+  const { setAccess, resendInvite, cancelInvite, setRole, setInviteRole } = useAdmActions()
   const note = useNote()
   const owner = useIsOwner()
   const real = useAdmSource() === 'real'
+  const [ask, setAsk] = useState(null)
+  const yes = () => {
+    const to = ROLE_WORD[ask.to]
+    if (ask.invite) { setInviteRole(ask.id, ask.to); note(`${ask.name}'s invite is ${to} now`) } else { setRole(ask.id, ask.to); note(`${ask.name} is ${to} now`) }
+    setAsk(null)
+  }
   const [who, setWho] = useState('agent')
   const [q, setQ] = useState('')
   const [adding, setAdding] = useState(false)
@@ -116,13 +145,14 @@ function People() {
       <ul className="tp-list adm-people">
         {/* P1004: every admin, real or sample. Admins can't change each other here (admin_user_guard); only the owner invites one. */}
         {who === 'admin' && admins.filter(a => !n || `${a.name} ${a.email}`.toLowerCase().includes(n)).map(a => (
-          <li key={a.id} className="fx-mrow"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>Admin · {a.email}{a.lastOn ? ` · on ${a.lastOn}` : ''}</small></span><Chip tone={a.owner ? 'teal' : 'mute'}>{a.owner ? 'Owner' : 'Admin'}</Chip><Lock size={14} aria-hidden="true" /></li>
+          <li key={a.id} className="fx-mrow"><Avatar name={a.name} /><span className="tp-grow"><b>{a.name}</b><small>Admin · {a.email}{a.lastOn ? ` · on ${a.lastOn}` : ''}</small></span><Chip tone={a.owner ? 'teal' : 'mute'}>{a.owner ? 'Owner' : 'Admin'}</Chip>{owner && !a.owner ? <RolePick value="admin" owner name={a.name} onPick={to => setAsk({ id: a.id, name: a.name, from: 'admin', to })} /> : <Lock size={14} aria-hidden="true" />}</li>
         ))}
         {rows.map(p => (
           <li key={p.id} className="fx-mrow">
             <Avatar name={p.name} />
             <span className="tp-grow"><b>{p.name}</b><small>{p.email} · on {p.lastOn}</small></span>
             <Chip tone={p.access ? 'green' : 'mute'}>{p.access ? 'Access on' : 'Access off'}</Chip>
+            <RolePick value={who} owner={owner} name={p.name} onPick={to => setAsk({ id: p.id, name: p.name, from: who, to })} />
             <button type="button" className="fx-pillbtn" onClick={() => { setAccess(p.id, !p.access); note(p.access ? `${p.name} can't sign in now` : `${p.name} can sign in again`) }}>{p.access ? <><ShieldOff size={13} />Turn off</> : <><ShieldCheck size={13} />Turn on</>}</button>
             <Link to={ap(who === 'agent' ? 'agents' : 'team', p.id)} className="fx-pillbtn">Open<ArrowUpRight size={13} /></Link>
           </li>
@@ -130,13 +160,15 @@ function People() {
         {out.map(i => (
           <li key={i.id} className="fx-mrow"><Mail size={17} aria-hidden="true" /><span className="tp-grow"><b>{i.name}</b><small>Invite · {ROLE_WORD[i.role] || 'Agent'} · {i.to || 'link to copy'} · sent {i.sent}</small></span>
             <button type="button" className="fx-pillbtn" onClick={() => { resendInvite(i.id); if (!real) note('Invite sent again (sample)') }}>{i.via === 'link' ? 'Copy link' : 'Resend'}</button>
+            {(owner || i.role !== 'admin') && <RolePick value={i.role || 'agent'} owner={owner} name={i.name} onPick={to => setAsk({ invite: true, id: i.id, name: i.name, from: i.role || 'agent', to })} />}
             <button type="button" className="fx-pillbtn" onClick={() => { cancelInvite(i.id); note('Invite cancelled') }}>Cancel</button>
           </li>
         ))}
-        {who === 'admin' && <li className="tp-sub">{owner ? 'Add an admin with Add someone. They get every page and permission you have, except inviting another admin.' : 'Only the owner can invite an admin.'} Admins can’t turn each other off or delete their own account here.</li>}
+        {who === 'admin' && <li className="tp-sub">{owner ? 'Add an admin with Add someone, or change someone’s role here. Admins get every page and permission you have, except inviting or changing an admin.' : 'Only the owner can make or change an admin.'} Admins can’t turn each other off here.</li>}
         {who !== 'admin' && rows.length === 0 && out.length === 0 && <li><Empty title="No one" sub="Nobody matches that." /></li>}
       </ul>
       <AddSomeone open={adding} onClose={() => setAdding(false)} />
+      <RoleAsk ask={ask} onClose={() => setAsk(null)} onYes={yes} />
     </>
   )
 }

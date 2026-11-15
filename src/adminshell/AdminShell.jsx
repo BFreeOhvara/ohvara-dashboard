@@ -92,10 +92,10 @@ export default function AdminShell({ account, preview = false }) {
   }, [preview])
   // P848/P858: the admin's own view (P934: the Sample info pill). Real (the company switch off, or this admin's own preview) hands
   // the pages the real store (hooks/admRealData.js); /preview/admin is always sample.
-  const { mode, canPreview, setView, show } = useDataMode()
+  const { mode, canPreview, setView } = useDataMode()
   const real = !preview && mode === 'real'
   const Data = real ? RealData : SampleData
-  const live = useMemo(() => (account ? { ...account, view: { mode, canPreview, setView, show } } : account), [account, mode, canPreview, setView, show])
+  const live = useMemo(() => (account ? { ...account, view: { mode, canPreview, setView } } : account), [account, mode, canPreview, setView])
   // P855: the outer boundary catches a throw in the frame itself (a page's own boundary keeps the tabs alive).
   return (
     <AdminBoundary>

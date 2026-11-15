@@ -63,7 +63,8 @@ const deps: Deps = {
   },
   async emailHasAccount(email) {
     // profiles.email mirrors auth.users.email (handle_new_user); case-insensitive exact match.
-    const { data, error } = await db.from('profiles').select('id').ilike('email', likeEscape(email)).limit(1)
+    // P1017: a deleted account never holds its email (its row is anonymised; the login is soft-deleted).
+    const { data, error } = await db.from('profiles').select('id').ilike('email', likeEscape(email)).is('deleted_at', null).limit(1)
     if (error) throw error
     return (data?.length ?? 0) > 0
   },

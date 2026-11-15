@@ -301,13 +301,16 @@ function DataRequests() {
 const PARTS = [['dnc', 'Do not call', DoNotCall], ['incidents', 'Licensed line', Incidents], ['complaints', 'Complaints', Complaints], ['legal', 'Legal holds', Legal], ['data', 'Data requests', DataRequests]]
 export function ACompliance() {
   const [part, setPart] = useState('dnc')
+  const real = useAdmSource() === 'real' // P1017: every list below is sample (p879.js); real has none logged yet
   const P = PARTS.find(p => p[0] === part)[2]
   return (
     <SubPage title="Compliance" line="Kept 5 years. Admins only." big>
       <div className="ma-chips am-tabs ma-rise" role="tablist" aria-label="Compliance">
         {PARTS.map(([k, w]) => <button key={k} type="button" role="tab" aria-selected={part === k} className={`ma-fchip am-fchip${part === k ? ' is-on' : ''}`} onClick={() => setPart(k)}>{w}</button>)}
       </div>
-      <P key={part} />
+      {real
+        ? <div className="ma-glass ma-list ma-rise"><p className="ma-empty">Nothing logged yet. Do-not-call numbers, licensed-line notes, complaints, legal holds and data requests show here once they're logged.</p></div>
+        : <P key={part} />}
     </SubPage>
   )
 }

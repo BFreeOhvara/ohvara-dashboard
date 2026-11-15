@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { paths } from '../paths'
 import { Layers, CreditCard, Check, PauseCircle, PlayCircle, LogOut, Phone, CalendarClock, Clock, CircleAlert, Wallet, CalendarCheck2, Users, BadgeCheck, Target, SlidersHorizontal, Clock3, MapPin, RotateCcw, ArrowUpCircle, ShieldCheck } from 'lucide-react'
-import { useSampleBilling, useSampleActions, useSampleAppointments } from '../data'
+import { useSampleBilling, useSampleActions, useSampleAppointments, useDataSource } from '../data'
 import { Chip, Drawer, Field, SampleTag, Seg, useNote } from '../kit'
 import { Select } from '../Select'
 import { usd } from '../motion'
@@ -54,6 +54,17 @@ const cost = v => (v == null ? '–' : money(Math.round(v)))
 
 // Pause (N-A-30, N-I-03): dates or until resumed; what stops and what keeps going; the billing effect; a reminder 2
 // days before it ends; it resumes by itself.
+// P1017: the dates in the pause and cancel drawers. Sample keeps the sample week; a real agent sees today and the
+// end of this week (Sunday) from their own clock, never the sample Nov 3 / Nov 8.
+const dayLabel = d => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+function billDates(real, now = new Date()) {
+  if (!real) return { today: 'Tue, Nov 3', weekEnd: 'Sun, Nov 8' }
+  const end = new Date(now)
+  end.setDate(now.getDate() + ((7 - now.getDay()) % 7))
+  return { today: dayLabel(now), weekEnd: dayLabel(end) }
+}
+const useBillDates = () => billDates(useDataSource() === 'real')
+
 // P890: the next four Mondays after tomorrow, as { label: 'Mon, Nov 16', iso: '2026-11-16' } (lead_pause_set takes the iso).
 function pauseDays(from = new Date()) {
   const d = new Date(from.getFullYear(), from.getMonth(), from.getDate() + 2)
@@ -65,6 +76,7 @@ function pauseDays(from = new Date()) {
   })
 }
 function PauseDrawer({ open, onClose, appts }) {
+  const bd = useBillDates()
   const { pause } = useSampleActions()
   const note = useNote()
   const [mode, setMode] = useState('dates')
@@ -73,7 +85,7 @@ function PauseDrawer({ open, onClose, appts }) {
   const inPause = appts.filter(a => a.kind === 'lead' && a.date >= 3)
   const save = () => {
     const untilIso = mode === 'dates' ? days.find(x => x.label === until)?.iso || null : null
-    pause({ from: 'Tue, Nov 3', until: mode === 'dates' ? until : null, untilIso })
+    pause({ from: bd.today, until: mode === 'dates' ? until : null, untilIso })
     note(mode === 'dates' ? `Paused until ${until}. Lead spend and new leads stop` : 'Paused until you resume. Lead spend and new leads stop')
     onClose()
   }
@@ -95,6 +107,7 @@ function PauseDrawer({ open, onClose, appts }) {
 // Cancel (N-I-05): why, an option that fits the reason, when it takes effect, the final bill, what happens, confirm.
 const REASONS = ['It costs too much', 'Not enough appointments', 'Not closing enough', 'Taking a break', 'Leaving insurance', 'Something else']
 function CancelDrawer({ open, onClose, b, onPause, onTalk }) {
+  const bd = useBillDates()
   const { cancelPlan, setSpend, setProducts } = useSampleActions()
   const note = useNote()
   const [why, setWhy] = useState('')
@@ -108,22 +121,22 @@ function CancelDrawer({ open, onClose, b, onPause, onTalk }) {
     'Something else': ['Talk to someone first', () => { onClose(); onTalk() }],
   }[why]
   const svcOnly = why === 'It costs too much' && b.products !== 'servicing'
-  const done = () => { cancelPlan({ why, on: 'Sun, Nov 8' }); note('Cancelled. A confirmation email is on its way'); onClose() }
+  const done = () => { cancelPlan({ why, on: bd.weekEnd }); note('Cancelled. A confirmation email is on its way'); onClose() }
   return (
     <Drawer open={open} onClose={onClose} title="Cancel your plan" sub="We’re sorry to see you go"
       footer={<><button type="button" className="tp-btn ov-ghost tp-danger" disabled={!why || !sure} onClick={done}>Cancel my plan</button><button type="button" className="tp-primary fx-accent" onClick={onClose}>Keep my account</button></>}>
       <Field label="Why are you leaving?"><Select label="Why are you leaving?" placeholder="Pick a reason" value={why} onChange={v => { setWhy(v); setSure(false) }} options={REASONS} /></Field>
       {offer && <button type="button" className="lc-nudge" onClick={offer[1]}><span className="tp-grow"><b>{offer[0]}</b><small>Most agents who pick this stay.</small></span><span className="lc-nudge-go">Try it</span></button>}
-      {svcOnly && <button type="button" className="lc-nudge" onClick={() => { setProducts('servicing'); note('Switched to servicing only. Leads stop on Sun, Nov 8'); onClose() }}><span className="tp-grow"><b>Keep servicing only</b><small>Your clients stay looked after. No new leads.</small></span><span className="lc-nudge-go">Switch</span></button>}
+      {svcOnly && <button type="button" className="lc-nudge" onClick={() => { setProducts('servicing'); note(`Switched to servicing only. Leads stop on ${bd.weekEnd}`); onClose() }}><span className="tp-grow"><b>Keep servicing only</b><small>Your clients stay looked after. No new leads.</small></span><span className="lc-nudge-go">Switch</span></button>}
       {why && <>
         <div className="sp-effects">
-          <div><h3>When</h3><ul><li>Ends Sun, Nov 8, the end of this week</li><li>New leads stop then; booked appointments stay on your calendar</li></ul></div>
+          <div><h3>When</h3><ul><li>Ends {bd.weekEnd}, the end of this week</li><li>New leads stop then; booked appointments stay on your calendar</li></ul></div>
           <div><h3>After that</h3><ul><li>The team stops servicing your clients</li><li>Your portal stays open for 30 days to download your book</li></ul></div>
         </div>
         <div className="pb-row"><span>Final bill</span><b className="tp-money">This month, as usual</b></div>
         <div className="pb-row"><span>Unspent lead spend credit, refunded</span><b className="tp-money">{money(b.nightNow.credit * (1 + b.nightNow.tonight.rate))}</b></div>
         <p className="tp-sub">The {money(SETUP_FEE)} setup fee isn{'’'}t refunded.</p>
-        <label className="tp-check"><input type="checkbox" checked={sure} onChange={e => setSure(e.target.checked)} /><span>I understand my leads and servicing stop on Sun, Nov 8.</span></label>
+        <label className="tp-check"><input type="checkbox" checked={sure} onChange={e => setSure(e.target.checked)} /><span>I understand my leads and servicing stop on {bd.weekEnd}.</span></label>
         <p className="tp-sub">We email you a confirmation. You can come back any time.</p>
       </>}
     </Drawer>
