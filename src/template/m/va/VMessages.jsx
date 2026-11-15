@@ -12,6 +12,7 @@ import { runsOf } from '../appModel'
 import { shortAt, subscribeLocal, getLocal, sendLocal } from '../threadStore'
 import { firstName } from './vaModel'
 import { useVaThreads, dmStore, VaStandingCtx } from './vaStore'
+import { NO_CONV, NO_CONV_SUB } from '../../msgsEmptyText.js'
 
 // P975 — Messages: threads straight on the page. Each agent thread is about one client (the agent and the VA; the
 // client never sees it). P977: Ohvara support pinned at the top (Brayden and Jordan, like the agent app's), then a
@@ -54,6 +55,7 @@ export default function VMessages() {
             </button>
           )
         })}
+        {!n && !all.some(t => !isSupport(t)) && <p className="ma-empty is-glass" role="status"><b>{NO_CONV}</b><br />{NO_CONV_SUB.va}</p>}
       </div>
       {n && threads.filter(t => !isSupport(t)).length === 0 && <p className="ma-empty is-glass">No thread. No client or agent by that name.</p>}
       <p className="ma-note">Agents write here about their clients. The client never sees these.</p>

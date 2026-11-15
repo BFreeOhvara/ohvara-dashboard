@@ -5,6 +5,7 @@ import { useAdmThreads, useAdmActions } from '../data'
 import { Avatar, Chip, Empty, Seg } from '../../template/kit'
 import { ap } from '../paths'
 import { SUPPORT_NAME } from '../../template/support911'
+import { ListEmpty, PickConversation } from '../../template/msgsEmpty'
 
 // P849 — Messages: the admin line with every agent and every VA, one thread per person (today's shared inbox for
 // admin). ?to=<person id> opens that person's line (Agents, Fulfillment, Leads and Billing link here). P867: Jordan is a
@@ -27,8 +28,8 @@ export default function Messages() {
   const list = threads.filter(x => (who === 'all' || x.role === who) && x.name.toLowerCase().includes(n))
   const pick = id => { setSel(id); readThread(id) }
   const send = e => { e.preventDefault(); if (!text.trim() || !t) return; sendMessage(t.id, text.trim(), 'me'); setText('') }
-  if (!t) return <Empty title="No messages" sub="Nobody has written yet." />
-  const first = t.name.split(' ')[0]
+  // P1013: no conversations yet keeps the whole box (empty list note + "Pick a conversation"), never a bare message.
+  const first = t ? t.name.split(' ')[0] : ''
   const otherSide = first
   return (
     <section className="ov-card tp-msgs adm-msgs" aria-label="Messages" data-fold data-fold-fit="480" data-fold-phone>
@@ -37,15 +38,16 @@ export default function Messages() {
         <Seg label="Who" className="adm-who-seg" value={who} onChange={setWho} options={[{ key: 'all', label: 'All' }, { key: 'Agent', label: 'Agents' }, { key: 'Fulfillment', label: 'VAs' }]} />
         <div className="tp-threads-b">
           {list.map(x => (
-            <button key={x.id} type="button" className={`tp-thread${x.id === t.id ? ' on' : ''}`} onClick={() => pick(x.id)}>
+            <button key={x.id} type="button" className={`tp-thread${x.id === t?.id ? ' on' : ''}`} onClick={() => pick(x.id)}>
               <Avatar name={x.name} /><span className="tp-grow"><b>{x.name}</b><small>{x.role} · {x.messages.at(-1)?.text || 'No messages yet'}</small></span>
               {x.unread > 0 && <span className="tp-tb is-msg">{x.unread}</span>}
             </button>
           ))}
-          {list.length === 0 && <Empty title="No thread" sub="Nobody by that name." />}
+          {!threads.length ? <ListEmpty who="admin" /> : list.length === 0 && <Empty title="No thread" sub="Nobody by that name." />}
         </div>
       </div>
       <div className="tp-conv">
+        {!t ? <PickConversation /> : <>
         <div className="tp-conv-h">
           <Avatar name={t.name} />
           <span className="tp-grow"><b>{t.name}</b><small>{`${t.role} · their ${SUPPORT_NAME} line. Only admins and ${first} see this.`}</small></span>
@@ -62,6 +64,7 @@ export default function Messages() {
           <input className="tp-input" aria-label={`Reply to ${otherSide} as ${SUPPORT_NAME}`} placeholder={`Reply to ${otherSide} as ${SUPPORT_NAME}…`} value={text} onChange={e => setText(e.target.value)} />
           <button type="submit" className="tp-primary fx-accent" disabled={!text.trim()}>Send</button>
         </form>
+        </>}
       </div>
     </section>
   )

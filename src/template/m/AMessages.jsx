@@ -10,6 +10,7 @@ import { useApp, SubPage, Ini, rise } from './AppKit'
 import { runsOf } from './appModel'
 import { subscribeLocal, getLocal, sendLocal, shortAt } from './threadStore'
 import { useKeyboard } from './useKeyboard'
+import { NO_CONV, NO_CONV_SUB } from '../msgsEmptyText.js'
 
 // P967 — Messages: you and the Ohvara team. Threads sit straight on the page with hairlines between them (no box, no
 // pencil). A thread opens as its own screen: the team on the left with who wrote, you on the right in dark, and the
@@ -72,7 +73,7 @@ export default function AMessages() {
             </button>
           )
         })}
-        {!all.length && <p className="ma-empty">Messages with the team show here. When the team needs you on a client, they write here.</p>}
+        {!q.trim() && !all.some(t => !isSupport(t)) && <p className="ma-empty is-glass" role="status"><b>{NO_CONV}</b><br />{NO_CONV_SUB.agent}</p>}
         {q.trim() && !threads.some(t => !isSupport(t)) && <p className="ma-empty"><b>No thread</b><br />No client by that name.</p>}
       </div>
       <p className="ma-note">Each chat is about one person. Our team answers here, usually within minutes.</p>
