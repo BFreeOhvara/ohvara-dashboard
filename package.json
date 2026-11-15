@@ -84,6 +84,7 @@
     "vitest": "^5.0.5"
   },
   "ohvara": {
-    "otaMinNativeBuild": { "ios": 3, "android": 1 }
+    "otaMinNativeBuild": { "ios": 3, "android": 1 },
+    "introMinNativeBuild": { "ios": 0, "android": 0 }
   }
 }

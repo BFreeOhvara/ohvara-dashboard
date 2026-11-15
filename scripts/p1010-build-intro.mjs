@@ -5,8 +5,11 @@ import { fileURLToPath } from 'node:url'
 const here = path.dirname(fileURLToPath(import.meta.url))
 const mark = JSON.parse(fs.readFileSync(path.resolve(here, '../../ohvara-site/_src/mark.json'), 'utf8'))
 const take = (process.argv[2] || '').toUpperCase()
+// The first app builds with the navy splash (P1010). Until they exist, 0 keeps the intro off everywhere.
+const MIN = JSON.parse(fs.readFileSync(path.resolve(here, '../package.json'), 'utf8')).ohvara.introMinNativeBuild || { ios: 0, android: 0 }
 let src = fs.readFileSync(path.join(here, 'p1010-intro.src.js'), 'utf8')
   .replace('__FRONT__', mark.front).replace('__BACK__', mark.back)
-if (take) src = src.replace("var TAKE = 'A'", `var TAKE = '${take}'`)
+  .replace('__MIN_IOS__', MIN.ios || 'Infinity').replace('__MIN_ANDROID__', MIN.android || 'Infinity')
+if (take) src = src.replace(/var TAKE = '[ABC]'/, `var TAKE = '${take}'`)
 fs.writeFileSync(path.resolve(here, '../public/intro.js'), src)
 console.log('public/intro.js', src.length, 'bytes', take ? `take ${take}` : '')

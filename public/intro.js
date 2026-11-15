@@ -3,10 +3,10 @@
 // ohvara-site/_src/mark.json, the one correct logo source; on navy the big piece is white, the wing teal).
 // A plain classic script so it runs before the app's bundle and paints from the first frame.
 // It only runs inside the iPhone/Android app (Capacitor), never on the website.
-// Three takes for Brayden to pick from (A Sweep, B Draw, C Converge); TAKE is the default.
+// Three takes were made (A Sweep, B Draw, C Converge); Brayden picked B. The others stay for the preview page.
 (function () {
   'use strict'
-  var TAKE = 'A'
+  var TAKE = 'B' // Brayden picked B (Nov 15)
   var NAVY = '#0A1F44', TEAL = '#00BFA6', WHITE = '#FFFFFF'
   var VB = [291.4, 354]
   var FRONT = 'M54.2 352.3 L52.2 353.0 L51.9 352.3 L58.2 346.5 L65.6 339.3 L71.4 333.3 L81.5 322.3 L88.4 314.3 L97.5 303.3 L105.5 293.3 L114.6 281.3 L127.5 263.3 L141.6 242.3 L153.6 223.3 L165.4 203.3 L175.5 185.3 L187.7 162.3 L200.5 136.3 L212.5 110.3 L219.5 94.3 L223.9 83.3 L224.5 82.3 L230.6 67.3 L234.0 58.3 L234.5 57.3 L237.0 50.3 L239.4 44.3 L240.0 42.3 L240.5 41.3 L243.0 34.3 L243.5 33.3 L244.1 31.3 L244.6 30.3 L246.9 23.3 L247.4 22.3 L248.0 20.3 L248.5 19.3 L249.0 17.3 L250.5 13.3 L253.6 4.3 L254.1 2.3 L255.2 1.0 L255.4 2.3 L254.6 52.3 L253.5 87.3 L250.5 163.3 L250.0 171.3 L249.5 184.3 L249.0 192.3 L248.5 205.3 L248.0 212.3 L247.5 225.3 L247.1 230.3 L247.3 231.3 L249.2 232.4 L289.2 251.1 L290.4 252.3 L283.2 255.5 L279.2 257.0 L271.2 260.5 L265.2 262.9 L264.2 263.5 L253.2 268.0 L252.2 268.6 L239.2 273.9 L238.2 274.5 L227.2 279.0 L224.2 280.4 L220.2 282.0 L219.2 282.6 L201.2 290.0 L200.2 290.6 L194.2 293.0 L193.2 293.6 L175.2 301.0 L167.2 304.6 L161.2 306.9 L160.2 307.5 L142.2 315.0 L141.2 315.6 L123.2 323.0 L120.2 324.4 L116.2 326.0 L115.2 326.6 L109.2 328.9 L108.2 329.5 L104.2 331.1 L101.2 332.5 L97.2 334.0 L96.2 334.6 L90.2 337.0 L89.2 337.6 L83.2 340.0 L82.2 340.5 L71.2 345.0 L70.2 345.6 L54.2 352.3 Z'
@@ -154,30 +154,54 @@
     try { if (C.nativePromise) return C.nativePromise('SplashScreen', 'hide', { fadeOutDuration: 0 }).catch(function () {}) } catch (e) { /* bridge not ready */ }
     return Promise.resolve()
   }
-  var now = Date.now(), at = null
-  try { at = Number(sessionStorage.getItem(KEY)) || null } catch (e) { /* storage off */ }
-  var reduce = false
-  try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches } catch (e) { /* old webview */ }
-  // A reload part-way through the intro (the over-the-air update switching in at launch) carries on
-  // from the same moment; any later reload, or a return from the background, never shows it again.
-  var from = at ? now - at : 0
-  if (at && from >= TOTAL) { hideSplash(); return }
-  if (!at) { try { sessionStorage.setItem(KEY, String(now)) } catch (e) { /* storage off */ } }
-  var intro = mount(document.body || document.documentElement, TAKE, reduce)
-  if (from >= intro.total) { intro.root.remove(); hideSplash(); return }
-  var started = false
-  window.__ohvaraIntroPlaying = true
-  function start() {
-    if (started) return
-    started = true
-    intro.play(from)
-    setTimeout(function () {
-      intro.root.remove()
-      window.__ohvaraIntroPlaying = false
-      window.dispatchEvent(new Event('ohvara-intro-done'))
-    }, Math.max(0, intro.total - from) + 60)
+  // The intro needs the plain navy splash and launchAutoHide off, which only app builds from P1010 on have.
+  // Older store builds (old splash with the mark, auto-hide) skip it, so they never see a jump.
+  var MIN_BUILD = { ios: Infinity, android: Infinity }
+  window.__ohvaraIntroPending = true
+  var decided = false
+  function skip() {
+    if (decided) return
+    decided = true
+    window.__ohvaraIntroPending = false
+    hideSplash()
   }
-  // The native splash is the same plain navy, so the hand-off has nothing to jump.
-  hideSplash().then(function () { requestAnimationFrame(start) })
-  setTimeout(start, 700)
+  setTimeout(skip, 1500)
+  try {
+    C.nativePromise('App', 'getInfo', {}).then(function (info) {
+      if (decided) return
+      var min = MIN_BUILD[C.getPlatform ? C.getPlatform() : ''] || Infinity
+      if (!(Number(info && info.build) >= min)) return skip()
+      decided = true
+      run()
+    }, skip)
+  } catch (e) { skip() }
+
+  function run() {
+    var now = Date.now(), at = null
+    try { at = Number(sessionStorage.getItem(KEY)) || null } catch (e) { /* storage off */ }
+    var reduce = false
+    try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches } catch (e) { /* old webview */ }
+    // A reload part-way through the intro (the over-the-air update switching in at launch) carries on
+    // from the same moment; any later reload, or a return from the background, never shows it again.
+    var from = at ? now - at : 0
+    if (at && from >= TOTAL) { window.__ohvaraIntroPending = false; hideSplash(); return }
+    if (!at) { try { sessionStorage.setItem(KEY, String(now)) } catch (e) { /* storage off */ } }
+    var intro = mount(document.body || document.documentElement, TAKE, reduce)
+    window.__ohvaraIntroPlaying = true
+    window.__ohvaraIntroPending = false
+    var started = false
+    function start() {
+      if (started) return
+      started = true
+      intro.play(from)
+      setTimeout(function () {
+        intro.root.remove()
+        window.__ohvaraIntroPlaying = false
+        window.dispatchEvent(new Event('ohvara-intro-done'))
+      }, Math.max(0, intro.total - from) + 60)
+    }
+    // The native splash is the same plain navy, so the hand-off has nothing to jump.
+    hideSplash().then(function () { requestAnimationFrame(start) })
+    setTimeout(start, 700)
+  }
 })()

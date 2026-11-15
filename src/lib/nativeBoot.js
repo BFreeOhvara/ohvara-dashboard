@@ -80,8 +80,9 @@ export function bootNative() {
   root.classList.add('is-native', `is-${nativePlatform()}`)
   viewportCover()
 
-  // P1010: the logo reveal (public/intro.js) hides the splash itself; this is the backstop if it didn't run.
-  SplashScreen.hide({ fadeOutDuration: 0 }).catch(() => {})
+  // P1010: the logo reveal (public/intro.js) hides the splash itself; this is the backstop if it didn't run
+  // (and it waits while intro.js is still checking the app build, so the app never flashes before the intro).
+  if (!window.__ohvaraIntroPending) SplashScreen.hide({ fadeOutDuration: 0 }).catch(() => {})
   window.addEventListener('ohvara-intro-done', syncStatusBar)
   syncStatusBar()
   new MutationObserver(syncStatusBar).observe(root, { attributes: true, attributeFilter: ['data-theme'] })
