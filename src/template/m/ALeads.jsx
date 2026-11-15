@@ -23,6 +23,8 @@ import { useApp, SubPage, Ini, CallButton, BottomSheet, rise } from './AppKit'
 import { TONE, TAG, stageOf } from './appModel'
 import { LANES, LANE_TONE, LANE_FROM, laneOfLead, leadMatches } from './p1002'
 import './p1002.css'
+import './p1015.css'
+import { useEdgeFade } from './useEdgeFade'
 
 // P967 — Leads: a sliding highlight in each lane's colour, a one-line hint, and every lead a full card in its colour.
 // P1002: the lanes are the desktop's five (Booked · No show · Follow up · Not interested · Sold); live calls and imported
@@ -64,6 +66,7 @@ export default function ALeads() {
   const rows = staged.filter(x => x.lane === lane).sort((a, b) => (b.stage === 'mark') - (a.stage === 'mark'))
   const pick = k => setParams(prev => { const p = new URLSearchParams(prev); p.set('stage', k); p.delete('lane'); return p }, { replace: true })
   const seg = useRef(null)
+  const { fade, onScroll } = useEdgeFade(seg, [lane]) // P1015: a soft fade on the side with more lanes
   useStretchPill(seg, { activeKey: lane, selector: 'button.is-on' })
   useEffect(() => {
     // Scroll the lane strip only: scrollIntoView would also slide the whole page strip (.ma-viewport) sideways.
@@ -90,7 +93,7 @@ export default function ALeads() {
         </section>
       )}
 
-      <div className="ma-seg is-stages is-lanes ma-rise" style={rise(1)} role="tablist" aria-label="Lead status" ref={seg}>
+      <div className={`ma-seg is-stages is-lanes ma-rise${fade}`} style={rise(1)} role="tablist" aria-label="Lead status" ref={seg} onScroll={onScroll}>
         {LANES.map(s => (
           <button key={s.key} type="button" role="tab" aria-selected={lane === s.key} className={`is-${LANE_TONE[s.key]}${lane === s.key ? ' is-on' : ''}`} onClick={() => pick(s.key)}>
             {s.label} <span>{counts[s.key]}</span>

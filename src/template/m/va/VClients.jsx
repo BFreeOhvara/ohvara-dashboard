@@ -6,6 +6,7 @@ import { stagesOf } from '../../../lib/clientStages.js'
 import { whyShort } from '../../ful/callSteps'
 import { useApp, SubPage, Ini, Toggle, rise } from '../AppKit'
 import { useNoAutoKeyboard } from '../useKeyboard'
+import PillBar from '../PillBar'
 import { CLIENT_TONE, dayWords } from '../appModel'
 import { useVaNow, dayOfItem } from './useVaNow'
 
@@ -14,6 +15,8 @@ import { useVaNow, dayOfItem } from './useVaNow'
 // · Working · Protected), and Show closed (Closed is its own switch, hidden until it's on). Each card shows the
 // client's status, where they stand and their next booked call; tap one to open the client.
 const SHORT = { needs_attention: 'Needs attention', working: 'Working', protected: 'Protected', closed: 'Closed' }
+// P1015: the one-row pill bar's shorter words.
+const PILL = { needs_attention: 'Attention', working: 'Working', protected: 'Protected', closed: 'Closed' }
 
 function useClientStatuses() {
   const { data: clients } = useFulClients()
@@ -50,30 +53,24 @@ export default function VClients() {
   const { clients, st } = useClientStatuses()
   const next = useNextCalls()
   const [q, setQ] = useState('')
-  const [stage, setStage] = useState('all')
+  const [stage, setStage] = useState(null) // P1015: null = nothing chosen = every client (no All pill)
   const [showClosed, setShowClosed] = useState(false)
   const input = useRef(null)
   useNoAutoKeyboard(input)
-  const setClosed = on => { setShowClosed(on); setStage(on ? 'closed' : 'all') }
+  const setClosed = on => { setShowClosed(on); setStage(on ? 'closed' : null) }
   const shown = clients.filter(c => showClosed || st.get(c.id) !== 'closed')
   const t = q.trim().toLowerCase()
-  const rows = shown.filter(c => (stage === 'all' || st.get(c.id) === stage) && `${c.name} ${c.policy_number} ${c.client_phone} ${c.agent}`.toLowerCase().includes(t))
+  const rows = shown.filter(c => (!stage || st.get(c.id) === stage) && `${c.name} ${c.policy_number} ${c.client_phone} ${c.agent}`.toLowerCase().includes(t))
   const count = s => clients.filter(c => st.get(c.id) === s).length
   const keys = showClosed ? [...STATUS_ORDER, 'closed'] : STATUS_ORDER
-  const options = [{ key: 'all', label: 'All', n: shown.length }, ...keys.map(k => ({ key: k, label: SHORT[k], n: count(k), title: CLIENT_STATUS[k].sub }))]
+  const options = keys.map(k => ({ key: k, label: PILL[k], count: count(k), title: CLIENT_STATUS[k].sub }))
   return (
     <SubPage title="Clients" line={`${shown.length} client${shown.length === 1 ? '' : 's'} across your agents`} big>
       <label className="ma-search ma-rise"><Search size={18} aria-hidden="true" />
         <input ref={input} type="search" inputMode="search" aria-label="Find a client" placeholder="Find a client, phone, policy…" value={q} onChange={e => setQ(e.target.value)} />
         {q && <button type="button" className="ma-ib" aria-label="Clear" onClick={() => setQ('')}><X size={18} aria-hidden="true" /></button>}
       </label>
-      <div className="va-chips va-statuspills ma-rise" style={rise(0)} role="group" aria-label="Status">
-        {options.map(o => (
-          <button key={o.key} type="button" aria-pressed={stage === o.key} title={o.title} className={`ma-chip va-tap ma-press${stage === o.key ? ' is-solid' : ''}`} onClick={() => setStage(o.key)}>
-            {o.label}<span className="va-pillcount">{o.n}</span>
-          </button>
-        ))}
-      </div>
+      <PillBar options={options} value={stage} onChange={setStage} label="Status" style={rise(0)} />
       <div className="ma-glass va-closedrow ma-rise" style={rise(1)}>
         <span className="ma-sym is-stone"><Archive size={16} aria-hidden="true" /></span>
         <span className="ma-grow"><b>Show closed</b></span>

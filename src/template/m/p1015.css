@@ -1,0 +1,17 @@
+/* P1015 — PillBar: the phone's one-row pill filter. Phone screens only; the desktop never loads this. Tokens only
+   (the same glass and solid the agent phone's chips use), every pill 44 px tall, never wraps, scrolls sideways with a
+   soft fade on the side that has more. */
+.pb-bar { display: flex; flex-wrap: nowrap; align-items: stretch; gap: 2px; padding: 4px; margin: 12px 0 8px; border-radius: 999px; background: var(--ma-glass); border: 1px solid var(--ma-glass-b); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.pb-bar::-webkit-scrollbar { display: none; }
+.pb-pill { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 44px; padding: 0 12px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 700; color: var(--ma-ink2); white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pb-pill.is-on { background: var(--ma-solid); color: var(--ma-solid-ink); box-shadow: 0 4px 12px -6px rgba(0, 0, 0, .35); }
+.pb-pill:focus-visible { outline: 2px solid var(--ma-solid); outline-offset: 1px; }
+.pb-n { font-size: 12px; font-weight: 700; opacity: .75; }
+.pb-pill.is-on .pb-n { opacity: .85; }
+/* the soft edge: a mask on the bar itself fades whatever scrolls past that side */
+.pb-bar.has-right, .ma-seg.is-lanes.has-right { -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent); mask-image: linear-gradient(to right, black calc(100% - 28px), transparent); }
+.pb-bar.has-left, .ma-seg.is-lanes.has-left { -webkit-mask-image: linear-gradient(to left, black calc(100% - 28px), transparent); mask-image: linear-gradient(to left, black calc(100% - 28px), transparent); }
+.pb-bar.has-left.has-right, .ma-seg.is-lanes.has-left.has-right { -webkit-mask-image: linear-gradient(to right, transparent, black 28px, black calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent, black 28px, black calc(100% - 28px), transparent); }
+@media (prefers-reduced-motion: reduce) { .pb-bar { scroll-behavior: auto; } }
+.pb-dot { width: 10px; height: 10px; border-radius: 5px; background: var(--tbar); flex: none; }
+.pb-pill.is-on .pb-dot { background: currentColor; }

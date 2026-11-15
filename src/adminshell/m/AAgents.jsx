@@ -8,6 +8,7 @@ import { useApp, SubPage, Ini, CallButton, rise } from '../../template/m/AppKit'
 import { useNoAutoKeyboard } from '../../template/m/useKeyboard'
 import { money, flagOf, statusLine, dailySpend, agentGroups, buysOf, buysLeads } from './admModel'
 import { useMessageTo } from './useAdm'
+import PillBar from '../../template/m/PillBar'
 
 // P986 — Agents: "7 agents · $X a day in lead spend", the list grouped Need you (orange cards) and Doing fine. An agent
 // opens from the right: who they are and what they buy, a flag banner if anything's wrong, their numbers, billing (view
@@ -22,28 +23,29 @@ export default function AAgents() {
   const { data: invites } = useAdmInvites()
   const { data: idle = [] } = useAdmIdleSignups()
   const { resendInvite, cancelInvite } = useAdmActions()
-  const [filter, setFilter] = useState('all')
+  const [filter, setFilter] = useState(null) // P1015: null = nothing chosen = every agent (no All pill)
   const [q, setQ] = useState('')
   const input = useRef(null)
   useNoAutoKeyboard(input)
   const n = q.trim().toLowerCase()
-  const keep = a => (filter === 'all' || (filter === 'duty' && a.active) || (filter === 'booking' && hasLeads(a) && !a.active) || (filter === 'due' && a.billing.status === 'past_due') || (filter === 'paused' && a.paused))
+  const keep = a => (!filter || (filter === 'duty' && a.active) || (filter === 'booking' && hasLeads(a) && !a.active) || (filter === 'due' && a.billing.status === 'past_due') || (filter === 'paused' && a.paused))
   const found = (filter === 'idle' ? idle : agents).filter(a => (filter === 'idle' || keep(a)) && (!n || `${a.name} ${a.email} ${a.phone} ${a.city}`.toLowerCase().includes(n)))
   // P999: sign-ups that did nothing sit behind their own pill.
   const groups = filter === 'idle' ? [{ key: 'idle', label: 'Signed up, not paying', items: found }] : agentGroups(found, 'all', day.todayIso)
+  // P1015: short labels, no All (nothing chosen = all; tap the chosen pill again to clear it), counts small beside each.
   const pills = [
-    ['all', 'All', agents.length], ['duty', 'Take transfers', agents.filter(a => a.active).length], ['booking', 'Booking only', agents.filter(a => hasLeads(a) && !a.active).length],
-    ['due', 'Past due', agents.filter(a => a.billing.status === 'past_due').length], ['paused', 'Leads paused', agents.filter(a => a.paused).length],
-    ...(idle.length ? [['idle', 'Signed up, not paying', idle.length]] : []),
+    { key: 'duty', label: 'Transfers', count: agents.filter(a => a.active).length, title: 'Take transfers' },
+    { key: 'booking', label: 'Booking', count: agents.filter(a => hasLeads(a) && !a.active).length, title: 'Booking only' },
+    { key: 'due', label: 'Past due', count: agents.filter(a => a.billing.status === 'past_due').length },
+    { key: 'paused', label: 'Paused', count: agents.filter(a => a.paused).length, title: 'Leads paused' },
+    ...(idle.length ? [{ key: 'idle', label: 'Not paying', count: idle.length, title: 'Signed up, not paying' }] : []),
   ]
   const out = invites.filter(i => i.role === 'agent')
   return (
     <div className="ma-tabpage">
       <div className="ma-top ma-rise"><span className="ma-grow"><h1>Agents</h1><small>{agents.length} agents · <span className="tp-money">{money(dailySpend(agents))}</span> a day in lead spend</small></span></div>
       <label className="va-find ma-rise" style={rise(0)}><Search size={18} aria-hidden="true" /><input ref={input} type="search" inputMode="search" enterKeyHint="search" placeholder="Find by name, email, phone or city" aria-label="Find an agent" value={q} onChange={e => setQ(e.target.value)} />{q && <button type="button" className="ma-ib" aria-label="Clear" onClick={() => setQ('')}><X size={18} aria-hidden="true" /></button>}</label>
-      <div className="ma-chips am-tabs ma-rise" style={rise(0)} role="tablist" aria-label="Show">
-        {pills.map(([k, w, c]) => <button key={k} type="button" role="tab" aria-selected={filter === k} className={`ma-fchip am-fchip${filter === k ? ' is-on' : ''}`} onClick={() => setFilter(k)}>{w} <span className="tp-num">{c}</span></button>)}
-      </div>
+      <PillBar options={pills} value={filter} onChange={setFilter} label="Show agents" style={rise(0)} />
       {groups.map((g, gi) => (
         <div key={g.key} className="ma-rise" style={rise(gi + 1)}>
           <div className="ma-h2"><h2>{g.label}</h2><span>{g.items.length}</span></div>
@@ -71,7 +73,7 @@ export default function AAgents() {
             )}
         </div>
       ))}
-      {!groups.length && <p className="ma-empty is-glass ma-rise">{n ? 'No agent matches that.' : filter === 'all' ? 'No agents here.' : 'No agent in this view.'}</p>}
+      {!groups.length && <p className="ma-empty is-glass ma-rise">{n ? 'No agent matches that.' : !filter ? 'No agents here.' : 'No agent in this view.'}</p>}
       {out.length > 0 && (
         <section className="ma-rise" aria-label="Invites out">
           <div className="ma-h2"><h2>Invites out</h2><span>Not signed up yet</span></div>

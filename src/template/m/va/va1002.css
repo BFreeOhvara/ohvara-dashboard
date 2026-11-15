@@ -10,9 +10,6 @@
 .ma-lead .va-tag, .va-chead .va-tag { background: color-mix(in srgb, white 30%, transparent); color: inherit; }
 
 /* ---- Clients list ---- */
-.va-statuspills { margin-bottom: 10px; }
-.va-statuspills .ma-chip { gap: 8px; }
-.va-pillcount { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; font-size: 12px; font-weight: 800; background: color-mix(in srgb, currentColor 14%, transparent); }
 .va-closedrow { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 16px; margin-bottom: 14px; }
 .va-clist { padding-bottom: 28px; }
 .va-crow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
