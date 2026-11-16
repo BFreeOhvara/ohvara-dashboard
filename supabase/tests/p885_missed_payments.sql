@@ -11,7 +11,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(60);
+select plan(61);
 
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 select '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authenticated', 'p885_' || u.n || '@example.invalid',
@@ -80,16 +80,16 @@ select results_eq($$ select t.kind, t.status, t.requested_by, t.due_at = e.save_
                        from public.payment_missed_events e join public.servicing_tasks t on t.id = e.lapse_task_id
                       where e.policy_id = 'b8850000-0000-4000-8000-000000000001' $$,
                   $$ values ('lapse_save'::text, 'requested'::text, 'system'::text, true, true) $$, 'a lapse-save step opened, due by the end of the next business day');
-select results_eq($$ select count(*)::int, min(title), bool_and(detail like '%Harborline Life%' and detail like '%Grace ends about%' and detail like '%chargeback watch%')
-                       from public.notifications where profile_id = 'a8850000-0000-4000-8000-00000000000a' and type = 'payment_missed' $$,
-                  $$ values (1, 'Chargeback risk: Harold Brooks missed a payment'::text, true) $$, 'the agent is warned at the first missed payment: chargeback risk, carrier, grace, watch month');
+select results_eq($$ select count(*)::int, min(title) from public.notifications where profile_id = 'a8850000-0000-4000-8000-00000000000a' and type = 'client_payment_failed' $$,
+                  $$ values (1, 'Harold B.''s policy payment didn''t go through'::text) $$, 'the agent hears at the first missed payment: one client_payment_failed (P1023; the chargeback wording is gone)');
+select is((select count(*)::int from public.notifications where profile_id = 'a8850000-0000-4000-8000-00000000000a' and type = 'payment_missed'), 0, 'and no old payment_missed notice (P1023: not on the list)');
 select ok((select warned_at is not null from public.payment_missed_events where policy_id = 'b8850000-0000-4000-8000-000000000001'), 'the warning time is stamped');
 select is(public.payment_intake_receive((select a from t_tok), 'm-1', 'notices@harborline.example', 'again', '', '{"kind":"missed","policy_number":"HL-100-200"}')->>'status',
           'duplicate', 'the same email twice is a duplicate');
 select is(public.payment_intake_receive((select a from t_tok), 'm-2', 'agent@forward', 'Fwd: Fwd: payment returned', '', jsonb_build_object('kind', 'missed', 'policy_number', 'HL100200', 'due_date', current_date - 2))->>'status',
           'matched', 'a second email about the same miss is matched');
 select results_eq($$ select (select count(*)::int from public.payment_missed_events where policy_id = 'b8850000-0000-4000-8000-000000000001'),
-                            (select count(*)::int from public.notifications where profile_id = 'a8850000-0000-4000-8000-00000000000a' and type = 'payment_missed'),
+                            (select count(*)::int from public.notifications where profile_id = 'a8850000-0000-4000-8000-00000000000a' and type = 'client_payment_failed' and data->>'policy_id' = 'b8850000-0000-4000-8000-000000000001'),
                             (select count(*)::int from public.servicing_tasks where policy_id = 'b8850000-0000-4000-8000-000000000001' and kind = 'lapse_save') $$,
                   $$ values (1, 1, 1) $$, 'the same miss joins the open event: one event, one warning, one save step');
 
@@ -98,8 +98,8 @@ select is(public.payment_intake_receive((select a from t_tok), 'm-3', 'x@pinecre
           'matched', '"Last, First" matches the insured''s name when only one policy fits');
 select results_eq($$ select first_year, repeat_miss from public.payment_missed_events where policy_id = 'b8850000-0000-4000-8000-000000000002' $$,
                   $$ values (false, false) $$, 'year three: no chargeback risk');
-select is((select title from public.notifications where profile_id = 'a8850000-0000-4000-8000-00000000000a' and type = 'payment_missed' and data->>'policy_id' = 'b8850000-0000-4000-8000-000000000002'),
-          'Luisa Ortega missed a payment', 'the warning after year one has no chargeback wording');
+select is((select title from public.notifications where profile_id = 'a8850000-0000-4000-8000-00000000000a' and type = 'client_payment_failed' and data->>'policy_id' = 'b8850000-0000-4000-8000-000000000002'),
+          'Luisa O.''s policy payment didn''t go through', 'the notice after year one has no chargeback wording');
 
 -- ── Unmatched: several policies, no policy, unclear ──
 select results_eq($$ select r->>'status', r->>'why' from (select public.payment_intake_receive((select a from t_tok), 'm-4', 'x', 'Missed payment: Mary Smith', 'body', '{"kind":"missed","client_name":"Mary Smith"}') r) q $$,
@@ -109,7 +109,7 @@ select results_eq($$ select r->>'status', r->>'why' from (select public.payment_
 select results_eq($$ select r->>'status', r->>'why' from (select public.payment_intake_receive((select a from t_tok), 'm-6', 'x', 'Your statement', 'body', '{"kind":"other","policy_number":"HL-600"}') r) q $$,
                   $$ values ('unmatched'::text, 'unclear'::text) $$, 'an email that isn''t clearly a miss waits for a VA');
 -- P888: the admins are told, not the VAs.
-select is((select count(*)::int from public.notifications where profile_id = 'a8850000-0000-4000-8000-000000000001' and type = 'payment_intake_unmatched'), 3, 'an admin is told about each waiting email');
+select is((select count(*)::int from public.notifications where profile_id = 'a8850000-0000-4000-8000-000000000001' and type = 'payment_intake_unmatched'), 0, 'no admin notice about a waiting email (P1023: not on the list)');
 select is((select count(*)::int from public.payment_missed_events where policy_id = 'b8850000-0000-4000-8000-000000000006'), 0, 'an unclear email makes no event');
 
 -- ── Who can see and call what ──
@@ -156,9 +156,8 @@ select is((select resolution from public.payment_missed_events where policy_id =
 select is(public.payment_intake_receive((select a from t_tok), 'm-7', 'x', 'Missed payment', '', jsonb_build_object('kind', 'missed', 'policy_number', 'PA-77', 'due_date', current_date - 1))->>'status', 'matched', 'a second miss two months later');
 select results_eq($$ select count(*)::int, bool_or(repeat_miss) from public.payment_missed_events where policy_id = 'b8850000-0000-4000-8000-000000000002' $$,
                   $$ values (2, true) $$, 'it is its own event, flagged repeat');
-select ok(exists (select 1 from public.notifications where type = 'payment_missed' and data->>'policy_id' = 'b8850000-0000-4000-8000-000000000002'
-                   and detail like 'Second missed payment in 12 months.%'),
-          'the agent is told it''s the second miss');
+select is((select count(*)::int from public.notifications where type = 'client_payment_failed' and data->>'policy_id' = 'b8850000-0000-4000-8000-000000000002'), 2,
+          'the agent is told of the second miss too (P1023: one client_payment_failed per event)');
 
 -- ── The chargeback watch ──
 insert into public.servicing_tasks (agent_id, policy_id, kind, status, due_at, watch_month, requested_by)
@@ -196,7 +195,7 @@ select is(public.va_portal_check_done((select id from t_chk where agent_id = 'a8
 select pg_temp.as_owner();
 select results_eq($$ select e.source, (select count(*)::int from public.notifications n where n.profile_id = e.agent_id and n.type = 'portal_action_needed') from public.payment_missed_events e
                       where e.policy_id = 'b8850000-0000-4000-8000-000000000007' $$,
-                  $$ values ('portal_check'::text, 1) $$, 'it becomes a Payment missed event, and the portal change goes to the agent (Q38)');
+                  $$ values ('portal_check'::text, 0) $$, 'it becomes a Payment missed event; no portal-change notice (P1023: not on the list)');
 select pg_temp.as_user('a8850000-0000-4000-8000-0000000000f1');
 select throws_ok($$ select public.va_portal_check_done((select id from t_chk where carrier_name = 'Pinecrest Assurance'), 'no_access') $$, '22023', null, 'no access needs a note for the agent');
 select lives_ok($$ select public.va_portal_check_done((select id from t_chk where carrier_name = 'Pinecrest Assurance'), 'nothing_missed') $$, 'nothing missed');

@@ -1,11 +1,10 @@
-import { useMemo, useSyncExternalStore } from 'react'
-import { useSampleNeeds, useSampleActivity, useSampleLeads, useSampleClients } from '../data'
+import { useMemo } from 'react'
+import { useSampleLeads, useSampleClients } from '../data'
 import { paths } from '../paths'
 import { useApp } from './AppKit'
-import { kindOfActivity, dayOf, minutesOf } from './appModel'
+import { minutesOf } from './appModel'
 
-// P972 — what Notifications and Activity read: the rows (with their kind, day group, time and where a tap goes), the
-// bell's count, and the device's seen (badge) and read (dots) lists.
+// P972 — what Activity reads: who a row is about, where a tap goes, newest first. P1023: the bell is hooks/useBell.
 // Who an activity row is about: a lead or a client by name (the log keeps names only).
 export function useWho() {
   const { data: leads } = useSampleLeads()
@@ -31,59 +30,4 @@ export function useGo() {
   }
 }
 
-// A tiny device store (seen = the badge, read = the dots), so the bell updates the moment the panel opens.
-function deviceSet(key) {
-  const read = () => { try { return JSON.parse(localStorage.getItem(key) || '[]') } catch { return [] } }
-  let cache = read()
-  const subs = new Set()
-  return {
-    sub: f => { subs.add(f); return () => { subs.delete(f) } },
-    get: () => cache,
-    add: ids => {
-      const next = [...new Set([...cache, ...ids])].slice(-300)
-      if (next.length === cache.length) return
-      cache = next
-      try { localStorage.setItem(key, JSON.stringify(cache)) } catch { /* private window: fine */ }
-      subs.forEach(f => f())
-    },
-  }
-}
-export const SEEN = deviceSet('ohv-ma-seen')
-export const READ = deviceSet('ohv-ma-read')
-
-const FYI_KIND = { 'New booking': 'booking', 'Missed transfer': 'live', 'No show': 'moved', Rebooking: 'booking' }
-const LATELY = 4 // the desktop bell's Lately list
 export const byTime = (a, b) => minutesOf(b.time) - minutesOf(a.time)
-export function useNotifItems() {
-  const { data: needs } = useSampleNeeds()
-  const { data: act } = useSampleActivity()
-  const who = useWho()
-  return useMemo(() => {
-    const top = [
-      ...(needs.notices || []).map(n => ({ id: `bill-${n.key}`, kind: 'payment', title: n.title || n.name, what: n.what, time: 'Now', group: 'today', to: { billing: true } })),
-      ...needs.now.map(n => ({
-        id: n.id, kind: n.trigger === 'live' ? 'live' : n.kind === 'check' ? 'risk' : n.kind === 'submit' ? 'sold' : 'todo',
-        title: n.kind === 'check' ? n.title : n.name, what: n.kind === 'check' ? `${n.name}. ${n.what}` : n.what,
-        time: n.when && n.when !== 'Today' ? n.when : '', group: 'today',
-        to: n.kind === 'check' ? { clients: 'need' } : n.ref ? { lead: n.ref } : null,
-      })),
-      ...(needs.fyi || []).map(n => ({ id: n.id, kind: FYI_KIND[n.title] || 'booking', title: n.name, what: `${n.title}. ${n.what}`, time: '', group: 'today', to: n.ref ? { lead: n.ref } : null })),
-    ]
-    // P1002: the desktop bell's events: billing notices, to-dos, the quiet FYI list, and the latest four activity rows
-    // ("Lately"); the rest is under See all activity. Unread chats are the Messages tab's badge, not the bell's.
-    const log = act.slice(0, LATELY).map(a => {
-      const d = dayOf(a.at)
-      return { id: `act-${a.id}`, kind: kindOfActivity(a), title: a.who, what: a.text, time: d.group === 'earlier' ? d.day : d.time, group: d.group, to: who(a.who), old: d.group !== 'today' }
-    })
-    const today = log.filter(x => x.group === 'today').sort(byTime)
-    return [...top, ...today, ...log.filter(x => x.group === 'yesterday').sort(byTime), ...log.filter(x => x.group === 'earlier')]
-  }, [needs, act, who])
-}
-
-// The bell's count: today's notifications not seen yet.
-export function useUnseen() {
-  const items = useNotifItems()
-  const seen = useSyncExternalStore(SEEN.sub, SEEN.get)
-  return items.filter(i => i.group === 'today' && !seen.includes(i.id)).length
-}
-

@@ -115,22 +115,7 @@
 .pv-sw:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .pv-act-err { margin-top: 10px; font-size: 13.5px; color: var(--danger); }
 
-/* live-transfer alert (components/agent/TransferAlert), portaled to <body>, so not under .pv */
-.pv-ta-scrim { z-index: 220; }
-.pv-ta { position: fixed; z-index: 221; top: max(16px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(440px, calc(100vw - 28px)); box-sizing: border-box; padding: 22px 20px 20px; display: flex; flex-direction: column; gap: 10px; }
-.pv-ta-top { display: flex; align-items: center; gap: 12px; }
-.pv-ta-ring { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--ov-hero-chip); border: 1px solid var(--ov-hero-chip-edge); flex-shrink: 0; animation: pvTaRing 1.2s ease-in-out infinite; }
-.pv-ta h2 { margin: 6px 0 0; color: inherit; font-family: var(--font-display); font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; overflow-wrap: anywhere; }
-.pv-ta p { margin: 0; font-size: 15px; color: var(--ov-hero-soft); }
-.pv-ta-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
-/* P880: the 30 s timer (server time) and the lead's age · state · need. */
-.pv-ta-left { margin-left: auto; font-family: var(--font-mono); font-size: 15px; font-weight: 600; }
-.pv-ta p.pv-ta-line { font-size: 16px; font-weight: 600; color: inherit; }
-.pv-ta-btn { min-height: 44px; padding: 0 22px; font-size: 14.5px; font-family: inherit; }
-.pv-ta-decline { border-radius: 999px; font-weight: 700; color: inherit; cursor: pointer; background: var(--ov-hero-chip); border: 1px solid var(--ov-hero-chip-edge); }
-@keyframes pvTaRing { 0%, 100% { transform: rotate(0); } 10%, 30% { transform: rotate(-12deg); } 20%, 40% { transform: rotate(12deg); } 50% { transform: rotate(0); } }
-@media (prefers-reduced-motion: reduce) { .pv-ta-ring { animation: none; } }
-@media (min-width: 768px) { .pv-ta { top: 28px; padding: 26px 24px 24px; } .pv-ta h2 { font-size: 28px; } }
+/* live-transfer alert: components/agent/transferAlert.css (P1023: the alert brings its own styles to every shell). */
 
 /* Today */
 .pv-greet h1 { font-size: 32px; letter-spacing: -0.035em; line-height: 1.05; }

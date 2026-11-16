@@ -108,7 +108,7 @@ test('no payments in the phone app: Billing slider is read-only in the native ap
 
 test('Settings has everything, including Sign out and Delete account', () => {
   const s = read('./template/m/ASettings.jsx')
-  for (const k of ['profile', 'licence', 'calls', 'email', 'alerts', 'receipts', 'password']) assert.match(s, new RegExp(`'${k}'`))
+  for (const k of ['profile', 'licence', 'calls', 'email', 'notify', 'receipts', 'password'] /* P1023: Email alerts folded into Notifications */) assert.match(s, new RegExp(`'${k}'`))
   assert.match(s, /Sign out/)
   assert.match(s, /Delete account/)
   assert.match(s, /DeleteDialog/)

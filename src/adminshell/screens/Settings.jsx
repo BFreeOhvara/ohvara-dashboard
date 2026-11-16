@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { useAdmSettings, useAdmActions, useAdmAgents, useAdmVas, useAdmInvites, useAdmAdmins, useAdmAudit, useAdmDay, useAdmSource } from '../data'
 import { useThemePref, previewTheme } from '../../hooks/useTheme'
-import { Field, Seg, Switch, Chip, PillTabs, Avatar, Empty, Drawer, useNote, useAccount, initials } from '../../template/kit'
+import { Field, Seg, Chip, PillTabs, Avatar, Empty, Drawer, useNote, useAccount, initials } from '../../template/kit'
 import { CountUp } from '../../template/motion'
 import '../../template/settings929.css'
 import { avatarHue } from '../../template/avatarHue'
@@ -25,6 +25,7 @@ import { StripeBilling } from './Billing933'
 import { useCallOpenMin, saveCallOpenMin } from '../../hooks/useCallOpen'
 import { AppAbout } from '../../components/native/AppAbout'
 import { AppReviewLogins } from './AppReview962'
+import { NotifSettings } from '../../components/notifications/NotifSettings'
 
 // P849 — admin Settings on the agent page's shape: the profile card and Sign out on the left, one panel whose stretch
 // tabs switch sections. Sections: Profile, People & access (everyone with a login, as Users does today), Switches,
@@ -222,16 +223,14 @@ function Audit() {
 
 function Prefs() {
   const { data: s } = useAdmSettings()
-  const { saveSettings, setTz } = useAdmActions()
+  const { setTz } = useAdmActions()
   const [saved, saveTheme] = useThemePref()
   const note = useNote()
   const [look, setLook] = useState(saved)
-  const [alerts, setAlerts] = useState(s.notifications)
   const savedRef = useRef(saved)
   useEffect(() => { savedRef.current = saved }, [saved])
   useEffect(() => () => previewTheme(savedRef.current), [])
   const pickLook = v => { setLook(v); previewTheme(v) }
-  const flip = (key, field, v) => setAlerts(alerts.map(x => (x.key === key ? { ...x, [field]: v } : x)))
   return (
     <>
       <Head title="Preferences" sub="Theme, your time zone, and what also comes to your phone or email." />
@@ -240,16 +239,9 @@ function Prefs() {
       {look !== saved && <div className="fx-form-row"><span className="tp-grow" /><button type="button" className="tp-btn ov-ghost" onClick={() => pickLook(saved)}>Discard</button><button type="button" className="tp-primary fx-accent" onClick={() => { saveTheme(look); note(`${THEME_NAME[look]} theme saved`) }}>Save theme</button></div>}
       <DField label="Time zone" hint="The clock beside the page title and every time on the admin side."><Dropdown label="Time zone" value={s.tz} onChange={tz => { setTz(tz); note('Time zone saved') }} options={ZONES.map(([v, l, x]) => ({ value: v, label: `${l} time`, sub: x }))} /></DField>
       </div><div>
-      <div className="fx-alerts">
-        <div className="fx-alerts-h"><span className="tp-grow" /><span>Push</span><span>Email</span></div>
-        <ul className="tp-list">{alerts.map(x => (
-          <li key={x.key} className="tp-li"><b className="tp-grow">{x.label}</b>
-            <Switch on={x.push} label={`${x.label} push`} onChange={v => flip(x.key, 'push', v)} />
-            <Switch on={x.email} label={`${x.label} email`} onChange={v => flip(x.key, 'email', v)} />
-          </li>
-        ))}</ul>
-      </div>
-      <FormFoot dirty={!same(alerts, s.notifications)} onDiscard={() => setAlerts(s.notifications)} onSave={() => { saveSettings({ notifications: alerts }); note('Notifications saved') }} />
+      <h3 className="lc-h">Notifications</h3>
+      <p className="tp-sub">Everything shows in the bell. Switch one off to stop its phone alert; the urgent ones are always on.</p>
+      <NotifSettings role="admin" />
       </div></div>
     </>
   )

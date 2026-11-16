@@ -6,7 +6,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { handle, sendDue, message, apnsSender, fcmSender, signJwt, checkKeys, type Store, type Due, type Senders } from './core.ts'
+import { handle, sendDue, message, apnsSender, fcmSender, fcmMessage, signJwt, checkKeys, type Store, type Due, type Senders } from './core.ts'
 
 const SECRET = 's3cret'
 const due = (o: Partial<Due> = {}): Due => ({
@@ -74,6 +74,10 @@ test('message: safe in-app link, trimmed body, badge never negative', () => {
   assert.equal(message(due({ link: 'https://evil.example' })).link, '/')
   assert.equal(message(due({ link: null })).link, '/')
   assert.equal(message(due({ body: 'x'.repeat(400) })).body.length, 300)
+  // P1023: urgent types break through Focus; the rest don't.
+  assert.equal(message(due({ type: 'call_not_started' })).timeSensitive, true)
+  assert.equal(message(due({ type: 'appointment_booked' })).timeSensitive, undefined)
+  assert.equal((fcmMessage('t', message(due({ type: 'va_ring' }))).android as any).notification.channel_id, 'ohvara_transfer')
   assert.equal(message(due({ badge: -2 })).badge, 0)
 })
 

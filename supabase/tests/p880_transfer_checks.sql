@@ -102,9 +102,9 @@ select ok((select va_callback_at from public.leads where id = 'a8800000-0000-400
 update public.push_devices set last_seen_at = now() - interval '20 days' where token = 'p880-token-agent-a-000000';
 select is(public.transfer_health_daily(), 1, 'e1 one agent switched to booking only');
 select is((select booking_only from public.transfer_readiness where agent_id = 'a8800000-0000-4000-8000-00000000000a'), true, 'e2 agent A is booking only');
-select ok(exists (select 1 from public.notifications where profile_id = 'a8800000-0000-4000-8000-00000000000a' and type = 'live_calls_unreachable')
-          and exists (select 1 from public.notifications where profile_id = 'a8800000-0000-4000-8000-000000000009' and type = 'live_calls_unreachable'),
-  'e3 the agent and the admin are told');
+select ok(not exists (select 1 from public.notifications where profile_id = 'a8800000-0000-4000-8000-00000000000a' and type = 'live_calls_unreachable')
+          and not exists (select 1 from public.notifications where profile_id = 'a8800000-0000-4000-8000-000000000009' and type = 'live_calls_unreachable'),
+  'e3 no agent or admin notice (P1023: not on the list)');
 
 select * from finish();
 rollback;

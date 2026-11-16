@@ -1,33 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Search, CheckCheck, X, Clock3, CalendarOff, CreditCard, UserPlus, ListChecks, Users, BarChart3, Bug } from 'lucide-react'
-import { useAdmFeed, useAdmAgents, useAdmVas, useAdmLeads, useAdmClients, useAdmActions, useAdmDay } from '../data'
+import { useMemo, useRef, useState } from 'react'
+import { Search, X, Clock3, CalendarOff, CreditCard, UserPlus, ListChecks, Users, BarChart3, Bug } from 'lucide-react'
+import { useAdmAgents, useAdmVas, useAdmLeads, useAdmClients, useAdmActions, useAdmDay } from '../data'
 import { useNote } from '../../template/kit'
 import { useApp, SubPage, BottomSheet, Ini, Row, rise } from '../../template/m/AppKit'
 import { useNoAutoKeyboard } from '../../template/m/useKeyboard'
-import { NoteRow } from '../../template/m/ANotes'
-import { FEED_SEEN, RECENT, useRecent } from './admStore'
+import { PhoneBell } from '../../template/m/ANotes'
+import { RECENT, useRecent } from './admStore'
 import { useNeeds } from './useAdm'
 import { searchAll, takingLeads, money, toWatch, flagOf, statusLine, leadStage, leadWhen, LEAD_TONE, LEAD_WORD } from './admModel'
 
 // P986 — the admin app's small shared screens and pieces: Notifications (from the left), Search (agents, VAs, leads
 // and clients), the "Give to an agent" sheet, and opening a chat with one person.
-const KIND = { billing: 'payment', team: 'message', bug: 'todo', connect: 'message', desk: 'live' }
 
+// P1023: the phone bell is Brayden's admin list (shared PhoneBell).
 export function ANotif() {
-  const { data: feed } = useAdmFeed()
-  const [read, setRead] = useState(() => FEED_SEEN.get())
-  const ids = feed.map(f => f.id).join('|')
-  useEffect(() => { if (ids) FEED_SEEN.add(ids.split('|')) }, [ids]) // keyed on the ids: the feed is a new array each render
-  const left = feed.filter(f => !read.includes(f.id)).length
-  const markAll = <button type="button" className="ma-textbtn ma-press" onClick={() => setRead(feed.map(f => f.id))} disabled={!left}><CheckCheck size={18} aria-hidden="true" />Mark all read</button>
-  return (
-    <SubPage title="Notifications" line={left ? `${left} new` : 'All caught up'} close="Close notifications" className="is-notif" left={markAll} arrowRight big>
-      {feed.map((f, i) => (
-        <NoteRow key={f.id} i={i} unread={!read.includes(f.id)} it={{ kind: KIND[f.kind] || 'todo', title: f.who, what: f.text, time: f.at }} onClick={() => setRead(r => [...new Set([...r, f.id])])} />
-      ))}
-      {!feed.length && <p className="ma-empty is-glass">Nothing new. Payments, days off, bug reports and the desk show here.</p>}
-    </SubPage>
-  )
+  return <PhoneBell role="admin" emptyLine="New agents ready, failed payments, VA strikes and bug reports show here." />
 }
 
 const TONE = { agent: 'sky', va: 'sage', lead: 'stone', client: 'sky' }

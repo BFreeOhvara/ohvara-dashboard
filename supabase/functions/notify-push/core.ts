@@ -43,6 +43,14 @@ export const corsHeaders = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
+// P1023: the urgent ones break through Focus / Do Not Disturb (iOS time-sensitive; Android "Live calls" channel):
+// the ringing call, a booked call about to start or late, the 15-minute appointment and shift reminders, and the
+// payment-failed ones.
+export const URGENT_TYPES = new Set([
+  'va_ring', 'call_soon', 'call_handed_to_you', 'call_not_started', 'appointment_soon', 'shift_soon',
+  'transfer_missed', 'billing_charge_failed', 'client_payment_failed', 'va_save_call', 'billing_payment_problem',
+])
+
 export function message(d: Due): Msg {
   return {
     title: d.title,
@@ -50,6 +58,7 @@ export function message(d: Due): Msg {
     link: d.link && d.link.startsWith('/') ? d.link : '/',
     badge: Math.max(0, d.badge | 0),
     type: d.type,
+    ...(URGENT_TYPES.has(d.type) ? { timeSensitive: true } : {}),
   }
 }
 
@@ -209,7 +218,8 @@ export function fcmMessage(token: string, m: Msg) {
     token,
     notification: { title: m.title, body: m.body },
     data,
-    android: { priority: 'HIGH', ...ttl, ...collapse, notification: { sound: 'default', notification_count: m.badge } },
+    android: { priority: 'HIGH', ...ttl, ...collapse,
+      notification: { sound: 'default', notification_count: m.badge, ...(m.timeSensitive ? { channel_id: 'ohvara_transfer' } : {}) } },
   }
 }
 

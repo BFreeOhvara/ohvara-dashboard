@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useSyncExternalStore } from 'react'
-import { CalendarCheck, PhoneIncoming, FileCheck, CreditCard, ShieldAlert, MessageCircle, ShieldCheck, ArrowRightLeft, BadgeCheck, CircleAlert, BellOff, CheckCheck, FileX, Banknote, LifeBuoy } from 'lucide-react'
+import { useMemo } from 'react'
+import { CalendarCheck, PhoneIncoming, FileCheck, CreditCard, ShieldAlert, MessageCircle, ShieldCheck, ArrowRightLeft, BadgeCheck, CircleAlert, BellOff, CheckCheck, FileX, Banknote, LifeBuoy, Lock } from 'lucide-react'
 import { useSampleActivity } from '../data'
-import { paths } from '../paths'
-import { useApp, SubPage, rise } from './AppKit'
+import { useApp, SubPage, Toggle, rise } from './AppKit'
 import { NOTE_KIND, kindOfActivity, dayOf, groupByDay } from './appModel'
-import { useWho, useGo, useNotifItems, SEEN, READ, byTime } from './useNotes'
+import { useWho, useGo, byTime } from './useNotes'
+import { useBell, useNotifPrefs } from '../../hooks/useBell'
+import { whereWords } from '../../lib/notifications'
 
 // P972 — Notifications and Activity, built out. Every row has a coloured icon for what happened (new booking, live
 // call, packet in, payment, client at risk, team message…), a bold title and one line, the time, and a tap that goes
@@ -27,25 +28,22 @@ export function NoteRow({ it, unread, onClick, i = 0 }) {
   )
 }
 
-export function ANotif() {
+// P1023 — the phone bell for every role: only the notifications on Brayden's list (from the notifications table, or
+// one of each for sample accounts), Today / Yesterday / Earlier; a tap opens the exact thing and marks it read.
+export function PhoneBell({ role, emptyLine, children = null }) {
   const app = useApp()
-  const items = useNotifItems()
-  const go = useGo()
-  const read = useSyncExternalStore(READ.sub, READ.get)
-  // Opening clears the badge (everything here is seen); the dots stay until read.
-  useEffect(() => { SEEN.add(items.filter(i => i.group === 'today').map(i => i.id)) }, [items])
-  const unread = it => !it.old && !read.includes(it.id)
-  const left = items.filter(unread).length
+  const { items, unread, markRead } = useBell(role)
   const groups = groupByDay(items)
-  const tap = it => { READ.add([it.id]); go(it.to) }
-  const markAll = <button type="button" className="ma-textbtn ma-press" onClick={() => READ.add(items.map(i => i.id))} disabled={!left}><CheckCheck size={18} aria-hidden="true" />Mark all read</button>
+  const tap = it => { if (it.unread) markRead([it.id]); if (it.to) app.open(it.to) }
+  const markAll = <button type="button" className="ma-textbtn ma-press" onClick={() => markRead(null)} disabled={!unread}><CheckCheck size={18} aria-hidden="true" />Mark all read</button>
   return (
-    <SubPage className="is-notif" arrowRight big title="Notifications" line={left ? `${left} new` : 'You’re all caught up'} close="Close notifications" left={markAll}>
+    <SubPage className="is-notif" arrowRight big title="Notifications" line={unread ? `${unread} new` : 'You’re all caught up'} close="Close notifications" left={markAll}>
+      {children}
       {groups.map(g => (
         <section key={g.key} className="ma-notes">
           <p className="ma-cap is-out">{g.label}</p>
           <div className="ma-glass ma-note-list">
-            {g.items.map((it, i) => <NoteRow key={it.id} it={it} i={i} unread={unread(it)} onClick={it.to ? () => tap(it) : null} />)}
+            {g.items.map((it, i) => <NoteRow key={it.id} it={it} i={i} unread={it.unread} onClick={() => tap(it)} />)}
           </div>
         </section>
       ))}
@@ -53,13 +51,15 @@ export function ANotif() {
         <div className="ma-blank ma-rise">
           <span className="ma-blank-ic" aria-hidden="true"><BellOff size={30} /></span>
           <b>No notifications</b>
-          <small>New bookings, live calls and what needs you show here.</small>
+          <small>{emptyLine || 'What needs you shows here.'}</small>
         </div>
       )}
-      {/* P1002: the desktop bell's footer */}
-      <button type="button" className="ma-pillbtn ma-press" onClick={() => app.open(paths.activity())}>See all activity</button>
     </SubPage>
   )
+}
+
+export function ANotif() {
+  return <PhoneBell role="agent" emptyLine="New bookings, missed transfers and payment news show here." />
 }
 
 // Activity: everything that happened, grouped by day, with the same icons; each row opens its lead or client.
@@ -98,5 +98,26 @@ export function AActivity() {
         </div>
       )}
     </SubPage>
+  )
+}
+
+// P1023 — Settings › Notifications on the phone, every role: the role's list, where each arrives, a switch that mutes
+// the phone alert of any non-urgent one (it still lands in the bell), "Always on" for the urgent ones.
+export function PhoneNotifRows({ role }) {
+  const { rows, setMuted } = useNotifPrefs(role)
+  return (
+    <>
+      <p className="ma-hint">Everything shows in the bell. Switch one off to stop its phone alert; the urgent ones are always on.</p>
+      <div className="ma-glass ma-list ma-set ma-rise">
+        {rows.map(r => (
+          <div key={r.type} className="ma-row">
+            <span className="ma-grow"><b>{r.label}</b><small>{r.muted ? 'Bell only (muted)' : whereWords(r)}</small></span>
+            {r.can_mute
+              ? <Toggle on={!r.muted} label={`${r.label} alerts`} onChange={on => setMuted(r.type, !on)} />
+              : <small className="ma-lock"><Lock size={12} aria-hidden="true" /> Always on</small>}
+          </div>
+        ))}
+      </div>
+    </>
   )
 }

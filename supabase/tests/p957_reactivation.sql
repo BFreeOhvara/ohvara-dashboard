@@ -75,7 +75,7 @@ select is((public.reactivation_card_record('a9570000-0000-4000-8000-00000000000a
 select ok(public.reactivation_card_ok('a9570000-0000-4000-8000-00000000000a'), 'b4 checked');
 select ok(public.reactivation_card_shared('a9570000-0000-4000-8000-00000000000b', 'fp_a'), 'b5 the same card on a second account is caught');
 select is((public.reactivation_card_record('a9570000-0000-4000-8000-00000000000b', 'pm_b', 'fp_a', 'credit', 'visa', '4242', 'shared') ->> 'code'), 'shared', 'b6 recorded as shared');
-select is((select count(*)::int from public.notifications where type = 'reactivation_watch' and profile_id = 'a9570000-0000-4000-8000-00000000000d'), 1, 'b7 the admins are told');
+select is((select count(*)::int from public.notifications where type = 'reactivation_watch' and profile_id = 'a9570000-0000-4000-8000-00000000000d'), 0, 'b7 no admin notice (P1023: not on the list)');
 select is((public.reactivation_start_list((select (r ->> 'list_id')::uuid from p957_a1), 'a9570000-0000-4000-8000-00000000000a') ->> 'status'), 'waiting_scrub', 'b8 card ok → the list starts, free');
 select is((select count(*)::int from public.lead_spend_charges where agent_id = 'a9570000-0000-4000-8000-00000000000a'), 0, 'b9 no charge to start');
 select pg_temp.as_user('a9570000-0000-4000-8000-00000000000a');
@@ -109,7 +109,7 @@ select is((public.lead_spend_charge_result((select id from public.lead_spend_cha
 select pg_temp.as_user('a9570000-0000-4000-8000-00000000000a');
 select is((select count(*)::int from public.leads where reactivation_id is not null and reactivated_at is not null and delivered_at is not null), 1, 'd6 paid → on the board, Delivered');
 select pg_temp.as_owner();
-select is((select count(*)::int from public.notifications where type = 'reactivation_delivered' and profile_id = 'a9570000-0000-4000-8000-00000000000a'), 1, 'd7 the agent is told');
+select is((select count(*)::int from public.notifications where type = 'reactivation_delivered' and profile_id = 'a9570000-0000-4000-8000-00000000000a'), 0, 'd7 no delivered notice (P1023: not on the list)');
 
 -- ── e. no-show → the AI rebooks, free ───────────────────────────────────────────────────────────────────────────────
 insert into public.inbound_events (lead_id, agent_id, kind, label, state)
@@ -127,7 +127,7 @@ select public.ai_caller_result((select call2 from p957_f), 'booked', jsonb_build
 select is((public.lead_spend_charge_result((select c.id from public.lead_spend_charges c join public.reactivation_deliveries d on d.charge_id = c.id where d.call_id = (select call2 from p957_f)),
            'failed', 'pi_f', 'Your card was declined.') ->> 'status'), 'failed', 'f1 the $20 is declined');
 select is((select status || ':' || pause_kind from public.reactivation_lists where id = (select (r ->> 'list_id')::uuid from p957_a1)), 'paused:card', 'f2 the list pauses at once');
-select is((select count(*)::int from public.notifications where type = 'reactivation_card_paused' and profile_id = 'a9570000-0000-4000-8000-00000000000a'), 1, 'f3 the agent is asked to update the card');
+select is((select count(*)::int from public.notifications where type = 'reactivation_card_paused' and profile_id = 'a9570000-0000-4000-8000-00000000000a'), 0, 'f3 no card-paused notice (P1023: not on the list)');
 select is((select reason from public.ai_caller_takes((select lead_id from public.reactivation_contacts where id = (select id from p957_ppl where n = 1)))), 'list_paused', 'f4 nobody is called');
 select pg_temp.as_user('a9570000-0000-4000-8000-00000000000a');
 select is((select count(*)::int from public.leads where reactivation_id is not null and reactivated_at is not null), 1, 'f5 the declined person stays hidden');

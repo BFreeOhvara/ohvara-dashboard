@@ -87,3 +87,32 @@ export function useSetNotificationEmail(profileId) {
     onSettled: () => qc.invalidateQueries({ queryKey: [...SETTINGS, profileId] }),
   })
 }
+
+// P1023 — the role's own list (my_notification_list: label, where it arrives, can it be muted, is it muted).
+const LIST = ['notifications', 'list']
+export function useNotificationList(profileId) {
+  return useQuery({
+    queryKey: [...LIST, profileId],
+    enabled: !!profileId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('my_notification_list')
+      if (error) throw error
+      return data || []
+    },
+  })
+}
+
+// Mute = no phone alert or email; it still lands in the bell. The urgent ones refuse (the server says why).
+export function useSetNotificationMute(profileId) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ type, muted }) => {
+      const { error } = await supabase.rpc('set_notification_mute', { p_type: type, p_muted: muted })
+      if (error) throw error
+    },
+    onMutate: ({ type, muted }) => {
+      qc.setQueryData([...LIST, profileId], rows => rows?.map(r => (r.type === type ? { ...r, muted } : r)))
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: [...LIST, profileId] }),
+  })
+}

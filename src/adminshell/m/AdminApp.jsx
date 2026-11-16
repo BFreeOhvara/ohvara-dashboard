@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import { useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { Home, Briefcase, Users, MessageCircle } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
-import { useAdmFeed, useAdmSource, useAdmMeta, useAdmSettings, useAdmActions } from '../data'
+import { useAdmSource, useAdmMeta, useAdmSettings, useAdmActions } from '../data'
 import { PhoneZone } from '../../template/m/zone'
 import { ap } from '../paths'
 import { DataLoading, DataError } from '../../template/DataState'
@@ -11,7 +11,7 @@ import { useTabSwipe } from '../../template/m/useTabSwipe'
 import { useBackSwipe } from '../../template/m/useBackSwipe'
 import { screenKey, stackOf } from '../../template/m/appModel'
 import { ADM_TABS, ADM_LABEL, ADM_OWN_BAR, admRouteOf } from './admModel'
-import { useFeedSeen } from './admStore'
+import { useBell } from '../../hooks/useBell'
 import { useNeeds, useUnread, useAdmName } from './useAdm'
 import AHomeAdm, { AMoney } from './AHomeAdm'
 import AAgents, { AAgent } from './AAgents'
@@ -107,9 +107,7 @@ export default function AdminApp() {
   // Badges: the Needs you count (Home), unread messages (Messages), new notifications (the bell).
   const needs = useNeeds().length
   const unread = useUnread()
-  const { data: feed } = useAdmFeed()
-  const seen = useFeedSeen()
-  const unseen = feed.filter(f => !seen.includes(f.id)).length
+  const unseen = useBell('admin').unread
 
   const [leaving, setLeaving] = useState(false)
   const leaveT = useRef(null)

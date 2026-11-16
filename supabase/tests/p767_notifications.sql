@@ -42,28 +42,28 @@ begin
                         fulfillment_assigned, assigned_fulfillment_id, scheduled_call_at, fulfillment_stage)
   values (pol, A, 'Test', 'Lopez', 'State Farm', 'In Effect', true, F, now() + interval '1 day', 'Pending');
   select count(*) into k from notifications where profile_id = F and type = 'call_booked' and data->>'policy_id' = pol::text;
-  r := r || format(E'\n%s booked → rep: %s', case when k = 1 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 1)::int;
+  r := r || format(E'\n%s booked → no rep notice (P1023: call_booked is not on the list): %s', case when k = 0 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 0)::int;
   update policies set notes = 'touch' where id = pol;
   select count(*) into k from notifications where profile_id = F and type = 'call_booked' and data->>'policy_id' = pol::text;
-  r := r || format(E'\n%s no dupe on unrelated update: %s', case when k = 1 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 1)::int;
+  r := r || format(E'\n%s still none on an unrelated update: %s', case when k = 0 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 0)::int;
   x := public.notify(F, 'call_booked', 't', 'd', '/x', false, 'booked:' || pol || ':' || extract(epoch from (select scheduled_call_at from policies where id = pol))::bigint);
-  r := r || format(E'\n%s same dedupe key twice → null: %s', case when x is null then 'PASS' else 'FAIL' end, x); fails := fails + (x is not null)::int;
+  r := r || format(E'\n%s non-firing type → null: %s', case when x is null then 'PASS' else 'FAIL' end, x); fails := fails + (x is not null)::int;
 
   -- 2. No answer (texting off) → agent, needs action.
   update policies set last_call_outcome = 'no_answer', last_call_at = now() where id = pol;
   select count(*) into k from notifications where profile_id = A and type = 'client_no_answer' and needs_action and data->>'policy_id' = pol::text;
-  r := r || format(E'\n%s no answer → agent (needs you): %s', case when k = 1 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 1)::int;
+  r := r || format(E'\n%s no answer → no agent notice (P1023: not on the list): %s', case when k = 0 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 0)::int;
   update policies set last_call_outcome = 'no_answer' where id = pol;  -- same call, saved again
   select count(*) into k from notifications where profile_id = A and type = 'client_no_answer' and data->>'policy_id' = pol::text;
-  r := r || format(E'\n%s no answer saved twice → still 1: %s', case when k = 1 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 1)::int;
+  r := r || format(E'\n%s no answer saved twice → still 0: %s', case when k = 0 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 0)::int;
 
   -- 3. Text flow steps.
   update policies set recovery_phase = 1, recovery_step = 'number_check' where id = pol;
   select count(*) into k from notifications where profile_id = A and type = 'client_no_answer' and data->>'policy_id' = pol::text;
-  r := r || format(E'\n%s number check → agent: %s', case when k = 2 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 2)::int;
+  r := r || format(E'\n%s number check → no agent notice (P1023): %s', case when k = 0 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 0)::int;
   update policies set recovery_phase = 2, recovery_step = 'call_directly', recovery_handoff_at = now() where id = pol;
   select count(*) into k from notifications where profile_id = A and type = 'client_unreachable' and data->>'policy_id' = pol::text;
-  r := r || format(E'\n%s call directly → agent: %s', case when k = 1 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 1)::int;
+  r := r || format(E'\n%s call directly → no agent notice (P1023): %s', case when k = 0 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 0)::int;
 
   -- 4. Messages both ways.
   insert into policy_messages (policy_id, sender_id, sender_name, sender_role, body) values (pol, A, 'Agent T', 'agent', 'Can you check this?');
@@ -75,7 +75,7 @@ begin
   -- 5. Cancelled → agent; no cancel pay row (P890).
   update policies set fulfillment_stage = 'Complete', fulfillment_completed_at = now() where id = pol;
   select count(*) into k from notifications where profile_id = A and type = 'policy_cancelled' and data->>'policy_id' = pol::text;
-  r := r || format(E'\n%s cancelled → agent: %s', case when k = 1 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 1)::int;
+  r := r || format(E'\n%s cancelled → no agent notice (P1023): %s', case when k = 0 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 0)::int;
   -- P890: VA pay is hourly, so a cancel makes no pay row and nobody is asked to listen.
   select count(*) into k from fulfillment_cancels where policy_id = pol;
   r := r || format(E'
@@ -88,27 +88,31 @@ begin
   select count(*) into k from notifications where profile_id = M and type = 'payout_problem' and title like '%$120 short%';
   r := r || format(E'\n%s short pay run → admin: %s', case when k = 1 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 1)::int;
   select count(*) into k from notification_emails where profile_id = M and type = 'payout_problem' and send_after <= now() + interval '1 second';
-  r := r || format(E'\n%s money email queued now (no quiet hours): %s', case when k = 1 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 1)::int;
+  r := r || format(E'\n%s no email queued (P1023: email only for payment failed and something broke): %s', case when k = 0 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 0)::int;
 
   -- 7. Email toggle respected (as the admin, through the RPC).
   perform set_config('request.jwt.claims', json_build_object('sub', M, 'role', 'authenticated')::text, true);
   execute 'set local role authenticated';
-  perform public.set_notification_email('payout_problem', false);
+  begin
+    perform public.set_notification_email('payout_problem', false);
+    r := r || E'\nFAIL email toggle on payout_problem was accepted'; fails := fails + 1;
+  exception when sqlstate '22023' then r := r || E'\nPASS email toggle refused (P1023: payout_problem has no email)';
+  end;
   j := public.my_money_banner();
   execute 'reset role';
   r := r || format(E'\n%s admin banner = short balance: %s', case when j->>'kind' = 'short_balance' then 'PASS' else 'FAIL' end, j->>'title');
   fails := fails + (coalesce(j->>'kind', '') <> 'short_balance')::int;
   insert into fulfillment_pay_runs (pay_date, period_start, status, note) values (date '2027-11-29', date '2027-11-22', 'error', 'Stripe timeout');
   select count(*) into k from notifications where profile_id = M and type = 'payout_problem';
-  r := r || format(E'\n%s email off → bell yes (%s), no new email (emails %s)', case when k = 2 and (select count(*) from notification_emails where profile_id = M and type = 'payout_problem') = 1 then 'PASS' else 'FAIL' end, k,
+  r := r || format(E'\n%s email off → bell yes (%s), no new email (emails %s)', case when k = 2 and (select count(*) from notification_emails where profile_id = M and type = 'payout_problem') = 0 then 'PASS' else 'FAIL' end, k,
                    (select count(*) from notification_emails where profile_id = M and type = 'payout_problem'));
-  fails := fails + (not (k = 2 and (select count(*) from notification_emails where profile_id = M and type = 'payout_problem') = 1))::int;
+  fails := fails + (not (k = 2 and (select count(*) from notification_emails where profile_id = M and type = 'payout_problem') = 0))::int;
 
   -- 8. Agent payment failed → agent + admin.
   update profiles set billing_exempt = false, billing_status = 'active' where id = A;
   update profiles set billing_status = 'past_due', billing_updated_at = now() where id = A;
   select count(*) into k from notifications where (profile_id = A and type = 'payment_failed') or (profile_id = M and type = 'agent_payment_failed');
-  r := r || format(E'\n%s payment failed → agent + admin: %s', case when k = 2 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 2)::int;
+  r := r || format(E'\n%s payment failed → no old payment_failed / agent_payment_failed notice (P1023): %s', case when k = 0 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 0)::int;
 
   -- 9. Payouts: paid / failed / held → rep (+ admin on failed).
   insert into fulfillment_payouts (id, rep_id, period_start, period_end, amount_cents, status)
@@ -127,7 +131,7 @@ begin
   insert into rep_invites (id, token, role, created_by, invited_email, expires_at) values (inv, 'p767-' || inv, 'agent', M, 'new@example.com', now() + interval '1 day');
   update rep_invites set used_at = now(), used_by = A where id = inv;
   select count(*) into k from notifications where profile_id = M and type = 'invite_accepted' and detail = 'Accepted your invite';
-  r := r || format(E'\n%s invite accepted → admin: %s', case when k = 1 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 1)::int;
+  r := r || format(E'\n%s invite accepted → no admin notice (P1023): %s', case when k = 0 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 0)::int;
 
   -- 11. Call times: 5 minutes before, and not started.
   insert into policies (id, agent_id, client_first_name, client_last_name, status, fulfillment_assigned, assigned_fulfillment_id, scheduled_call_at, fulfillment_stage)
@@ -135,7 +139,7 @@ begin
   perform public.notify_call_times(); perform public.notify_call_times();
   select count(*) into k from notifications where profile_id = F and type = 'call_soon' and link like '%' || pol3;
   r := r || format(E'\n%s 5 minutes before, run twice → 1: %s', case when k = 1 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 1)::int;
-  perform public.notify_call_times(now() + interval '9 minutes');
+  perform public.notify_call_times(now() + interval '11 minutes');  -- P1023: late = 5 minutes past the booked time
   select count(*) into k from notifications where profile_id = F and type = 'call_not_started' and link like '%' || pol3;
   r := r || format(E'\n%s call time passed, not started → 1: %s', case when k = 1 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 1)::int;
 
@@ -183,19 +187,19 @@ begin
   -- Yesterday 8 AM: the four crons were failing in that window.
   perform public.notify_hourly(timestamptz '2026-10-15 08:10 America/Chicago');
   select count(*) into k from notification_emails where profile_id = M and type = 'daily_digest';
-  r := r || format(E'\n%s 8 AM digest queued (crons failed in last 24h): %s', case when k = 1 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 1)::int;
+  r := r || format(E'\n%s 8 AM digest not queued (P1023: email only for payment failed and something broke): %s', case when k = 0 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 0)::int;
   -- A Monday 8 AM a year out (nothing failed in that future window, so no digest).
   perform public.notify_hourly(timestamptz '2027-10-18 08:10 America/Chicago');
   select count(*) into k from notification_emails where type = 'monday_summary' and profile_id in (A, M);
-  r := r || format(E'\n%s Monday summaries (agent + admin): %s', case when k = 2 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 2)::int;
+  r := r || format(E'\n%s no Monday summaries (P1023: no email): %s', case when k = 0 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 0)::int;
   perform public.notify_hourly(timestamptz '2027-10-18 08:40 America/Chicago');
   select count(*) into k from notification_emails where type in ('monday_summary', 'daily_digest') and profile_id in (A, M);
-  r := r || format(E'\n%s second run same hour → no dupes: %s', case when k = 3 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 3)::int;
+  r := r || format(E'\n%s second run same hour → still none: %s', case when k = 0 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 0)::int;
   select count(*) into k from notifications where profile_id = A and type = 'needs_attention';
   r := r || format(E'\nINFO needs-attention items: %s', k);
   perform public.notify_hourly(timestamptz '2027-10-18 13:10 America/Chicago');
   select count(*) into k from notification_emails where type in ('monday_summary', 'daily_digest') and profile_id in (A, M);
-  r := r || format(E'\n%s not 8 AM → nothing: %s', case when k = 3 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 3)::int;
+  r := r || format(E'\n%s not 8 AM → nothing: %s', case when k = 0 then 'PASS' else 'FAIL' end, k); fails := fails + (k <> 0)::int;
 
   raise exception 'P767 RESULTS (% failed):%', fails, r;
 end $$;

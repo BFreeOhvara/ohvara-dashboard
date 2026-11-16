@@ -148,7 +148,7 @@ select is(public.doc_token_sign((select t2 from t_doc), 'Jo Fry', true, '5.6.7.8
 select is((select sign_ip || '|' || consent_version from public.doc_signers where token_hash = public.doc_hash((select t2 from t_doc))), '5.6.7.8|esign-v1', 'g7 IP and consent version kept');
 select lives_ok($$ select public.doc_signed_file((select id from t_doc), (select 'b8860000-0000-4000-8000-000000000002/' || id || '/signed.pdf' from t_doc), repeat('a', 64)) $$, 'g8 the stamped PDF is stored');
 select is((select status from public.policy_documents where id = (select id from t_doc)), 'signed', 'g9 signed');
-select is((select count(*)::int from public.notifications where profile_id = 'a8860000-0000-4000-8000-0000000000f1' and type = 'document_signed'), 1, 'g10 the VA is told');
+select is((select count(*)::int from public.notifications where profile_id = 'a8860000-0000-4000-8000-0000000000f1' and type = 'document_signed'), 0, 'g10 no signed notice (P1023: not on the list)');
 
 -- ── h. Decline, expiry, a new link ──────────────────────────────────────────
 select pg_temp.as_user('a8860000-0000-4000-8000-0000000000f1');
@@ -159,7 +159,7 @@ create temp table t_d3 as select public.doc_start_signing('b8860000-0000-4000-80
 select pg_temp.as_owner();
 select lives_ok($$ select public.doc_token_decline((select r->'links'->0->>'token' from t_d2), 'Wrong address on it') $$, 'h1 a signer can decline');
 select is((select status from public.policy_documents where id = (select (r->>'document_id')::uuid from t_d2)), 'declined', 'h2 declined');
-select is((select count(*)::int from public.notifications where profile_id = 'a8860000-0000-4000-8000-0000000000f1' and type = 'document_declined'), 1, 'h3 the VA is told why');
+select is((select count(*)::int from public.notifications where profile_id = 'a8860000-0000-4000-8000-0000000000f1' and type = 'document_declined'), 0, 'h3 no declined notice (P1023: not on the list)');
 update public.doc_signers set link_expires_at = now() - interval '1 minute' where document_id = (select (r->>'document_id')::uuid from t_d3);
 select is(public.doc_token_view((select r->'links'->0->>'token' from t_d3))->>'state', 'expired', 'h4 an old link says it ran out');
 select is((select status from public.policy_documents where id = (select (r->>'document_id')::uuid from t_d3)), 'expired', 'h5 the form shows expired');
@@ -195,7 +195,7 @@ select is((select count(*)::int from public.doc_sends_claim(10)), 1, 'j4 doc-sen
 select is((select status from public.doc_sends where id = (select (r->>'send_id')::uuid from t_s1)), 'sending', 'j5 sending');
 select throws_ok($$ select public.doc_send_result((select (r->>'send_id')::uuid from t_s1), 'failed', '') $$, '22023', 'Say why it failed', 'j6 a failure has a reason');
 select lives_ok($$ select public.doc_send_result((select (r->>'send_id')::uuid from t_s1), 'failed', 'Busy signal after 3 tries') $$, 'j7 the fax failed');
-select is((select count(*)::int from public.notifications where profile_id = 'a8860000-0000-4000-8000-0000000000f1' and type = 'document_send_failed'), 1, 'j8 the VA is told');
+select is((select count(*)::int from public.notifications where profile_id = 'a8860000-0000-4000-8000-0000000000f1' and type = 'document_send_failed'), 0, 'j8 no send-failed notice (P1023: not on the list)');
 select pg_temp.as_user('a8860000-0000-4000-8000-0000000000f1');
 create temp table t_s2 as select public.doc_send_request((select id from t_doc), 'email', null, (select (r->>'send_id')::uuid from t_s1)) as r;
 select is((select r->>'channel' || '|' || (r->>'attempt') from t_s2), 'email|2', 'j9 retried by email, attempt 2');
@@ -229,7 +229,7 @@ select pg_temp.as_user('a8860000-0000-4000-8000-0000000000f1');
 create temp table t_s4 as select public.doc_send_request((select (r->>'document_id')::uuid from t_up)) as r;
 select is((select r->>'channel' || '|' || (r->>'status') from t_s4), 'agent_portal|sending', 'j22 goes to the agent''s portal');
 select pg_temp.as_owner();
-select is((select count(*)::int from public.notifications where profile_id = 'a8860000-0000-4000-8000-00000000000a' and type = 'carrier_upload_needed'), 1, 'j23 the agent is asked');
+select is((select count(*)::int from public.notifications where profile_id = 'a8860000-0000-4000-8000-00000000000a' and type = 'carrier_upload_needed'), 0, 'j23 no upload-needed notice (P1023: not on the list)');
 select pg_temp.as_user('a8860000-0000-4000-8000-0000000000f1');
 select throws_ok($$ select public.doc_send_result((select (r->>'send_id')::uuid from t_s4), 'delivered') $$, '42501', null, 'j24 the VA can''t say the agent uploaded it');
 select pg_temp.as_user('a8860000-0000-4000-8000-00000000000a');
@@ -249,7 +249,7 @@ select throws_ok($$ select public.replacement_mark('b8860000-0000-4000-8000-0000
 select lives_ok($$ select public.replacement_mark('b8860000-0000-4000-8000-000000000001', 'issued', current_date - 10, 'Carrier portal') $$, 'k7 issued');
 select throws_ok($$ select public.replacement_mark('b8860000-0000-4000-8000-000000000001', 'first_payment', current_date - 20) $$, '22023', null, 'k8 payment can''t clear before issue');
 select is(public.replacement_mark('b8860000-0000-4000-8000-000000000001', 'first_payment', current_date - 2, 'Bank draft cleared')->>'open', 'true', 'k9 open');
-select is((select count(*)::int from public.notifications where profile_id = 'a8860000-0000-4000-8000-0000000000f1' and type = 'replacement_ready'), 1, 'k10 the VA is told to cancel now');
+select is((select count(*)::int from public.notifications where profile_id = 'a8860000-0000-4000-8000-0000000000f1' and type = 'task_due'), 1, 'k10 the VA gets a task_due: cancel the old policy now (P1023: was replacement_ready)');
 select is((select r->>'channel' from (select public.doc_send_request((select id from t_cx)) as r) x), 'fax', 'k11 now the cancellation goes to the old carrier''s fax');
 select pg_temp.as_owner();
 select lives_ok($$ update public.policies set fulfillment_stage = 'Complete' where id = 'b8860000-0000-4000-8000-000000000001' $$, 'k12 and can be marked done');

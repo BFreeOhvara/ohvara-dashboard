@@ -19,8 +19,8 @@ import { LiveClock } from '../Clock'
 import { OhvaraMark } from '../../components/ui/OhvaraMark'
 import { isSearchKey } from '../../lib/searchKey'
 import { SUPPORT_EMAIL } from '../../components/auth/authUtils'
-import { useFulDay, useFulClients, useFulFeed, useFulSettings, useFulPay, useFulTasks, useFulActions, useFulAgents, useFulShift, useFulSchedule, useAgentAppts, useVaBooking, useFulLive, useFulClock, useFulSource, useFulStatus } from './data'
-import { DataLoading, DataError, FirstRun } from '../DataState'
+import { useFulDay, useFulClients, useFulSettings, useFulPay, useFulTasks, useFulActions, useFulAgents, useFulShift, useFulSchedule, useAgentAppts, useVaBooking, useFulLive, useFulClock, useFulSource, useFulStatus } from './data'
+import { DataLoading, DataError } from '../DataState'
 import { SlotPick } from '../SlotPick'
 import { useClientZone } from '../useClientZone'
 import { agentSlots, clocksBetween, zoneAbbr, DEFAULT_APPT_MIN } from '../../lib/callSlots'
@@ -47,6 +47,8 @@ import { useMessagesToggle } from '../msgToggle'
 import '../p911.css'
 import '../shell914.css'
 import '@fontsource/urbanist/500.css'
+import { DeskBell } from '../../components/notifications/DeskBell'
+import { useBell, useNotifPrefs } from '../../hooks/useBell'
 import '@fontsource/urbanist/600.css'
 import '@fontsource/urbanist/700.css'
 
@@ -59,16 +61,9 @@ const money = usd()
 // P907: a Calendar item still to call (sample rows carry done; a real call row is open while booked).
 const openItem = k => (k.done != null ? !k.done : k.status === 'booked')
 
+// P1023: the bell is notifications only (Brayden's list for VAs).
 function BellDrawer({ open, onClose }) {
-  const { data: items } = useFulFeed()
-  return (
-    <Drawer open={open} onClose={onClose} title="Notifications" sub="What happened lately">
-      {!items.length && <FirstRun icon={Bell} title="Nothing yet" sub="Calls booked for you, agents' requests and payouts show here." />}
-      <ul className="tp-list">
-        {items.slice(0, 6).map(a => <li key={a.id} className="tp-li"><Avatar name={a.who} /><span className="tp-grow"><b>{a.who}</b><small>{a.text}</small></span><small>{a.at}</small></li>)}
-      </ul>
-    </Drawer>
-  )
+  return <DeskBell role="fulfillment" open={open} onClose={onClose} emptyLine="New clients, booked calls, tasks due and pay news show here." />
 }
 
 // Log a call: the result of a call is saved on the call itself, so this picks one of today's calls and opens it.
@@ -248,11 +243,11 @@ function RailTimer({ since }) {
 
 // Three headline numbers beside the title: what a VA checks first on that page.
 function useHeadStats(page) {
+  const { rows: alertRows } = useNotifPrefs('fulfillment')
   const { data: day } = useFulDay()
   const { data: pay } = useFulPay()
   const { data: clients } = useFulClients()
   const { data: agents } = useFulAgents()
-  const { data: settings } = useFulSettings()
   const { data: shift } = useFulShift()
   const { data: sched } = useFulSchedule()
   const { weeks } = useFulClock()
@@ -276,7 +271,7 @@ function useHeadStats(page) {
     // P946: pay is hourly (P879/P945): what's earned so far, the hours, and days off left. No per-cancellation pay.
     pay: [S(Wallet, real ? 0 : weekPay().pay, 'earned this week', { fmt: money, chip: [`${money(pay.lastWeek)} last week`, 'blue'] }), S(Clock3, real ? 0 : weekPay().hours, 'hours this week', { fmt: n => (real ? '0' : n.toFixed(1)) }), S(CalendarOff, Math.max(0, offRoom.allowance - offRoom.used), 'days off left this month')],
     training: [S(GraduationCap, tr.passed, `of ${tr.total} lessons passed`, { chip: tr.complete ? ['Complete', 'up'] : null }), S(Trophy, tr.avg == null ? 0 : Math.round(tr.avg * 100), 'average check score', { fmt: n => `${n}%` }), S(Clock3, tr.left, 'lessons to go', { chip: tr.left ? ['Next one open', 'blue'] : null })],
-    settings: [S(CalendarCheck, shift.thisWeek, 'shifts this week'), S(Users, agents.length, 'agents you serve'), S(Bell, settings.notifications.filter(n => n.push).length, 'alerts switched on')],
+    settings: [S(CalendarCheck, shift.thisWeek, 'shifts this week'), S(Users, agents.length, 'agents you serve'), S(Bell, alertRows.filter(n => !n.muted).length, 'alerts switched on')],
   }[page] || []
 }
 
@@ -288,7 +283,7 @@ export default function FulFrame() {
   const [panel, setPanel] = useState(null)
   const account = useAccount()
   const note = useNote()
-  const { data: feed } = useFulFeed() // P934: the bell's count is what's really in it (no fixed 3)
+  const bell = useBell('fulfillment').unread
   const active = fulPageOf(pathname)
   const page = usePageSwap(active || 'overview', outlet)
   const layout = page.key
@@ -433,7 +428,7 @@ export default function FulFrame() {
   const tops = (
     <>
       <NavLink to={fp('messages')} className={`fx-ib tp-wig${msg.closing ? ' is-closing' : ''}`} aria-label={active === 'messages' ? 'Close Messages' : 'Messages'} {...wig} onClick={e => { wig.onClick?.(e); msg.onClick(e) }}><MessageSquare size={18} />{day.unread > 0 && <span className="fx-badge">{day.unread}</span>}</NavLink>
-      <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} />{feed.length > 0 && <span className="fx-badge">{Math.min(9, feed.length)}</span>}</button>
+      <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} />{bell > 0 && <span className="fx-badge">{Math.min(9, bell)}</span>}</button>
     </>
   )
 

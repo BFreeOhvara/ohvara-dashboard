@@ -76,15 +76,15 @@ select is(public.deedstone_from('d9160000-0000-4000-8000-00000000000d') ->> 'pho
 select is((select count(*)::int from public.notifications where type = 'deedstone_number_hot' and profile_id = 'd9160000-0000-4000-8000-000000000001'), 0, 'c7b no warning while a number has room');
 -- E: both numbers full → least loaded (a tie: the first), and admins told.
 select is(public.deedstone_from('d9160000-0000-4000-8000-00000000000e') ->> 'phone', '+12145550001', 'c8a every number full → least loaded');
-select is((select count(*)::int from public.notifications where type = 'deedstone_number_hot' and profile_id = 'd9160000-0000-4000-8000-000000000001'), 1, 'c8 admin told every number is full');
+select is((select count(*)::int from public.notifications where type = 'deedstone_number_hot' and profile_id = 'd9160000-0000-4000-8000-000000000001'), 0, 'c8 no admin notice that every number is full (P1023: not on the list)');
 -- 54 calls today on number 1 → 90% of 60 → hot (1 so far + 52 + the 54th).
 insert into public.deedstone_number_use (number_id, kind, agent_id)
 select (select id from public.deedstone_numbers where phone = '+12145550001'), 'va_call', 'd9160000-0000-4000-8000-00000000000a'
   from generate_series(1, 52);
 select ok(public.deedstone_from('d9160000-0000-4000-8000-00000000000b', 'va_call') is not null, 'c9 the 54th call');
-select is((select count(*)::int from public.notifications where type = 'deedstone_number_hot' and profile_id = 'd9160000-0000-4000-8000-000000000001'), 2, 'c10 admin told the number runs hot');
+select is((select count(*)::int from public.notifications where type = 'deedstone_number_hot' and profile_id = 'd9160000-0000-4000-8000-000000000001'), 0, 'c10 no admin notice that the number runs hot (P1023: not on the list)');
 select ok(public.deedstone_from('d9160000-0000-4000-8000-00000000000b', 'va_call') is not null, 'c11 the 55th call');
-select is((select count(*)::int from public.notifications where type = 'deedstone_number_hot' and profile_id = 'd9160000-0000-4000-8000-000000000001'), 2, 'c12 hot told once a day');
+select is((select count(*)::int from public.notifications where type = 'deedstone_number_hot' and profile_id = 'd9160000-0000-4000-8000-000000000001'), 0, 'c12 still no hot notice (P1023: not on the list)');
 select pg_temp.as_user('d9160000-0000-4000-8000-000000000001');
 select is((select (n ->> 'today')::int from jsonb_array_elements(public.admin_deedstone_numbers() -> 'numbers') n
             where n ->> 'phone' = '+12145550001'), 54 + 1, 'c13 admin sees calls today per number');

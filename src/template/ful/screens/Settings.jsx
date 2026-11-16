@@ -5,7 +5,7 @@ import { useFulSettings, useFulActions, useFulDay, useFulPay, useFulAgents, useF
 import { ShiftLine, DayOffDrawer } from '../Shift'
 import { dateLabel } from '../../../lib/vaShifts'
 import { useThemePref, previewTheme } from '../../../hooks/useTheme'
-import { Drawer, Field, Seg, Switch, Chip, PillTabs, Avatar, useNote, useAccount, initials } from '../../kit'
+import { Drawer, Field, Seg, Chip, PillTabs, Avatar, useNote, useAccount, initials } from '../../kit'
 import '../../settings929.css'
 import { CountUp, usd } from '../../motion'
 import { TimeZoneSelect } from '../../Clock'
@@ -14,6 +14,7 @@ import { avatarHue } from '../../avatarHue'
 import { fp } from '../paths'
 import { PhoneInput } from '../../PhoneInput'
 import { AppAbout } from '../../../components/native/AppAbout'
+import { NotifSettings } from '../../../components/notifications/NotifSettings'
 
 // P845 — Settings, the agent's page for a VA: the profile card and the Sign out box on the left, one panel whose
 // stretch tabs switch sections, each a short form with Discard / Save. VA tabs: Profile, Shift (P846: set hours and
@@ -77,7 +78,6 @@ export default function Settings() {
   const [pDraft, setPDraft] = useState(s.profile)
   const [tz, setTz] = useState(s.timeZone)
   const [payDraft, setPayDraft] = useState(s.payDetails)
-  const [alerts, setAlerts] = useState(s.notifications)
   const [look, setLook] = useState(saved)
   const savedRef = useRef(saved)
   useEffect(() => { savedRef.current = saved }, [saved])
@@ -89,7 +89,6 @@ export default function Settings() {
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
   const signOut = () => (account.live ? account.signOut() : note('Sign out works once you sign in for real'))
   const DeleteDialog = account.DeleteDialog
-  const flip = (key, field, v) => setAlerts(alerts.map(n => (n.key === key ? { ...n, [field]: v } : n)))
 
   return (
     <div className="tp-page fx-set">
@@ -160,17 +159,8 @@ export default function Settings() {
           </>}
 
           {tab === 'alerts' && <>
-            <Head title="Notifications" sub="Everything shows in the bell. Choose what also comes to your phone or email." />
-            <div className="fx-alerts">
-              <div className="fx-alerts-h"><span className="tp-grow" /><span>Push</span><span>Email</span></div>
-              <ul className="tp-list">{alerts.map(n => (
-                <li key={n.key} className="tp-li"><b className="tp-grow">{n.label}</b>
-                  <Switch on={n.push} label={`${n.label} push`} onChange={v => flip(n.key, 'push', v)} />
-                  <Switch on={n.email} label={`${n.label} email`} onChange={v => flip(n.key, 'email', v)} />
-                </li>
-              ))}</ul>
-            </div>
-            <FormFoot dirty={!same(alerts, s.notifications)} onDiscard={() => setAlerts(s.notifications)} onSave={() => { saveSettings({ notifications: alerts }); note('Notifications saved') }} />
+            <Head title="Notifications" sub="Everything shows in the bell. Switch one off to stop its phone alert; the urgent ones are always on." />
+            <NotifSettings role="fulfillment" />
           </>}
 
           {tab === 'look' && <>

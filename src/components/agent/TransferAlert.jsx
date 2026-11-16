@@ -8,6 +8,7 @@ import { useCheckRow } from '../../hooks/useLiveTransfer'
 import { agentView, answerWords, callTransfer } from '../../lib/liveTransfer'
 import { playRing, audioContext } from '../../lib/transferAlert'
 import { TRANSFER_EVENT, takePendingTransfer } from '../../lib/push'
+import './transferAlert.css'
 
 // P880 — the agent's live-transfer alert (replaces P182's 4-second poll and the old Accept / Can't take it, which
 // only acknowledged a call help-transfer was already dialing). A VA's Check agent makes a transfer_checks row; it
@@ -17,7 +18,7 @@ import { TRANSFER_EVENT, takePendingTransfer } from '../../lib/push'
 //   yes        "your phone rings next: press 1", and Can't take it after all (withdraw, before it connects)
 //   connected  the lead's card opens (with the VA's notes)
 //   over       one closing line: missed, booked for [time], no longer available...
-// Mounted once per screen (DashboardLayout, PhoneShell). Portaled to <body> (.page-enter's transform traps fixed).
+// Mounted once per screen (DashboardLayout, PhoneShell; P1023: and the live agent shell, AgentShell). Portaled to <body> (.page-enter's transform traps fixed).
 export function TransferAlert() {
   const { session } = useAuth()
   const me = session?.user?.id

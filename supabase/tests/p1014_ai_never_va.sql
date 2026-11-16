@@ -87,8 +87,8 @@ update public.recovery_config set ai_caller_live = true;
 select pg_temp.lead('noconsent', 'QA', 'mp-v1');
 select is((select state from public.ai_lead_waits where lead_id = pg_temp.n('noconsent')), 'blocked_no_consent', '3a no AI consent: blocked');
 select is((select count(*)::int from public.ai_calls where lead_id = pg_temp.n('noconsent')) + pg_temp.vaq(pg_temp.n('noconsent')), 0, '3b no AI consent: no AI call, no VA item');
-select ok(exists (select 1 from public.notifications where profile_id = 'a1014000-0000-4000-8000-00000000000a' and type = 'ai_lead_not_called'),
-          '3c every admin is told');
+select ok(not exists (select 1 from public.notifications where profile_id = 'a1014000-0000-4000-8000-00000000000a' and type = 'ai_lead_not_called'),
+          '3c no admin notice (P1023: not on the list)');
 
 -- ── 1. Outside calling hours: the AI calls at the next allowed moment ─────────────────────────────────────────────
 select pg_temp.lead('night', 'QB', 'ds-ai-v1');

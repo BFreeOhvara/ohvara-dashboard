@@ -255,7 +255,7 @@ select is((select count(*) from pg_indexes where schemaname = 'public' and table
             and indexname = 'servicing_tasks_open_due_idx' and indexdef ~ '\(due_at\) WHERE'), 1::bigint, 'a10 open tasks have a partial index by due_at');
 select is((select string_agg(t.tgname::text, ',' order by t.tgname) from pg_trigger t
             where t.tgrelid = 'public.servicing_tasks'::regclass and t.tgname like 'servicing_tasks_%'),
-          'servicing_tasks_book_welcome,servicing_tasks_status_order,servicing_tasks_touch', 'a11 the status trigger is separate from servicing_tasks_touch (243 adds servicing_tasks_book_welcome)');
+          'servicing_tasks_book_welcome,servicing_tasks_notify,servicing_tasks_status_order,servicing_tasks_touch', 'a11 the status trigger is separate from servicing_tasks_touch (243 adds servicing_tasks_book_welcome, 282 adds servicing_tasks_notify)');
 select is((select array_agg(a.attname::text order by a.attnum) from pg_attribute a
             where a.attrelid = 'public.policy_servicing_status'::regclass and a.attnum > 0 and not a.attisdropped),
           array['policy_id', 'agent_id', 'client_key', 'client_first_name', 'client_last_name', 'client_phone', 'carrier', 'stage',
@@ -665,13 +665,11 @@ select is((select concat_ws('|', status, sent_reason, sent_question, sent_by = p
           'in_progress|advice|Should they keep the rider?|t|t|t|t', 'i7 it stores the trimmed question, drops the claim and keeps the status');
 select is(public.p_vs_stage('snd'), 'needs_attention|carrier_call', 'i8 policy_servicing_status reads needs_attention, next_step the sent kind');
 select is(public.p_vs_client_stage('snd'), 'needs_attention', 'i9 and so does agent_clients');
-select is(public.p_vs_notices('snd'), 1::bigint, 'i10 it creates exactly one notice');
-select is((select concat_ws('|', profile_id = public.p_vs_person('a'), link, needs_action, read, title, data ->> 'policy_id' = (select policy_id::text from public.servicing_tasks where id = public.p_vs_id('snd')))
-             from public.notifications where data ->> 'task_id' = public.p_vs_id('snd')::text),
-          't|/agent/clients?stage=needs|t|f|A client needs your answer|t', 'i11 to the agent, needing action, with the link and policy_id');
-select is((select dedupe_key from public.notifications where data ->> 'task_id' = public.p_vs_id('snd')::text),
-          (select 'servicing_sent:' || id::text || ':' || extract(epoch from sent_to_agent_at)::text from public.servicing_tasks where id = public.p_vs_id('snd')),
-          'i12 its key is task + sent time');
+select is(public.p_vs_notices('snd'), 0::bigint, 'i10 it creates no notice (P1023: needs_attention is not on the list)');
+select is((select count(*) from public.notifications where data ->> 'task_id' = public.p_vs_id('snd')::text and profile_id = public.p_vs_person('a')),
+          0::bigint, 'i11 none to the agent (P1023: it no longer fires)');
+select is((select count(*) from public.notifications where dedupe_key like 'servicing_sent:' || public.p_vs_id('snd')::text || '%'),
+          0::bigint, 'i12 and none with its task + sent time key');
 
 select public.p_vs_as('v1');
 select is(public.p_vs_queue_has('snd'), false, 'i13 sending removes it from the queue');
@@ -707,8 +705,8 @@ select is((select concat_ws('|', sent_to_agent_at is null, agent_reply_note, age
           't|Yes, keep it.|t|in_progress', 'i27 the note is stored and the send is cleared');
 select is(public.p_vs_stage('snd'), 'protected|chargeback_watch', 'i28 the stage is back as before');
 select is(public.p_vs_client_stage('snd'), 'protected', 'i29 in agent_clients too');
-select is((select concat_ws('|', needs_action, read, read_at = now()) from public.notifications where data ->> 'task_id' = public.p_vs_id('snd')::text),
-          'f|t|t', 'i30 that notice is resolved');
+select is((select count(*) from public.notifications where data ->> 'task_id' = public.p_vs_id('snd')::text and needs_action and not read),
+          0::bigint, 'i30 no notice is left open (P1023: none was written)');
 select public.p_vs_as('v2');
 select is((select concat_ws('|', q.mine, q.agent_reply_note is null) from public.va_servicing_queue() q where q.task_id = public.p_vs_id('snd')),
           'f|t', 'i31 it returns to the queue unclaimed, with the note still hidden');
@@ -717,8 +715,8 @@ select is((select concat_ws('|', q.mine, q.agent_reply_note) from public.va_serv
           't|Yes, keep it.', 'i32 the VA who claims it reads the agent''s note');
 select lives_ok(format('select public.va_servicing_send_to_agent(%L, ''coverage'', ''And the second rider?'')', public.p_vs_id('snd')), 'i33 send again, inside one transaction');
 select public.p_vs_owner();
-select is(public.p_vs_notices('snd'), 2::bigint, 'i34 send, clear, send = 2 notices');
-select is((select count(*) from public.notifications where data ->> 'task_id' = public.p_vs_id('snd')::text and needs_action and not read), 1::bigint, 'i35 and only the new one needs action');
+select is(public.p_vs_notices('snd'), 0::bigint, 'i34 send, clear, send = 0 notices (P1023: not on the list)');
+select is((select count(*) from public.notifications where data ->> 'task_id' = public.p_vs_id('snd')::text and needs_action and not read), 0::bigint, 'i35 and none needs action');
 select is((select concat_ws('|', agent_reply_note is null, agent_replied_at is null, sent_reason) from public.servicing_tasks where id = public.p_vs_id('snd')),
           't|t|coverage', 'i36 the older reply is cleared');
 select is(public.p_vs_stage('snd'), 'needs_attention|carrier_call', 'i37 and it needs attention again');
@@ -843,7 +841,7 @@ select is((select count(*) from public.policy_events where kind = 'servicing' an
 select is((select count(*) from public.inbound_events where kind = 'note' and detail ->> 'task_id' in (public.p_vs_id('mk_lead_send')::text, public.p_vs_id('mk_lead_cancel')::text)),
           3::bigint, 'l4 the lead-only tasks wrote theirs');
 select is((select count(*) from public.notifications where data ->> 'task_id' in (public.p_vs_id('mk_send')::text, public.p_vs_id('mk_send_coverage')::text, public.p_vs_id('mk_send_other')::text, public.p_vs_id('mk_lead_send')::text)),
-          4::bigint, 'l5 and each send wrote a notice, one for each reason');
+          0::bigint, 'l5 and no send wrote a notice (P1023: not on the list)');
 select is((select count(*) from public.policy_events e where e.detail::text ~ 'MARKERX|555-?0199'), 0::bigint, 'l6 the marker is in no policy_events.detail');
 select is((select count(*) from public.inbound_events e where e.detail::text ~ 'MARKERX|555-?0199'), 0::bigint, 'l7 no inbound_events.detail');
 select is((select count(*) from public.notifications n where to_jsonb(n)::text ~ 'MARKERX|555-?0199'), 0::bigint, 'l8 no notification');
@@ -877,8 +875,8 @@ select is((select concat_ws('|', q.client_phone, q.note) from public.va_servicin
 select public.va_servicing_outcome(public.p_vs_id('ld'), 'completed');
 select is(public.p_vs_try(format('select public.va_servicing_send_to_agent(%L, ''coverage'', ''Is this covered?'')', public.p_vs_id('ld'))), 'ok', 'm3 send works on a lead-only task');
 select public.p_vs_owner();
-select is(public.p_vs_notices('ld'), 1::bigint, 'm4 it gives the notice');
-select is((select (data ? 'policy_id') and data ->> 'policy_id' is null from public.notifications where data ->> 'task_id' = public.p_vs_id('ld')::text), true, 'm5 with no policy id');
+select is(public.p_vs_notices('ld'), 0::bigint, 'm4 it gives no notice (P1023: not on the list)');
+select is((select count(*) from public.notifications where data ->> 'task_id' = public.p_vs_id('ld')::text), 0::bigint, 'm5 so none with a null policy id');
 select is((select count(*) || ':' || md5(string_agg(s.policy_id::text || s.stage, ',' order by s.policy_id)) from public.policy_servicing_status s where s.agent_id = public.p_vs_person('a')),
           (select n || ':' || stages from ld_before), 'm6 and changes no stage: the view is untouched');
 select public.p_vs_as('a');
@@ -971,7 +969,7 @@ select lives_ok(format('select public.va_servicing_send_to_agent(%L, ''other'', 
   from unnest(array['w_demo', 'w_sample', 'w_lead_sample']) k;
 select public.p_vs_owner();
 select is(public.p_vs_notices('w_sample') + public.p_vs_notices('w_lead_sample'), 0::bigint, 'n20 a demo VA on sample rows of a non-demo agent gets no notice (P775)');
-select is(public.p_vs_notices('w_demo'), 1::bigint, 'n21 a demo agent''s own demo client does');
+select is(public.p_vs_notices('w_demo'), 0::bigint, 'n21 a demo agent''s own demo client gets none either (P1023: not on the list)');
 select public.p_vs_as('a');
 select throws_ok(format('select public.agent_servicing_clear_sent(%L, ''x'')', public.p_vs_id('w_sample')), '42501', 'Only this client''s agent can answer this', 'n22 the live agent is walled off their sample row');
 select public.p_vs_as('d');

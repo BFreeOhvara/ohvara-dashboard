@@ -117,7 +117,7 @@ select is((public.lead_spend_record_delivered('a8840000-0000-4000-8000-000000000
 select is(public.lead_spend_balance('a8840000-0000-4000-8000-00000000000a'), 0, 'e8 never below zero');
 select is((pg_temp.ctl('a8840000-0000-4000-8000-00000000000a', 'appts')).run, false, 'e9 the money ran out: ads stop');
 select is((pg_temp.ctl('a8840000-0000-4000-8000-00000000000a', 'live')).reason, 'out', 'e10 with the reason');
-select is(pg_temp.notes('a8840000-0000-4000-8000-00000000000a', 'billing_balance_out'), 1, 'e11 the agent is told once');
+select is(pg_temp.notes('a8840000-0000-4000-8000-00000000000a', 'billing_balance_out'), 0, 'e11 no balance-out notice (P1023: not on the list)');
 select is(((public.lead_spend_week_report('a8840000-0000-4000-8000-00000000000a', '2026-11-09'))->'types'->'appts'->>'absorbed_cents'), '10000', 'e12 the week report shows what was absorbed');
 select is(((public.lead_spend_week_report('a8840000-0000-4000-8000-00000000000a', '2026-11-09'))->>'collected_cents'), '30000', 'e13 and what was collected');
 select throws_ok($$ delete from public.lead_spend_ledger $$, '42501', null, 'e14 the ledger is append-only');

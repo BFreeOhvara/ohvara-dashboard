@@ -12,12 +12,12 @@ import { useIsTestAccount } from '../hooks/useIsTestAccount'
 import {
   useSampleActivity, useSampleClients, useSampleLeads, useSampleThreads, useSampleBilling, useSampleAppointments, useSampleSettings, useSampleActions, useSampleNeeds, useDataStatus, useDataSource,
 } from './data'
-import { NeedRows, FyiList, NoticeRows } from './NeedsNow'
+import { DeskBell } from '../components/notifications/DeskBell'
+import { useBell, useNotifPrefs } from '../hooks/useBell'
 import { useNavKeys, useProducts } from './useProducts'
 import { liveCalls } from './agentView'
-import { useNeedAction } from './needAction'
 import { useClientStatusOf } from './checkSettings'
-import { Drawer, Avatar, Field, PillTabs, Seg, useAccount, useNote, initials } from './kit'
+import { Drawer, Field, PillTabs, Seg, useAccount, useNote, initials } from './kit'
 import { ReportBug } from './ReportBug'
 import { avatarHue } from './avatarHue'
 import { DataLoading, DataError } from './DataState'
@@ -74,28 +74,9 @@ const TABS = [
 ]
 const PAGES = [...TABS, { to: paths.messages, label: 'Messages' }, { to: paths.submit, label: 'Submit a policy' }, { to: paths.settings, label: 'Settings' }]
 
-// P873: the bell leads with Your to-dos (P910; each with its one action), any billing notice (Fix card), then the
-// quiet FYI list, then the latest activity.
+// P1023: the bell is notifications only (Brayden's list for agents); to-dos stay on Home.
 function BellDrawer({ open, onClose }) {
-  const { data: items } = useSampleActivity()
-  const { data: needs } = useSampleNeeds()
-  const act = useNeedAction(onClose)
-  return (
-    <Drawer open={open} onClose={onClose} title="Notifications" sub={needs.now.length ? `${needs.now.length} to-do${needs.now.length === 1 ? '' : 's'}` : 'You’re all caught up'} footer={<Link to={paths.activity()} className="tp-btn ov-ghost" onClick={onClose}>See all activity</Link>}>
-      <NoticeRows items={needs.notices} onPick={onClose} />
-      <section className="lc-bell" aria-label="Your to-dos">
-        <h3 className="lc-h">Your to-dos</h3>
-        {needs.now.length ? <NeedRows items={needs.now} onAct={act} /> : <p className="tp-sub">You{'’'}re all caught up.</p>}
-      </section>
-      <FyiList items={needs.fyi} onPick={onClose} />
-      <section className="lc-bell" aria-label="Lately">
-        <h3 className="lc-h">Lately</h3>
-        {items.length ? <ul className="tp-list">
-          {items.slice(0, 4).map(a => <li key={a.id} className="tp-li"><Avatar name={a.who} /><span className="tp-grow"><b>{a.who}</b><small>{a.text}</small></span><small>{a.at}</small></li>)}
-        </ul> : <p className="tp-sub">Nothing has happened yet.</p>}
-      </section>
-    </Drawer>
-  )
+  return <DeskBell role="agent" open={open} onClose={onClose} emptyLine="New bookings, missed transfers and payment news show here." />
 }
 
 // Book a call. P847: three kinds. An appointment or check-in goes on the agent's own calendar (as before). A
@@ -321,6 +302,7 @@ function AccountMenu({ open, onClose, theme, setTheme, onApp }) {
 
 // Three headline numbers beside the title: what an agent checks first on that page.
 function useHeadStats(page) {
+  const { rows: alertRows } = useNotifPrefs('agent')
   const { data: leads } = useSampleLeads()
   const { data: clients } = useSampleClients()
   const { data: billing } = useSampleBilling()
@@ -347,7 +329,7 @@ function useHeadStats(page) {
     billing: [S(Wallet, daily, 'lead spend a day', { fmt: money }), S(ShieldCheck, tierOf(daily).monthly || 0, `${tierOf(daily).label} a month`, { fmt: money }), booked(S)],
     // P843: no weekly submit count or 'no weekly limit' (old plan language): what is in servicing now
     submit: [S(ShieldCheck, clients.length - by('closed'), 'clients in servicing'), S(FileUp, by('working'), 'working', { chip: by('working') ? ['Team on it', 'blue'] : null }), S(Users, by('protected'), 'protected', { chip: ['On time', 'up'] })],
-    settings: [S(Bell, settings.notifications.filter(n => n.push).length, 'alerts switched on'), S(CalendarDays, settings.hours.days.length, 'working days'), S(Users, clients.length, 'clients in your book')],
+    settings: [S(Bell, alertRows.filter(n => !n.muted).length, 'alerts switched on'), S(CalendarDays, settings.hours.days.length, 'working days'), S(Users, clients.length, 'clients in your book')],
     messages: [S(MessageSquare, threads.reduce((n, t) => n + t.unread, 0), 'unread'), S(Users, threads.length, 'threads')],
   }[page] || []
 }
@@ -383,7 +365,7 @@ export default function TemplateFrame() {
   const { data: allLeads } = useSampleLeads()
   // P910: the Leads count = leads waiting on the agent (calls to mark, live calls pinned), in its grey circle.
   const needs = new Set([...needList.now.filter(n => n.kind === 'lead').map(n => n.ref), ...liveCalls(allLeads).map(l => l.id)]).size
-  const bell = needList.now.length + (needList.notices?.length || 0)
+  const bell = useBell('agent').unread
   const close = useCallback(() => setPanel(null), [])
   const open = which => e => { wig.onClick(e); setPanel(which) }
   // P893: the avatar toggles its menu (a second click closes it, with the menu's close animation)

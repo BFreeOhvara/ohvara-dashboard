@@ -125,7 +125,8 @@ test('fixes: no phone icon in the VA header, Add is the main call button, notifi
   assert.match(call, /va-addmain/)
   assert.match(call, /va-padbtn/)
   assert.doesNotMatch(call, /btn\('pad', 'Keypad'/)
-  for (const f of ['./template/m/ANotes.jsx', './template/m/va/VSubs.jsx', './adminshell/m/ASubsAdm.jsx']) assert.match(src(f), /is-notif"[^>]*arrowRight|arrowRight[^>]*is-notif/)
+  assert.match(src('./template/m/ANotes.jsx'), /is-notif"[^>]*arrowRight|arrowRight[^>]*is-notif/)
+  for (const f of ['./template/m/va/VSubs.jsx', './adminshell/m/ASubsAdm.jsx']) assert.match(src(f), /<PhoneBell /) // P1023: one shared phone bell
   const css = src('./template/m/app.css')
   // P989: Sign out is a real glass button again (red text only, no red fill or border) — see p989.test.js.
   assert.match(css, /\.ma-signout \{[^}]*border: 1px solid var\(--ma-glass-b\); background: var\(--ma-glass\);/)

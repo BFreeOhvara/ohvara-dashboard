@@ -163,7 +163,7 @@ select count(public.ai_caller_result(c.id, case when rn <= 5 then 'opt_out' else
 select is((select internal from public.dnc_numbers where phone = (select phone from p952_stop order by phone limit 1)), true, 'h1 stop or not interested → on our do-not-call list');
 select is((select status from public.reactivation_lists), 'paused', 'h2 too many stops → the list paused itself');
 select ok((select pause_reason from public.reactivation_lists) like '5 of 20 people reached asked us to stop%', 'h3 with the reason');
-select is((select count(*)::int from public.notifications where type = 'reactivation_paused' and profile_id = 'a9520000-0000-4000-8000-00000000000b'), 1, 'h4 the admin is told (to-do + bell)');
+select is((select count(*)::int from public.notifications where type = 'reactivation_paused' and profile_id = 'a9520000-0000-4000-8000-00000000000b'), 0, 'h4 no admin notice (P1023: not on the list)');
 select is((select reason from public.ai_caller_takes((select lead_id from public.reactivation_contacts where id = (select id from p952_p)))), 'list_paused', 'h5 a paused list dials nobody');
 
 -- ── i. no-answer cadence: next try on day 2, never a 2-minute retry ────────────────────────────────────────────────
