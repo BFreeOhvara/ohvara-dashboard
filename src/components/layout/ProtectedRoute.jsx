@@ -2,6 +2,8 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { needsTerms } from '../../lib/oauth'
 import { Loader } from '../shared/Loader'
+import { NamePrompt } from '../auth/NamePrompt'
+import { hasRealName } from '../../lib/personName'
 
 export function ProtectedRoute({ children, allowedRoles }) {
   const { session, profile, loading, mfaRequired } = useAuth()
@@ -14,6 +16,8 @@ export function ProtectedRoute({ children, allowedRoles }) {
   if (mfaRequired) return <Navigate to="/login" replace />
   // P999: a first Google / Apple sign-in agrees to the terms on /login before anything opens.
   if (needsTerms(profile)) return <Navigate to="/login" replace />
+  // P1024: an account with no name saved is asked for it once, before anything else opens.
+  if (profile && !hasRealName(profile.full_name)) return <NamePrompt />
 
   if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
     // Redirect to their own dashboard

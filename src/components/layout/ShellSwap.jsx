@@ -11,6 +11,7 @@ import { ProtectedRoute } from './ProtectedRoute'
 import { DeleteAccountDialog } from '../shared/DeleteAccount'
 import { rememberPerson } from '../../template/avatarHue'
 import { Loader } from '../shared/Loader'
+import { personName } from '../../lib/personName'
 
 const AgentShell = lazy(() => import('../../template/AgentShell'))
 const FulfillShell = lazy(() => import('../../fulshell/FulfillShell'))
@@ -66,10 +67,10 @@ function FulfillmentOnly() {
   const account = useMemo(() => ({
     live: true,
     id: profile?.id || null,
-    name: profile?.full_name || profile?.email || 'Fulfillment',
+    name: personName(profile?.full_name),
     signOut: async () => { await signOut(); navigate('/login') },
     DeleteDialog: DeleteAccountDialog,
-  }), [profile?.id, profile?.full_name, profile?.email, signOut, navigate])
+  }), [profile?.id, profile?.full_name, signOut, navigate])
   rememberPerson(account.id, account.name)
   return <Suspense fallback={<Spinner />}><FulfillShell account={account} /></Suspense>
 }
@@ -81,10 +82,10 @@ function AdminOnly() {
   const account = useMemo(() => ({
     live: true,
     id: profile?.id || null,
-    name: profile?.full_name || profile?.email || 'Admin',
+    name: personName(profile?.full_name),
     signOut: async () => { await signOut(); navigate('/login') },
     DeleteDialog: DeleteAccountDialog,
-  }), [profile?.id, profile?.full_name, profile?.email, signOut, navigate])
+  }), [profile?.id, profile?.full_name, signOut, navigate])
   rememberPerson(account.id, account.name)
   // P855: if the shell's code can't load (a tab left open across a deploy) or the shell itself throws, show the crash panel.
   return <AdminBoundary><Suspense fallback={<Spinner />}><AdminShell account={account} /></Suspense></AdminBoundary>
@@ -99,10 +100,10 @@ function OpenOnly({ old }) {
   const account = useMemo(() => ({
     live: true,
     id: profile?.id || null,
-    name: profile?.full_name || profile?.email || 'Agent',
+    name: personName(profile?.full_name),
     signOut: async () => { await signOut(); navigate('/login') },
     DeleteDialog: DeleteAccountDialog,
-  }), [profile?.id, profile?.full_name, profile?.email, signOut, navigate])
+  }), [profile?.id, profile?.full_name, signOut, navigate])
   rememberPerson(account.id, account.name)
   if (portal.view === 'loading') return <Spinner />
   if (portal.view !== 'open') return old
