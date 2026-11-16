@@ -8,6 +8,7 @@ import { tierOf } from '../template/spendPlan.js'
 import { isTestProfile } from './testAccounts.js'
 import { dailyCounts } from '../template/leadTrend.js'
 import { typeLabel } from './coverageTypes.js'
+import { personName } from './personName.js'
 
 export const TZ = 'America/Chicago'
 const DAY = 864e5
@@ -55,7 +56,7 @@ export function fmtPhone(p) {
   return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : (p || '')
 }
 // P1001: every real agent / VA / admin the admin side loads is remembered by id, so their avatar is their colour.
-const nameOf = p => { const n = p?.full_name || p?.username || p?.email || 'No name'; rememberPerson(p?.id, n); return n }
+const nameOf = p => { const n = personName(p?.full_name); rememberPerson(p?.id, n); return n }
 
 // ── people ───────────────────────────────────────────────────────────────────
 const PLAN_KEYS = new Set([...PRICES.tiers.map(t => t.key), 'servicing'])
@@ -387,7 +388,7 @@ export function buildAdmState(raw = {}, { now = Date.now(), clock = realClock(no
   const idleSignups = profiles.filter(p => p.role === 'agent' && idle(p)).map(p => ({ ...toAgent(p, { settings, onDuty: [], plans: plansIdx }), idle: true }))
   const vas = profiles.filter(p => p.role === 'fulfillment').map(p => toVa(p, { accounts: raw.accounts || [] }))
   // P1004: every admin, the owner marked (migration 275's is_owner; before it, nobody is marked and the list still shows).
-  const admins = profiles.filter(p => p.role === 'admin' && !p.deleted_at).map(p => ({ id: p.id, name: p.full_name || p.email || 'Admin', email: p.email || '', owner: p.is_owner === true, access: p.is_active !== false, lastOn: p.last_login_at ? whenText(p.last_login_at, now) : 'Never' }))
+  const admins = profiles.filter(p => p.role === 'admin' && !p.deleted_at).map(p => ({ id: p.id, name: personName(p.full_name), email: p.email || '', owner: p.is_owner === true, access: p.is_active !== false, lastOn: p.last_login_at ? whenText(p.last_login_at, now) : 'Never' }))
   const intake = Object.fromEntries((raw.intake || []).map(i => [i.lead_id, i]))
   const seen = new Set()
   const leads = [...(raw.leads || []), ...(raw.unassigned || [])].filter(l => !l.is_sample && notTest(l.assigned_rep_id) && !seen.has(l.id) && seen.add(l.id)).map(l => toLead(l, { clock, now, intake }))

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Search, ArrowUpRight } from 'lucide-react'
 import { useAdmThreads, useAdmActions } from '../data'
-import { Avatar, Chip, Empty, Seg } from '../../template/kit'
+import { Avatar, Chip, Empty } from '../../template/kit'
 import { ap } from '../paths'
 import { SUPPORT_NAME } from '../../template/support911'
 import { ListEmpty, PickConversation } from '../../template/msgsEmpty'
@@ -21,7 +21,6 @@ import { ListEmpty, PickConversation } from '../../template/msgsEmpty'
 const PERSON = { Agent: 'agents', Fulfillment: 'team' }
 const TONE = { Agent: 'blue', Fulfillment: 'green', Admin: 'outline', Client: 'warn', VAs: 'mute' }
 const WORD = { Agent: 'Agent', Fulfillment: 'VA', Admin: 'Admin', Client: 'Client', VAs: 'VAs' }
-const GROUP = r => (r === 'VAs' ? 'Fulfillment' : r)
 const subOf = x => (x.role === 'Client' ? `Agent: ${x.agent}${x.va ? ` · VA: ${x.va}` : ''}` : x.role === 'VAs' ? 'Between two VAs' : x.role === 'Admin' ? 'Admin' : `${WORD[x.role]} · Support line`)
 
 export default function Messages() {
@@ -33,10 +32,9 @@ export default function Messages() {
   const [sel, setSel] = useState(want || threads[0]?.id)
   const [text, setText] = useState('')
   const [q, setQ] = useState('')
-  const [who, setWho] = useState('all')
   const t = threads.find(x => x.id === sel) || threads[0]
   const n = q.trim().toLowerCase()
-  const list = threads.filter(x => (who === 'all' || GROUP(x.role) === who) && `${x.name} ${x.agent || ''} ${x.va || ''}`.toLowerCase().includes(n))
+  const list = threads.filter(x => `${x.name} ${x.agent || ''} ${x.va || ''}`.toLowerCase().includes(n))
   const pick = id => { setSel(id); readThread(id) }
   const send = e => { e.preventDefault(); if (!text.trim() || !t || t.readOnly) return; sendMessage(t.id, text.trim(), 'me'); setText('') }
   // P1013: no conversations yet keeps the whole box (empty list note + "Pick a conversation"), never a bare message.
@@ -53,7 +51,6 @@ export default function Messages() {
     <section className="ov-card tp-msgs adm-msgs" aria-label="Messages" data-fold data-fold-fit="480" data-fold-phone>
       <div className="tp-threads">
         <label className="tp-find tp-threads-find"><Search size={15} aria-hidden="true" /><input aria-label="Find a person or client" placeholder="Find someone or a client" value={q} onChange={e => setQ(e.target.value)} /></label>
-        <Seg label="Who" className="adm-who-seg" value={who} onChange={setWho} options={[{ key: 'all', label: 'All' }, { key: 'Admin', label: 'Admins' }, { key: 'Agent', label: 'Agents' }, { key: 'Fulfillment', label: 'VAs' }, { key: 'Client', label: 'Clients' }]} />
         <div className="tp-threads-b">
           {list.map(x => (
             <button key={x.id} type="button" className={`tp-thread${x.id === t?.id ? ' on' : ''}`} onClick={() => pick(x.id)}>

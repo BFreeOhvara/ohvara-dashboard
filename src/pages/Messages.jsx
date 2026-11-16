@@ -8,6 +8,7 @@ import {
   useStandingThreads, useDmMessages, useSendDm, useMarkDmRead, dmId, parseDmId,
 } from '../hooks/useDirectMessages'
 import { DISPLAY } from '../lib/exportStyles'
+import { personName } from '../lib/personName'
 import {
   InboxHero, InboxRow, InboxRowSkeleton, LineAvatar, DayDivider, ChatBubbleGroup, Composer, LoadError,
 } from '../components/agent/AgentUI'
@@ -77,8 +78,8 @@ function buildItems(standing, me) {
     const kind = ownLine ? (t.peer_id ? 'fulfillment' : 'admin')
       : me?.role === 'admin' && t.agent_role === 'fulfillment' ? 'fulfillment' : 'agent'
     const title = kind === 'admin' ? 'Admin'
-      : ownLine ? t.peer_name || 'Fulfillment'
-      : t.agent_name || 'Unknown'
+      : ownLine ? personName(t.peer_name)
+      : personName(t.agent_name)
     const line = kind === 'admin' ? { kind, name: 'Admin' }
       : ownLine ? { kind, name: title, avatarUrl: t.peer_avatar_url, avatarColor: t.peer_avatar_color }
       : { kind, name: title, avatarUrl: t.agent_avatar_url, avatarColor: t.agent_avatar_color }

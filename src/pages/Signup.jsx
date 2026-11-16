@@ -13,6 +13,7 @@ import { SocialButtons } from '../components/auth/SocialButtons'
 import { Captcha } from '../components/auth/Captcha'
 import { TermsLine } from '../components/auth/TermsLine'
 import { markTermsAgreed } from '../lib/oauth'
+import { joinName } from '../lib/personName'
 
 // Create your account. Anyone can make a portal account here, but only while the
 // server's sign-up switch is on: the page asks self-signup for its status and
@@ -74,7 +75,7 @@ export default function Signup() {
   const open = useSignupOpen() // null while asking
   const [serverClosed, setServerClosed] = useState(false)
 
-  const [form, setForm] = useState({ full_name: '', email: '', password: '' })
+  const [form, setForm] = useState({ first: '', last: '', email: '', password: '' })
   const [agree, setAgree] = useState(false)
   const [error, setError] = useState(null) // { field: 'name' | 'email' | 'pw' | 'agree', msg }
   const [banner, setBanner] = useState(null) // 'rate' | 'neutral'
@@ -90,9 +91,9 @@ export default function Signup() {
   async function handleSubmit(e) {
     e?.preventDefault()
     setError(null); setBanner(null)
-    const name = form.full_name.trim()
+    const name = joinName(form.first, form.last)
     const email = form.email.trim()
-    if (!name) return setError({ field: 'name', msg: 'Type your full name.' })
+    if (!form.first.trim() || !form.last.trim()) return setError({ field: 'name', msg: 'Type your first and last name.' })
     if (!EMAIL_RE.test(email)) return setError({ field: 'email', msg: 'Type a valid email address.' })
     if (!has8 || !hasNum) return setError({ field: 'pw', msg: 'Your password needs 8 or more characters and a number.' })
     if (!agree) return setError({ field: 'agree', msg: 'Agree to the Terms and Privacy Policy to continue.' })
@@ -170,10 +171,16 @@ export default function Signup() {
         </div>
       )}
       {error && <AuAlert>{error.msg}</AuAlert>}
-      <AuField first label="Full name" icon={User} name="name" autoComplete="name" autoCapitalize="words"
-        autoFocus={!phone} value={form.full_name}
-        onChange={e => { setForm(f => ({ ...f, full_name: e.target.value })); clearRate() }}
-        placeholder={phone ? 'Full name' : 'Your full name'} error={bad === 'name'} />
+      <div className="sx-two">
+        <AuField first label="First name" icon={User} name="given-name" autoComplete="given-name" autoCapitalize="words"
+          autoFocus={!phone} value={form.first}
+          onChange={e => { setForm(f => ({ ...f, first: e.target.value })); clearRate() }}
+          placeholder="First name" error={bad === 'name'} />
+        <AuField first label="Last name" icon={User} name="family-name" autoComplete="family-name" autoCapitalize="words"
+          value={form.last}
+          onChange={e => { setForm(f => ({ ...f, last: e.target.value })); clearRate() }}
+          placeholder="Last name" error={bad === 'name'} />
+      </div>
       <AuField label="Email" icon={Mail} type="email" inputMode="email" name="email" autoComplete="username"
         autoCapitalize="none" spellCheck={false} value={form.email}
         onChange={e => { setForm(f => ({ ...f, email: e.target.value })); clearRate() }}

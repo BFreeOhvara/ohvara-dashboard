@@ -4,6 +4,7 @@ import { User, Mail, Lock, ArrowRight, Loader2, Check, Clock, PhoneCall, ListChe
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { AuthPage, AuField, PasswordField, AuCheck, AuAlert } from '../components/auth/AuthShell'
+import { joinName } from '../lib/personName'
 import { keepSubmitVisible, EMAIL_RE, SUPPORT_EMAIL, AGENT_PERKS } from '../components/auth/authUtils'
 
 // Create account — Prompt 781 (mockups media/sign-in/Join + JoinPhone in the
@@ -87,7 +88,7 @@ export default function Join() {
   const [checking, setChecking] = useState(true)
   const [invite, setInvite] = useState(null) // { role, email, byText, pay } when valid
   const [reason, setReason] = useState(null)
-  const [form, setForm] = useState({ full_name: '', email: '', password: '' })
+  const [form, setForm] = useState({ first: '', last: '', email: '', password: '' })
   const [agree, setAgree] = useState(false)
   const [error, setError] = useState('')
   const [bad, setBad] = useState({})
@@ -120,9 +121,9 @@ export default function Join() {
   async function handleSubmit(e) {
     e?.preventDefault()
     setError('')
-    const name = form.full_name.trim()
+    const name = joinName(form.first, form.last)
     const email = form.email.trim()
-    if (!name) { setBad({ name: true }); return setError('Type your full name.') }
+    if (!form.first.trim() || !form.last.trim()) { setBad({ name: true }); return setError('Type your first and last name.') }
     if (!EMAIL_RE.test(email)) { setBad({ email: true }); return setError('Type a valid email address.') }
     if (!has8 || !hasNum) { setBad({ pw: true }); return setError('Your password needs 8 or more characters and a number.') }
     if (!agree) { setBad({ agree: true }); return setError('Agree to the Terms and Privacy Policy to continue.') }
@@ -172,9 +173,14 @@ export default function Join() {
             <h2>Create your account</h2>
             <p className="sx-card-sub">You’ll sign in with your email.</p>
             {error && <AuAlert>{error}</AuAlert>}
-            <AuField first label="Full name" icon={User} name="name" autoComplete="name" autoCapitalize="words"
-              value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
-              placeholder="Your first and last name" error={!!bad.name} />
+            <div className="sx-two">
+              <AuField first label="First name" icon={User} name="given-name" autoComplete="given-name" autoCapitalize="words"
+                value={form.first} onChange={e => setForm(f => ({ ...f, first: e.target.value }))}
+                placeholder="First name" error={!!bad.name} />
+              <AuField first label="Last name" icon={User} name="family-name" autoComplete="family-name" autoCapitalize="words"
+                value={form.last} onChange={e => setForm(f => ({ ...f, last: e.target.value }))}
+                placeholder="Last name" error={!!bad.name} />
+            </div>
             <AuField label="Email" icon={Mail} type="email" inputMode="email" name="email" autoComplete="username"
               autoCapitalize="none" spellCheck={false} value={form.email}
               onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="you@email.com"

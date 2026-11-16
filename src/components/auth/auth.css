@@ -211,6 +211,8 @@ html.sx-root body {
 /* Fields */
 .sx-field { display: block; margin-top: 14px; }
 .sx-field--first { margin-top: 20px; }
+/* P1024: first and last name side by side; each keeps its own label, error border and margin. */
+.sx-two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
 .sx-label { display: block; font-size: 13px; font-weight: 600; color: var(--sx-soft); margin-bottom: 7px; }
 .sx-box {
   display: flex; align-items: center; gap: 10px;

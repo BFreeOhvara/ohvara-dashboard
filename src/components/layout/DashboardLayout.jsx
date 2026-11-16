@@ -23,6 +23,7 @@ import { PhoneShell } from './PhoneShell'
 import { ConfirmEmailBanner } from './ConfirmEmailBanner'
 import { useIsPhone } from '../../hooks/usePhoneLayout'
 import { TransferAlert } from '../agent/TransferAlert'
+import { personName } from '../../lib/personName'
 // The transfer alert's styles (.pv-ta) live with the v2 pages.
 import '../../pages/agent/v2/portalV2.css'
 
@@ -205,7 +206,7 @@ function SettingsLine({ session, profile }) {
   if (!user) return null
   const twoStep = (user.factors || []).some(f => f.factor_type === 'totp' && f.status === 'verified')
   return <LiveLine items={[
-    <Plain>{profile?.full_name?.trim() || user.email}</Plain>,
+    <Plain>{personName(profile?.full_name)}</Plain>,
     <Pill tone="slate" to="/settings#security">Two-step {twoStep ? 'on' : 'off'}</Pill>,
   ]} />
 }

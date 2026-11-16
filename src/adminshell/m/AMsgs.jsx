@@ -29,25 +29,18 @@ function useAllThreads() {
   return [...lines.filter(t => t.role === 'Admin'), ...pinned.filter(t => t.id === JORDAN_THREAD), ...pinned.filter(t => t.id !== JORDAN_THREAD), ...lines.filter(t => t.role !== 'Admin')]
 }
 
-// Which group a thread is in: a support line carries its role, a chat started here carries who it is "about".
-const roleOf = t => (t.role === 'Admin' || t.role === 'Client' ? t.role : t.role === 'VAs' ? 'Fulfillment' : t.role === 'Agent' || t.about === 'Agent' ? 'Agent' : t.role === 'Fulfillment' || t.about === 'VA' ? 'Fulfillment' : null)
-const WHO = [['all', 'All'], ['Admin', 'Admins'], ['Agent', 'Agents'], ['Fulfillment', 'VAs'], ['Client', 'Clients']]
 export default function AMsgs() {
   const app = useApp()
   const all = useAllThreads()
   const [q, setQ] = useState('')
-  const [who, setWho] = useState('all')
   const input = useRef(null)
   useNoAutoKeyboard(input)
   const n = q.trim().toLowerCase()
-  const threads = all.filter(t => (who === 'all' || roleOf(t) === who) && `${t.name || ''} ${t.agent || ''}`.toLowerCase().includes(n))
+  const threads = all.filter(t => `${t.name || ''} ${t.agent || ''}`.toLowerCase().includes(n))
   return (
     <div className="ma-tabpage">
       <div className="ma-top ma-rise"><span className="ma-grow"><h1>Messages</h1><small>Everyone, and every conversation</small></span></div>
       <label className="va-find ma-rise" style={rise(0)}><Search size={18} aria-hidden="true" /><input ref={input} type="search" inputMode="search" enterKeyHint="search" placeholder="Find someone" aria-label="Find a person or client" value={q} onChange={e => setQ(e.target.value)} />{q && <button type="button" className="ma-ib" aria-label="Clear" onClick={() => setQ('')}><X size={18} aria-hidden="true" /></button>}</label>
-      <div className="ma-seg am-seg ma-rise" style={rise(0)} role="tablist" aria-label="Who">
-        {WHO.map(([k, w]) => <button key={k} type="button" role="tab" aria-selected={who === k} className={`is-sky${who === k ? ' is-on' : ''}`} onClick={() => setWho(k)}>{w}</button>)}
-      </div>
       <div className="ma-threads ma-rise" style={rise(0)}>
         {!threads.length && (all.length ? <p className="ma-empty is-glass">Nobody by that name.</p> : <p className="ma-empty is-glass" role="status"><b>{NO_CONV}</b><br />{NO_CONV_SUB.admin}</p>)}
         {threads.map(t => {
