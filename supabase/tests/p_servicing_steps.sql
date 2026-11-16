@@ -295,7 +295,7 @@ select is((select string_agg(client_last_name || ':' || (assigned_fulfillment_id
 select is((select string_agg(kind, ',' order by kind) from public.policy_events where policy_id = public.p_st_i('rr1')), 'submitted', 'd5 a No deal''s owner writes no event');
 select is((select string_agg(kind, ',' order by kind) from public.policy_events where policy_id = public.p_st_i('rr2')), 'booked,submitted', 'd6 nor does a Yes deal''s');
 select is((select count(*) from public.notifications where type = 'call_booked' and (data ->> 'policy_id')::uuid in (public.p_st_i('rr2'), public.p_st_i('rr4'))),
-          2::bigint, 'd7 each Yes deal tells its rep once');
+          0::bigint, 'd7 a Yes deal no longer tells its rep (P1023: call_booked is not on the list)');
 select is((select count(*) from public.notifications where (data ->> 'policy_id')::uuid in (public.p_st_i('rr1'), public.p_st_i('rr3'), public.p_st_i('rr5'), public.p_st_i('rr6'))),
           0::bigint, 'd8 a No deal''s owner fires no notice');
 

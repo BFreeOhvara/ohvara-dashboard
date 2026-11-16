@@ -146,13 +146,13 @@ select pg_temp.as_user('e8820000-0000-4000-8000-000000000001');
 select is(public.route_pass((select id from public.call_queue where lead_id = 'a8820000-0000-4000-8000-000000000011')) ->> 'status',
   'away', 'e2 Not now twice in a row sets V1 to Away');
 select pg_temp.as_owner();
-select ok(exists (select 1 from public.notifications where profile_id = 'd8820000-0000-4000-8000-000000000001' and type = 'va_missed_rings'), 'e3 admins told');
+select ok(not exists (select 1 from public.notifications where profile_id = 'd8820000-0000-4000-8000-000000000001' and type = 'va_missed_rings'), 'e3 no admin notice (P1023: not on the list)');
 select is((select status from public.call_queue where lead_id = 'a8820000-0000-4000-8000-000000000011'), 'waiting', 'e4 the lead waits for the first VA free');
 
 -- ── f. waiting 60 s → admins pushed, a speed miss ───────────────────────────────────────────────────────────
 update public.call_queue set ready_at = now() - interval '70 seconds' where lead_id = 'a8820000-0000-4000-8000-000000000011';
 select public.route_tick();
-select ok(exists (select 1 from public.notifications where profile_id = 'd8820000-0000-4000-8000-000000000001' and type = 'lead_waiting'), 'f1 lead waiting 60 s: admins pushed');
+select ok(not exists (select 1 from public.notifications where profile_id = 'd8820000-0000-4000-8000-000000000001' and type = 'lead_waiting'), 'f1 lead waiting 60 s: no admin notice (P1023: not on the list)');
 select is((select speed_miss from public.call_queue where lead_id = 'a8820000-0000-4000-8000-000000000011'), true, 'f2 counted as a speed miss');
 
 -- ── g. wrap-up, then the first VA free gets the waiting lead ────────────────────────────────────────────────
@@ -168,7 +168,7 @@ select is((select offered_to from public.call_queue where lead_id = 'a8820000-00
   'e8820000-0000-4000-8000-000000000002'::uuid, 'g6 the waiting lead goes to the first VA out of wrap');
 update public.va_presence set wrap_started_at = now() - interval '4 minutes', status = 'wrap' where user_id = 'e8820000-0000-4000-8000-000000000001';
 select public.route_tick();
-select ok(exists (select 1 from public.notifications where type = 'wrap_stuck'), 'g7 wrap over 3 min: admins told');
+select ok(not exists (select 1 from public.notifications where type = 'wrap_stuck'), 'g7 wrap over 3 min: no admin notice (P1023: not on the list)');
 update public.va_presence set status = 'available', wrap_started_at = null, idle_since = now() where user_id = 'e8820000-0000-4000-8000-000000000001';
 
 -- ── h. a callback rings the promiser first ───────────────────────────────────────────────────────────────────
@@ -182,7 +182,7 @@ select is((select offered_to from public.call_queue where lead_id = 'a8820000-00
   'e8820000-0000-4000-8000-000000000002'::uuid, 'h1 the callback rings the VA who promised it, not the longest idle');
 update public.call_queue set offer_expires_at = now() + interval '1 minute' where lead_id = 'a8820000-0000-4000-8000-000000000011' and kind = 'callback';
 select public.route_tick();
-select ok(exists (select 1 from public.notifications where type = 'callback_late'), 'h2 more than 5 min late: admins told');
+select ok(not exists (select 1 from public.notifications where type = 'callback_late'), 'h2 more than 5 min late: no admin notice (P1023: not on the list)');
 
 -- ── i. a caller waiting pulls a VA off a carrier hold (no client on it) ────────────────────────────────────────────
 update public.call_queue set status = 'done' where status in ('waiting', 'offered', 'held');
@@ -218,7 +218,7 @@ update public.va_presence set last_seen = now() - interval '40 seconds', status 
 update public.call_queue set status = 'done' where status in ('waiting', 'offered');
 select public.route_tick();
 select is((select pulled_reason from public.va_presence where user_id = 'e8820000-0000-4000-8000-000000000001'), 'silent', 'k1 quiet 30 s: pulled from routing');
-select ok(exists (select 1 from public.notifications where profile_id = 'e8820000-0000-4000-8000-000000000001' and type = 'va_pulled'), 'k2 and told');
+select ok(not exists (select 1 from public.notifications where profile_id = 'e8820000-0000-4000-8000-000000000001' and type = 'va_pulled'), 'k2 no notice (P1023: not on the list)');
 
 -- ── l. one-tap Do not call ───────────────────────────────────────────────────────────────────────────────────
 update public.va_presence set status = 'available', last_seen = now(), pulled_reason = null where user_id = 'e8820000-0000-4000-8000-000000000001';

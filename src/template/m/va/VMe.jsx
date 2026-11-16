@@ -20,6 +20,8 @@ import { SUPPORT_THREAD } from '../../support911'
 import { useApp, SubPage, Row, Ini, Toggle, SignOutButton, BottomSheet, rise } from '../AppKit'
 import { PRIVACY_URL } from '../ASettings'
 import { ZonePicker } from '../zone'
+import { PhoneNotifRows } from '../ANotes'
+import { useNotifPrefs } from '../../../hooks/useBell'
 import { zoneName, shiftWords } from '../zoneTime'
 
 // P975 — Me: a dark card (you, hours this pay period, earned so far, next payday), two tiles (Ask for a day off,
@@ -183,14 +185,15 @@ export function VSettings({ section }) {
   const { data: s } = useFulSettings()
   const { data: shift } = useFulShift()
   const [pref] = useThemePref()
-  const on = (s.notifications || []).filter(n => n.push).length
+  const { rows: alertRows } = useNotifPrefs('fulfillment')
+  const on = alertRows.filter(n => n.push && !n.muted).length
   if (SECTIONS[section]) return <SubPage title={SECTIONS[section]} line="Settings" big><VSection k={section} /></SubPage>
   const go = k => app.openSub('settings', { t: k })
   return (
     <SubPage title="Settings" big>
       <div className="ma-glass ma-list ma-set ma-sections ma-rise">
         <Row onClick={() => go('account')} lead={<span className="ma-sym is-sky"><User size={16} aria-hidden="true" /></span>} title="Account" sub={`${zoneName(s.timeZone)} · ${THEME_WORD[pref] || 'Match my phone'}`} />
-        <Row onClick={() => go('alerts')} lead={<span className="ma-sym is-coral"><Bell size={16} aria-hidden="true" /></span>} title="Notifications" sub={on ? `${on} of ${(s.notifications || []).length} come to your phone` : 'Only in the bell'} />
+        <Row onClick={() => go('alerts')} lead={<span className="ma-sym is-coral"><Bell size={16} aria-hidden="true" /></span>} title="Notifications" sub={on ? `${on} of ${alertRows.length} come to your phone` : 'Only in the bell'} />
         <Row onClick={() => go('shifts')} lead={<span className="ma-sym is-sage"><CalendarDays size={16} aria-hidden="true" /></span>} title="Shifts" sub={shiftWords(shift.shift?.text, s.timeZone)} />
         <Row onClick={() => go('pay')} lead={<span className="ma-sym is-sage"><Landmark size={16} aria-hidden="true" /></span>} title="Pay details" sub={payLine(s.payDetails)} />
         <Row onClick={() => go('privacy')} lead={<span className="ma-sym is-stone"><Shield size={16} aria-hidden="true" /></span>} title="Privacy and security" sub="Password, privacy policy" />
@@ -208,11 +211,9 @@ function VSection({ k }) {
   const { saveSettings } = useFulActions()
   const off = useTimeOff()
   const [pref, savePref] = useThemePref()
-  const [alerts, setAlerts] = useState(s.notifications || [])
   const [payDraft, setPayDraft] = useState(s.payDetails || {})
   const [panel, setPanel] = useState(null)
   const DeleteDialog = account?.DeleteDialog
-  const flip = (key, field, v) => { const next = alerts.map(n => (n.key === key ? { ...n, [field]: v } : n)); setAlerts(next); saveSettings({ notifications: next }) }
   if (k === 'zone') return <ZonePicker tz={s.timeZone} onPick={tz => { saveSettings({ timeZone: tz }); note(`Time zone: ${zoneName(tz)}`) }} />
   if (k === 'account') {
     return (
@@ -235,20 +236,7 @@ function VSection({ k }) {
       </>
     )
   }
-  if (k === 'alerts') {
-    return (
-      <div className="ma-glass ma-list ma-rise">
-        <div className="ma-row is-head"><span className="ma-grow" /><small>Push</small><small>Email</small></div>
-        {alerts.map(n => (
-          <div key={n.key} className="ma-row">
-            <span className="ma-grow"><b>{n.label}</b></span>
-            <Toggle small on={n.push} label={`${n.label} push`} onChange={v => flip(n.key, 'push', v)} />
-            <Toggle small on={n.email} label={`${n.label} email`} onChange={v => flip(n.key, 'email', v)} />
-          </div>
-        ))}
-      </div>
-    )
-  }
+  if (k === 'alerts') return <PhoneNotifRows role="fulfillment" />
   if (k === 'shifts') {
     return (
       <>

@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './template.css'
 import { NoteProvider, AccountProvider } from './kit'
 import { ShellFrame, Pick } from './m/usePhone'
@@ -31,6 +32,9 @@ import MMore from './m/MMore'
 const VA = { live: false, name: ME.name, signOut: null, DeleteDialog: null }
 
 // The clickable agent-side template (and, P845, the Fulfillment side under /template/fulfillment): sample info only, its own router, nothing leaves the browser.
+// P1023: the bell hooks read through react-query; the preview has no backend, so this client never fetches.
+const previewQueries = new QueryClient()
+
 export default function TemplateApp() {
   useEffect(() => {
     const tag = document.createElement('meta')
@@ -41,6 +45,7 @@ export default function TemplateApp() {
   }, [])
 
   return (
+    <QueryClientProvider client={previewQueries}>
     <BrowserRouter basename="/template">
       <NoteProvider>
         <DeedstoneCallProvider>
@@ -71,5 +76,6 @@ export default function TemplateApp() {
         </DeedstoneCallProvider>
       </NoteProvider>
     </BrowserRouter>
+    </QueryClientProvider>
   )
 }

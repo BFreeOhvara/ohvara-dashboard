@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Search, MessageCircle, Phone, CheckCheck, Check, Minus, ShieldCheck, Archive, CalendarClock, TriangleAlert, LayoutGrid, PhoneCall, LifeBuoy, ChevronRight, Users } from 'lucide-react'
-import { useFulFeed, useFulClients, useFulSchedule, useFulTasks, useFulClock } from '../../ful/data'
+import { useMemo, useRef, useState } from 'react'
+import { Search, MessageCircle, Phone, Check, Minus, ShieldCheck, Archive, CalendarClock, TriangleAlert, LayoutGrid, PhoneCall, LifeBuoy, ChevronRight, Users } from 'lucide-react'
+import { useFulClients, useFulSchedule, useFulTasks, useFulClock } from '../../ful/data'
 import { clientStatusOf, clientStatus, requestTag } from '../../../lib/clientCheck.js'
 import { stagesOf } from '../../../lib/clientStages.js'
 import { KIND } from '../../ful/words'
 import { whyShort } from '../../ful/callSteps'
 import { useApp, SubPage, Ini, rise } from '../AppKit'
 import { useNoAutoKeyboard } from '../useKeyboard'
-import { NoteRow } from '../ANotes'
-import { useVaCall, FEED_SEEN } from './vaStore'
+import { PhoneBell } from '../ANotes'
+import { useVaCall } from './vaStore'
 import { useVaChat } from './useVaChat'
 import { useVaNow, dayOfItem } from './useVaNow'
 import { stateOf, STATE_TONE, STATE_TAG, forLine } from './vaModel'
@@ -18,22 +18,10 @@ import { dayWords, CLIENT_TONE } from '../appModel'
 // P1002 — Search covers clients, booked calls, client steps and pages (the desktop palette); a client shows the whole
 // desktop client: status, the help alert, steps, policy with product and premium, the note, the calls with you, and a
 // Message button that is always there.
-const KIND_OF = { call: 'live', servicing: 'protected', shift: 'booking', message: 'message' }
 
+// P1023: the phone bell is Brayden's VA list (shared PhoneBell).
 export function VNotif() {
-  const { data: feed } = useFulFeed()
-  const [read, setRead] = useState(() => FEED_SEEN.get())
-  useEffect(() => { FEED_SEEN.add(feed.map(f => f.id)) }, [feed])
-  const left = feed.filter(f => !read.includes(f.id)).length
-  const markAll = <button type="button" className="ma-textbtn ma-press" onClick={() => setRead(feed.map(f => f.id))} disabled={!left}><CheckCheck size={18} aria-hidden="true" />Mark all read</button>
-  return (
-    <SubPage title="Notifications" line={left ? `${left} new` : 'All caught up'} close="Close notifications" className="is-notif" left={markAll} arrowRight big>
-      {feed.map((f, i) => (
-        <NoteRow key={f.id} i={i} unread={!read.includes(f.id)} it={{ kind: KIND_OF[f.kind] || 'todo', title: f.who, what: f.text, time: f.at }} onClick={() => setRead(r => [...new Set([...r, f.id])])} />
-      ))}
-      {!feed.length && <p className="ma-empty is-glass">Nothing new. Bookings, messages and shift news show here.</p>}
-    </SubPage>
-  )
+  return <PhoneBell role="fulfillment" emptyLine="New clients, booked calls, tasks due and pay news show here." />
 }
 
 const digits = s => String(s || '').replace(/\D/g, '')

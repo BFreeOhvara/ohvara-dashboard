@@ -56,9 +56,9 @@ select is(public.ghl_intake_lead('{"intake_key":"p915-int-2","phone":"(214) 555-
 select is(public.ghl_intake_lead('{"intake_key":"p915-int-3","phone":"(214) 555-0103","state":"TX","agent_id":"DS-NOPE"}')->>'routing',
           'unknown', 'b5 an unknown code is unmatched');
 select is((select count(*)::int from public.notifications where type = 'lead_unmatched' and profile_id = 'f9150000-0000-4000-8000-00000000000a'),
-          1, 'b6 the admin gets the unmatched push');
+          0, 'b6 no unmatched push for the admin (P1023: not on the list)');
 select is(public.ghl_intake_lead('{"intake_key":"p915-int-4","phone":"(214) 555-0104","state":"TX"}')->>'routing', 'missing', 'b7 no ref, no campaign: missing');
-select is((select count(*)::int from public.notifications where type = 'lead_unmatched' and profile_id = 'f9150000-0000-4000-8000-00000000000a'), 2, 'b8 one push per unmatched lead');
+select is((select count(*)::int from public.notifications where type = 'lead_unmatched' and profile_id = 'f9150000-0000-4000-8000-00000000000a'), 0, 'b8 still no push per unmatched lead (P1023: not on the list)');
 select is((select count(*)::int from public.notifications n join public.profiles p on p.id = n.profile_id where n.type = 'lead_unmatched' and p.role::text <> 'admin'),
           0, 'b9 only admins hear about unmatched leads');
 
@@ -109,10 +109,10 @@ select is((select array_to_string(array(select jsonb_array_elements_text(public.
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"f9150000-0000-4000-8000-00000000000a","role":"authenticated"}', true);
 select throws_ok($$select public.admin_turn_campaign_on('f9150000-0000-4000-8000-00000000000b')$$, 'P0001', null, 'e2 Turn campaign on is refused while a check fails');
-select is((public.admin_place_test_call('f9150000-0000-4000-8000-00000000000b')->>'asked')::int, 1, 'e3 Place test call asks the VAs');
+select is((public.admin_place_test_call('f9150000-0000-4000-8000-00000000000b')->>'asked')::int, 0, 'e3 Place test call asks no VA (P1023: va_test_call is not on the list)');
 reset role;
 select is((select count(*)::int from public.notifications where type = 'va_test_call' and profile_id = 'f9150000-0000-4000-8000-00000000000f'),
-          1, 'e4 the VA is told to call the test lead');
+          0, 'e4 no VA notice for the test call (P1023: not on the list)');
 update public.agent_lead_settings set states = '{TX,OK,LA}' where agent_id = 'f9150000-0000-4000-8000-00000000000b';
 update public.profiles set npn = '1234567', working_hours_start = '09:00', timezone = 'America/Chicago', billing_status = 'active'
  where id = 'f9150000-0000-4000-8000-00000000000b';
@@ -144,7 +144,7 @@ select is((select reason from public.agent_campaign_control where agent_id = 'f9
 update public.profiles set billing_status = 'past_due' where id = 'f9150000-0000-4000-8000-00000000000b';
 select is(public.launch_checks_sweep(), 1, 'e11 the sweep pauses one campaign');
 select is((select state || '|' || paused_key from public.agent_launch where agent_id = 'f9150000-0000-4000-8000-00000000000b'), 'paused|paid', 'e12 paused on the paid check');
-select is((select count(*)::int from public.notifications where type = 'campaign_launch_paused' and profile_id = 'f9150000-0000-4000-8000-00000000000a'), 1, 'e13 admins hear');
+select is((select count(*)::int from public.notifications where type = 'campaign_launch_paused' and profile_id = 'f9150000-0000-4000-8000-00000000000a'), 0, 'e13 no admin notice (P1023: not on the list)');
 select ok((select bool_and(not run and reason like 'launch check%') from public.agent_campaign_control where agent_id = 'f9150000-0000-4000-8000-00000000000b'),
           'e14 and the row says stop, ready to push');
 

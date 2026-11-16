@@ -30,6 +30,8 @@ import { useMyPayoutBank, useOwnerPayouts, useSplitLine } from '../payoutBank'
 import { AssignSheet } from './ASubsAdm'
 import { useMessageTo } from './useAdm'
 import { AddVaSheet } from './AHelpAdm'
+import { PhoneNotifRows } from '../../template/m/ANotes'
+import { useNotifPrefs } from '../../hooks/useBell'
 
 // P986 — You: a dark card (you, Admin, your next payout and payday, how many agents), two tiles (Unassigned leads,
 // AI caller), then All leads, All clients, Reports, Bug reports, Setup (the tickets), Connect (every connection, view
@@ -578,15 +580,15 @@ export function ASettingsAdm({ section }) {
   const app = useApp()
   const { data: s } = useAdmSettings()
   const [pref] = useThemePref()
-  const alerts = s.notifications || []
-  const pushOn = alerts.filter(n => n.push).length
+  const { rows: alertRows } = useNotifPrefs('admin')
+  const pushOn = alertRows.filter(n => n.push && !n.muted).length
   if (ADM_SECTIONS[section]) return <SubPage title={ADM_SECTIONS[section]} line="Settings" big><ASettingsSection k={section} /></SubPage>
   const go = k => app.openSub('settings', { t: k })
   return (
     <SubPage title="Settings" big>
       <div className="ma-glass ma-list ma-set ma-sections ma-rise">
         <Row onClick={() => go('account')} lead={<span className="ma-sym is-sky"><User size={16} aria-hidden="true" /></span>} title="Account" sub={`${zoneName(s.tz)} · ${ADM_THEME[pref] || 'Match my phone'}`} />
-        <Row onClick={() => go('alerts')} lead={<span className="ma-sym is-coral"><Bell size={16} aria-hidden="true" /></span>} title="Notifications" sub={pushOn ? `${pushOn} of ${alerts.length} come to your phone` : 'Only in the bell'} />
+        <Row onClick={() => go('alerts')} lead={<span className="ma-sym is-coral"><Bell size={16} aria-hidden="true" /></span>} title="Notifications" sub={pushOn ? `${pushOn} of ${alertRows.length} come to your phone` : 'Only in the bell'} />
         <Row onClick={() => go('privacy')} lead={<span className="ma-sym is-stone"><Shield size={16} aria-hidden="true" /></span>} title="Privacy and security" sub="Password, privacy policy" />
       </div>
     </SubPage>
@@ -631,17 +633,7 @@ function ASettingsSection({ k }) {
       </>
     )
   }
-  if (k === 'alerts') {
-    return (
-      <>
-        <p className="ma-hint">Everything shows in the bell. These also come to your phone or email.</p>
-        <div className="ma-glass ma-list ma-set ma-rise">
-          {(s.notifications || []).map(n => <div key={n.key} className="ma-row"><span className="ma-grow"><b>{n.label}</b><small>{[n.push && 'Phone', n.email && 'Email'].filter(Boolean).join(' and ') || 'Only in the bell'}</small></span></div>)}
-        </div>
-        <p className="ma-note">Alerts, people, live switches and everything else are changed in the desktop’s Settings.</p>
-      </>
-    )
-  }
+  if (k === 'alerts') return <PhoneNotifRows role="admin" />
   if (k === 'privacy') {
     return (
       <>

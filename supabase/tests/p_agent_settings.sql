@@ -87,9 +87,10 @@ declare
 begin
   select jsonb_agg(n) into v_rest from jsonb_array_elements(v_before -> 'notifications') n where n ->> 'type' <> t;
 
+  -- P1023: nothing emails any more for these types, so a saved email choice is stored but email_on always reads off.
   v_on := not public.pas_pick(v_before, t, 'email_on')::boolean;
   v_after := public.save_my_agent_settings(jsonb_build_object('notifications', jsonb_build_array(jsonb_build_object('type', t, 'email', v_on))));
-  if public.pas_pick(v_after, t, 'email_on')::boolean <> v_on then return 'email did not change'; end if;
+  if public.pas_pick(v_after, t, 'email_on')::boolean then return 'email turned on'; end if;
   if public.pas_pick(v_after, t, 'push_on') <> public.pas_pick(v_before, t, 'push_on') then return 'email moved push'; end if;
   if (select jsonb_agg(n) from jsonb_array_elements(v_after -> 'notifications') n where n ->> 'type' <> t) <> v_rest then return 'email moved another type'; end if;
 
@@ -121,12 +122,12 @@ select is((select jsonb_object_agg(type, label || '|' || sort) from public.notif
           'a1 the four new types have their labels and sort');
 select is((select count(*) from public.notification_types
             where type in ('new_lead', 'live_call_ringing', 'appointment_1h', 'request_done')
-              and roles = '{agent}' and not email_default and email_via = 'notify' and in_bell and push and not money and not fires),
-          4::bigint, 'a2 all four: agent, email off, via notify, bell, push, not money, not firing');
+              and roles = '{agent}' and not email_default and email_via is null and in_bell and push and not money and not fires),
+          4::bigint, 'a2 all four: agent, email off, no email (P1023), bell, push, not money, not firing');
 select is((select count(*) from public.notification_types
-            where (type = 'needs_attention' and fires and email_via = 'notify' and not email_default and not push and sort = 14)
-               or (type = 'payment_failed' and fires and email_via = 'notify' and email_default and push and money and sort = 16)),
-          2::bigint, 'a3 the two reused types are as 146 left them');
+            where (type = 'needs_attention' and not fires and email_via is null and not email_default and not push and sort = 14)
+               or (type = 'payment_failed' and not fires and email_via is null and email_default and push and money and sort = 16)),
+          2::bigint, 'a3 the two reused types are as 146 left them, except P1023 stops them firing and emailing');
 select ok(exists (select 1 from pg_timezone_names where name = 'America/Chicago')
           and exists (select 1 from pg_timezone_names where name = 'America/New_York'),
           'a4 pg_timezone_names resolves both zones here');
@@ -155,20 +156,19 @@ select is(public.my_agent_settings(),
     {"type":"new_lead","label":"New lead","fires":false,"email_on":false,"push_on":true},
     {"type":"live_call_ringing","label":"Live call ringing","fires":false,"email_on":false,"push_on":true},
     {"type":"appointment_1h","label":"Appointment in 1 hour","fires":false,"email_on":false,"push_on":true},
-    {"type":"needs_attention","label":"Clients that need attention (daily)","fires":true,"email_on":false,"push_on":false},
+    {"type":"needs_attention","label":"Clients that need attention (daily)","fires":false,"email_on":false,"push_on":false},
     {"type":"request_done","label":"Request done","fires":false,"email_on":false,"push_on":true},
-    {"type":"payment_failed","label":"Weekly payment failed","fires":true,"email_on":true,"push_on":true}]}'::jsonb,
+    {"type":"payment_failed","label":"Weekly payment failed","fires":false,"email_on":false,"push_on":true}]}'::jsonb,
   'a11 a fresh agent reads the registry defaults, all six types, no hours');
 select is((select count(*) from public.my_notification_settings()
             where type in ('new_lead', 'live_call_ringing', 'appointment_1h', 'request_done')), 0::bigint,
           'a12 today''s Settings list does not gain the new types');
-select is((select count(*) from public.my_notification_settings() where type in ('needs_attention', 'payment_failed')), 2::bigint,
-          'a13 today''s Settings list still has the reused types');
-select lives_ok($$ select public.set_notification_email('new_lead', true) $$,
-          'a14 set_notification_email accepts a new type (email_via is notify)');
-select is(public.pas_pick(public.my_agent_settings(), 'new_lead', 'email_on'), 'true',
-          'a15 and my_agent_settings reads it back');
-select public.set_notification_email('new_lead', false);
+select is((select count(*) from public.my_notification_settings() where type in ('needs_attention', 'payment_failed')), 0::bigint,
+          'a13 today''s Settings list no longer has the reused types (P1023: they don''t fire or email)');
+select throws_ok($$ select public.set_notification_email('new_lead', true) $$, '22023', 'Not a notification you get',
+          'a14 set_notification_email refuses the type (P1023: email_via is null)');
+select is(public.pas_pick(public.my_agent_settings(), 'new_lead', 'email_on'), 'false',
+          'a15 and my_agent_settings still reads email off');
 reset role;
 
 -- ── b. Round trip ───────────────────────────────────────────────────────────
@@ -211,13 +211,13 @@ select is(public.my_agent_settings(),
     "live_transfer_phone":"+15125550101",
     "on_duty_default":true,
     "notifications":[
-      {"type":"new_lead","label":"New lead","fires":false,"email_on":true,"push_on":false},
-      {"type":"live_call_ringing","label":"Live call ringing","fires":false,"email_on":true,"push_on":false},
-      {"type":"appointment_1h","label":"Appointment in 1 hour","fires":false,"email_on":true,"push_on":false},
-      {"type":"needs_attention","label":"Clients that need attention (daily)","fires":true,"email_on":true,"push_on":true},
-      {"type":"request_done","label":"Request done","fires":false,"email_on":true,"push_on":false},
-      {"type":"payment_failed","label":"Weekly payment failed","fires":true,"email_on":false,"push_on":false}]}'::jsonb,
-  'b2 a full save reads back: zone, seven days including a 24:00 end, phone, default, six email and push values');
+      {"type":"new_lead","label":"New lead","fires":false,"email_on":false,"push_on":false},
+      {"type":"live_call_ringing","label":"Live call ringing","fires":false,"email_on":false,"push_on":false},
+      {"type":"appointment_1h","label":"Appointment in 1 hour","fires":false,"email_on":false,"push_on":false},
+      {"type":"needs_attention","label":"Clients that need attention (daily)","fires":false,"email_on":false,"push_on":true},
+      {"type":"request_done","label":"Request done","fires":false,"email_on":false,"push_on":false},
+      {"type":"payment_failed","label":"Weekly payment failed","fires":false,"email_on":false,"push_on":false}]}'::jsonb,
+  'b2 a full save reads back: zone, seven days including a 24:00 end, phone, default, six push values (P1023: email_on always reads off)');
 select is((select doc from pas_saved), public.my_agent_settings(), 'b3 the save returns the same shape as the read');
 
 select is((public.save_my_agent_settings('{"on_duty_default":false}'::jsonb) - 'on_duty_default'),
@@ -575,7 +575,7 @@ select is((select array_agg(k order by k) from public.profiles, jsonb_object_key
 update public.profiles set notification_prefs = '{"email":{"new_lead":true},"push_types":{"new_lead":false}}'
  where id = 'a9700000-0000-4000-8000-00000000000a';
 set local role authenticated;
-select is(public.pas_pick(public.save_my_agent_settings('{"notifications":[{"type":"needs_attention"}]}'::jsonb), 'new_lead', 'email_on'), 'true',
+select is(public.pas_pick(public.save_my_agent_settings('{"notifications":[{"type":"needs_attention"}]}'::jsonb), 'new_lead', 'email_on'), 'false',
           'j7 a type with neither email nor push changes nothing');
 reset role;
 select is((select notification_prefs -> 'email' from public.profiles where id = 'a9700000-0000-4000-8000-00000000000a'), '{"new_lead":true}'::jsonb,
@@ -585,7 +585,7 @@ select is((select notification_prefs -> 'email' from public.profiles where id = 
 set local role authenticated;
 update public.profiles set notification_prefs = '5' where id = 'a9700000-0000-4000-8000-00000000000a';
 select lives_ok($$ select public.my_agent_settings() $$, 'k1 the read survives prefs that are a number');
-select is(public.pas_pick(public.my_agent_settings(), 'payment_failed', 'email_on'), 'true', 'k2 and falls back to the registry');
+select is(public.pas_pick(public.my_agent_settings(), 'payment_failed', 'email_on'), 'false', 'k2 and falls back to the registry (P1023: email off)');
 select is(public.pas_pick(public.save_my_agent_settings('{"notifications":[{"type":"new_lead","push":false}]}'::jsonb), 'new_lead', 'push_on'), 'false',
           'k3 a save repairs prefs that are a number');
 reset role;
@@ -595,12 +595,12 @@ select is((select notification_prefs from public.profiles where id = 'a9700000-0
 set local role authenticated;
 update public.profiles set notification_prefs = '[1]' where id = 'a9700000-0000-4000-8000-00000000000a';
 select lives_ok($$ select public.my_agent_settings() $$, 'k5 the read survives prefs that are an array');
-select is(public.pas_pick(public.save_my_agent_settings('{"notifications":[{"type":"new_lead","email":true}]}'::jsonb), 'new_lead', 'email_on'), 'true',
+select is(public.pas_pick(public.save_my_agent_settings('{"notifications":[{"type":"new_lead","email":true}]}'::jsonb), 'new_lead', 'email_on'), 'false',
           'k6 a save repairs prefs that are an array');
 update public.profiles set notification_prefs = '{"push":false,"email":7,"push_types":"x"}' where id = 'a9700000-0000-4000-8000-00000000000a';
 select lives_ok($$ select public.my_agent_settings() $$, 'k7 the read survives email and push_types that aren''t objects');
 select is(public.pas_pick(public.my_agent_settings(), 'new_lead', 'push_on'), 'true', 'k8 and falls back to the registry');
-select is(public.pas_pick(public.save_my_agent_settings('{"notifications":[{"type":"request_done","email":true,"push":false}]}'::jsonb), 'request_done', 'email_on'), 'true',
+select is(public.pas_pick(public.save_my_agent_settings('{"notifications":[{"type":"request_done","email":true,"push":false}]}'::jsonb), 'request_done', 'email_on'), 'false',
           'k9 a save repairs email and push_types');
 reset role;
 select is((select notification_prefs from public.profiles where id = 'a9700000-0000-4000-8000-00000000000a'),
@@ -614,7 +614,7 @@ select lives_ok($$ select public.my_agent_settings() $$, 'k11 the read survives 
 select is(public.pas_pick(public.my_agent_settings(), 'new_lead', 'email_on'), 'false', 'k12 non-boolean email falls back to email_default (off)');
 select is(public.pas_pick(public.my_agent_settings(), 'payment_failed', 'email_on'), 'true', 'k13 non-boolean email falls back to email_default (on)');
 select is(public.pas_pick(public.my_agent_settings(), 'new_lead', 'push_on'), 'true', 'k14 non-boolean push falls back to the registry (on)');
-select is(public.pas_pick(public.save_my_agent_settings('{"notifications":[{"type":"new_lead","email":true}]}'::jsonb), 'new_lead', 'email_on'), 'true',
+select is(public.pas_pick(public.save_my_agent_settings('{"notifications":[{"type":"new_lead","email":true}]}'::jsonb), 'new_lead', 'email_on'), 'false',
           'k15 a save overwrites a non-boolean value');
 select is(public.pas_pick(public.my_agent_settings(), 'payment_failed', 'email_on'), 'true', 'k16 the other type''s bad value still reads as the default');
 reset role;

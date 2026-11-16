@@ -27,6 +27,8 @@ import { useProducts } from '../useProducts'
 import { label as productsLabel } from '../../lib/products.js'
 import '../settings929.css'
 import { useApp, SubPage, Row, Toggle, Ini } from './AppKit'
+import { PhoneNotifRows } from './ANotes'
+import { useNotifPrefs } from '../../hooks/useBell'
 import { weekWords } from './appModel'
 
 // P971 — Settings on the phone: glass cards, one row per setting with its current value on the right and a chevron,
@@ -39,7 +41,7 @@ const THEMES = [['light', 'Light'], ['dark', 'Dark'], ['system', 'Match my phone
 const TITLE = {
   account: 'Account', notify: 'Notifications', calendar: 'Calls and calendar', billing: 'Plan and billing', privacy: 'Privacy and security',
   profile: 'Edit profile', leadtype: 'Lead type', zone: 'Time zone', licence: 'Licensed states', carriers: 'Carriers you write with', setup: 'Your setup', calls: 'Call hours',
-  email: 'Carrier emails', alerts: 'Email alerts', receipts: 'Receipts', appearance: 'Theme', password: 'Password',
+  email: 'Carrier emails', receipts: 'Receipts', appearance: 'Theme', password: 'Password',
 }
 export const PRIVACY_URL = 'https://ohvara.com/privacy'
 const GROUPS = { account: 1, notify: 1, calendar: 1, billing: 1, privacy: 1 }
@@ -74,20 +76,20 @@ function useSettingsBits() {
   const [theme] = useThemePref()
   const go = k => app.open(`${paths.settings()}?set=${k}`)
   const leads = has('leads')
-  const alerts = s.notifications || []
-  return { app, s, b, go, leads, picked, theme, alerts }
+  return { app, s, b, go, leads, picked, theme }
 }
 const themeWordOf = theme => (THEMES.find(([k]) => k === theme) || THEMES[2])[1]
 
 // The first screen: the sections, each with what's in it (or its current value) under the name.
 function SettingsList() {
-  const { s, b, go, leads, picked, theme, alerts } = useSettingsBits()
-  const pushOn = alerts.filter(n => n.push).length
+  const { s, b, go, leads, picked, theme } = useSettingsBits()
+  const { rows: alertRows } = useNotifPrefs('agent')
+  const pushOn = alertRows.filter(n => n.push && !n.muted).length
   return (
     <SubPage big title="Settings">
       <div className="ma-glass ma-list ma-set ma-sections ma-rise">
         <Row onClick={() => go('account')} lead={<span className="ma-sym is-sky"><User size={16} aria-hidden="true" /></span>} title="Account" sub={`${zoneWord(s.timeZone)} · ${themeWordOf(theme)}`} />
-        <Row onClick={() => go('notify')} lead={<span className="ma-sym is-coral"><Bell size={16} aria-hidden="true" /></span>} title="Notifications" sub={pushOn ? `${pushOn} of ${alerts.length} come to your phone` : 'Only in the bell'} />
+        <Row onClick={() => go('notify')} lead={<span className="ma-sym is-coral"><Bell size={16} aria-hidden="true" /></span>} title="Notifications" sub={pushOn ? `${pushOn} of ${alertRows.length} come to your phone` : 'Only in the bell'} />
         <Row onClick={() => go('calendar')} lead={<span className="ma-sym is-sage"><CalendarDays size={16} aria-hidden="true" /></span>} title="Calls and calendar" sub={`Hours ${weekWords(s.week)}`} />
         <Row onClick={() => go('billing')} lead={<span className="ma-sym is-butter"><CreditCard size={16} aria-hidden="true" /></span>} title="Plan and billing" sub={leads ? planOf(b).label : productsLabel(picked)} />
         <Row onClick={() => go('privacy')} lead={<span className="ma-sym is-stone"><Shield size={16} aria-hidden="true" /></span>} title="Privacy and security" sub="Password, who sees your clients" />
@@ -98,15 +100,13 @@ function SettingsList() {
 
 // One section's own screen.
 function GroupScreen({ k }) {
-  const { s, b, go, app, leads, picked, theme, alerts } = useSettingsBits()
-  const { setNotification } = useSampleActions()
+  const { s, b, go, app, leads, picked, theme } = useSettingsBits()
   const account = useAccount()
   const note = useNote()
   const money = usd()
   const native = isNativeApp()
   const [panel, setPanel] = useState(null)
   const duty = !!b.take && inLiveHours(b.take.hours, b.take.tz)
-  const emailed = alerts.filter(n => n.email).length
   const card = b.card?.onFile === false ? 'No card' : `${b.card?.brand || ''} ${b.card?.last4 || ''}`.trim()
   const DeleteDialog = account?.DeleteDialog
   if (k === 'account') {
@@ -122,20 +122,7 @@ function GroupScreen({ k }) {
       </>
     )
   }
-  if (k === 'notify') {
-    return (
-      <>
-        <p className="ma-hint">Everything shows in the bell. These also come to your phone.</p>
-        <div className="ma-glass ma-list ma-set ma-rise">
-          {alerts.map(n => (
-            <div key={n.key} className="ma-row"><span className="ma-grow"><b>{n.label}</b></span>
-              <Toggle on={n.push} label={`${n.label} push`} onChange={v => { setNotification(n.key, 'push', v); note(`${n.label}: push ${v ? 'on' : 'off'}`) }} /></div>
-          ))}
-          <Row onClick={() => go('alerts')} title="Email alerts" right={<Val>{emailed ? `${emailed} on` : 'Off'}</Val>} />
-        </div>
-      </>
-    )
-  }
+  if (k === 'notify') return <PhoneNotifRows role="agent" />
   if (k === 'calendar') {
     return (
       <div className="ma-glass ma-list ma-set ma-rise">
@@ -199,14 +186,13 @@ const MField = ({ label, hint, children }) => <label className="ma-field"><span>
 function Section({ k }) {
   const app = useApp()
   const { data: s } = useSampleSettings()
-  const { setNotification, saveSettings, saveWeek } = useSampleActions()
+  const { saveSettings, saveWeek } = useSampleActions()
   const [theme, saveTheme] = useThemePref()
   const note = useNote()
   const setupView = useLaunchView()
   const [p, setP] = useState(s.profile || {})
   const [tz, setTz] = useState(s.timeZone)
   const [week, setWeek] = useState(s.week)
-  const [alerts, setAlerts] = useState(s.notifications || [])
   const [rc, setRc] = useState({ email: s.profile?.email || '', receipts: true })
   const source = useDataSource()
   const carriers = useCarriers()
@@ -280,28 +266,6 @@ function Section({ k }) {
         <HoursEditor week={week} onChange={setWeek} tz={s.timeZone} />
         <DeedstonePhone />
         {save(dirty, () => { saveWeek(week); done('Hours saved. Clashes with booked calls show on Calendar') })}
-      </div>
-    )
-  }
-  if (k === 'alerts') {
-    const flip = (key, field, v) => setAlerts(alerts.map(n => (n.key === key ? { ...n, [field]: v } : n)))
-    const dirty = JSON.stringify(alerts) !== JSON.stringify(s.notifications)
-    return (
-      <div className="ma-form">
-        {intro('Everything shows in the bell. Choose what also comes to your phone or email.')}
-        <div className="ma-glass ma-list ma-set">
-          <div className="ma-row is-head"><span className="ma-grow" /><small>Push</small><small>Email</small></div>
-          {alerts.map(n => (
-            <div key={n.key} className="ma-row"><span className="ma-grow"><b>{n.label}</b></span>
-              <Toggle small on={n.push} label={`${n.label} push`} onChange={v => flip(n.key, 'push', v)} />
-              <Toggle small on={n.email} label={`${n.label} email`} onChange={v => flip(n.key, 'email', v)} />
-            </div>
-          ))}
-        </div>
-        {save(dirty, () => {
-          alerts.forEach(n => { const was = (s.notifications || []).find(x => x.key === n.key); if (!was) return; if (was.push !== n.push) setNotification(n.key, 'push', n.push); if (was.email !== n.email) setNotification(n.key, 'email', n.email) })
-          done('Notifications saved')
-        })}
       </div>
     )
   }

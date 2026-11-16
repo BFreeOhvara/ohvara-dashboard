@@ -9,7 +9,7 @@ import {
 import { useTheme } from '../hooks/useTheme'
 import { useIsTestAccount } from '../hooks/useIsTestAccount'
 import { useIsOwner, ROLE_WORD, roleOptions } from './owner'
-import { Drawer, Avatar, Field, Seg, PillTabs, useAccount, useNote, initials } from '../template/kit'
+import { Drawer, Field, Seg, PillTabs, useAccount, useNote, initials } from '../template/kit'
 import ViewToggle from '../template/ViewToggle'
 import { ReportBug } from '../template/ReportBug'
 import { GetApp } from '../template/TemplateFrame'
@@ -22,7 +22,7 @@ import { OhvaraMark } from '../components/ui/OhvaraMark'
 import { isSearchKey } from '../lib/searchKey'
 import { SUPPORT_EMAIL } from '../components/auth/authUtils'
 import {
-  useAdmDay, useAdmAgents, useAdmVas, useAdmLeads, useAdmClients, useAdmFeed, useAdmSettings, useAdmMoney, useAdmActions,
+  useAdmDay, useAdmAgents, useAdmVas, useAdmLeads, useAdmClients, useAdmSettings, useAdmMoney, useAdmActions,
   useAdmInvites, useAdmPeriod, useAdmSetup, useAdmSource,
 } from './data'
 import { useGhlRow } from './useGhlRow'
@@ -41,6 +41,8 @@ import './p914.css'
 import './p934.css'
 import { useMessagesToggle } from '../template/msgToggle'
 import { UnmatchedAlert, RouteLeadDrawer } from './screens/Unmatched913'
+import { DeskBell } from '../components/notifications/DeskBell'
+import { useBell } from '../hooks/useBell'
 import '@fontsource/urbanist/500.css'
 import '@fontsource/urbanist/600.css'
 import '@fontsource/urbanist/700.css'
@@ -53,17 +55,10 @@ import '@fontsource/urbanist/700.css'
 const ICONS = { overview: Home, agents: Users, setup: Rocket, team: Headset, leads: PhoneIncoming, clients: BookUser, billing: Landmark, connect: Plug }
 const money = usd()
 
+// P1023: the bell is notifications only (Brayden's list for admins). P913's unmatched-lead alert stays on top (it's a
+// lead waiting for an agent, not a notification type).
 function BellDrawer({ open, onClose, onRoute }) {
-  const { data: items } = useAdmFeed()
-  return (
-    <Drawer open={open} onClose={onClose} title="Notifications" sub="What happened lately">
-      {/* P913: a lead that matched no agent is an alert at the top. P934: clicking it slides in Pick the agent. */}
-      <UnmatchedAlert onOpen={onRoute} />
-      <ul className="tp-list">
-        {items.slice(0, 8).map(a => <li key={a.id} className="tp-li"><Avatar name={a.who} /><span className="tp-grow"><b>{a.who}</b><small>{a.text}</small></span><small>{a.at}</small></li>)}
-      </ul>
-    </Drawer>
-  )
+  return <DeskBell role="admin" open={open} onClose={onClose} extra={<UnmatchedAlert onOpen={onRoute} />} emptyLine="New agents ready, failed payments, VA strikes and bug reports show here." />
 }
 
 // Add someone: an agent or a Fulfillment person, by email, by text, or a link to copy. No admin from here (as today).
@@ -203,6 +198,7 @@ export default function AdminFrame() {
   const title = admTitleOf(layout)
   const stats = useHeadStats(layout)
   const { data: day } = useAdmDay()
+  const bell = useBell('admin').unread
   const { data: agents } = useAdmAgents()
   const { data: vas } = useAdmVas()
   const { data: leads } = useAdmLeads()
@@ -256,7 +252,7 @@ export default function AdminFrame() {
   const tops = (
     <>
       <NavLink to={ap('messages')} className={`fx-ib tp-wig${msg.closing ? ' is-closing' : ''}`} aria-label={active === 'messages' ? 'Close Messages' : 'Messages'} {...wig} onClick={e => { wig.onClick?.(e); msg.onClick(e) }}><MessageSquare size={18} />{day.unread > 0 && <span className="fx-badge">{day.unread}</span>}</NavLink>
-      <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} /><span className="fx-badge">{Math.min(9, day.needs)}</span></button>
+      <button type="button" className="fx-ib tp-wig is-bell" aria-label="Notifications" {...wig} onClick={open('bell')}><Bell size={18} />{bell > 0 && <span className="fx-badge">{Math.min(9, bell)}</span>}</button>
     </>
   )
   const me = account.name

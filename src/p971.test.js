@@ -75,6 +75,6 @@ test('Settings: hours in words, every portal setting, Sign out and Delete accoun
   assert.equal(weekWords({}), 'Not set')
   const s = read('./template/m/ASettings.jsx')
   for (const g of ['Calls and calendar', 'Notifications', 'Plan and billing', 'Account']) assert.match(s, new RegExp(`title="${g}"`)) // P977: sections, each its own screen
-  for (const k of ['profile', 'zone', 'licence', 'setup', 'calls', 'email', 'alerts', 'receipts', 'appearance', 'password']) assert.match(s, new RegExp(`k === '${k}'`))
+  for (const k of ['profile', 'zone', 'licence', 'setup', 'calls', 'email', 'notify', 'receipts', 'appearance', 'password']) assert.match(s, new RegExp(`k === '${k}'`))
   assert.match(s, /NATIVE_BILLING_TEXT/)
 })

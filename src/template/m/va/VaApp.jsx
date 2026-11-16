@@ -1,10 +1,10 @@
-import { useCallback, useMemo, useRef, useState, useEffect, useSyncExternalStore } from 'react'
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import { useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { Home, CalendarDays, Users, MessageCircle } from 'lucide-react'
 import { useTheme } from '../../../hooks/useTheme'
 import { useIsTestAccount } from '../../../hooks/useIsTestAccount'
 import { useAccount } from '../../kit'
-import { useFulSchedule, useFulStatus, useFulSource, useFulFeed, useFulSettings, useFulActions } from '../../ful/data'
+import { useFulSchedule, useFulStatus, useFulSource, useFulSettings, useFulActions } from '../../ful/data'
 import { PhoneZone } from '../zone'
 import { fp } from '../../ful/paths'
 import { DataLoading, DataError } from '../../DataState'
@@ -18,7 +18,8 @@ import VToday from './VToday'
 import VCalendar from './VCalendar'
 import VRota from './VRota'
 import VMessages, { VThread, VaStandingProvider } from './VMessages'
-import { useVaThreads, FEED_SEEN } from './vaStore'
+import { useVaThreads } from './vaStore'
+import { useBell } from '../../../hooks/useBell'
 import VMe, { VPay, VSettings, VProfile, VTraining, VLesson, VHelp } from './VMe'
 import { VNotif, VSearch, VClient } from './VSubs'
 import VClients from './VClients'
@@ -104,9 +105,7 @@ function Frame() {
   // P1001: count only the threads the Messages list shows (VA-to-VA chats are hidden there; desktop has none).
   const threads = useVaThreads().filter(t => !t.va)
   const unread = threads.reduce((n, t) => n + (t.unread || 0), 0)
-  const { data: feed } = useFulFeed()
-  const seen = useSyncExternalStore(FEED_SEEN.sub, FEED_SEEN.get)
-  const unseen = feed.filter(f => !seen.includes(f.id)).length
+  const unseen = useBell('fulfillment').unread
 
   const [leaving, setLeaving] = useState(false)
   const leaveT = useRef(null)

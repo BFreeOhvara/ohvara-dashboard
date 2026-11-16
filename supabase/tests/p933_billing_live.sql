@@ -79,7 +79,7 @@ select ok(public.lead_spend_day_paid(pg_temp.a(), '2026-11-10') and public.lead_
 select is((select note from public.lead_spend_charges where agent_id = pg_temp.a() and kind = 'nightly' and for_day = '2026-11-10'),
   'Lead spend for Tue, Nov 10: $100.00 to your ads · $12.00 booking desk · paid with your sign-up', 'c8 a nightly row''s words');
 select is(public.lead_spend_nightly('2026-11-09'), 0, 'c9 tonight charges nothing more (both days are paid)');
-select ok(exists (select 1 from public.notifications where profile_id = pg_temp.a() and type = 'billing_charged' and title = 'You''re all set'), 'c10 You''re all set');
+select ok(not exists (select 1 from public.notifications where profile_id = pg_temp.a() and type = 'billing_charged' and title = 'You''re all set'), 'c10 no You''re all set notice (P1023: not on the list)');
 select is((public.lead_spend_nightly('2026-11-10')), 1, 'c11 the next evening charges Nov 12 as usual');
 select is((select note from public.lead_spend_charges where agent_id = pg_temp.a() and kind = 'nightly' and for_day = '2026-11-12'), 'Lead spend for Thu, Nov 12: $100.00 to your ads · $12.00 booking desk', 'c12 nightly words: no "+ 12%"');
 select throws_ok($$ select public.billing_signup_start('growth', 10000, pg_temp.a()) $$, 'P0001', 'You''ve already signed up', 'c13 no second sign-up');

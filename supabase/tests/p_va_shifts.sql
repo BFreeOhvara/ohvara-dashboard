@@ -111,7 +111,7 @@ reset role;
 select is((select status from public.va_day_off_requests where off_date = public.va_today() + 2), 'approved', 'd7 P915: the VA''s own booking is booked at once (no approval since P913)');
 select is((select reason from public.va_day_off_requests where off_date = public.va_today() + 2), 'Doctor''s appointment', 'd8 the reason is trimmed');
 select is((select count(*)::int from public.notifications where profile_id = 'dddddddd-dddd-4ddd-8ddd-000000000001' and type = 'va_day_off_requested'),
-          1, 'd9 the admin is told (one in-app notification, the RPC ask only)');
+          0, 'd9 the admin is not told (P1023: va_day_off_requested is not on the list)');
 
 select pg_temp.as_user('eeeeeeee-eeee-4eee-8eee-000000000001');
 select is((select count(*)::int from public.va_day_off_requests), 0, 'd10 V1 cannot see V2''s requests');
@@ -138,7 +138,7 @@ select is((select count(*)::int from public.va_shifts_today(public.va_today() + 
 select is((select off_status from public.va_shift_week(public.va_today() + 2, 1) where va_id = 'eeeeeeee-eeee-4eee-8eee-000000000002'), 'approved', 'e7 the rota shows V2 off');
 reset role;
 select is((select count(*)::int from public.notifications where profile_id = 'eeeeeeee-eeee-4eee-8eee-000000000002' and type = 'va_day_off_decided'),
-          1, 'e8 V2 is told the one real decision (the decline)');
+          0, 'e8 V2 is not told the decline (P1023: va_day_off_decided is not on the list)');
 select is((select count(*)::int from public.notification_emails where type in ('va_day_off_requested', 'va_day_off_decided')),
           0, 'e8b no email is queued for either');
 

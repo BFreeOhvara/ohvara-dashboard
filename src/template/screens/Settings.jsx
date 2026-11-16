@@ -22,6 +22,7 @@ import { DeedstonePhone } from '../DeedstonePhone'
 import { useProducts } from '../useProducts'
 import { AppAbout } from '../../components/native/AppAbout'
 import { LeadTypeCard } from '../LeadTypeCard'
+import { NotifSettings } from '../../components/notifications/NotifSettings'
 
 // P929: Settings back to the pre-P924 layout (profile card on the left, tabs on the right). Notifications is only the
 // switches; the carrier-email forwarding address that sat under it has its own Email tab, so no section is long.
@@ -84,7 +85,7 @@ function ProfileCard({ profile }) {
 export default function Settings() {
   const { data: s } = useSampleSettings()
   const { data: billing } = useSampleBilling()
-  const { setNotification, saveSettings, saveWeek } = useSampleActions()
+  const { saveSettings, saveWeek } = useSampleActions()
   const [saved, saveTheme] = useThemePref()
   const note = useNote()
   const account = useAccount()
@@ -104,7 +105,6 @@ export default function Settings() {
   const carriersSaved = Array.isArray(s.profile?.carriers) ? s.profile.carriers : [...new Set(clientRows.map(c => c.carrier_name).filter(Boolean))].sort()
   const [cs, setCs] = useState(carriersSaved)
   const [tz, setTz] = useState(s.timeZone)
-  const [alerts, setAlerts] = useState(s.notifications)
   const [cDraft, setCDraft] = useState({ week: s.week })
   const [bill, setBill] = useState({ email: s.profile.email, receipts: true })
   const [bDraft, setBDraft] = useState(bill)
@@ -118,11 +118,9 @@ export default function Settings() {
   useEffect(() => () => previewTheme(savedRef.current), [])
 
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
-  const alertsDirty = !same(alerts, s.notifications)
   const callsSaved = { week: s.week }
   const signOut = () => (account.live ? account.signOut() : note('Sign out works once you sign in for real'))
   const DeleteDialog = account.DeleteDialog
-  const flip = (key, field, v) => setAlerts(alerts.map(n => (n.key === key ? { ...n, [field]: v } : n)))
   const money = usd()
   const setupView = useLaunchView()
 
@@ -173,20 +171,8 @@ export default function Settings() {
           {tab === 'licence' && <><LicenceCard />{has('leads') && <LeadTypeCard />}</>}
 
           {tab === 'alerts' && <>
-            <Head title="Notifications" sub="Everything shows in the bell. Choose what also comes to your phone or email." />
-            <div className="fx-alerts">
-              <div className="fx-alerts-h"><span className="tp-grow" /><span>Push</span><span>Email</span></div>
-              <ul className="tp-list">{alerts.map(n => (
-                <li key={n.key} className="tp-li"><b className="tp-grow">{n.label}</b>
-                  <Switch on={n.push} label={`${n.label} push`} onChange={v => flip(n.key, 'push', v)} />
-                  <Switch on={n.email} label={`${n.label} email`} onChange={v => flip(n.key, 'email', v)} />
-                </li>
-              ))}</ul>
-            </div>
-            <FormFoot dirty={alertsDirty} onDiscard={() => setAlerts(s.notifications)} onSave={() => {
-              alerts.forEach(n => { const was = s.notifications.find(x => x.key === n.key); if (was.push !== n.push) setNotification(n.key, 'push', n.push); if (was.email !== n.email) setNotification(n.key, 'email', n.email) })
-              note('Notifications saved')
-            }} />
+            <Head title="Notifications" sub="Everything shows in the bell. Switch one off to stop its phone alert; the urgent ones are always on." />
+            <NotifSettings role="agent" />
           </>}
 
           {tab === 'email' && <>

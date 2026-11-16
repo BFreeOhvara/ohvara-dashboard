@@ -378,7 +378,7 @@ select is((select current_carrier from public.policy_fulfillment_details where p
           'P Submit Leaving Life', 'g3 current_carrier is the carrier they leave');
 select is((select count(*) from public.notifications where type = 'call_booked'
               and profile_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001' and (data ->> 'policy_id') = (select id::text from ids where name = 'yes')),
-          1::bigint, 'g4 the rep is told');
+          0::bigint, 'g4 the rep is not told (P1023: call_booked is not on the list)');
 select is((select string_agg(kind, ',' order by kind) from public.policy_events where policy_id = (select id from ids where name = 'yes')),
           'booked,submitted', 'g5 it keeps the booked row and adds submitted');
 

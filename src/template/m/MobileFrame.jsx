@@ -23,7 +23,7 @@ import { AClients, AClientsTab } from './AClients'
 import { AClient } from './AClient'
 import { AHelp } from './AHelp'
 import { ANotif, AActivity } from './ANotes'
-import { useUnseen } from './useNotes'
+import { useBell } from '../../hooks/useBell'
 import ABilling from './ABilling'
 import ASettings from './ASettings'
 import ASubmit from './ASubmit'
@@ -124,7 +124,7 @@ function Frame() {
   const { data: clients } = useSampleClients()
   const statusOf = useClientStatusOf()
   const needClients = tabs.includes('clients') ? clients.filter(c => statusOf(c) === 'needs_attention').length : 0
-  const unseen = useUnseen()
+  const unseen = useBell('agent').unread
   const now = clockNow()
   const toMark = leads.filter(l => stageOf(l, now) === 'mark').length
   const unread = threads.reduce((n, t) => n + (t.unread || 0), 0)

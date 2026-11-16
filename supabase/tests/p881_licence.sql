@@ -73,7 +73,7 @@ select is((select source from public.agent_licenses where profile_id = 'a8810000
 select is((select count(*)::int from public.agent_licenses where profile_id = 'a8810000-0000-4000-8000-00000000000a' and state = 'TX'), 1, 'c4 no duplicate TX row');
 select ok(public.licence_ready('a8810000-0000-4000-8000-00000000000a'), 'c5 ready to launch');
 select is((select states from public.agent_targeting_states where agent_id = 'a8810000-0000-4000-8000-00000000000a'), '{FL,TX}'::text[], 'c6 targeting hand-off has the verified states');
-select ok(exists (select 1 from public.notifications where profile_id = 'a8810000-0000-4000-8000-00000000000a' and type = 'licence_verified'), 'c7 agent told it''s checked');
+select ok(not exists (select 1 from public.notifications where profile_id = 'a8810000-0000-4000-8000-00000000000a' and type = 'licence_verified'), 'c7 no licence notice (P1023: not on the list)');
 
 -- ── d. the gate on ──────────────────────────────────────────────────────────
 update public.licence_settings set gate_on = true;
@@ -118,8 +118,8 @@ select public.licence_apply_check('a8810000-0000-4000-8000-00000000000a', '12345
   pg_temp.lic('TX', false, true, current_date + 400), pg_temp.lic('FL', true, true, current_date + 20)), true);
 select is(public.licence_verified_states('a8810000-0000-4000-8000-00000000000a'), '{FL}'::text[], 'e1 TX dropped');
 select is((select lapse_reason from public.agent_licenses where profile_id = 'a8810000-0000-4000-8000-00000000000a' and state = 'TX'), 'nipr_inactive', 'e2 lapse recorded');
-select ok(exists (select 1 from public.notifications where profile_id = 'a8810000-0000-4000-8000-00000000000a' and type = 'licence_lapsed'), 'e3 agent told');
-select ok(exists (select 1 from public.notifications where profile_id = 'a8810000-0000-4000-8000-000000000001' and type = 'licence_lapsed'), 'e4 admin told');
+select ok(not exists (select 1 from public.notifications where profile_id = 'a8810000-0000-4000-8000-00000000000a' and type = 'licence_lapsed'), 'e3 no lapse notice for the agent (P1023: not on the list)');
+select ok(not exists (select 1 from public.notifications where profile_id = 'a8810000-0000-4000-8000-000000000001' and type = 'licence_lapsed'), 'e4 no lapse notice for the admin (P1023: not on the list)');
 select is((select states from public.agent_targeting_states where agent_id = 'a8810000-0000-4000-8000-00000000000a'), '{FL}'::text[], 'e5 targeting updated the same day');
 select is((select states from public.agent_lead_settings where agent_id = 'a8810000-0000-4000-8000-00000000000a'), '{TX,FL}'::text[], 'e6 the agent''s pick is kept (comes back when renewed)');
 select public.licence_apply_check('a8810000-0000-4000-8000-00000000000a', '1234567', 'registry_down', null, '[]', true);
@@ -127,8 +127,8 @@ select is(public.licence_verified_states('a8810000-0000-4000-8000-00000000000a')
 
 -- ── f. the expiry sweep and reminders ───────────────────────────────────────
 select ok(public.licence_daily_sweep() >= 0, 'f1 sweep runs');
-select ok(exists (select 1 from public.notifications where profile_id = 'a8810000-0000-4000-8000-00000000000a' and type = 'licence_expiring'
-                  and dedupe_key like '%:30'), 'f2 FL (20 days) gets the 30-day reminder');
+select ok(not exists (select 1 from public.notifications where profile_id = 'a8810000-0000-4000-8000-00000000000a' and type = 'licence_expiring'
+                  and dedupe_key like '%:30'), 'f2 no 30-day reminder (P1023: not on the list)');
 update public.agent_licenses set expires_on = current_date - 1 where profile_id = 'a8810000-0000-4000-8000-00000000000a' and state = 'FL';
 select is(public.licence_daily_sweep(), 1, 'f3 expired FL lapses');
 select is(public.licence_verified_states('a8810000-0000-4000-8000-00000000000a'), '{}'::text[], 'f4 nothing left');

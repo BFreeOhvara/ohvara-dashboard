@@ -56,8 +56,8 @@ select is((select count(*)::int from public.servicing_tasks where policy_id = 'b
           'the miss is one ordinary save call for the VAs');
 select results_eq($$ select r->>'status', r->>'why' from (select public.payment_intake_receive((select a from t_tok), 'e-2', 'x', 'Lapse pending', '', '{"kind":"lapsed","client_name":"J. Smith"}') r) q $$,
                   $$ values ('unmatched'::text, 'several_policies'::text) $$, 'a last name that fits two policies doesn''t guess');
-select is((select count(*)::int from public.notifications where profile_id = 'a8880000-0000-4000-8000-000000000001' and type = 'payment_intake_unmatched'), 1,
-          'the admin is told about the email nothing could match');
+select is((select count(*)::int from public.notifications where profile_id = 'a8880000-0000-4000-8000-000000000001' and type = 'payment_intake_unmatched'), 0,
+          'the admin gets no notice about the email nothing could match (P1023: not on the list)');
 select is((select count(*)::int from public.notifications where profile_id = 'a8880000-0000-4000-8000-0000000000f1' and type = 'payment_intake_unmatched'), 0,
           'the VA is not');
 select is((select roles from public.notification_types where type = 'payment_intake_unmatched'), array['admin']::text[], 'that notice is admin-only');

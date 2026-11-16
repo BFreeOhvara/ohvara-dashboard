@@ -70,7 +70,7 @@ select is((pg_temp.pl(pg_temp.c())).picked, '{reactivation}'::text[], 'b5 picked
 select is((pg_temp.pl(pg_temp.c())).products, 'servicing', 'b6 the old column says no lead spend');
 select is((public.agent_membership_due(pg_temp.c()))->>'membership_cents', '0', 'b7 no monthly charge');
 select throws_ok($$ select public.billing_signup_start(null, null, pg_temp.c(), '{reactivation}') $$, 'P0001', 'You''ve already signed up', 'b8 once');
-select ok(exists (select 1 from public.notifications where type = 'new_agent_paid' and detail like 'Cy Reactivation Only signed up for Reactivation only%'), 'b9 admins hear about it');
+select ok(not exists (select 1 from public.notifications where type = 'new_agent_paid' and detail like 'Cy Reactivation Only signed up for Reactivation only%'), 'b9 no new_agent_paid notice (P1023: not on the list; agent_ready fires on a paid sign-up charge only)');
 
 -- ── c. all three ────────────────────────────────────────────────────────────
 select is((public.billing_signup_start('growth', 10000, pg_temp.a(), '{leads,servicing,reactivation}'))->>'total_cents', (202200 + 49900)::text, 'c1 Ann: all three, $2,521');

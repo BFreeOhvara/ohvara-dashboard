@@ -27,6 +27,7 @@ import MMore from './m/MMore'
 import { DeedstoneCallProvider } from './DeedstoneCall'
 import { isNativeApp } from '../lib/native'
 import { NativeBillingNote } from '../components/native/NativeBillingNote'
+import { TransferAlert } from '../components/agent/TransferAlert'
 
 // P956: no payments inside the phone app (P775 rule). Billing there is one line: it's managed on the website.
 function NativeBilling() {
@@ -68,6 +69,8 @@ export default function AgentShell({ account }) {
             </Route>
             <Route path="*" element={<Navigate to={SHELL_ROUTES.overview} replace />} />
           </Routes>
+          {/* P1023: the live-transfer Yes / No (realtime, the push's link, or the lock-screen answer), desktop and phone. */}
+          <TransferAlert />
           </DeedstoneCallProvider>
         </NoteProvider>
       </DataProvider>

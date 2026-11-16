@@ -1,0 +1,34 @@
+/* P1023 — the desktop bell (agent, VA, admin). Tones use the shell's fill tokens (index.css --sh-*). */
+.nb-group { display: flex; flex-direction: column; gap: 6px; }
+.nb-group + .nb-group { margin-top: 14px; }
+.nb-h { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .02em; color: var(--ov-mute); }
+.nb-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.nb-row { width: 100%; display: flex; align-items: flex-start; gap: 12px; padding: 10px; border: 0; border-radius: 12px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background-color .2s ease; }
+.nb-row:hover { background: color-mix(in srgb, var(--ov-mute) 12%, transparent); }
+.nb-row:focus-visible { outline: 2px solid var(--ov-data-a); outline-offset: 1px; }
+.nb-grow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.nb-grow b { font-size: 14px; font-weight: 600; line-height: 1.3; }
+.nb-row.is-new .nb-grow b { font-weight: 800; }
+.nb-grow small { font-size: 12.5px; line-height: 1.35; color: var(--ov-mute); }
+.nb-end { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; padding-top: 2px; }
+.nb-end small { font-size: 12px; white-space: nowrap; color: var(--ov-mute); }
+.nb-dot { display: block; width: 8px; height: 8px; border-radius: 4px; background: var(--sh-f-coral); }
+.nb-ic { --s: 36px; width: var(--s); height: var(--s); flex: 0 0 var(--s); border-radius: calc(var(--s) * .32); display: grid; place-items: center; background: var(--tcard); color: var(--tink); }
+.nb-ic.is-apricot { --tf: var(--sh-f-apricot); --ti: var(--sh-fi-apricot); --tc: var(--sh-cf-apricot); }
+.nb-ic.is-sky { --tf: var(--sh-f-sky); --ti: var(--sh-fi-sky); --tc: var(--sh-cf-sky); }
+.nb-ic.is-butter { --tf: var(--sh-f-butter); --ti: var(--sh-fi-butter); --tc: var(--sh-cf-butter); }
+.nb-ic.is-sage { --tf: var(--sh-f-sage); --ti: var(--sh-fi-sage); --tc: var(--sh-cf-sage); }
+.nb-ic.is-stone { --tf: var(--sh-f-stone); --ti: var(--sh-fi-stone); --tc: var(--sh-cf-stone); }
+.nb-ic.is-coral { --tf: var(--sh-f-coral); --ti: var(--sh-fi-coral); --tc: var(--sh-cf-coral); }
+.nb-ic { --tcard: var(--tc); --tink: var(--sh-ci); }
+[data-theme="light"] .nb-ic { --tcard: color-mix(in srgb, var(--tf) 90%, transparent); --tink: var(--ti); }
+.nb-blank { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 40px 20px; text-align: center; }
+.nb-blank-ic { width: 56px; height: 56px; border-radius: 18px; display: grid; place-items: center; margin-bottom: 4px; background: color-mix(in srgb, var(--ov-mute) 14%, transparent); color: var(--ov-mute); }
+.nb-blank small { color: var(--ov-mute); max-width: 260px; }
+
+/* P1023 — notification settings rows (desktop). */
+.nb-set { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.nb-set li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--ov-line); }
+.nb-set li:first-child { border-top: 0; }
+.nb-set .nb-grow b { font-weight: 600; }
+.nb-lock { font-size: 12px; font-weight: 700; color: var(--ov-mute); white-space: nowrap; }
