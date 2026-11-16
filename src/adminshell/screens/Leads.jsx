@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
 import { Search, PhoneIncoming, CalendarCheck, PhoneForwarded, PhoneOff, MapPin, Clock, Shuffle, Check, Lock } from 'lucide-react'
-import { useAdmLeads, useAdmAgents, useAdmActions, useAdmDay } from '../data'
+import { useAdmLeads, useAdmAgents, useAdmActions, useAdmDay, useAdmCosts, useAdmSource } from '../data'
 import { Avatar, Chip, Empty, Seg, useNote } from '../../template/kit'
 import { RecordDrawer, Block } from '../../template/Record'
 import { Dropdown, DField } from '../kit'
@@ -10,6 +10,11 @@ import { LEAD_LANES, STAGE_WORD, KIND_WORD, FOLLOW_OWNER, MATCH_WORD, stageTone,
 import { ConsentProof, UnassignedBlock } from './Compliance879'
 import { AiCallsView } from './AiCalls892'
 import { ReactivationView } from './Reactivation952'
+import { useCoverageTypes } from '../../hooks/useLeadTypes'
+import { byType } from '../../lib/coverageTypes'
+import { LeadTypes } from './LeadTypes1016'
+import { usd } from '../../template/motion'
+import './leadTypes1016.css'
 
 // P849 — Leads (the inbounds page, on screen as Leads): every lead across every agent this week. P906: the board is
 // the admin statuses. P913: Booked · No show · Follow up · Sold · Not interested (No answer is gone: those are Follow ups
@@ -69,7 +74,7 @@ function LeadDrawer({ id, onClose }) {
         <DField label="Agent"><Dropdown label="Agent" value={to} options={options} onChange={setPick} /></DField>
       </Block>}
       <Block title="What we know">
-        <dl className="fx-facts">{[['Phone', l.phone], ['Came in', l.came], ['Type', KIND_WORD[l.kind]], ['From', l.source], ['Looking for', l.product], ['Agent', l.agent || 'Not matched'], ['Matched by', MATCH_WORD[l.matchedBy] || 'Nothing matched'], ['Agent ID in link', l.agentRef || 'None'], ['Meta campaign ID', l.campaignId || l.campaign || 'None']].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+        <dl className="fx-facts">{[['Phone', l.phone], ['Came in', l.came], ['Type', KIND_WORD[l.kind]], ['From', l.source], ['Lead type', l.product], ['Agent', l.agent || 'Not matched'], ['Matched by', MATCH_WORD[l.matchedBy] || 'Nothing matched'], ['Agent ID in link', l.agentRef || 'None'], ['Meta campaign ID', l.campaignId || l.campaign || 'None']].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
         {l.note && <p className="tp-sub">{l.note}</p>}
       </Block>
       <ConsentProof lead={l} />
@@ -83,6 +88,52 @@ function LeadDrawer({ id, onClose }) {
 // Appointments / Live calls switch: both are Delivered.
 const RANGES = [{ key: 'today', label: 'Today' }, { key: 'week', label: 'This week' }, { key: 'all', label: 'All' }]
 
+// P1016: leads, booked or transferred, sold and cost per lead by lead type, for this week (or every lead on file).
+// Ad spend is per agent; an agent runs one type a day, so each agent's spend is split by their own leads' mix
+// (lib/coverageTypes.js byType). Spend is this week's only; until the spend feed is on there is none.
+const BOOKED = l => (l.kind === 'appointment' && !!l.appt && l.appt !== 'not booked yet') || (l.kind === 'live' && l.owner !== 'team')
+function ByTypeView() {
+  const [when, setWhen] = useState('week')
+  const { data: leads } = useAdmLeads({ all: when === 'all' })
+  const { data: costs } = useAdmCosts()
+  const { all: types } = useCoverageTypes(useAdmSource() === 'real')
+  const money = usd(true)
+  const rows = byType(types, leads.filter(l => !isUnassigned(l)).map(l => ({ coverage: l.coverage, agentId: l.agent_id, booked: BOOKED(l) || l.stage === 'sold', sold: l.stage === 'sold' })),
+    when === 'week' && costs ? Object.entries(costs.byAgent).map(([agentId, c]) => ({ agentId, spendCents: Math.round((c.spend || 0) * 100) })) : [])
+  const tot = rows.reduce((t, r) => ({ leads: t.leads + r.leads, booked: t.booked + r.booked, sold: t.sold + r.sold, spendCents: t.spendCents + r.spendCents }), { leads: 0, booked: 0, sold: 0, spendCents: 0 })
+  const spendKnown = when === 'week' && !!costs
+  const c = v => (spendKnown && v != null ? money(v / 100) : '–')
+  return (
+    <>
+    <section className="fx-tile lty-report" aria-label="Leads by lead type">
+      <header className="lty-report-h">
+        <div><h2>By lead type</h2><p>{spendKnown ? 'Ad spend is split by each agent’s own leads.' : when === 'week' ? 'Ad spend shows once the spend feed is on.' : 'Ad spend is shown for this week only.'}</p></div>
+        <Seg label="Showing" value={when} onChange={setWhen} options={[{ key: 'week', label: 'This week' }, { key: 'all', label: 'All' }]} />
+      </header>
+      {rows.length === 0 ? <Empty title="No leads yet" sub="Leads show here by type as they come in." /> : (
+        <div className="lty-table-wrap">
+          <table className="lty-table">
+            <thead><tr><th scope="col">Lead type</th><th scope="col">Leads</th><th scope="col">Booked or transferred</th><th scope="col">Sold</th><th scope="col">Ad spend</th><th scope="col">Per lead</th></tr></thead>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r.key} data-testid={`bytype-${r.key}`}>
+                  <th scope="row">{r.label}</th><td className="tp-num">{r.leads}</td><td className="tp-num">{r.booked}</td><td className="tp-num">{r.sold}</td>
+                  <td className="tp-money">{c(r.spendCents)}</td><td className="tp-money">{c(r.perLeadCents)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot><tr><th scope="row">Total</th><td className="tp-num">{tot.leads}</td><td className="tp-num">{tot.booked}</td><td className="tp-num">{tot.sold}</td>
+              <td className="tp-money">{c(tot.spendCents)}</td><td className="tp-money">{c(tot.leads ? Math.round(tot.spendCents / tot.leads) : null)}</td></tr></tfoot>
+          </table>
+        </div>
+      )}
+      </section>
+      {/* The list itself: rename, add, hide, reorder, Most popular (P1016; kept off Settings so its tabs stay one row). */}
+      <section className="fx-tile lty-report lty-edit" aria-label="Edit lead types"><LeadTypes /></section>
+    </>
+  )
+}
+
 export default function Leads() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -93,17 +144,30 @@ export default function Leads() {
   const { data: day } = useAdmDay()
   const [q, setQ] = useState('')
   const agent = sp.get('agent') || 'all'
-  const setAgent = v => setSp(v === 'all' ? {} : { agent: v }, { replace: true })
+  // P1016: ?type= keeps one lead type; filters combine (agent + type).
+  const { all: types } = useCoverageTypes(useAdmSource() === 'real')
+  const type = sp.get('type') || 'all'
+  const setKey = (k, v) => { const p = new URLSearchParams(sp); p.delete('view'); if (v === 'all') p.delete(k); else p.set(k, v); setSp(p, { replace: true }) }
+  const setAgent = v => setKey('agent', v)
+  const setType = v => setKey('type', v)
   // P892: Board (every lead by status) or AI calls (the AI caller's numbers and calls), kept in the address.
   // P952: + Reactivation (every agent's old-lead list with its contact, booked and stop rates).
-  const view = ['ai', 'reactivation'].includes(sp.get('view')) ? sp.get('view') : 'board'
+  const view = ['ai', 'reactivation', 'types'].includes(sp.get('view')) ? sp.get('view') : 'board'
   const setView = v => setSp(v === 'board' ? {} : { view: v }, { replace: true })
-  const viewSeg = <Seg label="View" value={view} onChange={setView} options={[{ key: 'board', label: 'Board' }, { key: 'ai', label: 'AI calls' }, { key: 'reactivation', label: 'Your own leads' }]} />
+  const viewSeg = <Seg label="View" value={view} onChange={setView} options={[{ key: 'board', label: 'Board' }, { key: 'ai', label: 'AI calls' }, { key: 'types', label: 'By lead type' }, { key: 'reactivation', label: 'Your own leads' }]} />
   if (view === 'reactivation') {
     return (
       <div className="tp-page fx-page fx-leads adm-leads">
         <div className="fx-tools"><span className="tp-grow" />{viewSeg}</div>
         <ReactivationView />
+      </div>
+    )
+  }
+  if (view === 'types') {
+    return (
+      <div className="tp-page fx-page fx-leads adm-leads">
+        <div className="fx-tools"><span className="tp-grow" />{viewSeg}</div>
+        <ByTypeView />
       </div>
     )
   }
@@ -118,7 +182,7 @@ export default function Leads() {
   const n = q.trim().toLowerCase()
   const match = l => (when !== 'today' || l.day === day.today) && (!n || `${l.name} ${l.city} ${l.phone} ${l.agent || ''}`.toLowerCase().includes(n))
   const assigned = leads.filter(l => !isUnassigned(l))
-  const shown = assigned.filter(l => match(l) && (agent === 'all' || l.agent_id === agent))
+  const shown = assigned.filter(l => match(l) && (agent === 'all' || l.agent_id === agent) && (type === 'all' || l.coverage === type))
   const lanes = LEAD_LANES
   let card = 0
   return (
@@ -127,6 +191,7 @@ export default function Leads() {
         <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a lead" placeholder="Find by name, city, phone or agent" value={q} onChange={e => setQ(e.target.value)} /></label>
         <Seg className="adm-showing" label="Showing" value={when} onChange={setWhen} options={RANGES} />
         <Dropdown className="adm-dd-sm" label="Agent" value={agent} onChange={setAgent} options={[{ value: 'all', label: 'Every agent' }, ...agents.map(a => ({ value: a.id, label: a.name }))]} />
+        <Dropdown className="adm-dd-sm" label="Lead type" value={type} onChange={setType} options={[{ value: 'all', label: 'Every lead type' }, ...types.map(t => ({ value: t.key, label: t.hidden ? `${t.label} (hidden)` : t.label }))]} />
         <span className="tp-grow" />
         {viewSeg}
       </div>

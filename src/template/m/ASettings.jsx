@@ -12,6 +12,9 @@ import { paths } from '../paths'
 import { inLiveHours } from '../../lib/leadSplit'
 import { HoursEditor } from '../Hours'
 import { LicenceCard } from '../Licence'
+import { LeadTypeCard } from '../LeadTypeCard'
+import { useCoverageTypes, useMyLeadType } from '../../hooks/useLeadTypes'
+import { typeLabel, effectiveType } from '../../lib/coverageTypes'
 import { PaymentIntakeCard } from '../PaymentIntake'
 import { DeedstonePhone } from '../DeedstonePhone'
 import { SetupProgress } from '../SetupProgress'
@@ -35,7 +38,7 @@ import { weekWords } from './appModel'
 const THEMES = [['light', 'Light'], ['dark', 'Dark'], ['system', 'Match my phone']]
 const TITLE = {
   account: 'Account', notify: 'Notifications', calendar: 'Calls and calendar', billing: 'Plan and billing', privacy: 'Privacy and security',
-  profile: 'Edit profile', zone: 'Time zone', licence: 'Licensed states', carriers: 'Carriers you write with', setup: 'Your setup', calls: 'Call hours',
+  profile: 'Edit profile', leadtype: 'Lead type', zone: 'Time zone', licence: 'Licensed states', carriers: 'Carriers you write with', setup: 'Your setup', calls: 'Call hours',
   email: 'Carrier emails', alerts: 'Email alerts', receipts: 'Receipts', appearance: 'Theme', password: 'Password',
 }
 export const PRIVACY_URL = 'https://ohvara.com/privacy'
@@ -138,6 +141,7 @@ function GroupScreen({ k }) {
       <div className="ma-glass ma-list ma-set ma-rise">
         <Row onClick={() => go('calls')} title="Call hours" sub={leads ? (duty ? 'Live calls ring you now' : 'Outside your hours we book callers') : undefined} right={<Val>{weekWords(s.week)}</Val>} />
         <Row onClick={() => go('email')} title="Carrier emails" right={<Val>Forwarding</Val>} />
+        {leads && <LeadTypeRow go={go} />}
         {leads && <Row onClick={() => go('setup')} title="Your setup" right={<Val>Steps</Val>} />}
       </div>
     )
@@ -167,6 +171,13 @@ function GroupScreen({ k }) {
     )
   }
   return null
+}
+
+// P1016: the lead type row (Settings › Calendar and calls).
+function LeadTypeRow({ go }) {
+  const { all } = useCoverageTypes(useDataSource() === 'real')
+  const mine = useMyLeadType(useDataSource() === 'real')
+  return <Row onClick={() => go('leadtype')} title="Lead type" right={<Val>{typeLabel(all, mine.nextKey || effectiveType(mine.key, all))}</Val>} />
 }
 
 // On Edit profile, under the fields: the states you're licensed in and the carriers you write with.
@@ -257,6 +268,7 @@ function Section({ k }) {
       </div>
     )
   }
+  if (k === 'leadtype') return <div className="ma-embed">{intro('The kind of life insurance leads you get. Once leads run, a switch starts the next day.')}<div className="ma-glass ma-pad"><LeadTypeCard compact /></div></div>
   if (k === 'licence') return <div className="ma-embed">{intro('Your licence and the states your leads come from.')}<LicenceCard /></div>
   if (k === 'setup') return <div className="ma-embed">{intro('The same steps our team sees, from sign-up to your first leads.')}{setupView ? <SetupProgress view={setupView} /> : <p className="ma-empty is-glass">Your setup steps show here once you’ve signed up.</p>}</div>
   if (k === 'email') return <div className="ma-embed">{intro('Forward carrier emails here: a lapse, missed payment or bounced draft becomes a save call for the team.')}<PaymentIntakeCard /></div>

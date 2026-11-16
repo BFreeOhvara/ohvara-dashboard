@@ -57,6 +57,8 @@ export type ControlRow = {
   agent_id: string; lead_type: 'appts' | 'live'; run: boolean; daily_budget_cents: number; cap_cents: number; reason: string
   split_form_pct: number | null; schedule: Record<string, unknown> | null; changed_at: string; attempt: number
   agent_code: string | null; agent_name: string | null; campaign_id: string | null; fb_campaign_id: string | null
+  // P1016: the lead type this agent's campaign runs (281: coverage_types). A switch re-sends the row the next day.
+  coverage_type?: string | null; coverage_label?: string | null
 }
 
 export type PostResult = { ok: boolean; status: number }
@@ -158,6 +160,7 @@ export function controlBody(r: ControlRow) {
     daily_budget_cents: r.daily_budget_cents, daily_budget: Math.round(r.daily_budget_cents) / 100,
     spend_cap_cents: r.cap_cents, split_form_pct: r.split_form_pct, schedule: r.schedule,
     campaign_id: r.campaign_id, fb_campaign_id: r.fb_campaign_id, changed_at: r.changed_at,
+    coverage_type: r.coverage_type ?? null, coverage_label: r.coverage_label ?? null,
   }
 }
 

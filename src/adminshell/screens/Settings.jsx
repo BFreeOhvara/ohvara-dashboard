@@ -37,7 +37,7 @@ import { AppReviewLogins } from './AppReview962'
 // setup checks are their own tab so no section scrolls. Old ?tab= links land where the section went (MOVED).
 const TABS = [['profile', 'Profile', User], ['people', 'People', Users], ['pay', 'Pay', Wallet], ['stripe', 'Stripe', CreditCard],
   ['servicing', 'Servicing', Hand], ['ai', 'AI caller', Bot], ['audit', 'Audit log', History], ['review', 'Review', Smartphone], ['prefs', 'Preferences', SlidersHorizontal]]
-const MOVED = { bugs: 'bugs', numbers: 'numbers', compliance: 'compliance', hold: 'numbers' } // P936: wording, training, playbook gone
+const MOVED = { bugs: 'bugs', numbers: 'numbers', compliance: 'compliance', hold: 'numbers', leadtypes: 'leads' } // P936: wording, training, playbook gone
 const RENAMED = { switches: 'profile', golive: 'profile', billing: 'stripe', split: 'profile' } // P950: Go live is gone; old links land on Profile
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
 

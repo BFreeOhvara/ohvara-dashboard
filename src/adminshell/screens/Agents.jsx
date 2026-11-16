@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Search, MapPin, MessageSquare, PhoneIncoming, BookUser, Radio, ShieldOff, ShieldCheck, Send, X, Mail, Smartphone } from 'lucide-react'
-import { useAdmAgents, useAdmIdleSignups, useAdmLeads, useAdmInvites, useAdmActions, useAdmCosts, useAdmSettings, PLANS, chargeFor } from '../data'
+import { Search, MapPin, MessageSquare, PhoneIncoming, BookUser, Radio, ShieldOff, ShieldCheck, Send, X, Mail, Smartphone, Tag } from 'lucide-react'
+import { useAdmAgents, useAdmIdleSignups, useAdmLeads, useAdmInvites, useAdmActions, useAdmCosts, useAdmSettings, PLANS, chargeFor, useAdmSource } from '../data'
 import { Avatar, Chip, Drawer, Empty, Seg, Switch, useNote } from '../../template/kit'
 import { RecordDrawer, Block } from '../../template/Record'
 import { usd } from '../../template/motion'
@@ -13,6 +13,8 @@ import { BILL_WORD, STAGE_WORD, stageTone } from '../words'
 import { CampaignBlock } from './Campaign879'
 import { productChips, chipsText, endingLines, hasLeads, planLineOf } from '../products955'
 import '../p955.css'
+import { useCoverageTypes } from '../../hooks/useLeadTypes'
+import { typeLabel, switchWords, centralToday } from '../../lib/coverageTypes'
 
 // P849 — Agents: every agent, their plan and weekly lead budget, whether they take live transfers, this week's results
 // and billing. A row opens the agent in a drawer at its own address (/admin/agents/:id) with every admin control the
@@ -141,6 +143,7 @@ function AgentDrawer({ id, onClose }) {
   const note = useNote()
   const navigate = useNavigate()
   const [ask, setAsk] = useState(null)
+  const { all: types } = useCoverageTypes(useAdmSource() === 'real')
   const a = agents.find(x => x.id === id)
   if (!a) return <RecordDrawer label="Not found" kicker="Agents" onClose={onClose} hero={<h2>No agent here</h2>}><p className="fx-calm">This agent is not on the list any more.</p></RecordDrawer>
   const [billWord, billTone] = BILL_WORD[a.billing.status]
@@ -153,6 +156,7 @@ function AgentDrawer({ id, onClose }) {
         <div className="fx-hero-top"><span className="fx-when"><Radio size={13} aria-hidden="true" />{!withLeads ? 'No Leads' : a.active ? (a.onDuty ? 'On duty for live transfers' : 'Takes transfers, off duty now') : 'Appointments only'}</span><Chip tone={billTone}>{billWord}</Chip>{a.paused && <Chip tone="warn">Leads paused</Chip>}</div>
         <h2>{a.name}</h2>
         <p><MapPin size={13} aria-hidden="true" />{a.city}, {a.state} · licensed in {a.states.join(', ')}</p>
+        {withLeads && <p data-testid="agent-lead-type"><Tag size={13} aria-hidden="true" />Leads: {typeLabel(types, a.coverage, 'Most popular (not picked yet)')}{a.coverageNext ? ` · ${switchWords(types, a.coverageNext, a.coverageFrom, centralToday())}` : ''}</p>}
         <div className="fx-hero-bot"><b className="fx-hero-big tp-num">{a.phone}</b><Avatar name={a.name} tone={tone} /></div>
       </>}
       actions={<>

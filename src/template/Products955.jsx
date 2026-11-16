@@ -147,6 +147,7 @@ export function LeadsDrawer({ open, onClose }) {
     return () => { live = false }
   }, [open, loadDetails])
 
+  const real = useDataSource() === 'real'
   const pick = k => { setTier(k); setDaily(d => clampDaily(PRICES.tiers.find(x => x.key === k), d)) }
   return (
     <Drawer open={open} onClose={onClose} title="Add Leads" sub={PRODUCTS.leads.line}
@@ -168,7 +169,7 @@ export function LeadsDrawer({ open, onClose }) {
           <p className="pb-note">Charged each night for the next day. Change it any time in Billing. <DeskInfo rate={PRICES.leadFee} /></p>
         </div>
       </div>
-      <SignupDetails value={details} onChange={setDetails} notTaking={notTaking} missing={missing} />
+      <SignupDetails value={details} onChange={setDetails} notTaking={notTaking} missing={missing} real={real} />
       <QuoteRows q={quote.q} err={quote.err} />
       {missing.length > 0 && (
         <div className="sc-miss" data-testid="pr-missing"><b>Before you pay</b><ul>{missing.map(m => <li key={m.key + m.text}>{m.text}</li>)}</ul></div>

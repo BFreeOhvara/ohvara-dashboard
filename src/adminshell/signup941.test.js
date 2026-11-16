@@ -85,11 +85,11 @@ test('real data: the sign-up block from agent_launch_facts lands on the ticket',
 
 test('sign-up form: 3 to 10 states, no New York, the tick clears when states change, nothing missing = ready', () => {
   let d = emptyDetails('America/Chicago')
-  assert.deepEqual(detailsMissing(d).map(m => m.key), ['states', 'licence', 'live'])
+  assert.deepEqual(detailsMissing(d).map(m => m.key), ['states', 'licence', 'coverage', 'live'])
   d = toggleState(d, 'NY')
   assert.deepEqual(d.states, [])
   for (const s of ['TX', 'OK', 'LA']) d = toggleState(d, s)
-  d = { ...d, licensed: true, live: true, phone: '(512) 555-0142' }
+  d = { ...d, licensed: true, live: true, phone: '(512) 555-0142', coverage: 'final_expense' }
   assert.deepEqual(detailsMissing(d), [])
   assert.equal(toggleState(d, 'AR').licensed, false)
   const p = toPayload(d)

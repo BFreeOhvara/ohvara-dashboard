@@ -35,7 +35,7 @@ async function sendInvite({ channel, to, role }) {
   try { msg = (await error.context?.json())?.error || msg } catch { /* keep it */ }
   return { error: new Error(msg) }
 }
-const COLS_LEAD = ['id', 'contact_name', 'business_name', 'phone', 'state', 'city', 'lead_type', 'lead_source', 'inbound_product', 'inbound_stage', 'outcome', 'transfer_status', 'va_outcome', 'assigned_rep_id', 'created_at', 'delivered_at', 'appointment_at', 'is_sample'].join(', ')
+const COLS_LEAD = ['id', 'contact_name', 'business_name', 'phone', 'state', 'city', 'lead_type', 'lead_source', 'inbound_product', 'inbound_stage', 'outcome', 'transfer_status', 'va_outcome', 'assigned_rep_id', 'created_at', 'delivered_at', 'appointment_at', 'is_sample', 'coverage_type'].join(', ')
 const COLS_POLICY = 'id, agent_id, client_first_name, client_last_name, client_phone, state, carrier_name, product_name, product_type, policy_number, monthly_premium, status, cancellation_status, cancellation_substatus, pending_underwriting, next_lapse_check_at, policy_sold_date, created_at, fulfillment_assigned, assigned_fulfillment_id, scheduled_call_at, call_live_since, fulfillment_stage'
 
 // One source: missing (not migrated yet) = fallback; any other error is noted and the fallback shown.
@@ -58,7 +58,10 @@ export async function loadAdmin(sb, clock) {
   const [profiles, leadSettings, onDuty, accounts, invites, leads, unassigned, policies, steps, threads, messages, bugs, audit, app, rc,
     campaigns, costsWeek, costsMonth, costsLast, runs, ticks, dayOff, ghl, keySaved, launch, history, activity, clientThreads, clientMsgs] = await Promise.all([
     src('people', sb.rpc('admin_list_profiles'), [], failed),
-    src('lead settings', sb.from('agent_lead_settings').select('agent_id, active, states'), [], failed),
+    // P1016: each agent's lead type (agent_coverage) rides on their lead-settings row as coverage / coverageNext.
+    src('lead settings', Promise.all([sb.from('agent_lead_settings').select('agent_id, active, states'),
+      sb.from('agent_coverage').select('agent_id, types, next_types, next_from').then(r => r, () => ({ data: [] }))])
+      .then(([a, c]) => ({ error: a.error, data: (a.data || []).map(r => { const x = (c.data || []).find(y => y.agent_id === r.agent_id); return { ...r, coverage: x?.types?.[0] ?? null, coverageNext: x?.next_types?.[0] ?? null, coverageFrom: x?.next_from ?? null } }) })), [], failed),
     src('on duty', sb.rpc('on_duty_agents'), [], []),
     src('payout accounts', sb.from('fulfillment_payout_accounts').select('*'), [], []),
     src('invites', sb.from('rep_invites').select('id, role, created_at, expires_at, channel, invited_email, invited_phone').is('used_at', null).gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false }), [], failed),

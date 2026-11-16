@@ -117,6 +117,9 @@ export type IntakeLead = {
   first_name: string | null; last_name: string | null; phone: string; email: string | null; state: string | null; postal_code: string | null
   campaign_id: string | null; adset_id: string | null; ad_id: string | null; contact_id: string | null; page_url: string | null
   consent_at: string | null; consent_text_version: string | null; is_test: boolean
+  // P1016: the lead type the ad was for (mortgage_protection, final_expense, iul, truckers, veterans, term_life; a
+  // label like "Final expense" also matches). Missing = the agent's type. answers = the type's form questions.
+  coverage_type: string | null; answers?: Record<string, string>
 }
 
 // P915: GoHighLevel → Ohvara when it creates an agent's campaign from the template (ghl_campaign_created, 253).
@@ -131,6 +134,17 @@ const LEAD_TYPES: Record<string, IntakeLead['lead_type']> = {
   live_call: 'live_call', live: 'live_call', call: 'live_call',
 }
 const META_OPTIONS: Record<string, IntakeLead['meta_option']> = { form_page: 'form_page', form: 'form_page', page_only: 'page_only', page: 'page_only' }
+
+// P1016: the per-type form's answers ({ question_key: answer }), strings only, at most 20, each cut to 200.
+// deno-lint-ignore no-explicit-any
+function formAnswers(a: any): { answers?: Record<string, string> } {
+  if (!a || typeof a !== 'object' || Array.isArray(a)) return {}
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(a).slice(0, 20)) {
+    if (/^[A-Za-z][A-Za-z0-9_]{0,39}$/.test(k) && (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean')) out[k] = String(v).slice(0, 200)
+  }
+  return Object.keys(out).length ? { answers: out } : {}
+}
 
 const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null)
 const isSms = (p: any) => {
@@ -202,6 +216,8 @@ export async function classify(p: any, raw: string): Promise<Action> {
         adset_id: pick('adset_id'), ad_id: pick('ad_id', 'utm_content'), contact_id: contactId, page_url: pick('page_url'),
         consent_at: pick('consent_at'), consent_text_version: pick('consent_text_version'),
         is_test: truthy(pick('is_test', 'test_lead')),
+        coverage_type: pick('coverage_type', 'product', 'utm_product', 'lead_product'),
+        ...formAnswers(cd.answers ?? p.answers),
       },
     }
   }

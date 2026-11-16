@@ -30,7 +30,7 @@ const senders = sendersFromEnv()
 // The transfer beats' words (check, connecting, bounce, hold) live in rules.js TRANSFER_WORDS (P903).
 const WORDS = {
   // P940 (Brayden, Nov 10): who it is and why it's calling, no small talk.
-  opening: 'Hey {first}, this is Max, the virtual assistant with Deedstone Insurance. I’m calling about the mortgage protection form you filled out.',
+  opening: 'Hey {first}, this is Max, the virtual assistant with Deedstone Insurance. I’m calling about the {product} coverage you looked at.', // P1016: {product} = the lead type
 }
 
 function provider(): Provider {
@@ -79,14 +79,16 @@ const store: Store = {
   async call(id) { const { data } = await admin.from('ai_calls').select(callCols).eq('id', id).maybeSingle(); return data },
   async callByProvider(pid) { if (!pid) return null; const { data } = await admin.from('ai_calls').select(callCols).eq('provider_call_id', pid).maybeSingle(); return data },
   async lead(id) {
-    const { data: l } = await admin.from('leads').select('id, contact_name, phone, state, qualifier_answers, inbound_product, is_sample, reactivation_id').eq('id', id).maybeSingle()
+    const { data: l } = await admin.from('leads').select('id, contact_name, phone, state, qualifier_answers, inbound_product, is_sample, reactivation_id, coverage_type').eq('id', id).maybeSingle()
     if (!l) return null
     const qa = (l.qualifier_answers ?? {}) as Record<string, unknown>
     // P926: only a sample lead can carry a test (admin test calls); a real lead never does.
     const test = l.is_sample && qa.test && typeof qa.test === 'object' ? qa.test as { check?: 'yes' | 'no' | 'none'; transferTo?: string; voice?: string | null } : null
     // P952: a reactivation person: their own opener, and a voicemail only the first time.
     const rc = l.reactivation_id ? (await admin.from('reactivation_contacts').select('voicemail_left').eq('id', l.reactivation_id).maybeSingle()).data : null
-    return { id: l.id, first: String(l.contact_name ?? '').split(' ')[0] || 'there', phone: l.phone, state: l.state, tz: (qa.tz as string) ?? null,
+    // P1016: the lead type in the caller's words (the lead's type, else its agent's, else "life insurance").
+    const product = (await admin.rpc('coverage_words_for_lead', { p_lead: l.id }).then(r => r.data, () => null)) as string | null
+    return { product, id: l.id, first: String(l.contact_name ?? '').split(' ')[0] || 'there', phone: l.phone, state: l.state, tz: (qa.tz as string) ?? null,
       need: (l.inbound_product as string) ?? 'Mortgage protection', age: (qa.age_band as string) ?? null, test,
       reactivation: l.reactivation_id ? { voicemailLeft: !!rc?.voicemail_left } : null,
       homeowner: typeof qa.homeowner === 'boolean' ? qa.homeowner : null, mortgage: (qa.mortgage_balance_band as string) ?? null }

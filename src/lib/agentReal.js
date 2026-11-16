@@ -113,6 +113,8 @@ export function toLead(r, events = [], tz = DEFAULT_TZ) {
     wants: qa.wants || qa.goal || qa.looking_for || '', note: [...notes, ...rows.filter(e => e.summary).slice(-1).map(e => e.summary)].join('\n'), reply: lastReply ? { text: lastReply.detail?.text || lastReply.label, at: wallOf(lastReply.at, tz), seen: true } : null,
     // P952: a person from one of the agent's reactivation lists (booked or transferred by the AI).
     reactivated: qa.reactivation === true || qa.reactivation === 'true',
+    // P1016: the lead type the ad was for (coverage_types key; null on leads from before 281).
+    coverage: r.coverage_type || null,
     tries, submitted: !!r.client_policy_id, clientId: r.client_policy_id || null, fresh: false, events: rows, real: true,
   }
 }

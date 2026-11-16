@@ -60,7 +60,7 @@ test('the prompt says who it is per call ({{ai_name}}), Max by default; no hard-
   assert.match(p, /You are \{\{ai_name\}\}, the virtual assistant/)
   assert.match(SCRIPT.open, /this is \{\{ai_name\}\}, the virtual assistant/)
   assert.match(VOICEMAIL_LINE, /this is \{\{ai_name\}\} with Deedstone/)
-  assert.deepEqual(retellLlm({ prompt: p, url: HOOK }).default_dynamic_variables, { ai_name: 'Max' })
+  assert.deepEqual(retellLlm({ prompt: p, url: HOOK }).default_dynamic_variables, { ai_name: 'Max', product: 'life insurance' }) // P1016: + the lead type
 })
 
 function fakes({ agents = { hope: { agent_id: 'ag_h' }, mark: { agent_id: 'ag_m' } }, counts = {}, attempt = 1, earlier = null, test = null, key = 'retell' } = {}) {

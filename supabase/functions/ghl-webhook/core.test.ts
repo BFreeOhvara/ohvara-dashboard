@@ -277,6 +277,22 @@ test('lead_created: a DS-XXXX code in the link and the test flag reach ghl_intak
   assert.ok(plain.kind === 'lead' && plain.lead.is_test === false)
 })
 
+test('lead_created (P1016): the lead type and the form answers ride along', async () => {
+  const base = JSON.parse(fx('workflow-lead.json'))
+  const body = { ...base, customData: { ...base.customData, coverage_type: 'final_expense',
+    answers: { age_range: '65-74', coverage_amount: '$15,000', bad: { x: 1 }, '1bad': 'no' } } }
+  const a = await classify(body, JSON.stringify(body))
+  assert.ok(a.kind === 'lead')
+  if (a.kind !== 'lead') return
+  assert.equal(a.lead.coverage_type, 'final_expense')
+  assert.deepEqual(a.lead.answers, { age_range: '65-74', coverage_amount: '$15,000' })
+  const viaProduct = { ...base, customData: { ...base.customData, product: 'Truckers' } }
+  const b = await classify(viaProduct, JSON.stringify(viaProduct))
+  assert.ok(b.kind === 'lead' && b.lead.coverage_type === 'Truckers' && b.lead.answers === undefined)
+  const plain = await classify(base, JSON.stringify(base))
+  assert.ok(plain.kind === 'lead' && plain.lead.coverage_type === null)
+})
+
 test('campaign_created: GoHighLevel\'s new campaign is saved on the agent (ghl_campaign_created)', async () => {
   const raw = fx('workflow-campaign-created.json')
   const db = fakeDb()

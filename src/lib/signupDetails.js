@@ -21,7 +21,8 @@ export function deviceZone() {
   try { const z = Intl.DateTimeFormat().resolvedOptions().timeZone; return ZONES.has(z) ? z : '' } catch { return '' }
 }
 
-export const emptyDetails = (tz = deviceZone()) => ({ states: [], licensed: false, timezone: tz, week: DEFAULT_WEEK, live: null, phone: '' })
+// P1016: coverage = the lead type they pick on the same step as their states (one key; migration 281).
+export const emptyDetails = (tz = deviceZone()) => ({ states: [], licensed: false, timezone: tz, week: DEFAULT_WEEK, live: null, phone: '', coverage: null })
 
 // my_signup_details() -> the form's shape. An empty save (nothing filled yet) keeps the defaults.
 export function fromSaved(d, fallback = emptyDetails()) {
@@ -35,6 +36,7 @@ export function fromSaved(d, fallback = emptyDetails()) {
     week: rows.length ? weekFromRows(rows) : fallback.week,
     live: any ? !!d.liveTransfers : null,
     phone: d.phone || '',
+    coverage: d.coverage || fallback.coverage || null,
   }
 }
 
@@ -55,6 +57,7 @@ export function detailsMissing(d, notTaking = NOT_TAKING) {
   else if (n > MAX_STATES) out.push({ key: 'states', text: `Pick at most ${MAX_STATES} states` })
   if (d.states.some(s => notTaking.includes(s))) out.push({ key: 'states', text: 'We aren’t taking New York yet' })
   if (!d.licensed) out.push({ key: 'licence', text: 'Tick the box: licensed in every state you picked' })
+  if (!d.coverage) out.push({ key: 'coverage', text: 'Pick the kind of leads you want' })
   if (!d.timezone) out.push({ key: 'timezone', text: 'Pick your time zone' })
   if (!d.week.some(x => x.open)) out.push({ key: 'hours', text: 'Turn on at least one day of hours' })
   else { const bad = validateWeek(d.week); if (bad) out.push({ key: 'hours', text: bad }) }
@@ -93,10 +96,18 @@ export const weekText = week => hoursText(rowsFromWeek(week))
 export async function loadSignupDetails(db) {
   const { data, error } = await db.rpc('my_signup_details')
   if (error) throw error
-  return data
+  // P1016: their lead type (agent_coverage, own row) rides along as `coverage`.
+  const uid = (await db.auth?.getUser?.())?.data?.user?.id
+  const cov = uid ? (await db.from('agent_coverage').select('types').eq('agent_id', uid).maybeSingle())?.data : null
+  return data ? { ...data, coverage: cov?.types?.[0] ?? null } : data
 }
 export async function saveSignupDetails(db, d) {
   const { data, error } = await db.rpc('save_signup_details', { p: toPayload(d) })
   if (error) throw Object.assign(new Error(error.message || 'Couldn’t save your details'), { code: error.hint || error.code })
+  // P1016: the lead type, picked on the same step (coverage_type_set: now on a first pick or before ads run).
+  if (d.coverage) {
+    const c = await db.rpc('coverage_type_set', { p_types: [d.coverage] })
+    if (c.error) throw Object.assign(new Error(c.error.message || 'Couldn’t save your lead type'), { code: c.error.code })
+  }
   return data
 }
