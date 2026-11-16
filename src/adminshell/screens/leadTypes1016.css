@@ -1,0 +1,46 @@
+/* P1016: Settings › Lead types */
+.lty-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.lty-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: start; padding: 14px; border: 1px solid var(--ov-line); border-radius: 14px; background: var(--ov-surface-tint); }
+.lty-row.is-hidden { opacity: .62; }
+.lty-move { display: flex; flex-direction: column; gap: 4px; }
+.lty-move button { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; border: 1px solid var(--ov-line); background: var(--ov-surface); color: var(--ov-mid); cursor: pointer; }
+.lty-move button:disabled { opacity: .35; cursor: default; }
+.lty-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.lty-fields label { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.lty-fields label span { font-size: 12px; color: var(--ov-mute); }
+.lty-fields input { height: 36px; padding: 0 10px; border-radius: 9px; border: 1px solid var(--ov-line); background: var(--ov-surface); color: var(--ov-hi); font: inherit; font-size: 13.5px; min-width: 0; }
+.lty-fields input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.lty-wide { grid-column: 1 / -1; }
+.lty-save { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; }
+.lty-side { display: grid; grid-template-columns: auto auto; gap: 8px 10px; align-items: center; justify-items: end; }
+.lty-side .lty-n, .lty-side .lty-pop { grid-column: 1 / -1; }
+.lty-side small { font-size: 12px; color: var(--ov-mute); }
+.lty-n { font-size: 12.5px; color: var(--ov-mid); }
+.lty-pop { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--ov-line); background: var(--ov-surface); color: var(--ov-mid); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.lty-pop.is-on { color: var(--ov-data-a); background: var(--ov-data-a-tint); border-color: transparent; cursor: default; }
+.lty-pop:disabled:not(.is-on) { opacity: .45; cursor: default; }
+.lty-add { margin-top: 18px; padding: 14px; border: 1px dashed var(--ov-line); border-radius: 14px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.lty-add .lty-fields { width: 100%; }
+.lty-add b { font-size: 14px; color: var(--ov-hi); }
+.lty-note, .lty-warn { margin: 0; font-size: 12.5px; color: var(--ov-mute); }
+.lty-warn { color: var(--ov-warn); }
+@media (max-width: 900px) {
+  .lty-row { grid-template-columns: auto minmax(0, 1fr); }
+  .lty-side { grid-column: 1 / -1; justify-items: start; grid-template-columns: auto auto auto auto; }
+  .lty-side .lty-n, .lty-side .lty-pop { grid-column: auto; }
+  .lty-fields { grid-template-columns: 1fr; }
+}
+
+/* Leads › By lead type */
+.lty-report { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.lty-report-h { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+.lty-report-h h2 { margin: 0; font-size: 17px; color: var(--ov-hi); }
+.lty-report-h p { margin: 2px 0 0; font-size: 13px; color: var(--ov-mute); }
+.lty-table-wrap { overflow-x: auto; }
+.lty-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.lty-table th, .lty-table td { padding: 10px 12px; text-align: right; border-bottom: 1px solid var(--ov-line); white-space: nowrap; }
+.lty-table th:first-child { text-align: left; }
+.lty-table thead th { font-size: 12px; font-weight: 600; color: var(--ov-mute); }
+.lty-table tbody th { font-weight: 600; color: var(--ov-hi); }
+.lty-table td { color: var(--ov-mid); }
+.lty-table tfoot th, .lty-table tfoot td { font-weight: 700; color: var(--ov-hi); border-bottom: 0; }

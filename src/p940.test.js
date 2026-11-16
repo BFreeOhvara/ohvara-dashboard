@@ -11,7 +11,7 @@ import { noProvider } from '../supabase/functions/ai-caller/providers.ts'
 const HOOK = 'https://x.supabase.co/functions/v1/ai-caller?k=secret'
 
 test('screening line is Brayden’s words, with the lead’s first name', () => {
-  assert.equal(SCREEN_LINE, 'Hi, this is {{ai_name}} with Deedstone Insurance, calling for {{first_name}} about the mortgage protection information they requested.')
+  assert.equal(SCREEN_LINE, 'Hi, this is {{ai_name}} with Deedstone Insurance, calling for {{first_name}} about the {{product}} information they requested.')
 })
 
 test('prompt: screener is not a hang-up, says the line, waits ~20 s, polite goodbye, no outcome', () => {
@@ -29,7 +29,7 @@ test('prompt: no small talk, why reflected back, form confirmed not asked, free 
   const p = retellPrompt()
   assert.match(p, /never ask how they are or how their day is/)
   assert.doesNotMatch(p, /How’s your day/)
-  assert.match(p, /Never explain what mortgage protection is/)
+  assert.match(p, /Never explain what {{product}} is/)
   assert.match(p, /Never mention time zones/)
   assert.doesNotMatch(p, /Who are you mainly looking to protect/)
   assert.match(p, /Never ask who they want to protect/)
@@ -106,7 +106,7 @@ test('model and voice: Claude Sonnet 5.5, no billed backup; smooth voice, waits 
 
 test('opening line: who it is and why it is calling, no small talk; test leads carry the form answers', () => {
   const src = readFileSync(new URL('../supabase/functions/ai-caller/index.ts', import.meta.url), 'utf8')
-  assert.match(src, /opening: 'Hey \{first\}, this is Max, the virtual assistant with Deedstone Insurance\. I’m calling about the mortgage protection form you filled out\./)
+  assert.match(src, /opening: 'Hey \{first\}, this is Max, the virtual assistant with Deedstone Insurance\. I’m calling about the \{product\} coverage you looked at\./)
   assert.doesNotMatch(src, /opening: '[^']*(how’s your day|how are you)/i)
   assert.match(src, /homeowner: true, mortgage_balance_band: '200-300k'/)
 })

@@ -10,6 +10,7 @@ import { TIMESHEET, HOURLY, sheetTotals } from './p879.js'
 import { matchAgent } from '../lib/leadMatch.js'
 import { isTrained } from '../fulshell/training/store.js'
 import { escalateCall, stepText } from '../lib/callEscalation.js'
+import { typeLabel } from '../lib/coverageTypes.js'
 
 // P849 — the one door to the Admin side's sample info, like src/template/ful/data.js for the VA side. Screens read only
 // through the hooks below; every read returns { data, isLoading: false, error: null }, the react-query shape, so the
@@ -53,10 +54,12 @@ const mkBill = o => ({
 })
 // P913: the Meta campaign ID saved on the agent when GoHighLevel creates their campaign (one campaign per agent).
 const metaId = id => `12021${String([...id].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 1e10, 7)).padStart(10, '0')}`
+// P1016: each sample agent's lead type (their leads carry it).
+const SAMPLE_AGENT_TYPE = { 'ag-dana': 'mortgage_protection', 'ag-marcus': 'final_expense', 'ag-priya': 'iul', 'ag-elena': 'mortgage_protection', 'ag-james': 'truckers' }
 const mkAgent = (id, name, o) => ({
   id, name, role: 'agent', city: 'Austin', state: 'TX', email: `${name.split(' ')[0].toLowerCase()}@example.com`, phone: '(555) 555-0100',
   spend: 100, active: true, onDuty: false, servicing: true, access: true, comped: false, joined: 'Sep 14', lastOn: 'Today',
-  agentRef: `DS-${id.slice(3, 7).toUpperCase()}`, campaignId: metaId(id), states: ['TX'], ...o, billing: mkBill(o.billing),
+  agentRef: `DS-${id.slice(3, 7).toUpperCase()}`, campaignId: metaId(id), states: ['TX'], coverage: SAMPLE_AGENT_TYPE[id] || 'mortgage_protection', ...o, billing: mkBill(o.billing),
   plan: planFor({ spend: 100, ...o }),
 })
 const seedAgents = [
@@ -194,7 +197,6 @@ const seedSetupLog = {
 // on booked until the agent marks the result.
 const FIRST = ['Angela', 'Kevin', 'Shirley', 'Marcus', 'Teresa', 'Daniel', 'Brenda', 'Frank', 'Joyce', 'Victor', 'Monica', 'Gary', 'Linda', 'Raymond', 'Carmen', 'Dennis', 'Yolanda', 'Russell', 'Tanya', 'Curtis', 'Wanda', 'Hector', 'Bonnie', 'Leon', 'Sheila', 'Wayne', 'Diane', 'Ruben', 'Gail', 'Marvin', 'Rita', 'Terrence', 'Lorraine', 'Felix', 'Darlene', 'Clyde']
 const LAST = ['Moore', 'Brooks', 'Adams', 'Hill', 'Lane', 'Ruiz', 'Cole', 'Ellis', 'Turner', 'Hayes', 'Diaz', 'Foster', 'Grant', 'Perry', 'Vega', 'Wells', 'Ford', 'Mills', 'Reyes', 'Bates', 'Long', 'Ortiz', 'Hunt', 'Webb', 'Ross', 'Fox', 'Barnes', 'Soto', 'Lowe', 'Pope', 'Rice', 'Tate', 'Kerr', 'Nash', 'Boyd', 'Gray']
-const PRODUCTS = ['Mortgage protection', 'Mortgage protection', 'Final expense', 'Term life']
 const CITY = { TX: ['Austin', 'Plano', 'Round Rock'], AZ: ['Phoenix', 'Mesa', 'Tempe'], FL: ['Tampa', 'Brandon', 'Ocala'], GA: ['Atlanta', 'Macon', 'Marietta'], CO: ['Denver', 'Aurora'], NC: ['Charlotte', 'Durham'], OK: ['Tulsa'], NV: ['Henderson'], SC: ['Greenville'] }
 const APPT_STAGES = ['booked', 'sold', 'no_show', 'not_interested', 'booked', 'sold', 'follow_up', 'team_follow']
 const LIVE_STAGES = ['booked', 'sold', 'follow_up', 'not_interested', 'sold', 'booked']
@@ -226,7 +228,7 @@ const seedLeads = (() => {
       const time = clock(k + (day === TODAY ? 2 : 0))
       out.push({
         id: `ib-${i + 1}`, name, phone: `(${['512', '602', '813', '404', '303', '704'][i % 6]}) 555-0${String(110 + i).padStart(3, '0')}`, state, city: cities[i % cities.length],
-        kind, product: PRODUCTS[i % PRODUCTS.length], day, time, came: day === TODAY ? `Today, ${time}` : `${dayName(day)}, ${time}`,
+        kind, coverage: agent.coverage, product: typeLabel(null, agent.coverage), day, time, came: day === TODAY ? `Today, ${time}` : `${dayName(day)}, ${time}`,
         source: i % 4 === 1 ? 'Meta · landing page' : 'Meta · form',
         agent_id: hit.agent_id, stage, owner, agentRef: sent.agentRef || '', campaignId: sent.campaignId || '', matchedBy: hit.by, why: hit.why,
         premium: stage === 'sold' ? 38 + ((i * 13) % 80) : 0,

@@ -257,6 +257,13 @@ test('control: the body carries budget in cents and dollars, the cap, the split 
   assert.deepEqual(b.schedule, { tz: 'America/Chicago' })
 })
 
+test('control (P1016): the body names the lead type the campaign runs', () => {
+  const b = controlBody(ctl({ run: true, coverage_type: 'final_expense', coverage_label: 'Final expense' }))
+  assert.equal(b.coverage_type, 'final_expense')
+  assert.equal(b.coverage_label, 'Final expense')
+  assert.equal(controlBody(ctl({})).coverage_type, null)
+})
+
 // ── P939: the key saved on the Connect page (secrets table) is the one ghl-push uses ──
 test('P939: a saved key is used for every GHL call (it wins over the env value)', async () => {
   const t = deps({ apiKey: 'env-key-0000-fallback' })

@@ -7,6 +7,7 @@ import { rememberPerson } from '../template/avatarHue.js'
 import { tierOf } from '../template/spendPlan.js'
 import { isTestProfile } from './testAccounts.js'
 import { dailyCounts } from '../template/leadTrend.js'
+import { typeLabel } from './coverageTypes.js'
 
 export const TZ = 'America/Chicago'
 const DAY = 864e5
@@ -86,6 +87,8 @@ export function toAgent(p, { settings = [], onDuty = [], plans = {} } = {}) {
     id: p.id, name: nameOf(p), role: 'agent', city: '', state: states[0] || '', email: p.email || '', phone: fmtPhone(p.phone),
     spend, active: !!s?.active, onDuty: onDuty.includes(p.id), servicing: !!p.has_servicing, access: p.is_active !== false,
     comped: !!p.billing_exempt, joined: shortDate(p.created_at), joinedIso: isoDay(p.created_at), lastOn: p.last_login_at ? dayText(p.last_login_at) : 'Never',
+    // P1016: the agent's lead type (null = never picked; the server uses Most popular) and a switch waiting for tomorrow.
+    coverage: s?.coverage ?? null, coverageNext: s?.coverageNext ?? null, coverageFrom: s?.coverageFrom ?? null,
     billing: billingOf(p, plans[plan]), states, plan, paused: p.leads_status === 'paused' ? { since: '', until: '' } : null, real: true,
   }
 }
@@ -132,7 +135,9 @@ export function toLead(l, { clock, now = Date.now(), intake = {} } = {}) {
   const i = intake[l.id]
   return {
     id: l.id, name: l.contact_name || l.business_name || 'No name', phone: fmtPhone(l.phone), state: l.state || '', city: l.city || '',
-    kind, product: l.lead_type === 'policy_help' ? 'Policy help call' : 'Mortgage protection', day: inWeek && p ? p.d : null, time: p?.time || '',
+    // P1016: the lead type (coverage_types key); product = its label for the rows that already show it.
+    coverage: l.coverage_type || null,
+    kind, product: l.coverage_type ? typeLabel(null, l.coverage_type) : l.lead_type === 'policy_help' ? 'Policy help call' : 'Mortgage protection', day: inWeek && p ? p.d : null, time: p?.time || '',
     came: whenText(l.created_at, now), source: l.lead_source === 'google' ? 'Google · live calls' : i?.meta_option === 'page_only' ? 'Meta · landing page' : 'Meta · form',
     agent_id: l.assigned_rep_id || null, stage, owner: stage === 'follow_up' ? (team ? 'team' : 'agent') : null, premium: 0,
     matchedBy: !l.assigned_rep_id ? null : i?.routing === 'campaign' ? 'campaign' : i?.routing === 'assigned' ? 'admin' : i ? 'link' : null,

@@ -11,7 +11,7 @@ import { aiStep, AI_RULES, ASK_AGENT_REASONS, SAID_OUTCOMES, WAIT_QUESTIONS, WAI
 import type { Ev, Provider } from './providers.ts'
 import { whisperWords } from '../help-transfer/core.ts'
 import { reactOpener, TEXT_ASK } from './reactivation.js'
-import { CALLER_SPLIT, pickVoice, aiNameOf } from './retellSpec.js'
+import { CALLER_SPLIT, pickVoice, aiNameOf, DEFAULT_PRODUCT } from './retellSpec.js'
 
 export type Phase = 'queued' | 'dialing' | 'talking' | 'checking' | 'transferring' | 'booking' | 'done' | 'to_va'
 export type Call = {
@@ -21,6 +21,7 @@ export type Call = {
 }
 export type Lead = { id: string; first: string; phone: string; state: string | null; tz: string | null; need: string | null; age: string | null
   homeowner?: boolean | null; mortgage?: string | null // P940: the form's answers
+  product?: string | null // P1016: the lead type in the caller's words ("final expense"); null = DEFAULT_PRODUCT
   // P952: a person on an agent's reactivation list (an aged lead): its own opener, voicemail only once.
   reactivation?: { voicemailLeft: boolean } | null
   // P926: an admin test call (a sample lead): the switch and the lead rules are skipped, the agent's check is answered
@@ -119,7 +120,8 @@ export async function start(store: Store, provider: Provider, env: Env, callId: 
     const r = await provider.start({
       callId: c.id, to: lead.phone, from, fromId: ds?.phone ? ds.providerId : null, agentId: v?.agentId ?? null, maxSecs: Math.min(live.maxSecs || AI_RULES.maxCallSecs, 900),
       // P940: what the form already told us, so the AI confirms it instead of asking ('' = not on the form, ask it).
-      vars: { first_name: lead.first, state: lead.state ?? '', lead_tz: lead.tz ?? '', opening: (lead.reactivation ? reactOpener(lead.first) : env.words.opening.replace('{first}', lead.first)).replace(/\bMax\b/, name), ai_name: name,
+      vars: { first_name: lead.first, state: lead.state ?? '', lead_tz: lead.tz ?? '', opening: (lead.reactivation ? reactOpener(lead.first) : env.words.opening.replace('{first}', lead.first).replace('{product}', lead.product || DEFAULT_PRODUCT)).replace(/\bMax\b/, name), ai_name: name,
+        product: lead.product || DEFAULT_PRODUCT, // P1016: the lead type in the caller's words
         reactivation: lead.reactivation ? 'yes' : '', leave_voicemail: lead.reactivation?.voicemailLeft ? 'no' : 'yes',
         form_state: lead.state ?? '', form_homeowner: lead.homeowner == null ? '' : lead.homeowner ? 'yes' : 'no', form_mortgage: lead.mortgage ?? '', form_age: lead.age ?? '', ...formLines(lead),
         callback_number: spokenNumber(from) }, // P940: the voicemail message gives the number that called them

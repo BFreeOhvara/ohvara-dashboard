@@ -61,7 +61,7 @@ const mkLead = (id, p, o) => {
   const l = {
     id, first_name: p.first, last_name: p.last, phone: p.phone, state: p.state, city: p.city,
     age_band: '45 to 54', mortgage_balance_band: '$200,000 to $300,000', homeowner: true, smoker: false,
-    best_time: 'Evenings', status: 'assigned', outcome: null, kind: 'appointment', appt: null, apptAt: null, note: '', reply: null, fresh: false,
+    best_time: 'Evenings', status: 'assigned', outcome: null, kind: 'appointment', coverage: 'mortgage_protection', appt: null, apptAt: null, note: '', reply: null, fresh: false,
     ...o,
   }
   l.dbStage = STAGES[l.stage].db
@@ -78,7 +78,7 @@ const seedLeads = [
   mkLead('sample-lead-2', people.carla, { stage: 'missed', kind: 'live_call', came: '2026-11-02T09:08', best_time: 'Mornings' }),
   mkLead('sample-lead-3', people.harold, { stage: 'ringing', kind: 'live_call', came: '2026-11-02T14:11', age_band: '55 to 64', wants: 'Cover the mortgage so his wife keeps the house', note: 'Retiring in 4 years. Mortgage about $180,000.' }),
   mkLead('sample-lead-4', people.renee, { stage: 'no_show', came: '2026-10-29T17:40', apptAt: '2026-11-02T11:00' }),
-  mkLead('sample-lead-5', people.denise, { stage: 'sold', status: 'closed', outcome: 'sold', submitted: true, came: '2026-10-24T16:05', apptAt: '2026-10-27T11:00' }),
+  mkLead('sample-lead-5', people.denise, { coverage: 'final_expense', stage: 'sold', status: 'closed', outcome: 'sold', submitted: true, came: '2026-10-24T16:05', apptAt: '2026-10-27T11:00' }),
   mkLead('sample-lead-6', people.robert, { stage: 'follow_up', status: 'contacted', outcome: 'follow_up', came: '2026-10-27T18:12', apptAt: '2026-10-30T15:00', follow: 'Mon, Nov 2', followAt: '2026-11-02T16:30' }),
   // P892: Owen was called seconds after his form came in (the agent sees the speed only).
   mkLead('sample-lead-7', people.owen, { stage: 'booked', came: '2026-10-30T12:20', apptAt: '2026-11-02T14:00', age_band: '35 to 44', speed: 9 }),
@@ -86,7 +86,7 @@ const seedLeads = [
   mkLead('sample-lead-9', people.tanya, { stage: 'calling', tries: 2, came: '2026-11-01T10:30', reply: { text: 'Can you call after 6? I am at work until then.', at: '2026-11-02T13:52', seen: false } }),
   mkLead('sample-lead-10', people.paul, { stage: 'new', came: '2026-11-02T14:10', mortgage_balance_band: '$300,000 to $400,000' }),
   mkLead('sample-lead-11', people.grace, { stage: 'calling', tries: 3, came: '2026-10-29T08:40' }),
-  mkLead('sample-lead-12', people.victor, { stage: 'unreachable', status: 'bad', came: '2026-07-28T19:05' }),
+  mkLead('sample-lead-12', people.victor, { coverage: 'final_expense', stage: 'unreachable', status: 'bad', came: '2026-07-28T19:05' }),
   mkLead('sample-lead-13', people.joan, { stage: 'opted_out', status: 'bad', came: '2026-10-28T11:00' }),
   mkLead('sample-lead-14', people.sam, { stage: 'not_interested', status: 'bad', outcome: 'not_interested', reason: 'Already covered', came: '2026-10-26T15:30', apptAt: '2026-10-29T10:00' }),
   // P878: Mark confirmed by text (the card says confirmed); Nina was sold but her servicing details aren't in yet.

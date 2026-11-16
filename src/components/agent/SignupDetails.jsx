@@ -1,21 +1,24 @@
-import { Check, MapPin, Clock, PhoneIncoming, Phone } from 'lucide-react'
+import { Check, MapPin, Clock, PhoneIncoming, Phone, Tag } from 'lucide-react'
 import { Switch } from '../ui/Switch'
 import { OvField, OvSelect } from './AgentUI'
 import { WEEKDAYS, setDay, timeOptions } from '../../lib/agentSettings'
 import { SELECTABLE_TIMEZONES } from '../../lib/timezones'
+import { LeadTypePicker } from './LeadTypePicker'
+import { useCoverageTypes } from '../../hooks/useLeadTypes'
 import { STATE_CHOICES, MIN_STATES, MAX_STATES, NOT_TAKING, LICENSED_WORDS, toggleState } from '../../lib/signupDetails'
 
 // P941 — the sign-up's details, filled in before paying for a lead plan: licensed states + the tick, time zone and
-// hours, live transfers yes/no. Controlled: `value` is src/lib/signupDetails.js's shape, `onChange` gets the next one.
+// hours, live transfers yes/no, and (P1016) the kind of leads they want. Controlled: `value` is src/lib/signupDetails.js's shape, `onChange` gets the next one.
 // One set of hours (P924): booked calls land and live calls ring inside them.
 
 const ZONES = SELECTABLE_TIMEZONES.map(z => ({ value: z.value, label: z.label }))
 
-export function SignupDetails({ value: d, onChange, notTaking = NOT_TAKING, missing = [] }) {
+export function SignupDetails({ value: d, onChange, notTaking = NOT_TAKING, missing = [], real = true }) {
   const n = d.states.length
   const inRange = n >= MIN_STATES && n <= MAX_STATES
   const miss = key => missing.some(m => m.key === key)
   const set = patch => onChange({ ...d, ...patch })
+  const { visible: types } = useCoverageTypes(real)
   return (
     <div className="sc-det" data-testid="sc-details">
       <section className={`ov-card sc-dcard${miss('states') || miss('licence') ? ' is-open' : ''}`} aria-labelledby="sc-st-h">
@@ -41,6 +44,15 @@ export function SignupDetails({ value: d, onChange, notTaking = NOT_TAKING, miss
           <span>{LICENSED_WORDS}</span>
         </label>
         {notTaking.length > 0 && <p className="sc-sub">We aren’t taking New York yet.</p>}
+      </section>
+
+      {/* P1016: the kind of leads, picked on the same step as the states. One today; switch any time in Settings. */}
+      <section className={`ov-card sc-dcard${miss('coverage') ? ' is-open' : ''}`} aria-labelledby="sc-ty-h" data-testid="sc-lead-type">
+        <header className="sc-dh">
+          <span className="sc-dtile"><Tag size={17} aria-hidden="true" /></span>
+          <span className="sc-dh-t"><b id="sc-ty-h">The leads you want</b><small>Pick one kind of life insurance lead. Every lead you get is that kind. You can switch any time in Settings.</small></span>
+        </header>
+        <LeadTypePicker types={types} value={d.coverage} onChange={k => set({ coverage: k })} name="sc-lead-type" />
       </section>
 
       <section className={`ov-card sc-dcard${miss('timezone') || miss('hours') ? ' is-open' : ''}`} aria-labelledby="sc-hr-h">

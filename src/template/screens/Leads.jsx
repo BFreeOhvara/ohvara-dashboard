@@ -1,4 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCoverageTypes } from '../../hooks/useLeadTypes'
+import { typeLabel } from '../../lib/coverageTypes'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { PhoneIncoming, CalendarDays, GripVertical, Search, Wallet, RotateCcw, Clock, MapPin, Check, X, ClipboardCheck, Users, Link2, MessageSquareWarning, PhoneForwarded, Inbox, CalendarX2 } from 'lucide-react'
 import { useDataSource, useSampleLeads, useSampleLead, useSampleBilling, useSampleActions, useSampleSettings, useSampleAppointments } from '../data'
@@ -57,6 +59,7 @@ const tagOf = (l, serve = true) => {
 }
 
 function LeadCard({ l, i, onResult, onGrab }) {
+  const { all: types } = useCoverageTypes(useDataSource() === 'real')
   const live = l.kind === 'live_call'
   const tone = laneOf(l).tone
   const { serve } = useProducts()
@@ -70,6 +73,7 @@ function LeadCard({ l, i, onResult, onGrab }) {
       {drag && <span className="ldg-grip" aria-hidden="true"><GripVertical size={14} /></span>}
       <Link to={paths.lead(l.id)} className="fx-cover" aria-label={`Open ${l.first_name} ${l.last_name}`} />
       <div className="fx-lcard-top"><span className="fx-kind">{live ? <PhoneIncoming size={13} aria-hidden="true" /> : <CalendarDays size={13} aria-hidden="true" />}{live ? 'Live call' : 'Appointment'}</span>{tag && <span className="fx-tag">{tag[1]}</span>}</div>
+      {l.coverage && <span className="fx-ltype" data-testid="lead-type-chip">{typeLabel(types, l.coverage)}</span>}
       <h3>{l.first_name} {l.last_name}</h3>
       <p>{l.city}, {l.state} · {l.age_band}</p>
       <div className="fx-lcard-bot">
@@ -132,7 +136,8 @@ export function LeadDrawer({ id, onClose, extra = null }) {
   // P894: the drawer's buttons are the results this lead's status allows, nothing else.
   const steps = resultsFor(lead).map(k => ({ key: k, label: RESULT_LABEL[k], tone: agentStatus(RESULT_STATUS[k]).tone })) // P929: board colours
   const chip = stageChip(lead.stage, lead, { noServicing: !serve })
-  const asks = [['Mortgage balance', lead.mortgage_balance_band], ['Age', lead.age_band], ['Homeowner', lead.homeowner ? 'Yes' : 'No'], ['Smoker', lead.smoker ? 'Yes' : 'No'], ['Best time', lead.best_time], ['Phone', lead.phone]]
+  const { all: types } = useCoverageTypes(useDataSource() === 'real')
+  const asks = [...(lead.coverage ? [['Lead type', typeLabel(types, lead.coverage)]] : []), ['Mortgage balance', lead.mortgage_balance_band], ['Age', lead.age_band], ['Homeowner', lead.homeowner ? 'Yes' : 'No'], ['Smoker', lead.smoker ? 'Yes' : 'No'], ['Best time', lead.best_time], ['Phone', lead.phone]]
   const pick = k => (k === 'booked' ? (moveLead(lead.id, 'booked'), note(`${name} moved to Booked`)) : setOutcome(k))
   const status = agentStatusOf(lead)
   const events = leadMessages(lead)
@@ -226,9 +231,14 @@ export default function Leads() {
   // P924: no Closed on Leads. A lead that never reached the agent is never on their side (useSampleLeads).
   const ALL = LANES
   const laneKey = ALL.some(l => l.key === params.get('lane')) ? params.get('lane') : 'all'
-  const setLane = k => setParams(k === 'all' ? {} : { lane: k }, { replace: true })
+  // P1016: ?type= keeps one lead type (the types these leads came from; the filter shows once there are two).
+  const { all: types } = useCoverageTypes(useDataSource() === 'real')
+  const present = [...new Set(leads.map(l => l.coverage).filter(Boolean))]
+  const typeKey = present.includes(params.get('type')) ? params.get('type') : 'all'
+  const setParam = (k, v) => { const p = new URLSearchParams(params); if (v === 'all') p.delete(k); else p.set(k, v); setParams(p, { replace: true }) }
+  const setLane = k => setParam('lane', k)
   const n = q.trim().toLowerCase()
-  const shown = leads.filter(l => !n || `${l.first_name} ${l.last_name} ${l.city} ${l.phone}`.toLowerCase().includes(n))
+  const shown = leads.filter(l => (typeKey === 'all' || l.coverage === typeKey) && (!n || `${l.first_name} ${l.last_name} ${l.city} ${l.phone}`.toLowerCase().includes(n)))
   const live = liveCalls(shown)
   const liveRef = useLiveRoom()
   const inLane = (lane, l) => agentStatusOf(l) === lane.key
@@ -247,6 +257,14 @@ export default function Leads() {
     <div className="tp-page fx-page fx-leads">
       <div className="fx-tools">
         <label className="fx-find"><Search size={16} aria-hidden="true" /><input aria-label="Find a lead" placeholder="Find by name, city or phone" value={q} onChange={e => setQ(e.target.value)} /></label>
+        {present.length > 1 && (
+          <label className="fx-typesel"><span className="sr-only">Lead type</span>
+            <select value={typeKey} onChange={e => setParam('type', e.target.value)} data-testid="lead-type-filter">
+              <option value="all">All lead types</option>
+              {types.filter(t => present.includes(t.key)).concat(present.filter(k => !types.some(t => t.key === k)).map(k => ({ key: k, label: typeLabel(types, k) }))).map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+            </select>
+          </label>
+        )}
         <span className="tp-grow" />
         {/* P952: bring a list of old leads; our AI calls them (Reactivate.jsx) */}
         <button type="button" className="fx-pillbtn" onClick={() => setReact(true)}><RotateCcw size={15} aria-hidden="true" />Import leads</button>

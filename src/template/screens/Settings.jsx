@@ -21,6 +21,7 @@ import { PaymentIntakeCard } from '../PaymentIntake'
 import { DeedstonePhone } from '../DeedstonePhone'
 import { useProducts } from '../useProducts'
 import { AppAbout } from '../../components/native/AppAbout'
+import { LeadTypeCard } from '../LeadTypeCard'
 
 // P929: Settings back to the pre-P924 layout (profile card on the left, tabs on the right). Notifications is only the
 // switches; the carrier-email forwarding address that sat under it has its own Email tab, so no section is long.
@@ -169,7 +170,7 @@ export default function Settings() {
             <FormFoot dirty={!same(pDraft, profile) || tz !== s.timeZone || !same(cs, carriersSaved)} onDiscard={() => { setPDraft(profile); setTz(s.timeZone); setCs(carriersSaved) }} onSave={() => { setProfile(pDraft); if (tz !== s.timeZone) saveSettings({ timeZone: tz }); if (!same(cs, carriersSaved)) saveSettings({ profile: { ...(s.profile || {}), carriers: cs } }); note('Profile saved') }} />
           </>}
 
-          {tab === 'licence' && <LicenceCard />}
+          {tab === 'licence' && <><LicenceCard />{has('leads') && <LeadTypeCard />}</>}
 
           {tab === 'alerts' && <>
             <Head title="Notifications" sub="Everything shows in the bell. Choose what also comes to your phone or email." />
