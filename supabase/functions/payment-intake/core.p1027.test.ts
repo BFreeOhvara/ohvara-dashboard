@@ -47,6 +47,30 @@ test('Ethos stand-in, auto-forwarded (the carrier stays the outer From)', () => 
   assert.equal(p.sender_domain, 'ethoslife.com')
 })
 
+// Brayden's real Ethos lapse notice (Nov 17), client details replaced: sender, layout and wording as sent.
+const ETHOS_LAPSED = `ETHOS
+Your client's policy has lapsed
+Call your client
+Hi Brayden,
+Pat Doe's policy has lapsed. This may result in a chargeback on your account.
+Your client should have received a letter explaining the policy lapse. Please contact them to make sure they are aware and address any concerns.
+Call your client
+Policy details:
+Policy owner: Pat Doe
+Carrier policy number: SI0000000001
+Product: TruStage Term Life
+Closed as of: 11/17/26
+See more policy details.
+Resources
+Find support and helpful tools in the Agent Portal.`
+
+test('real Ethos lapse notice (auto-forwarded)', () => {
+  const p = parseNotice('Policy lapsed for Pat Doe', ETHOS_LAPSED, 'Ethos for Agents <ethosforagent@mail.ethos-agents.com>')
+  assert.deepEqual([p.category, p.kind, p.policy_number, p.client_name, p.lapse_date, p.due_date, p.sender_domain, p.carrier_hint],
+    ['lapsed', 'lapsed', 'SI0000000001', 'Pat Doe', '2026-11-17', null, 'mail.ethos-agents.com', 'Ethos for Agents'])
+  assert.equal(needsAi(p), false)
+})
+
 test('addresses: name style, old style, Resend to-array', () => {
   assert.equal(tokenFrom('dana-7k2f@notices.ohvara.com'), 'dana-7k2f')
   assert.equal(tokenFrom('"Ohvara" <Dana-7K2F@notices.ohvara.com>'), 'dana-7k2f')

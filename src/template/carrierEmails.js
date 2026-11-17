@@ -5,9 +5,9 @@ import { useCallback, useState } from 'react'
 
 const SAMPLE_DATA = {
   address: 'dana-7k2f@notices.ohvara.com',
-  carriers: [{ name: 'Ethos', domain: 'ethoslife.com' }, { name: 'Americo', domain: null }],
-  suggested: [{ name: 'Americo', domain: null }, { name: 'Ethos', domain: 'ethoslife.com' }, { name: 'Transamerica', domain: 'transamerica.com' }],
-  all: [{ name: 'Corebridge', domain: 'corebridgefinancial.com' }, { name: 'Ethos', domain: 'ethoslife.com' }, { name: 'Mutual of Omaha', domain: 'mutualofomaha.com' }, { name: 'Transamerica', domain: 'transamerica.com' }, { name: 'Americo', domain: null }],
+  carriers: [{ name: 'Ethos', domain: 'ethos-agents.com' }, { name: 'Americo', domain: null }],
+  suggested: [{ name: 'Americo', domain: null }, { name: 'Ethos', domain: 'ethos-agents.com' }, { name: 'Transamerica', domain: 'transamerica.com' }],
+  all: [{ name: 'Corebridge', domain: 'corebridgefinancial.com' }, { name: 'Ethos', domain: 'ethos-agents.com' }, { name: 'Mutual of Omaha', domain: 'mutualofomaha.com' }, { name: 'Transamerica', domain: 'transamerica.com' }, { name: 'Americo', domain: null }],
   gmail: null,
   test_started_at: null,
   test_ok: false,

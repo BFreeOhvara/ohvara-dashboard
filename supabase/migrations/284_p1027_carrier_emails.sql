@@ -405,3 +405,30 @@ begin
     perform cron.schedule('payment-intake-purge', '15 9 * * *', 'select public.payment_intake_purge()');
   end if;
 end $$;
+
+-- ── 6. Known notice senders (from real notices, not guesses) ────────────────
+-- Ethos: Brayden's lapse notice of Nov 17, 2026 came from ethosforagent@mail.ethos-agents.com.
+update public.carriers set notice_senders = array['ethos-agents.com']
+ where lower(name) = 'ethos' and not ('ethos-agents.com' = any(notice_senders));
+
+-- ── 7. The Resend webhook's signing secret, kept in Vault (set once by payment-intake ?setup=resend) ──
+create or replace function public.payment_intake_webhook_secret() returns text language plpgsql stable
+security definer set search_path = public as $$
+declare v text;
+begin
+  if to_regclass('vault.decrypted_secrets') is null then return null; end if;
+  execute 'select decrypted_secret from vault.decrypted_secrets where name = $1 limit 1' into v using 'resend_inbound_secret';
+  return v;
+end; $$;
+revoke all on function public.payment_intake_webhook_secret() from public, anon, authenticated;
+
+create or replace function public.payment_intake_set_webhook_secret(p text) returns boolean language plpgsql
+security definer set search_path = public as $$
+begin
+  if p is null or p !~ '^whsec_[A-Za-z0-9+/=]{20,200}$' then raise exception 'Not a signing secret' using errcode = '22023'; end if;
+  if to_regclass('vault.secrets') is null then raise exception 'Vault is not available' using errcode = '55000'; end if;
+  if public.payment_intake_webhook_secret() is not null then return false; end if;
+  execute 'select vault.create_secret($1, $2, $3)' using p, 'resend_inbound_secret', 'P1027 Resend inbound webhook signing secret';
+  return true;
+end; $$;
+revoke all on function public.payment_intake_set_webhook_secret(text) from public, anon, authenticated;

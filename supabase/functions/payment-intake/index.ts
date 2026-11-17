@@ -5,10 +5,12 @@
 // Receiving API. Postmark / plain JSON with the shared secret still work (tests, a manual replay).
 // Deploy with --no-verify-jwt (mail services have no JWT; core.ts checks the signature / secret on every request):
 //   npx.cmd supabase functions deploy payment-intake --no-verify-jwt --project-ref jjextitmbptoaolacocs
-// Secrets: RESEND_API_KEY (already set), RESEND_INBOUND_SECRET (the webhook's whsec_ signing secret),
-//   PAYMENT_INTAKE_SECRET (Postmark/plain), ANTHROPIC_API_KEY (optional: the AI reader for unclear notices).
+// Secrets: RESEND_API_KEY (already set), PAYMENT_INTAKE_SECRET (Postmark/plain), ANTHROPIC_API_KEY (optional: the AI
+//   reader for unclear notices). The Resend webhook's signing secret lives in Vault (resend_inbound_secret), put there
+//   by the one-time POST ?setup=resend (setup.ts); RESEND_INBOUND_SECRET in env overrides it.
 import { createClient } from 'npm:@supabase/supabase-js'
 import { handle, type AiRead, type Store } from './core.ts'
+import { setup, type ResendApi } from './setup.ts'
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 const RESEND = Deno.env.get('RESEND_API_KEY')
@@ -56,6 +58,36 @@ const ai: AiRead | undefined = ANTHROPIC ? async (subject, text) => {
   return j ? JSON.parse(j[0]) : null
 } : undefined
 
-Deno.serve(req => handle(req, store, Deno.env.get('PAYMENT_INTAKE_SECRET'), {
-  resendSecret: Deno.env.get('RESEND_INBOUND_SECRET'), fetchResend, ai,
-}))
+// The signing secret: env first, else Vault (read once per instance).
+let vaultSecret: string | null | undefined
+async function resendSecret() {
+  const env = Deno.env.get('RESEND_INBOUND_SECRET')
+  if (env) return env
+  if (vaultSecret) return vaultSecret
+  const { data } = await admin.rpc('payment_intake_webhook_secret')
+  vaultSecret = typeof data === 'string' && data ? data : null
+  return vaultSecret ?? undefined
+}
+
+const api: ResendApi = async (method, path, body) => {
+  const r = await fetch(`https://api.resend.com${path}`, {
+    method, headers: { authorization: `Bearer ${RESEND}`, 'content-type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+  let j: Record<string, unknown> = {}
+  try { j = await r.json() } catch { /* empty */ }
+  return { ok: r.ok, status: r.status, json: j }
+}
+const secrets = {
+  get: async () => { const { data } = await admin.rpc('payment_intake_webhook_secret'); return typeof data === 'string' && data ? data : null },
+  set: async (s: string) => { const { data, error } = await admin.rpc('payment_intake_set_webhook_secret', { p: s }); if (error) throw error; return !!data },
+}
+const ENDPOINT = `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-intake`
+
+Deno.serve(async req => {
+  if (new URL(req.url).searchParams.has('setup')) {
+    if (!RESEND) return new Response(JSON.stringify({ error: 'RESEND_API_KEY missing' }), { status: 503 })
+    return setup(req, api, secrets, ENDPOINT)
+  }
+  return handle(req, store, Deno.env.get('PAYMENT_INTAKE_SECRET'), { resendSecret: await resendSecret(), fetchResend, ai })
+})

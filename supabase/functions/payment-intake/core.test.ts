@@ -44,7 +44,7 @@ test('dates in carrier formats', () => {
 
 test('a forwarded lapse-pending email', () => {
   const p = parseNotice('Fwd: Lapse Pending Notice', LAPSE_PENDING, 'Dana <dana@agent.example>')
-  assert.deepEqual(p, { kind: 'missed', category: 'pending_lapse', policy_number: 'HL-100-200', client_name: 'Harold Brooks', due_date: '2026-11-03', amount: '86.40', carrier_hint: 'Harborline Life Service', sender_domain: 'harborline.example', read_by: 'rules' })
+  assert.deepEqual(p, { kind: 'missed', category: 'pending_lapse', policy_number: 'HL-100-200', client_name: 'Harold Brooks', due_date: '2026-11-03', lapse_date: null, amount: '86.40', carrier_hint: 'Harborline Life Service', sender_domain: 'harborline.example', read_by: 'rules' })
 })
 
 test('other wordings', () => {

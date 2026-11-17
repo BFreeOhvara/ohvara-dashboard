@@ -14,6 +14,7 @@ export type Parsed = {
   policy_number: string | null
   client_name: string | null
   due_date: string | null // YYYY-MM-DD
+  lapse_date: string | null // YYYY-MM-DD: "Closed as of" / "Lapsed on" (Ethos lapse notices give no due date)
   amount: string | null
   carrier_hint: string | null
   sender_domain: string | null
@@ -87,6 +88,7 @@ export function isoDate(s: string): string | null {
   return `${y}-${pad(m)}-${pad(d)}`
 }
 const DATE = String.raw`(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}|[A-Za-z]{3,9}\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}|\d{1,2}\s+[A-Za-z]{3,9}\.?,?\s+\d{4})`
+const LAPSE_ON = new RegExp(String.raw`(?:closed|lapsed|terminated|lapse\s+date|lapse\s+effective)\s*(?:as\s+of|on|effective|date)?\s*[:\-]?\s*` + DATE, 'i')
 const DUE = new RegExp(String.raw`(?:premium\s+due|payment\s+due|due|draft|bill(?:ing)?|paid[-\s]to)\s*(?:date|on)?\s*[:\-]?\s*` + DATE, 'i')
 
 // ── the rest ──
@@ -118,6 +120,7 @@ export function parseNotice(subject: string, text: string, from = ''): Parsed {
   const pol = all.match(POLICY)
   const name = all.match(NAME)
   const amt = all.match(AMOUNT)
+  const lapse = all.match(LAPSE_ON)
   const category = categoryOf(subject, text)
   return {
     kind: kindFor(category),
@@ -125,6 +128,7 @@ export function parseNotice(subject: string, text: string, from = ''): Parsed {
     policy_number: pol ? pol[1].toUpperCase() : null,
     client_name: name ? name[1].replace(/\s+/g, ' ').trim() : null,
     due_date: due ? isoDate(due[1]) : null,
+    lapse_date: lapse ? isoDate(lapse[1]) : null,
     amount: amt ? amt[1].replace(/,/g, '') : null,
     carrier_hint: carrierHint(from, text),
     sender_domain: senderDomain(from, text),
