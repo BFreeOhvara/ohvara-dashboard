@@ -160,10 +160,13 @@
   var MIN_BUILD = { ios: 9, android: 6 }
   window.__ohvaraIntroPending = true
   var decided = false
+  // P1028: index.html keeps the page navy (html.oi-boot) until the intro covers it; without an intro, the theme returns.
+  function unboot() { document.documentElement.classList.remove('oi-boot') }
   function skip() {
     if (decided) return
     decided = true
     window.__ohvaraIntroPending = false
+    unboot()
     hideSplash()
   }
   setTimeout(skip, 1500)
@@ -185,7 +188,7 @@
     // A reload part-way through the intro (the over-the-air update switching in at launch) carries on
     // from the same moment; any later reload, or a return from the background, never shows it again.
     var from = at ? now - at : 0
-    if (at && from >= TOTAL) { window.__ohvaraIntroPending = false; hideSplash(); return }
+    if (at && from >= TOTAL) { window.__ohvaraIntroPending = false; unboot(); hideSplash(); return }
     if (!at) { try { sessionStorage.setItem(KEY, String(now)) } catch (e) { /* storage off */ } }
     var intro = mount(document.body || document.documentElement, TAKE, reduce)
     window.__ohvaraIntroPlaying = true
@@ -202,7 +205,18 @@
       }, Math.max(0, intro.total - from) + 60)
     }
     // The native splash is the same plain navy, so the hand-off has nothing to jump.
-    hideSplash().then(function () { requestAnimationFrame(start) })
-    setTimeout(start, 700)
+    // P1028: the splash goes only once the overlay's first frame has been painted (two animation frames). Before,
+    // it went in the same moment the overlay was added, so the phone showed the page under it for a frame or more:
+    // white in light mode. Android can hold the webview's drawing while its splash is up, so 300 ms is the backstop.
+    var shown = false
+    function painted() {
+      if (shown) return
+      shown = true
+      unboot()
+      hideSplash().then(function () { requestAnimationFrame(start) })
+      setTimeout(start, 700)
+    }
+    requestAnimationFrame(function () { requestAnimationFrame(painted) })
+    setTimeout(painted, 300)
   }
 })()
