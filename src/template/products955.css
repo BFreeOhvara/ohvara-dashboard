@@ -69,3 +69,14 @@
 .bl-plan .pr-quiet { color: inherit; opacity: 0.78; }
 .bl-plan .pr-quiet:hover { opacity: 1; }
 .bl-rows .bl-undo + .bl-undo, .bl-rows .tp-row .bl-undo { margin-top: 6px; }
+
+/* P1029 — Your own leads row: the text, then Import leads and Remove leads on the same line to its right. The text gives
+   way (it wraps) before the buttons drop down; only a phone-width card stacks them under the text. */
+.bl-rows dd.bl-own { display: flex; align-items: center; justify-content: space-between; gap: 12px 28px; }
+.bl-own-text { min-width: 0; flex: 1 1 0; }
+.bl-own-acts { display: flex; align-items: center; gap: 10px; flex: none; }
+.bl-rows .bl-own-acts .bl-undo { margin-top: 0; white-space: nowrap; }
+@media (max-width: 520px) {
+  .bl-rows dd.bl-own { flex-wrap: wrap; }
+  .bl-own-text { flex-basis: 100%; }
+}

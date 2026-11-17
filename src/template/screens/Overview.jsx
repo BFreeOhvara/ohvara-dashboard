@@ -11,7 +11,7 @@ import { agentCallLook, evClass, minsOf } from '../cal958'
 import { CallDrawer } from './Calendar'
 import '../cal947.css'
 import '../cal958.css'
-import { Avatar, Empty } from '../kit'
+import { Avatar } from '../kit'
 import { AllClear } from '../AllClear'
 import { CountUp } from '../motion'
 import { SetupProgress } from '../SetupProgress'
@@ -26,7 +26,7 @@ import { useCheckSettings, todayFor } from '../checkSettings'
 import { paths } from '../paths'
 import '../p893.css'
 import Chart from '../Chart'
-import { Area, ReferenceDot, ReferenceLine } from 'recharts'
+import { Select } from '../Select'
 
 // P841: a little more page. Next up is the second colour-filled tile (the Booked blue); under the pair, a This week
 // strip of the working week's calls (leads blue, clients yellow, as on Calendar); under Needs you, a Lead mix tile
@@ -51,51 +51,17 @@ function Tile({ className = '', i, title, sub, to, label, children, ...rest }) {
   )
 }
 
-// P844: the chart follows how long the agent has been on Ohvara (see data/index.js bookedChart). Weeks: a smooth area
-// over the expected range band (dashed edges). Days (first 2 weeks): one rounded bar per day this week.
-// P936: drawn by the one chart (../Chart.jsx); days still to come are a faint label, never an empty bar.
-// P949: back to this (Brayden: the P942 area chart is for the admin Overview only).
+// P1029: the Delivered chart shows FINISHED weeks only (never the week still running): one solid smooth line over the
+// expected range band, ending at the last finished week. The corner filter picks how many (4, 8 or 12; 8 by default).
+// The phone keeps its own Home; this is the desktop Overview only. Fewer finished weeks than asked: what there is.
 const DL_SERIES = [{ key: 'v', label: 'Delivered', color: 'var(--ox-1)' }]
-// P991: this week is still running, so it never dives: the solid line stops at last week, a dashed line runs to a
-// hollow "so far" point, and a faint point above it is where the week ends at this pace ("on pace for ~9").
-function SoFarDot({ cx, cy, payload }) {
-  if (!payload?.today || cx == null || cy == null) return <g />
+const WEEK_CHOICES = [4, 8, 12]
+const weeksLabel = n => `Last ${n} weeks`
+function BookedChart({ weeks, lo, hi }) {
+  const data = weeks.map(([w, v]) => ({ name: w, full: `Week of ${w}`, v }))
   return (
-    <g className="fx-sofar">
-      <circle cx={cx} cy={cy} r={5} className="fx-sofar-dot" />
-      <text x={cx - 9} y={cy + 17} textAnchor="end" className="fx-sofar-lbl">so far</text>
-    </g>
-  )
-}
-function BookedChart({ chart, lo, hi, total, pace }) {
-  const { points, mode } = chart
-  const days = mode === 'days'
-  const lastIdx = days ? points.findIndex(p => p[2]) - 1 : points.length - 1
-  const nowAt = days ? (lastIdx < 0 ? points.length - 1 : lastIdx) : points.length - 1
-  const running = !days && !pace.closed
-  const cur = points.length - 1
-  const data = points.map(([w, v, later], i) => ({
-    name: !days && i === cur ? 'This week' : days && i === nowAt ? 'Today' : w,
-    full: days ? w : i === cur && running ? `Week of ${w}, so far` : `Week of ${w}`, later: !!later, today: i === nowAt,
-    v: running && i === cur ? null : v,
-    ...(running && i === cur ? { so: total } : running && i === cur - 1 ? { so: v } : {}),
-  }))
-  const proj = running ? pace.projected : null
-  const tip = running ? row => (row.today ? [['So far', String(total), 'var(--ox-1)'], ...(proj != null ? [['On pace for', `about ${proj}`]] : [])] : [['Delivered', String(row.v ?? 0), 'var(--ox-1)']]) : null
-  const overlay = running ? [
-    <Area key="so" type="linear" dataKey="so" stroke="var(--ox-1)" strokeWidth={2.5} strokeDasharray="6 5" fill="none" connectNulls
-      dot={p => <SoFarDot key={p.index} {...p} />} activeDot={false} isAnimationActive={false} />,
-    ...(proj != null ? [
-      <ReferenceLine key="pl" segment={[{ x: 'This week', y: total }, { x: 'This week', y: proj }]} stroke="var(--ox-band-edge)" strokeDasharray="2 4" ifOverflow="extendDomain" />,
-      <ReferenceDot key="pd" x="This week" y={proj} r={4.5} className="fx-proj-dot" fill="var(--ox-1)" fillOpacity={0.3} stroke="var(--ox-1)" strokeOpacity={0.6} strokeWidth={1.5} ifOverflow="extendDomain"
-        label={{ value: `on pace for ~${proj}`, position: 'left', offset: 10, className: 'fx-proj-lbl' }} />,
-    ] : []),
-  ] : null
-  const now = running ? ` This week so far ${total}${proj != null ? `, on pace for about ${proj}` : ''}.` : ''
-  return (
-    <Chart kind={days ? 'bar' : 'area'} data={data} series={DL_SERIES} legend={false} height={168} className="fx-dchart is-stretch"
-      band={days ? null : { lo, hi }} overlay={overlay} reach={running ? Math.max(total, proj || 0) : 0} tip={tip}
-      label={`Delivered per ${days ? 'day' : 'week'}: ${points.filter((p, i) => !p[2] && !(running && i === cur)).map(([w, v]) => `${w} ${v}`).join(', ')}.${now}${days ? '' : ` Expected at your spend ${lo} to ${hi} a week.`}`} />
+    <Chart kind="area" data={data} series={DL_SERIES} legend={false} height={168} className="fx-dchart is-stretch" band={{ lo, hi }}
+      label={`Delivered per week: ${weeks.map(([w, v]) => `${w} ${v}`).join(', ')}. Expected at your spend ${lo} to ${hi} a week.`} />
   )
 }
 
@@ -205,6 +171,8 @@ export default function Overview() {
   const nBy = k => clients.filter(c => stOf(c) === k).length
   const prot = nBy('protected')
   const chart = o.bookedChart
+  const [span, setSpan] = useState(8)
+  const finished = (chart.past || []).slice(-span)
   // P910: Your to-dos (calls to mark, the monthly check), each with its action; live calls pinned above them.
   const { data: needs } = useSampleNeeds()
   const act = useNeedAction()
@@ -228,13 +196,13 @@ export default function Overview() {
             <span className="fx-bk-side"><b>Delivered</b><small className="fx-dl-split"><span className="tp-num">{dl.booked}</span> booked · <span className="tp-num">{dl.live}</span> live call{dl.live === 1 ? '' : 's'}</small>{last && <small className="fx-dl-last">{last}</small>}<i className={`fx-delta is-${pace.tone}`}>{pace.word}</i></span>
           </div>
           <div className="fx-key">
-            <span><i className="is-line" />{chart.mode === 'days' ? 'Delivered per day' : 'Delivered per week'}</span>
-            {chart.mode === 'weeks' && <span><i className="is-dash" />Expected at your spend</span>}
-            <span className="fx-key-range">{chart.range}</span>
+            <span><i className="is-line" />Delivered per week</span>
+            <span><i className="is-dash" />Expected at your spend</span>
+            <span className="fx-key-range"><Select label="Weeks shown" className="fx-wkf" value={weeksLabel(span)} onChange={v => setSpan(Number(v.match(/\d+/)[0]))} options={WEEK_CHOICES.map(weeksLabel)} /></span>
           </div>
-          {chart.empty
-            ? <Empty title="Nothing delivered yet" sub="Your first booked calls and live calls show up here as soon as they reach you." />
-            : <BookedChart chart={chart} lo={wk.low} hi={wk.high} total={dl.total} pace={pace} />}
+          {finished.length
+            ? <BookedChart weeks={finished} lo={wk.low} hi={wk.high} />
+            : <p className="fx-calm fx-dl-none" data-empty="delivered-weeks">Your chart starts after your first full week.</p>}
         </Tile>
 
         <div className="fx-ovl-pair">

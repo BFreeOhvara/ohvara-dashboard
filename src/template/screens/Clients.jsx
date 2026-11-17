@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Search, Plus, MessageSquare, MapPin, Users, UserPlus, Archive, CalendarCheck, Check, ShieldCheck, ShieldAlert, Wrench, Send, Inbox, Copy, ChevronRight } from 'lucide-react'
 import { useDataSource, useSampleClients, useSampleClient, useSampleThreads, useSampleActions, useSampleActivity, useSampleLeads } from '../data'
@@ -39,14 +39,33 @@ function useAnswer() {
 
 // P949 — one box for every unanswered check: "These policies drafted Oct 27 – Nov 1. Are they still on the books?"
 // One list of clients (each with its draft date), "Fell off?" ticks, the first 5 then Show all, and one button.
+// P1029: ONE row of cards, however many columns the window fits (2 to 4; the grid never goes past 4), then Show all N.
+// One column (a narrow window) keeps the first 5.
 const SHOW = 5
+function useCardsPerRow(ref) {
+  const [cols, setCols] = useState(1)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return undefined
+    const read = () => setCols(Math.max(1, getComputedStyle(el).gridTemplateColumns.split(' ').filter(Boolean).length))
+    read()
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const ro = new ResizeObserver(read)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [ref])
+  return cols
+}
 function CheckBox({ m }) {
   const answer = useAnswer()
   const [off, setOff] = useState([])
   const [all, setAll] = useState(false)
   const flip = id => setOff(o => (o.includes(id) ? o.filter(x => x !== id) : [...o, id]))
   const many = m.rows.length > 1
-  const shown = all ? m.rows : m.rows.slice(0, SHOW)
+  const rowsRef = useRef(null)
+  const cols = useCardsPerRow(rowsRef)
+  const per = cols > 1 ? cols : SHOW
+  const shown = all ? m.rows : m.rows.slice(0, per)
   // Each draft date is answered on its own (the check is per draft); the ticks say which fell off.
   const note = useNote()
   const save = () => {
@@ -68,7 +87,7 @@ function CheckBox({ m }) {
         <span className="ck-ic"><CalendarCheck size={18} aria-hidden="true" /></span>
         <span className="tp-grow"><h2>Still on the books?</h2><p data-check-q>{mergedQuestion(m)}</p><small>{m.rows.length} {m.rows.length === 1 ? 'policy' : 'policies'} · tick only the ones that fell off</small></span>
       </header>
-      <ul className="ck-rows">
+      <ul className="ck-rows" ref={rowsRef}>
         {shown.map(({ c, draft }) => {
           const gone = off.includes(c.id)
           return (
@@ -80,7 +99,7 @@ function CheckBox({ m }) {
           )
         })}
       </ul>
-      {m.rows.length > SHOW && <button type="button" className="tp-link ck-more" data-check-more onClick={() => setAll(a => !a)}>{all ? 'Show fewer' : `Show all ${m.rows.length}`}</button>}
+      {m.rows.length > per && <button type="button" className="tp-link ck-more" data-check-more onClick={() => setAll(a => !a)}>{all ? 'Show fewer' : `Show all ${m.rows.length}`}</button>}
       <footer className="ck-f">
         {off.length === 0
           ? <button type="button" className="tp-primary fx-accent" onClick={save}><Check size={16} aria-hidden="true" />{many ? 'All still on the books' : 'Still on the books'}</button>

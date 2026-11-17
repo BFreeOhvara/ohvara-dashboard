@@ -139,7 +139,9 @@ test('the sample timeline: planned texts show as Planned; agents never see the n
   assert.deepEqual(planned.map(e => e.step), ['bk_day_before', 'bk_morning', 'bk_1h'])
   assert.ok(planned.every(e => /Dana|Pat|calls you/.test(e.text) || e.text.length > 20))
   const leads = readFileSync('src/template/screens/Leads.jsx', 'utf8')
-  assert.match(leads, /'Planned'/)
+  // P1029: the agent's thread is only texts already sent or received (leadMessages drops the planned ones), as bubbles
+  assert.match(leads, /<Thread lead=\{lead\} events=\{events\}/)
+  assert.match(leads, /leadMessages\(lead\)/)
   const chase = seedEvents({ id: 'u', first_name: 'Vic', last_name: 'T', state: 'NC', kind: 'appointment', stage: 'unreachable', came: '2026-07-28T10:05' }, DEFAULT_DATE)
   assert.ok(chase.some(e => e.step?.startsWith('na_')))
   assert.ok(!agentEvents(chase).some(e => e.step?.startsWith('na_')))

@@ -27,6 +27,7 @@ import { FilterPills } from '../FilterPills'
 import { ReactivateDrawer, ReactivationCards } from '../Reactivate'
 import { AddLeadsCard, AddServicingCard } from '../Products955'
 import { useProducts } from '../useProducts'
+import { SUPPORT_NAME } from '../support911'
 
 // P898: Leads as a board of the agent's five statuses (agentView.js), left to right: Booked, No show, Follow up, Not
 // interested, Sold. P924: no Closed: a lead that never reached the agent (couldn't reach, opted out, wrong number)
@@ -90,23 +91,30 @@ function LeadCard({ l, i, onResult, onGrab }) {
 // from the agent's phone, P916's phone flow in src/template/m); the number and Copy stay.
 const CallOrCopy = ({ lead, closed }) => <CallOr phone={lead.phone} target={null} closed={closed} />
 
-// One timeline row, shaped like a lead-events row. Texts show as bubbles; what the system or the agent sends is a
-// preview until texting is switched on.
-function Row({ e, lead, last }) {
-  const isText = e.kind === 'text_sent' || e.kind === 'text_received'
-  const theirs = e.kind === 'text_received'
-  const later = e.state === 'scheduled'
+// P1029: a lead's messages look like a phone's text thread. Only the texts, as chat bubbles: ours on the right with our
+// avatar (Ohvara: we never show a staff member's own name, so the avatar is the only mark and the name is never printed),
+// the lead's on the left with their initials. Small timestamps; no labels, dots or call events. A run of our texts with no
+// reply from the lead reads at a glance. The phone's own thread is separate (src/template/m).
+function Thread({ lead, events }) {
+  const name = `${lead.first_name} ${lead.last_name}`.trim()
+  const tone = laneOf(lead).tone
+  const now = clockNow()
   return (
-    <li className={`lc-ev${later ? ' is-later' : last ? ' now' : ' done'}`} data-kind={e.kind}>
-      <i />
-      <div>
-        <span className="lc-ev-h"><b>{e.label}</b>{later && <span className="lc-sched">{e.kind === 'text_sent' ? 'Planned' : 'Next'}</span>}</span>
-        <span className="lc-ev-by">{e.by} · {atLabel(e.at, clockNow())}</span>
-        {isText && <div className={`tp-bub lc-bub${theirs ? '' : ' me'}`}>{e.text}{!theirs && <small>Automatic · preview, sends when your leads go live</small>}{theirs && <small>From {lead.first_name}</small>}</div>}
-        {e.kind === 'call_task' && <span className={`lc-task is-${e.task === 'you' ? 'you' : 'team'}`}>{e.task === 'you' ? 'For you' : 'For our team'}</span>}
-        {e.audit && <span className="lc-task is-audit">Kept on the record</span>}
-      </div>
-    </li>
+    <ol className="lt-thread" aria-label={`Texts with ${lead.first_name}`}>
+      {events.map((e, i) => {
+        const theirs = e.kind === 'text_received'
+        const endOfRun = !events[i + 1] || (events[i + 1].kind === 'text_received') !== theirs
+        return (
+          <li key={e.id || i} className={`lt-row ${theirs ? 'is-them' : 'is-us'}`} data-kind={e.kind}>
+            {endOfRun ? <Avatar name={theirs ? name : SUPPORT_NAME} tone={theirs ? tone : undefined} /> : <span className="lt-gap" aria-hidden="true" />}
+            <div className="lt-col">
+              <p className="lt-bub"><span className="lt-sr">{theirs ? `${lead.first_name} wrote: ` : 'We sent: '}</span>{e.text}</p>
+              <small className="lt-at">{atLabel(e.at, now)}</small>
+            </div>
+          </li>
+        )
+      })}
+    </ol>
   )
 }
 
@@ -175,7 +183,7 @@ export function LeadDrawer({ id, onClose, extra = null }) {
       </Block>
       <Block title="Messages" sub="The texts sent to and from them">
         {events.length
-          ? <ol className="tp-tl fx-tl lc-tl">{events.map((e, i) => <Row key={e.id || i} e={e} lead={lead} last={i === events.length - 1} />)}</ol>
+          ? <Thread lead={lead} events={events} />
           : <p className="fx-calm" data-empty="messages">No messages yet.</p>}
       </Block>
       <Block title="Notes" sub="Only you and our team see these">

@@ -458,20 +458,23 @@ const LEAD_NEW = ['booked', 'ringing', 'missed']
 // First 2 weeks: day by day this week. 2 to 8 weeks: week by week since joining. 8+ weeks: the last 8 weeks.
 // points: [label, value, upcoming]. prev: last week's total, or null when there was no last week.
 // P923: the value is Delivered (booked appointments + live calls that reached the agent), not booked alone.
+// P1029: the finished weeks only, oldest first, up to 12 (the desktop chart's 4 / 8 / 12 filter reads these; `points` is
+// untouched, the phone keeps using it).
+const pastOf = a => (a.none ? [] : a.weeks.map(([w, b, l]) => [w, b + (l || 0)]).slice(-12))
 function bookedChart(thisWeek) {
   const a = sampleAgent()
   const delivered = a.none ? 0 : thisWeek
   if (a.days < 14) {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
     return { mode: 'days', range: 'This week, day by day', empty: delivered === 0, prev: null, prevSoFar: null, share: weekShare(PACE_NOW),
-      points: days.map((d, i) => [d, i === 0 ? delivered : 0, i > 0]) }
+      past: pastOf(a), points: days.map((d, i) => [d, i === 0 ? delivered : 0, i > 0]) }
   }
   const all = [...a.weeks.map(([w, b, l]) => [w, b + (l || 0)]), ['Nov 2', delivered]]
   const weeks = a.days < 56 ? all : all.slice(-8)
   // P991: share = how much of this week has passed; prevSoFar = last week by this time (the sample spreads it evenly).
   const share = weekShare(PACE_NOW)
   const prev = all.length > 1 ? all[all.length - 2][1] : null
-  return { mode: 'weeks', range: a.days < 56 ? 'Since you joined' : 'Last 8 weeks', empty: false, prev, prevSoFar: prev == null ? null : Math.round(prev * share), share, points: weeks }
+  return { mode: 'weeks', range: a.days < 56 ? 'Since you joined' : 'Last 8 weeks', empty: false, prev, prevSoFar: prev == null ? null : Math.round(prev * share), share, past: pastOf(a), points: weeks }
 }
 
 function useOverviewSample() {

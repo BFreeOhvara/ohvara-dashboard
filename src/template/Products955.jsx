@@ -263,7 +263,7 @@ export function ManageDrawer({ product, open, onClose }) {
 
 // The plan card's product lines: only what this agent has (or is about to have). Leads is the card's hero.
 export function PlanProductRows({ onManage, charged = '' }) {
-  const { b } = useProducts()
+  const { b, picked } = useProducts()
   const [listBusy, startList] = useStartList()
   const sv = stateOf(b, 'servicing')
   const rx = stateOf(b, 'reactivation')
@@ -283,19 +283,27 @@ export function PlanProductRows({ onManage, charged = '' }) {
           <button type="button" className="tp-btn ov-ghost bl-undo" onClick={() => onManage('servicing')} data-manage="servicing">{sv.kind === 'ending' ? 'Keep' : 'Change'}</button></dd></div>
       )}
       {rx.kind !== 'off' && (
-        <div data-row="own" data-state={rx.kind}><dt>Your own leads</dt><dd>
-          <b className="tp-money">{rx.kind === 'starting' ? `From ${dayWords(rx.on)}` : `${cr.big} or live call`}</b>
-          <small>Nothing monthly. Free to upload{rx.kind === 'starting' ? '' : charged}</small>
-          <span className="tp-row tp-wrap">
+        // P1029: the text on the left; Import leads and Remove leads on the same line, to its right. The old Change button
+        // (Remove for Your own leads) is gone; Remove leads (the Leads product's own removal) moved here from the card's foot.
+        <div data-row="own" data-state={rx.kind}><dt>Your own leads</dt><dd className="bl-own">
+          <span className="bl-own-text">
+            <b className="tp-money">{rx.kind === 'starting' ? `From ${dayWords(rx.on)}` : `${cr.big} or live call`}</b>
+            <small>Nothing monthly. Free to upload{rx.kind === 'starting' ? '' : charged}</small>
+          </span>
+          <span className="bl-own-acts">
             <button type="button" className="tp-btn ov-ghost bl-undo" disabled={listBusy} onClick={startList} data-import="own">Import leads</button>
-            {rx.kind === 'on' && canRemove(b, 'reactivation') && <button type="button" className="tp-btn ov-ghost bl-undo" onClick={() => onManage('reactivation')} data-manage="reactivation">Change</button>}
+            {canRemoveLeads(b, ld, picked) && <button type="button" className="tp-btn ov-ghost bl-undo" onClick={() => onManage('leads')} data-manage="leads">Remove leads</button>}
           </span></dd></div>
       )}
     </>
   )
 }
 
+// Remove leads shows when Leads is on, it isn't the only product, and it can be removed right now.
+const canRemoveLeads = (b, ld, picked) => ld.kind === 'on' && picked.length > 1 && canRemove(b, 'leads')
+
 // The plan card's quiet adds and the one removal that has no other home: Add servicing, Import leads, Remove Leads.
+// P1029: Remove leads sits in the Your own leads row; this foot link stays only when that row isn't on the card.
 export function PlanProductActions({ onAdd, onManage, noServicing = false }) {
   const { b, picked } = useProducts()
   const [listBusy, startList] = useStartList()
@@ -306,7 +314,7 @@ export function PlanProductActions({ onAdd, onManage, noServicing = false }) {
     <>
       {!noServicing && sv.kind === 'off' && ld.kind === 'off' && <button type="button" className="tp-btn ov-ghost" onClick={() => onAdd('servicing')} data-add="servicing"><ShieldCheck size={15} aria-hidden="true" />Add servicing</button>}
       {rx.kind === 'off' && <button type="button" className="tp-btn ov-ghost" disabled={listBusy} onClick={startList} data-import="own"><RotateCcw size={15} aria-hidden="true" />Import leads</button>}
-      {ld.kind === 'on' && picked.length > 1 && canRemove(b, 'leads') && <button type="button" className="pr-quiet" onClick={() => onManage('leads')} data-manage="leads">Remove Leads</button>}
+      {rx.kind === 'off' && canRemoveLeads(b, ld, picked) && <button type="button" className="pr-quiet" onClick={() => onManage('leads')} data-manage="leads">Remove Leads</button>}
     </>
   )
 }

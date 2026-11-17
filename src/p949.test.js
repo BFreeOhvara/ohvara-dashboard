@@ -38,7 +38,7 @@ test('P949: every unanswered check is one box with a date range', () => {
 test('P949: agent Overview is the P936 chart again; admin keeps the area chart', () => {
   const agent = src('./template/screens/Overview.jsx')
   assert.match(agent, /function BookedChart/)
-  assert.match(agent, /<Chart kind=\{days \? 'bar' : 'area'\}/)
+  assert.match(agent, /<Chart kind="area"/)
   assert.doesNotMatch(agent, /AreaTrend|useDeliveredTrend/)
   assert.match(src('./adminshell/screens/Overview.jsx'), /<AreaTrend\b/)
 })
