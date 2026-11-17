@@ -1,5 +1,5 @@
-import { useLayoutEffect, useRef } from 'react'
-import { acquire, release, isPhone, regionOf, place } from '../../lib/loader'
+import { useEffect, useLayoutEffect, useState } from 'react'
+import { acquire, release, isPhone, hold, SLOW_MS } from '../../lib/loader'
 
 // P1020 — the one loading screen (Brayden's approved mockups, obsidian-mind/media/loader/). Desktop: the portal's soft
 // blue-to-beige background, the logo in its real colours (big piece navy, wing teal), the wing lifting and settling on a
@@ -9,29 +9,31 @@ import { acquire, release, isPhone, regionOf, place } from '../../lib/loader'
 //
 // One overlay, many owners. It only shows once loading has taken 300 ms, so fast pages never flash it, and fades out
 // when ready. A loader that mounts right as another unmounts (sign-in check -> shell code -> page data) takes over the
-// same overlay, so a chain of loads reads as one, and the 300 ms counts from the first. <Loader /> covers the screen;
-// <Loader area /> covers only the page area (from the top of the page column down), never the top bar or menus.
-
-export function Loader({ area = false }) {
-  const slot = useRef(null)
+// same overlay, so a chain of loads reads as one, and the 300 ms counts from the first.
+//
+// P1026: it always covers the whole window, never a box inside the page. `hold` also hides the app behind it
+// (html.ol-hold) so the header and menus never show with an empty body: the whole page comes up at once.
+export function Loader({ hold: covers = false }) {
   useLayoutEffect(() => {
     const h = acquire()
     h.el.classList.toggle('ol-phone', isPhone())
-    h.el.classList.toggle('ol-area', area)
-    const region = area ? regionOf(slot.current) : null
-    const fit = () => place(h.el, region)
-    fit()
-    const ro = region && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null
-    ro?.observe(region)
-    window.addEventListener('resize', fit)
-    if (region) window.addEventListener('scroll', fit, true)
+    if (covers) hold(true)
     return () => {
-      ro?.disconnect()
-      window.removeEventListener('resize', fit)
-      window.removeEventListener('scroll', fit, true)
+      if (covers) hold(false)
       release(h)
     }
-  }, [area])
-  // In the page, the slot keeps the page area its height while the overlay sits on top of it.
-  return <span ref={slot} className={area ? 'ol-slot' : undefined} hidden={!area} aria-hidden="true" />
+  }, [covers])
+  return null
+}
+
+// P1026: a page that is slow after the portal has opened. The page on screen stays; only a slim teal line runs along
+// the very top of the window (after 300 ms, so quick pages show nothing). Past SLOW_MS it becomes the full-screen loader.
+export function PageWait() {
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setSlow(true), SLOW_MS)
+    return () => clearTimeout(t)
+  }, [])
+  if (slow) return <Loader hold />
+  return <div className="ol-top" role="progressbar" aria-label="Loading"><i /></div>
 }

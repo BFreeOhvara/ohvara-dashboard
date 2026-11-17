@@ -46,7 +46,9 @@
       .ol.is-on{opacity:1;pointer-events:auto;animation:none}
       .ol.is-out{opacity:0;transition-duration:.22s;pointer-events:none;animation:none}
       .ol.ol-boot{animation:ol-in .2s ease .3s forwards}
-      .ol.ol-area{z-index:35}
+      html.ol-hold #root{visibility:hidden}
+      .ol-top{position:fixed;top:0;left:0;right:0;height:3px;z-index:2147482999;overflow:hidden;pointer-events:none;opacity:0;animation:ol-in .2s ease .3s forwards}
+      .ol-top i{position:absolute;top:0;bottom:0;left:-40%;width:40%;border-radius:2px;background:#00BFA6;animation:ol-bar 1.3s ease-in-out infinite}
       .ol svg{display:block;width:88px;height:107px;overflow:visible}
       .ol .olb{fill:var(--ol-body)}
       .ol .olw{fill:var(--ol-wing);transform-origin:150px 245px;animation:ol-wing 1.6s cubic-bezier(.45,0,.25,1) var(--ol-t,0s) infinite}
@@ -56,12 +58,11 @@
       .ol.ol-phone svg{width:72px;height:87px}
       .ol.ol-phone .ol-track{width:120px}
       .ol.ol-phone .ol-word{display:none}
-      .ol-slot{display:block;min-height:60vh}
       @keyframes ol-in{to{opacity:1;pointer-events:auto}}
       @keyframes ol-wing{0%,100%{transform:rotate(0deg)}45%{transform:rotate(-9deg)}60%{transform:rotate(-7deg)}}
       @keyframes ol-bar{0%{left:-40%}100%{left:100%}}
       @keyframes ol-fade{0%,100%{opacity:.55}50%{opacity:1}}
-      @media (prefers-reduced-motion:reduce){.ol .olw,.ol-word{animation:none}}
+      @media (prefers-reduced-motion:reduce){.ol .olw,.ol-word{animation:none}.ol-top i{animation:none;left:0;width:100%;opacity:.7}}
     </style>
 
     <!-- Open Graph / link-unfurl preview (Prompt 294 Part A). Static: this is

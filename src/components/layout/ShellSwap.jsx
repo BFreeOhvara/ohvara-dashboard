@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo } from 'react'
+import { lazy, Suspense, useEffect, useMemo } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { usePortal } from '../../hooks/usePortalAccess'
@@ -11,6 +11,7 @@ import { ProtectedRoute } from './ProtectedRoute'
 import { DeleteAccountDialog } from '../shared/DeleteAccount'
 import { rememberPerson } from '../../template/avatarHue'
 import { Loader } from '../shared/Loader'
+import { resetBooted } from '../../lib/loader'
 import { personName } from '../../lib/personName'
 
 const AgentShell = lazy(() => import('../../template/AgentShell'))
@@ -42,6 +43,8 @@ export function ShellSwap({ children }) {
   const { profile, loading } = useAuth()
   const { pathname, search } = useLocation()
   const native = isNativeApp()
+  // P1026: a new person signing in opens the portal fresh: the full-screen loader again, not a slim line.
+  useEffect(() => { resetBooted() }, [profile?.id])
   if (isAdminPreviewPath(pathname) && !native) return <Suspense fallback={<Spinner />}><AdminShell preview /></Suspense>
   // Until we know the role, hold a shell URL: today's catch-all would send /agent/request-service (shell-only) home,
   // and /fulfillment/servicing (shell-only) the same way, and /admin/agents (P849, shell-only).

@@ -90,18 +90,17 @@ export function adoptBoot() {
   h.release = setTimeout(later, 250)
 }
 
-// The page area an in-page loader covers: the page column on desktop, the page body in the phone frames.
-export function regionOf(slot) {
-  return slot?.closest('.tp-col, .ma-solo, main') || slot?.parentElement || null
-}
+// P1026 — one loader until the page is ready. The first time a portal opens, the loading screen covers the whole window
+// and the shell stays hidden behind it (html.ol-hold, index.html) until the shell AND its first data are in, then the whole
+// page comes up at once. After that, a slow page keeps the current page on screen under a slim teal line at the top of
+// the window, and only past SLOW_MS falls back to the full-screen loader. Never a box inside the page.
+export const SLOW_MS = 2000
+let booted = false
+export const isBooted = () => booted
+export const markBooted = () => { booted = true }
+export const resetBooted = () => { booted = false }
 
-export function place(el, region) {
-  if (!region) { el.style.top = el.style.left = el.style.right = el.style.bottom = ''; return }
-  const r = region.getBoundingClientRect()
-  const phoneBody = region.classList.contains('ma-solo') && r.height > 120
-  el.style.top = `${Math.max(0, Math.round(r.top))}px`
-  el.style.left = `${Math.max(0, Math.round(r.left))}px`
-  el.style.right = '0px'
-  el.style.bottom = phoneBody ? `${Math.max(0, Math.round(window.innerHeight - r.bottom))}px` : '0px'
+// Hides the app behind the loading screen (not the overlay itself, which sits outside #root) while a hold is up.
+export function hold(on) {
+  try { document.documentElement.classList.toggle('ol-hold', on) } catch { /* no document */ }
 }
-

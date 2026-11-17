@@ -20,7 +20,7 @@ import { OhvaraMark } from '../../components/ui/OhvaraMark'
 import { isSearchKey } from '../../lib/searchKey'
 import { SUPPORT_EMAIL } from '../../components/auth/authUtils'
 import { useFulDay, useFulClients, useFulSettings, useFulPay, useFulTasks, useFulActions, useFulAgents, useFulShift, useFulSchedule, useAgentAppts, useVaBooking, useFulLive, useFulClock, useFulSource, useFulStatus } from './data'
-import { DataLoading, DataError } from '../DataState'
+import { useDataBody } from '../useDataBody'
 import { SlotPick } from '../SlotPick'
 import { useClientZone } from '../useClientZone'
 import { agentSlots, clocksBetween, zoneAbbr, DEFAULT_APPT_MIN } from '../../lib/callSlots'
@@ -300,6 +300,7 @@ export default function FulFrame() {
   const source = useFulSource()
   const isTest = useIsTestAccount() // P929: no sample line on test accounts
   const status = useFulStatus()
+  const dataBody = useDataBody(status, page.el)
   const { sum: trainSum } = useTraining(account.name)
   const trainLeft = trainSum.left
   const close = useCallback(() => setPanel(null), [])
@@ -496,7 +497,7 @@ export default function FulFrame() {
         </div>
 
         <main className={`tp-main fx-main fs-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>
-          {status.error ? <DataError onRetry={status.retry} /> : status.loading ? <DataLoading /> : page.el}
+          {dataBody}
           {!isTest && source !== 'real' && <p className="tp-foot">Sample info. Changes reset when you reload.</p>}
         </main>
       </div>

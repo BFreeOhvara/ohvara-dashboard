@@ -10,7 +10,7 @@ import { useNavKeys } from '../useProducts'
 import { useClientStatusOf } from '../checkSettings'
 import { clockNow } from '../leadLifecycle'
 import { paths } from '../paths'
-import { DataLoading, DataError } from '../DataState'
+import { usePhoneBody } from '../useDataBody'
 import { NoShowUndo } from '../LeadOutcome'
 import { AppCtx, ResultSheet, SoldSheet, FollowPicker, Ini, useStill } from './AppKit'
 import { SupportProvider, AThread } from './AMessages'
@@ -191,7 +191,7 @@ function Frame() {
   const swipeL = useBackSwipe({ layerRef: notifRef, underOf: underL, scrimRef, dir: -1, on: notif, onClose: doBack })
 
   const hideBar = OWN_BAR.includes(route.sub) || notif || (route.sub === 'clients' && !!route.id) // P972: a client has its own button at the bottom
-  const body = status.error ? <DataError onRetry={status.retry} /> : status.loading ? <DataLoading /> : null
+  const { body, wait } = usePhoneBody(status)
   const { onClickCapture } = useTabSwipe({ viewRef, trackRef, barRef, idx, count: tabs.length, onSwitch, on: !body })
   const trackStyle = { transform: `translate3d(calc(${-idx * 100}% + 0px), 0, 0)`, transition: still ? 'none' : undefined }
 
@@ -200,6 +200,7 @@ function Frame() {
       <div className={`tp fx ma${still ? ' is-still' : ''}${route.sub ? ' has-sub' : ''}`} ref={frameRef}>
         <div className="tp-sky" aria-hidden="true" />
         {!body && <PhoneZone tz={zoneSet?.timeZone} save={tz => saveZone({ timeZone: tz })} real={source === 'real'} />}
+        {wait}
         {body
           ? <main className="ma-solo">{body}</main>
           : (

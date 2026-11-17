@@ -7,7 +7,7 @@ import { useAccount } from '../../kit'
 import { useFulSchedule, useFulStatus, useFulSource, useFulSettings, useFulActions } from '../../ful/data'
 import { PhoneZone } from '../zone'
 import { fp } from '../../ful/paths'
-import { DataLoading, DataError } from '../../DataState'
+import { usePhoneBody } from '../../useDataBody'
 import { AppCtx, Ini, useStill } from '../AppKit'
 import { useTabSwipe } from '../useTabSwipe'
 import { useBackSwipe } from '../useBackSwipe'
@@ -155,7 +155,7 @@ function Frame() {
   const swipeL = useBackSwipe({ layerRef: notifRef, underOf: underL, scrimRef, dir: -1, on: notif, onClose: doBack })
 
   const hideBar = VA_NO_BAR.includes(route.sub) || notif
-  const body = status.error ? <DataError onRetry={status.retry} /> : status.loading ? <DataLoading /> : null
+  const { body, wait } = usePhoneBody(status)
   const { onClickCapture } = useTabSwipe({ viewRef, trackRef, barRef, idx, count: VA_TABS.length, onSwitch, on: !body })
   const trackStyle = { transform: `translate3d(calc(${-idx * 100}% + 0px), 0, 0)`, transition: still ? 'none' : undefined }
 
@@ -164,6 +164,7 @@ function Frame() {
       <div className={`tp fx ma va${still ? ' is-still' : ''}${route.sub ? ' has-sub' : ''}`} ref={frameRef}>
         <div className="tp-sky" aria-hidden="true" />
         {!body && <PhoneZone tz={zoneSet?.timeZone} save={tz => saveZone({ timeZone: tz })} real={zoneReal} />}
+        {wait}
         {body
           ? <main className="ma-solo">{body}</main>
           : (

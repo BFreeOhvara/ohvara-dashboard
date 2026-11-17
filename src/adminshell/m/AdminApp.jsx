@@ -5,7 +5,7 @@ import { useTheme } from '../../hooks/useTheme'
 import { useAdmSource, useAdmMeta, useAdmSettings, useAdmActions } from '../data'
 import { PhoneZone } from '../../template/m/zone'
 import { ap } from '../paths'
-import { DataLoading, DataError } from '../../template/DataState'
+import { usePhoneBody } from '../../template/useDataBody'
 import { AppCtx, Ini, useStill } from '../../template/m/AppKit'
 import { useTabSwipe } from '../../template/m/useTabSwipe'
 import { useBackSwipe } from '../../template/m/useBackSwipe'
@@ -157,7 +157,7 @@ export default function AdminApp() {
   const swipeL = useBackSwipe({ layerRef: notifRef, underOf: underL, scrimRef, dir: -1, on: notif, onClose: doBack })
 
   const hideBar = ADM_OWN_BAR.includes(route.sub) || notif
-  const body = meta?.error ? <DataError onRetry={meta.retry} /> : meta?.isLoading ? <DataLoading /> : null
+  const { body, wait } = usePhoneBody({ loading: !!meta?.isLoading, error: meta?.error, retry: meta?.retry })
   const { onClickCapture } = useTabSwipe({ viewRef, trackRef, barRef, idx, count: ADM_TABS.length, onSwitch, on: !body })
   const trackStyle = { transform: `translate3d(calc(${-idx * 100}% + 0px), 0, 0)`, transition: still ? 'none' : undefined }
 
@@ -166,6 +166,7 @@ export default function AdminApp() {
       <div className={`tp fx ma va am${still ? ' is-still' : ''}${route.sub ? ' has-sub' : ''}`} ref={frameRef}>
         <div className="tp-sky" aria-hidden="true" />
         {!body && <PhoneZone tz={zoneSet?.tz} save={setTz} real={source === 'real'} />}
+        {wait}
         {body
           ? <main className="ma-solo">{body}</main>
           : (
