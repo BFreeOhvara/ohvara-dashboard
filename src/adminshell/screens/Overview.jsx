@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom'
-import { Check, CalendarDays, CreditCard, PhoneCall, Radio, Megaphone, MapPin, Shuffle, Rocket, CalendarOff, PhoneIncoming, Headset, Landmark, Users, RotateCcw } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { Check, CalendarDays, CreditCard, PhoneCall, Radio, Megaphone, MapPin, Shuffle, Rocket, CalendarOff, PhoneIncoming, Headset, Landmark, Users, RotateCcw, Mail } from 'lucide-react'
 import { useAdmDay, useAdmMoney, useAdmAgents, useAdmDesk, useAdmCosts, useAdmSetup, useAdmRota, useAdmVas, useAdmSource, useAdmSettings, SHIFT_MIN, dateText } from '../data'
 import { useAdmReactivation, pausedLists } from '../reactivation952'
 import { Avatar } from '../../template/kit'
@@ -12,6 +12,8 @@ import { adAlerts } from '../p879'
 import LiveStatus from '../LiveStatus'
 import { LiveClock } from '../../template/Clock'
 import { adminTodos, shortCover } from '../todos'
+import { useAdmNotices, noticeWhy } from '../notices1027'
+import { NoticeDrawer } from '../NoticeDrawer1027'
 import { useStateChanges, openChanges, diffWords, dayWords, doneStateChange } from '../../template/adStates'
 import Chart from '../../template/Chart'
 import AreaTrend from '../../template/AreaTrend'
@@ -26,7 +28,7 @@ import '../p964.css'
 // P906: "transferred" reads Live calls; no missed transfers (a missed one bounces back and is booked).
 // P914: "Needs you" is To-dos: a clean list of real admin jobs (todos.js), each with one action; what fits shows, the
 // rest wait behind "Show all" (never cut off). Empty: All caught up.
-const TODO_ICON = { lead: Shuffle, card: CreditCard, launch: Rocket, cover: CalendarOff, ad: Megaphone, states: MapPin, reactivation: RotateCcw }
+const TODO_ICON = { notice: Mail, lead: Shuffle, card: CreditCard, launch: Rocket, cover: CalendarOff, ad: Megaphone, states: MapPin, reactivation: RotateCcw }
 const money = usd()
 const cents = usd(true)
 const REV_SERIES = [{ key: 'plans', label: 'Plan fees', color: 'var(--ox-1)' }, { key: 'fee', label: 'Booking desk', color: 'var(--ox-3)' }, { key: 'setup', label: 'Setup fees', color: 'var(--ox-4)' }]
@@ -89,12 +91,18 @@ export default function Overview() {
   // P949: an agent's state change waits here until the campaign has the new states (sample store until the sync does it).
   const stateChanges = useStateChanges()
   // P952: reactivation lists that paused themselves.
-  const react = useAdmReactivation(useAdmSource())
+  const src = useAdmSource()
+  const react = useAdmReactivation(src)
+  // P1027: forwarded carrier notices waiting for an admin (Needs a look).
+  const notices = useAdmNotices(src)
+  const [params, setParams] = useSearchParams()
+  const openNotice = notices.list.find(n => n.id === params.get('notice')) || null
   // P1017: real mode lists only real agents' changes (never the sample Dana, or a save made on a sample page).
   const states = openChanges(day.real ? stateChanges.filter(c => agents.some(a => a.id === c.agentId)) : stateChanges).map(c => ({ ...c, name: agents.find(a => a.id === c.agentId)?.name || c.agentName, diff: diffWords(c), startsText: dayWords(c.starts),
     onDone: () => doneStateChange(c.id, new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) }))
   const todos = adminTodos({
     unassigned: day.unassigned, pipeline, failed: day.failed, cover, ads: day.real ? [] : adAlerts(), states, react: pausedLists(react),
+    notices: notices.list.map(n => ({ ...n, whyText: noticeWhy(n.why) })),
     ap, money, dayText: dateText, agentName: id => agents.find(a => a.id === id)?.name || 'An agent',
   })
   const onShift = day.onShift.map(v => ({ ...v, calls: desk.filter(c => c.va_id === v.id) }))
@@ -182,6 +190,8 @@ export default function Overview() {
           ))}
         </ul>
       </Tile>
+      <NoticeDrawer n={openNotice} match={notices.match} dismiss={notices.dismiss}
+        onClose={() => { const p = new URLSearchParams(params); p.delete('notice'); setParams(p, { replace: true }) }} />
     </div>
   )
 }

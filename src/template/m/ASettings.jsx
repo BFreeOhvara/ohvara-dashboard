@@ -257,7 +257,7 @@ function Section({ k }) {
   if (k === 'leadtype') return <div className="ma-embed">{intro('The kind of life insurance leads you get. Once leads run, a switch starts the next day.')}<div className="ma-glass ma-pad"><LeadTypeCard compact /></div></div>
   if (k === 'licence') return <div className="ma-embed">{intro('Your licence and the states your leads come from.')}<LicenceCard /></div>
   if (k === 'setup') return <div className="ma-embed">{intro('The same steps our team sees, from sign-up to your first leads.')}{setupView ? <SetupProgress view={setupView} /> : <p className="ma-empty is-glass">Your setup steps show here once you’ve signed up.</p>}</div>
-  if (k === 'email') return <div className="ma-embed">{intro('Forward carrier emails here: a lapse, missed payment or bounced draft becomes a save call for the team.')}<PaymentIntakeCard /></div>
+  if (k === 'email') return <div className="ma-embed">{intro('Your carriers’ policy notices come to Ohvara, so a missed payment becomes a save call for the team before you’ve opened your inbox.')}<PaymentIntakeCard /></div>
   if (k === 'calls') {
     const dirty = JSON.stringify(week) !== JSON.stringify(s.week)
     return (

@@ -20,3 +20,15 @@
 .pi-now { display: inline-flex; gap: 6px; align-items: center; }
 .pi-act { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--ov-warn-tint); color: var(--ov-hi); font-size: 13px; }
 .pi-act > svg { flex: none; margin-top: 2px; color: var(--ov-warn); }
+/* P1027 — Connect carrier emails */
+.pi-safe { display: flex; gap: 8px; align-items: flex-start; margin: 0; font-size: 13px; color: var(--ov-mid); line-height: 1.5; }
+.pi-safe > svg { flex: none; margin-top: 3px; color: var(--ov-data-a); }
+.pi-carriers { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.pi-carriers li { display: inline-flex; gap: 6px; align-items: center; min-width: 0; padding: 4px 4px 4px 10px; border-radius: 999px; border: 1px solid var(--ov-line); font-size: 13px; color: var(--ov-hi); }
+.pi-carriers code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: var(--ov-mid); overflow-wrap: anywhere; }
+.pi-x { display: inline-grid; place-items: center; width: 24px; height: 24px; border: 0; border-radius: 999px; background: transparent; color: var(--ov-mid); cursor: pointer; }
+.pi-x:hover { background: var(--ov-stub); color: var(--ov-hi); }
+.pi-add { display: flex; flex-wrap: wrap; gap: 8px; }
+.pi-add input { flex: 1 1 160px; min-width: 0; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--ov-line); background: var(--ov-page); color: var(--ov-hi); font: inherit; font-size: 14px; }
+.pi-gcode { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--ov-data-a-tint); color: var(--ov-hi); font-size: 14px; }
+.pi-gcode code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 16px; letter-spacing: .04em; }

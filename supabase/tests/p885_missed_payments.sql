@@ -47,7 +47,7 @@ values
 
 -- ── The forwarding address ──
 select pg_temp.as_user('a8850000-0000-4000-8000-00000000000a');
-select matches(public.my_payment_intake_address(), '^pay\+[a-z0-9]{10}@in\.ohvara\.com$', 'an agent gets a pay+token address');
+select matches(public.my_payment_intake_address(), '^ada-[a-z0-9]{4}@notices\.ohvara\.com$', 'an agent gets a name-style address (P1027)');
 select is(public.my_payment_intake_address(), public.my_payment_intake_address(), 'the same address every time');
 create temp table t_addr as select public.my_payment_intake_address() as old_addr;
 select isnt(public.rotate_my_payment_intake_address(), (select old_addr from t_addr), 'rotate gives a new address');
@@ -56,12 +56,12 @@ select pg_temp.as_user('a8850000-0000-4000-8000-0000000000f1');
 select throws_ok($$ select public.my_payment_intake_address() $$, '42501', null, 'a VA has no forwarding address');
 select pg_temp.as_user('a8850000-0000-4000-8000-00000000000b');
 select is((select count(*)::int from public.payment_intake_addresses where agent_id = 'a8850000-0000-4000-8000-00000000000a'), 0, 'agent B can''t see A''s address');
-select ok(public.my_payment_intake_address() like 'pay+%', 'agent B gets one too');
+select ok(public.my_payment_intake_address() like 'bo-%@notices.ohvara.com', 'agent B gets one too');
 select pg_temp.as_owner();
 create temp table t_tok as
   select (select token from public.payment_intake_addresses where agent_id = 'a8850000-0000-4000-8000-00000000000a') as a,
          (select token from public.payment_intake_addresses where agent_id = 'a8850000-0000-4000-8000-00000000000b') as b,
-         substr(split_part((select old_addr from t_addr), '@', 1), 5) as old;
+         split_part((select old_addr from t_addr), '@', 1) as old;
 select is(public.payment_intake_receive((select old from t_tok), 'm-old', 'x@y', 'Payment missed', '', '{"kind":"missed","policy_number":"HL-100-200"}')->>'status',
           'unknown_address', 'the old address stops working after a rotate');
 

@@ -26,7 +26,7 @@ import { NotifSettings } from '../../components/notifications/NotifSettings'
 
 // P929: Settings back to the pre-P924 layout (profile card on the left, tabs on the right). Notifications is only the
 // switches; the carrier-email forwarding address that sat under it has its own Email tab, so no section is long.
-const TABS = [['profile', 'Profile', User], ['setup', 'Your setup', Rocket], ['licence', 'Licence', BadgeCheck], ['alerts', 'Notifications', Bell], ['email', 'Email', Mail], ['calls', 'Hours and calls', Radio], ['billing', 'Billing', CreditCard], ['look', 'Appearance', SunMoon]]
+const TABS = [['profile', 'Profile', User], ['setup', 'Your setup', Rocket], ['licence', 'Licence', BadgeCheck], ['alerts', 'Notifications', Bell], ['calls', 'Hours and calls', Radio], ['email', 'Carrier emails', Mail], ['billing', 'Billing', CreditCard], ['look', 'Appearance', SunMoon]]
 const NEEDS = ['ringing', 'showed']
 const PRIVACY_URL = 'https://ohvara.com/privacy'
 const THEME_NAME = { light: 'Light', dark: 'Dark', system: 'System (follows your device)' }
@@ -176,7 +176,7 @@ export default function Settings() {
           </>}
 
           {tab === 'email' && <>
-            <Head title="Email" sub="Forward carrier emails here: a lapse, missed payment or bounced draft becomes a save call for the team." />
+            <Head title="Connect carrier emails" sub="Your carriers’ policy notices come to Ohvara, so a missed payment becomes a save call for the team before you’ve opened your inbox." />
             <PaymentIntakeCard />
           </>}
 

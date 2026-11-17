@@ -39,7 +39,7 @@ values
   ('b8880000-0000-4000-8000-000000000004', 'a8880000-0000-4000-8000-00000000000a', 'Lee',  'Park',  'Americo', 'AM-404', 'In Effect', (current_date - interval '5 months')::date, 'TX');
 
 select pg_temp.as_user('a8880000-0000-4000-8000-00000000000a');
-select ok(public.my_payment_intake_address() like 'pay+%', 'agent A has a forwarding address');
+select ok(public.my_payment_intake_address() like '%@notices.ohvara.com', 'agent A has a forwarding address (P1027: name-style)');
 select pg_temp.as_owner();
 create temp table t_tok as select token as a from public.payment_intake_addresses where agent_id = 'a8880000-0000-4000-8000-00000000000a';
 

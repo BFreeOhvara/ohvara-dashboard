@@ -11,7 +11,7 @@ import { HoursEditor, CalendarConnect } from '../Hours'
 import { SpendSliders, SpendSummary } from '../PlanBuilder'
 import { DEFAULT_LIVE_HOURS, PITCH, takeOk } from '../../lib/leadSplit'
 import { TalkDrawer } from '../Talk'
-import { ForwardSetup } from '../PaymentIntake'
+import { CarrierEmails } from '../PaymentIntake'
 import '../p885.css'
 import { DeskInfo } from '../../components/agent/DeskInfo'
 import { openSlotsPerWeek, slotsNeeded, spendOk, dailyTotal, nightlyFor, feeWords, LEAD_FEE, SETUP_FEE } from '../spendPlan'
@@ -113,7 +113,7 @@ export default function Welcome() {
     // P909: a card on file before leads start (lead spend is charged nightly, the plan monthly).
     { key: 'card', label: 'Your card', done: !!s.card },
     // P890: forward carrier emails (missed payments) to the agent's address. Servicing only; skippable.
-    ...(s.products === 'leads' ? [] : [{ key: 'forward', label: 'Carrier emails', done: !!(s.forward?.tested || s.forward?.later) }]),
+    ...(s.products === 'leads' ? [] : [{ key: 'forward', label: 'Connect carrier emails', done: !!(s.forward?.tested || s.forward?.later) }]),
     { key: 'app', label: 'Phone app', done: s.push === 'yes' },
     { key: 'terms', label: 'Terms', done: s.terms },
   ]
@@ -168,9 +168,8 @@ export default function Welcome() {
               <p className="tp-sub">Setup is {money(SETUP_FEE)} once, charged when you finish. It isn{'’'}t refunded.</p>
             </>}
             {cur.key === 'forward' && <>
-              <header className="fx-form-h"><h2>Carrier emails</h2><p>When a carrier emails you about a missed or returned payment, forward it to us and the team calls the client the same day.</p></header>
-              <code className="pi-code" aria-label="Your forwarding address">{settings.paymentIntake?.address}</code>
-              <ForwardSetup value={s.forward} address={settings.paymentIntake?.address} onChange={f => stable(x => ({ ...x, forward: { ...f, later: false } }))} />
+              <header className="fx-form-h"><h2>Connect carrier emails</h2><p>Forward your carriers’ policy notices to Ohvara so our team catches missed payments for you. When a payment fails or a policy heads for lapse, we call your client the same day.</p></header>
+              <CarrierEmails compact onTested={() => { if (!s.forward?.tested) stable(x => ({ ...x, forward: { ...x.forward, tested: true, later: false } })) }} />
               {!s.forward?.tested && <button type="button" className="tp-btn ov-ghost fx-self" onClick={() => stable(x => ({ ...x, forward: { ...x.forward, later: true } }))}>{s.forward?.later ? 'Skipped: set it up later in Settings' : 'I’ll do this later in Settings'}</button>}
             </>}
             {cur.key === 'app' && <PushStep s={s} up={stable} />}
