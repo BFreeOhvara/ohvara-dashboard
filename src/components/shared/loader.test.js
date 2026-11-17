@@ -33,7 +33,7 @@ test('it waits 300 ms before showing', () => {
 })
 
 test('every page-level loading state uses it', () => {
-  assert.match(src('../../template/DataState.jsx'), /<Loader area \/>/)
+  assert.match(src('../../template/DataState.jsx'), /<Loader hold \/>/)
   assert.match(src('../layout/ShellSwap.jsx'), /const Spinner = \(\) => <Loader \/>/)
   assert.match(src('../layout/ProtectedRoute.jsx'), /if \(loading\) return <Loader \/>/)
   const app = src('../../App.jsx')
@@ -41,6 +41,25 @@ test('every page-level loading state uses it', () => {
   assert.doesNotMatch(app, /Suspense fallback=\{null\}/)
   assert.match(src('../../adminshell/AdminShell.jsx'), /<Suspense fallback=\{<Loader \/>\}><AdminApp \/>/)
   assert.match(src('../../main.jsx'), /adoptBoot\(\)\r?\n\r?\ncreateRoot/)
+})
+
+test('P1026: one full-screen loader until the page is ready, never a box inside the page', () => {
+  const state = src('../../template/DataState.jsx')
+  const css = html.match(/<style id="ol-css">([\s\S]*?)<\/style>/)?.[1] || ''
+  // no in-page (area) loader anywhere
+  for (const f of ['../Loader.jsx', '../../lib/loader.js', '../../template/DataState.jsx', '../../App.jsx']) assert.doesNotMatch(src(f.replace('../Loader.jsx', './Loader.jsx')), /Loader area|regionOf|ol-slot|ol-area/)
+  assert.doesNotMatch(css, /ol-area|ol-slot/)
+  // the first open holds the app behind the loader; later slow pages get a slim line, then the full screen after 2 s
+  assert.match(css, /html\.ol-hold #root\{visibility:hidden\}/)
+  assert.match(css, /\.ol-top\{position:fixed;top:0;left:0;right:0;height:3px/)
+  assert.match(css, /\.ol-top i\{[^}]*background:#00BFA6/)
+  assert.match(css, /\.ol-top\{[^}]*animation:ol-in \.2s ease \.3s forwards/)
+  assert.match(loader, /export const SLOW_MS = 2000/)
+  assert.match(state, /isBooted\(\) \? <PageWait \/> : <Loader hold \/>/)
+  for (const f of ['../../template/TemplateFrame.jsx', '../../template/ful/FulFrame.jsx']) assert.match(src(f), /useDataBody\(status, page\.el\)/)
+  for (const f of ['../../template/m/MobileFrame.jsx', '../../template/m/va/VaApp.jsx', '../../adminshell/m/AdminApp.jsx']) assert.match(src(f), /usePhoneBody\(/)
+  const app = src('../../App.jsx')
+  assert.equal((app.match(/Suspense fallback=\{<PageWait \/>\}/g) || []).length, 3)
 })
 
 test('the app intro is always the dark one: navy ground, big piece teal, wing white, in light and dark mode', () => {

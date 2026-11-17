@@ -20,7 +20,7 @@ import { useClientStatusOf } from './checkSettings'
 import { Drawer, Field, PillTabs, Seg, useAccount, useNote, initials } from './kit'
 import { ReportBug } from './ReportBug'
 import { avatarHue } from './avatarHue'
-import { DataLoading, DataError } from './DataState'
+import { useDataBody } from './useDataBody'
 import { wig, still, CountUp, RollTitle, usePageSwap, usd, useExit, useKeep } from './motion'
 import { armEntrance } from '../adminshell/entrance'
 import { visibilityGate } from '../adminshell/entrance'
@@ -355,6 +355,7 @@ export default function TemplateFrame() {
   // with the same page swap as a nav tab.
   const msg = useMessagesToggle(layoutOf(pathname) === 'messages', paths.home())
   const status = useDataStatus()
+  const dataBody = useDataBody(status, page.el)
   const source = useDataSource()
   const isTest = useIsTestAccount() // P929: no sample line on test accounts
   const unread = threads.reduce((n, t) => n + t.unread, 0)
@@ -472,7 +473,7 @@ export default function TemplateFrame() {
         </div>
 
         <main className={`tp-main fx-main${page.leaving ? ' is-leaving' : ''}`} key={page.key}>
-          {status.error ? <DataError onRetry={status.retry} /> : status.loading ? <DataLoading /> : page.el}
+          {dataBody}
           {!isTest && source === 'sample' && <p className="tp-foot">Sample info. Changes reset when you reload.</p>}
         </main>
       </div>

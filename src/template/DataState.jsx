@@ -1,11 +1,15 @@
 import { RefreshCw, CloudOff } from 'lucide-react'
 import './p848.css'
-import { Loader } from '../components/shared/Loader'
+import { Loader, PageWait } from '../components/shared/Loader'
+import { isBooted } from '../lib/loader'
 
 // P848 — the real portal's loading and error states, in the shell style. Sample data never shows either.
-// P1020: slow page data shows the loading screen over the page area (not the top bar), only past 300 ms.
+// P1026: one loader until the page is ready. The first time the portal opens, the full-screen loading screen covers
+// the window (the header and menus stay hidden behind it) until the data is in, then the whole page comes up at once.
+// After that, a slow page keeps the page on screen with a slim teal line along the top of the window (PageWait), and
+// only past two seconds falls back to the full-screen loader. Never a box inside the page.
 export function DataLoading() {
-  return <div className="tp-page fx-page dz-load"><Loader area /></div>
+  return isBooted() ? <PageWait /> : <Loader hold />
 }
 
 export function DataError({ onRetry }) {

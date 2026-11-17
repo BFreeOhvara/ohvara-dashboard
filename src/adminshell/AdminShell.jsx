@@ -16,6 +16,7 @@ import { withProducts } from './products955'
 import { usePhone } from '../template/m/phone'
 import { Loader } from '../components/shared/Loader'
 import { DataLoading } from '../template/DataState'
+import { useBoot } from '../template/useDataBody'
 
 // P986 — below 768 px (and in the native app) an admin gets the admin phone app (src/adminshell/m), same addresses
 // and data; 768 px and up is the desktop admin exactly as it was. Loaded only on a phone, so its styles never reach
@@ -33,8 +34,9 @@ const SAMPLE = { live: false, name: ME.name, signOut: null, DeleteDialog: null }
 // didn't load while the rest still shows. Sample data never shows here.
 function RealGate({ children }) {
   const meta = useAdmMeta()
+  useBoot(!!meta?.isLoading)
   if (!meta) return children
-  if (meta.isLoading) return <DataLoading /> // P1020: the loading screen over the page area, only past 300 ms
+  if (meta.isLoading) return <DataLoading /> // P1026: the full-screen loader the first time, a slim line after; never a box
   if (meta.error) {
     return (
       <div className="tp-page fx-page" role="alert">
