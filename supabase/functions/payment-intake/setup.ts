@@ -32,7 +32,11 @@ export async function setup(req: Request, api: ResendApi, secrets: SecretStore, 
   try {
     if (mode === 'status' && req.method === 'GET') {
       const d = await domain(api, false)
-      return json(200, { domain: DOMAIN, found: !!d, status: d?.status ?? null, records: d ? records(d) : [], webhook_secret_saved: !!(await secrets.get()) })
+      // How many emails Resend has received lately and when the last came in (no addresses or content).
+      const rx = await api('GET', '/emails/receiving?limit=20')
+      const got = list(rx.json)
+      const received = rx.ok ? { count: got.length, latest_at: got.map(x => String(x.created_at ?? '')).sort().pop() ?? null } : null
+      return json(200, { domain: DOMAIN, found: !!d, status: d?.status ?? null, records: d ? records(d) : [], webhook_secret_saved: !!(await secrets.get()), received })
     }
     if (mode === 'verify' && req.method === 'POST') {
       // After the DNS records are added: ask Resend to check them now (safe to repeat).
