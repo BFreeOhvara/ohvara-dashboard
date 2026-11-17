@@ -372,17 +372,22 @@ export function useOverviewReal() {
     const weekStart = i => new Date(thisMon.getTime() - i * 7 * 86400000)
     const inWeek = (w, i) => { const s = weekStart(i).toISOString().slice(0, 10); const e = weekStart(i - 1).toISOString().slice(0, 10); return w.slice(0, 10) >= s && w.slice(0, 10) < e }
     const thisWeek = bookedAt.filter(w => inWeek(w, 0)).length
+    // P1029: the finished weeks (up to 12, oldest first) that overlap the time the agent has been here; the desktop chart's
+    // 4 / 8 / 12 filter reads these. `points` is untouched (the phone keeps using it).
+    const joinedAt = d0.getTime() - age * 86400000
+    const past = Array.from({ length: 12 }, (_, k) => 12 - k).filter(i => weekStart(i - 1).getTime() > joinedAt)
+      .map(i => { const s = weekStart(i); return [`${MON[s.getUTCMonth()]} ${s.getUTCDate()}`, bookedAt.filter(w => inWeek(w, i)).length] })
     let bookedChart
     if (age < 14) {
       const todayIdx = (d0.getUTCDay() + 6) % 7
-      bookedChart = { mode: 'days', range: 'This week, day by day', empty: thisWeek === 0, prev: null, prevSoFar: null, share: weekShare(now), points: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((dd, i) => [dd, bookedAt.filter(w => w.slice(0, 10) === new Date(thisMon.getTime() + i * 86400000).toISOString().slice(0, 10)).length, i > todayIdx]) }
+      bookedChart = { mode: 'days', range: 'This week, day by day', empty: thisWeek === 0, prev: null, prevSoFar: null, share: weekShare(now), past, points: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((dd, i) => [dd, bookedAt.filter(w => w.slice(0, 10) === new Date(thisMon.getTime() + i * 86400000).toISOString().slice(0, 10)).length, i > todayIdx]) }
     } else {
       const n = Math.min(8, Math.max(2, Math.ceil(age / 7)))
       const points = Array.from({ length: n }, (_, k) => { const i = n - 1 - k; const s = weekStart(i); return [`${MON[s.getUTCMonth()]} ${s.getUTCDate()}`, bookedAt.filter(w => inWeek(w, i)).length] })
       // P991: last week by this same time (same weekday and clock), for "N by this time last week · M by the end".
       const ago = weekAgo(now)
       const prevSoFar = points.length > 1 ? bookedAt.filter(w => inWeek(w, 1) && w.slice(0, 16) <= ago).length : null
-      bookedChart = { mode: 'weeks', range: age < 56 ? 'Since you joined' : 'Last 8 weeks', empty: false, prev: points.length > 1 ? points[points.length - 2][1] : null, prevSoFar, share: weekShare(now), points }
+      bookedChart = { mode: 'weeks', range: age < 56 ? 'Since you joined' : 'Last 8 weeks', empty: false, prev: points.length > 1 ? points[points.length - 2][1] : null, prevSoFar, share: weekShare(now), past, points }
     }
     const nowMin = Number(now.slice(11, 13)) * 60 + Number(now.slice(14, 16))
     const today = appts.data.filter(a => a.wall?.slice(0, 10) === now.slice(0, 10))

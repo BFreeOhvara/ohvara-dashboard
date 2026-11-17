@@ -77,3 +77,8 @@
 .fx-proj-lbl { opacity: 0.85; }
 .fx-proj-dot { fill: color-mix(in srgb, var(--ox-1) 32%, transparent); stroke: color-mix(in srgb, var(--ox-1) 55%, transparent); stroke-width: 1.5; }
 .fx-proj-lbl text, text.fx-proj-lbl { fill: var(--ox-axis); }
+
+/* P1029: the Delivered card's "Last N weeks" filter (in the corner where the label was), and its empty line. */
+.fx-key .fx-sel.fx-wkf { width: auto; min-height: 30px; padding: 0 8px 0 12px; gap: 6px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--ov-mid); background: transparent; }
+.fx-key .fx-sel.fx-wkf .fx-sel-chev { width: 14px; height: 14px; }
+.fx-dl-none { flex: 1; min-height: 120px; justify-content: center; text-align: center; }

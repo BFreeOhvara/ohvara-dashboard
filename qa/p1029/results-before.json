@@ -1,0 +1,67 @@
+{
+ "hero": {
+  "text": "Delivered this week Your lead spend delivers about 9 to 17 a week: booked calls and live calls 6 Delivered 4 booked · 2 live calls 1 by this time last week · 12 by the end Ahead of pace Delivered per week Expected at your spend Last 8 weeks so far Sep 14 Sep 21 Sep 28 Oct 5 Oct 12 Oct 19 Oct 26 This"
+ },
+ "leadLinks": [
+  "/template/leads/sample-lead-3",
+  "/template/leads/sample-lead-21",
+  "/template/leads/sample-lead-22",
+  "/template/leads/sample-lead-1",
+  "/template/leads/sample-lead-7",
+  "/template/leads/sample-lead-8",
+  "/template/leads/sample-lead-15",
+  "/template/leads/sample-lead-17",
+  "/template/leads/sample-lead-4",
+  "/template/leads/sample-lead-6",
+  "/template/leads/sample-lead-18",
+  "/template/leads/sample-lead-14",
+  "/template/leads/sample-lead-19",
+  "/template/leads/sample-lead-5",
+  "/template/leads/sample-lead-16"
+ ],
+ "lead1": {
+  "bubbles": 5,
+  "sent": 3
+ },
+ "lead2": {
+  "bubbles": 0,
+  "sent": 0
+ },
+ "lead3": {
+  "bubbles": 0,
+  "sent": 0
+ },
+ "lead4": {
+  "bubbles": 7,
+  "sent": 6
+ },
+ "lead5": {
+  "bubbles": 6,
+  "sent": 5
+ },
+ "lead6": {
+  "bubbles": 6,
+  "sent": 5
+ },
+ "lead7": {
+  "bubbles": 4,
+  "sent": 4
+ },
+ "lead8": {
+  "bubbles": 6,
+  "sent": 5
+ },
+ "lead9": {
+  "bubbles": 4,
+  "sent": 3
+ },
+ "billing": {
+  "plan": "Your plan Month to month. Cancel anytime Sample price Current plan Growth Plan price $1,499 / month Renews Tue, Dec 1 Every month on the 1st Daily lead spend $100 / day + booking desk Your states AZ, FL, GA, TX Your leads only come from these states Your own leads $20 per appointment or live call Nothing monthly. Free to upload · $40 charged so far Import leads Change Edit plan Your states Remove Leads"
+ },
+ "clients": {
+  "rows": 5,
+  "more": "Show all 15"
+ },
+ "errs": [],
+ "phoneErrs": []
+}
