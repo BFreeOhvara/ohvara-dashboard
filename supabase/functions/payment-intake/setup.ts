@@ -1,7 +1,7 @@
 // payment-intake setup — P1027. One-time Resend set-up done server-side, so no key or signing secret is ever copied
 // by hand: POST ?setup=resend adds notices.ohvara.com to Resend (receiving only) if missing, creates the email.received
 // webhook pointing here, and keeps its signing secret in Vault. It runs only while no secret is saved (one-shot);
-// afterwards it answers 409. GET ?setup=status shows the domain's DNS records and status (public DNS facts only).
+// afterwards it answers 409. POST ?setup=verify asks Resend to re-check the DNS. GET ?setup=status shows the domain's DNS records and status (public DNS facts only).
 // The secret is never returned. Tests: setup.test.ts.
 
 export type ResendApi = (method: string, path: string, body?: unknown) => Promise<{ ok: boolean; status: number; json: Record<string, unknown> }>
@@ -34,7 +34,15 @@ export async function setup(req: Request, api: ResendApi, secrets: SecretStore, 
       const d = await domain(api, false)
       return json(200, { domain: DOMAIN, found: !!d, status: d?.status ?? null, records: d ? records(d) : [], webhook_secret_saved: !!(await secrets.get()) })
     }
-    if (mode !== 'resend' || req.method !== 'POST') return json(400, { error: 'Use POST ?setup=resend or GET ?setup=status' })
+    if (mode === 'verify' && req.method === 'POST') {
+      // After the DNS records are added: ask Resend to check them now (safe to repeat).
+      const d = await domain(api, false)
+      if (!d) return json(404, { error: 'Run POST ?setup=resend first' })
+      const v = await api('POST', `/domains/${d.id}/verify`)
+      const g = await domain(api, false)
+      return json(v.ok ? 200 : 502, { domain: DOMAIN, status: g?.status ?? null, records: g ? records(g) : [] })
+    }
+    if (mode !== 'resend' || req.method !== 'POST') return json(400, { error: 'Use POST ?setup=resend, POST ?setup=verify or GET ?setup=status' })
     if (await secrets.get()) return json(409, { error: 'Already set up' })
     const d = await domain(api, true)
     // A webhook for this endpoint without a saved secret can't be used (Resend shows the secret once): replace it.

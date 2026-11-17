@@ -43,4 +43,7 @@ test('second run is refused; an old unusable webhook is replaced; status is read
   assert.deepEqual([s.found, s.webhook_secret_saved], [true, true])
   assert.ok(f.calls.slice(n).every(c => c.startsWith('GET')))
   assert.equal((await setup(req('GET', 'resend'), f.api, f.secrets, EP)).status, 400)
+  assert.equal((await setup(req('POST', 'verify'), f.api, f.secrets, EP)).status, 200)
+  assert.ok(f.calls.includes('POST /domains/d1/verify'))
+  assert.equal((await setup(req('POST', 'verify'), fake().api, fake().secrets, EP)).status, 404)
 })
