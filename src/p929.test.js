@@ -40,7 +40,7 @@ test('Settings: pill tabs again, Notifications and Email each their own tab, no 
   const s = src('./template/screens/Settings.jsx')
   assert.match(s, /<PillTabs/)
   assert.match(s, /\['alerts', 'Notifications'/)
-  assert.match(s, /\['email', 'Email'/)
+  assert.match(s, /\['email', 'Carrier emails'/) // P1027: renamed, next to Hours and calls
   assert.match(src('./template/settings929.css'), /overflow-x: hidden/)
 })
 

@@ -16,6 +16,7 @@ import { answerCheck, markLapsed } from '../../lib/clientCheck.js'
 import { SUPPORT_THREAD } from '../support911.js'
 import { SAMPLE_DEEDSTONE } from '../deedstone.js'
 import { SAMPLE_REACTIVATION } from '../reactivation.js'
+import { SAMPLE_CARRIER_EMAILS } from '../carrierEmails.js'
 import { norm, afterRemove, PRODUCTS, canServe } from '../../lib/products.js'
 import { pickedOf, productsWord, sampleQuote, dayWords } from '../productsView.js'
 import { weekShare } from '../weekPace.js'
@@ -825,6 +826,8 @@ const SAMPLE = {
   deedstone: SAMPLE_DEEDSTONE,
   // P952: Reactivate old leads (template/reactivation.js; real: hooks/reactivationReal.js).
   reactivation: SAMPLE_REACTIVATION,
+  // P1027: Connect carrier emails (template/carrierEmails.js; real: hooks/carrierEmailsReal.js).
+  carrierEmails: SAMPLE_CARRIER_EMAILS,
 }
 const ImplCtx = createContext(SAMPLE)
 // Loading and error for the page as a whole: never for sample data.
@@ -863,6 +866,8 @@ export function useSampleActions(...a) { return useImpl().useActions(...a) }
 export const useDeedstone = () => useImpl().deedstone || SAMPLE_DEEDSTONE
 // P952: the reactivation side for this mode (sample or real).
 export const useReactivation = () => useImpl().reactivation || SAMPLE_REACTIVATION
+// P1027: Connect carrier emails for this mode (sample or real).
+export const useCarrierEmails = () => (useImpl().carrierEmails || SAMPLE_CARRIER_EMAILS).useCarrierEmails()
 
 // P911: the sample clients, for the stage-checklist tests (each journey has one at a different step).
 export { seedClients as SAMPLE_CLIENTS }

@@ -44,7 +44,7 @@ test('dates in carrier formats', () => {
 
 test('a forwarded lapse-pending email', () => {
   const p = parseNotice('Fwd: Lapse Pending Notice', LAPSE_PENDING, 'Dana <dana@agent.example>')
-  assert.deepEqual(p, { kind: 'missed', policy_number: 'HL-100-200', client_name: 'Harold Brooks', due_date: '2026-11-03', amount: '86.40', carrier_hint: 'Harborline Life Service' })
+  assert.deepEqual(p, { kind: 'missed', category: 'pending_lapse', policy_number: 'HL-100-200', client_name: 'Harold Brooks', due_date: '2026-11-03', lapse_date: null, amount: '86.40', carrier_hint: 'Harborline Life Service', sender_domain: 'harborline.example', read_by: 'rules' })
 })
 
 test('other wordings', () => {
@@ -110,7 +110,7 @@ test('handler: secret checks', async () => {
 test('handler: passes the parsed email to the database', async () => {
   const { s, calls } = store()
   const r = await handle(post(EMAIL, { 'x-ohvara-intake': 'k' }), s, 'k')
-  assert.deepEqual(await r.json(), { status: 'matched', intake_id: 'i1', kind: 'missed' })
+  assert.deepEqual(await r.json(), { status: 'matched', intake_id: 'i1', kind: 'missed', category: 'pending_lapse' })
   const [token, mid, , subject, , parsed] = calls[0] as [string, string, string, string, string, Parsed]
   assert.equal(token, 'k7m2q9xd4a')
   assert.equal(mid, 'pm-1')
