@@ -82,7 +82,12 @@ export function bootNative() {
 
   // P1010: the logo reveal (public/intro.js) hides the splash itself; this is the backstop if it didn't run
   // (and it waits while intro.js is still checking the app build, so the app never flashes before the intro).
-  if (!window.__ohvaraIntroPending) SplashScreen.hide({ fadeOutDuration: 0 }).catch(() => {})
+  // P1028: while the intro is playing it hides the splash itself, after its first frame is on screen (hiding it
+  // here could beat that frame). If intro.js never ran, index.html's boot navy (html.oi-boot) comes off here too.
+  if (!window.__ohvaraIntroPending && !window.__ohvaraIntroPlaying) {
+    root.classList.remove('oi-boot')
+    SplashScreen.hide({ fadeOutDuration: 0 }).catch(() => {})
+  }
   window.addEventListener('ohvara-intro-done', syncStatusBar)
   syncStatusBar()
   new MutationObserver(syncStatusBar).observe(root, { attributes: true, attributeFilter: ['data-theme'] })

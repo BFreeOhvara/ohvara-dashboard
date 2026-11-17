@@ -36,6 +36,23 @@
         }
       })()
     </script>
+    <!-- P1028: phone app only, cold start only. The page stays the splash's navy until public/intro.js has painted
+         its first frame over it, so hiding the native splash can never show the light/dark page (the white flash).
+         intro.js takes the class off under its own overlay; nativeBoot.js and the 5 s timer are backstops. A reload
+         after the intro (the over-the-air update switching in) is not a cold start and keeps the theme's background. -->
+    <style>html.oi-boot,html.oi-boot body{background:#0A1F44!important}</style>
+    <script>
+      (function () {
+        var C = window.Capacitor
+        if (!C || typeof C.isNativePlatform !== 'function' || !C.isNativePlatform()) return
+        var at = null
+        try { at = Number(sessionStorage.getItem('ohvara-intro-at')) || null } catch (e) {}
+        if (at && Date.now() - at >= 2150) return
+        var h = document.documentElement
+        h.classList.add('oi-boot')
+        setTimeout(function () { h.classList.remove('oi-boot') }, 5000)
+      })()
+    </script>
     <!-- P1020: the loading screen's look (src/components/shared/Loader.jsx). Here, not in the bundle, so the first
          paint can show it (#ol-boot below) before any script has loaded. The only colours it uses sit on .ol. -->
     <style id="ol-css">
