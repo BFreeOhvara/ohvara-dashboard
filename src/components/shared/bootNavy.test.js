@@ -44,6 +44,8 @@ const tick = () => new Promise(r => setTimeout(r, 0))
 test('the boot navy is the splash navy, and the native splash is that same navy', () => {
   assert.match(html, /html\.oi-boot,html\.oi-boot body\{background:#0A1F44!important\}/)
   assert.equal(cap.plugins.SplashScreen.backgroundColor, NAVY)
+  // The webview's own background (seen for a moment between the launch screen and the splash on iOS) is navy too.
+  assert.equal(cap.backgroundColor, NAVY)
   assert.match(androidSplash, new RegExp(`ohvaraSplashNavy">${NAVY}<`))
   assert.ok(bootScript, 'index.html has the boot script')
 })
